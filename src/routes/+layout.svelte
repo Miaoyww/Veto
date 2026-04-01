@@ -7,11 +7,10 @@
 	import UnitPro from '$lib/components/unit-pro.svelte';
 	import LeftSidebar from '$lib/components/sidebar/left-sidebar.svelte';
 	import SettingsDialog from '$lib/components/dialog/settings-dialog.svelte';
+	import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte';
 	import { ARMYS_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
 	let { children } = $props();
-
-	
 </script>
 
 <svelte:head>
@@ -34,21 +33,7 @@
 <Bottom />
 <RightSidebar />
 <SettingsDialog />
-
-<div 
-	hidden={true}
-	class="absolute z-[10000] hidden min-w-[160px] rounded-md border border-(--border-color) bg-(--bg-card) py-[5px] shadow"
-	id="context-menu"
->
-	<div class="context-menu-item" id="context-view-properties">查看属性</div>
-	<div class="context-menu-item" id="context-delete-unit">删除单位</div>
-	<Separator />
-	<div class="context-menu-item" id="context-set-status">设置状态</div>
-	<div class="context-menu-item" id="context-change-faction">变更阵营</div>
-	<Separator />
-	<div class="context-menu-item" id="context-copy-unit">复制单位</div>
-	<div class="context-menu-item" id="context-move-to">移动至此</div>
-</div>
+<MyAlertDialog />
 
 <style>
 	* {

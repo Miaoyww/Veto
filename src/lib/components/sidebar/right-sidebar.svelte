@@ -1,19 +1,22 @@
 <script lang="ts">
 	import RightSidebarMenubutton from '$lib/components/buttons/right-sidebar-menubutton.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { FileUp, Grid3x3, Pin, PinOff, Ruler, Save } from '@lucide/svelte';
+	import { FileUp, Grid3x3, Pin, PinOff, Ruler, Save, Swords } from '@lucide/svelte';
 	import SettingsButton from '$lib/components/buttons/right-bar/settings-button.svelte';
 	import ResetButton from '$lib/components/buttons/right-bar/reset-button.svelte';
 	import { rightBarPinned } from '$lib/stores/sidebar-store';
 	import PinButton from '../buttons/right-bar/pin-button.svelte';
+	import BattleDialog from '$lib/components/dialog/battle-dialog.svelte';
+	import { showAlert } from '$lib/stores/alert-dialog-store';
 
 	// 是否鼠标悬停
 	let hover = $state(false);
+	let battleDialogOpen = $state(false);
 
 	// 计算最终展开状态
 	let expanded = $derived($rightBarPinned || hover);
 
-	function togglePin() {P
+	function togglePin() {
 		rightBarPinned.update((prev) => !prev);
 	}
 </script>
@@ -32,6 +35,11 @@
 
 	<div class="panel-section">
 		<div class="controls">
+			<RightSidebarMenubutton content="战局管理">
+				<Button variant="ghost" size="icon" onclick={() => (battleDialogOpen = true)}>
+					<Swords />
+				</Button>
+			</RightSidebarMenubutton>
 			<RightSidebarMenubutton content="切换网格显示">
 				<Button variant="ghost" size="icon">
 					<Grid3x3 />
@@ -48,12 +56,12 @@
 	<div class="panel-section">
 		<div class="controls">
 			<RightSidebarMenubutton content="保存当前推演状态">
-				<Button variant="ghost" size="icon">
+				<Button variant="ghost" size="icon" onclick={() => showAlert('已保存', '当前推演状态已自动保存到浏览器。')}>
 					<Save />
 				</Button>
 			</RightSidebarMenubutton>
 			<RightSidebarMenubutton content="加载推演">
-				<Button variant="ghost" size="icon">
+				<Button variant="ghost" size="icon" onclick={() => (battleDialogOpen = true)}>
 					<FileUp />
 				</Button>
 			</RightSidebarMenubutton>
@@ -66,6 +74,8 @@
 		</div>
 	</div>
 </div>
+
+<BattleDialog bind:open={battleDialogOpen} />
 
 <style>
 	.sidebar {

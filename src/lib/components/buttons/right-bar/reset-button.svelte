@@ -3,6 +3,8 @@
 	import { RotateCcw } from '@lucide/svelte';
 
 	import { settingOpen } from '$lib/stores/setting-dialog-store';
+	import { resetCurrentBattle } from '$lib/stores/battle-store';
+	import { showAlert } from '$lib/stores/alert-dialog-store';
 	import { tweened } from 'svelte/motion';
 	import { cubicInOut, linear } from 'svelte/easing';
 
@@ -30,6 +32,8 @@
 		await rotate.set(360, { duration: 400, easing: cubicInOut });
 		// 重置为 0°，以便下次点击
 		rotate.set(0, { duration: 0 });
+		resetCurrentBattle();
+		showAlert('已重置', '当前战局已清空所有阵营、单位和日志。');
 	}
 </script>
 
