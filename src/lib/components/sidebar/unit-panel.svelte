@@ -6,6 +6,7 @@
 		currentBranch,
 		addUnit,
 		removeUnit,
+		updateUnit,
 		interactionMode,
 		pendingPlaceUnitId
 	} from '$lib/stores/battle-store';
@@ -14,15 +15,6 @@
 		NavyUnit,
 		AirForceUnit,
 		MilitaryUnit,
-		InfantryComponent,
-		ArmorComponent,
-		MissileComponent,
-		SurfaceShipComponent,
-		SubmarineComponent,
-		NavalSupportComponent,
-		FighterComponent,
-		BomberComponent,
-		AirSupportComponent,
 		ArmyInfantryType,
 		InfantryQuality,
 		ArmyArmorType,
@@ -64,181 +56,175 @@
 		AIR_SUPPORT_TYPE_LABELS,
 		AIR_SUPPORT_QUALITY_LABELS
 	} from '$lib/types';
-	import { Trash2, MapPin } from '@lucide/svelte';
+	import { Trash2, MapPin, ChevronDown, ChevronRight, Plus } from '@lucide/svelte';
 
 	const branches: Branch[] = ['army', 'navy', 'air_force'];
 
-	// ============ 陆军表单状态 ============
-	let armyName = $state('');
+	// 编辑状态
+	let editingUnitId = $state<string | null>(null);
+	let newUnitName = $state('');
+
+	// 陆军添加表单
 	let armyInfantryType = $state<ArmyInfantryType>('light');
 	let armyInfantryQuality = $state<InfantryQuality>('basic');
 	let armyInfantryCount = $state(1000);
-	let armyInfantryList = $state<InfantryComponent[]>([]);
 
 	let armyArmorType = $state<ArmyArmorType>('light_tank');
 	let armyArmorQuality = $state<ArmorQuality>('gen1');
 	let armyArmorCount = $state(50);
-	let armyArmorList = $state<ArmorComponent[]>([]);
 
 	let armyMissileType = $state<ArmyMissileType>('anti_tank');
 	let armyMissileQuality = $state<MissileQuality>('basic');
 	let armyMissileCount = $state(20);
-	let armyMissileList = $state<MissileComponent[]>([]);
 
-	// ============ 海军表单状态 ============
-	let navyName = $state('');
+	// 海军添加表单
 	let navySurfaceType = $state<NavySurfaceType>('destroyer');
 	let navySurfaceQuality = $state<NavalQuality>('basic');
 	let navySurfaceCount = $state(2);
-	let navySurfaceList = $state<SurfaceShipComponent[]>([]);
 
 	let navySubType = $state<NavySubmarineType>('attack_sub');
 	let navySubQuality = $state<SubmarineQuality>('basic');
 	let navySubCount = $state(1);
-	let navySubList = $state<SubmarineComponent[]>([]);
 
 	let navySupportType = $state<NavySupportType>('amphibious');
 	let navySupportQuality = $state<NavalSupportQuality>('basic');
 	let navySupportCount = $state(1);
-	let navySupportList = $state<NavalSupportComponent[]>([]);
 
-	// ============ 空军表单状态 ============
-	let airName = $state('');
+	// 空军添加表单
 	let airFighterType = $state<AirForceFighterType>('air_superiority');
 	let airFighterQuality = $state<FighterQuality>('gen4');
 	let airFighterCount = $state(12);
-	let airFighterList = $state<FighterComponent[]>([]);
 
 	let airBomberType = $state<AirForceBomberType>('strategic');
 	let airBomberQuality = $state<BomberQuality>('basic');
 	let airBomberCount = $state(4);
-	let airBomberList = $state<BomberComponent[]>([]);
 
 	let airSupportType = $state<AirForceSupportType>('awacs');
 	let airSupportQuality = $state<AirSupportQuality>('basic');
 	let airSupportCount = $state(2);
-	let airSupportList = $state<AirSupportComponent[]>([]);
 
 	// ============ 辅助函数 ============
 	function genId() {
 		return crypto.randomUUID();
 	}
 
-	// 陆军操作
-	function addInfantry() {
-		armyInfantryList = [
-			...armyInfantryList,
-			{ id: genId(), type: armyInfantryType, quality: armyInfantryQuality, count: armyInfantryCount }
-		];
-	}
+	// 获取当前编辑的单位
+	let editingUnit = $derived.by(() => {
+		if (!editingUnitId || !$currentFaction) return null;
+		return $currentFaction.units.find((u) => u.id === editingUnitId) ?? null;
+	});
 
-	function addArmor() {
-		armyArmorList = [
-			...armyArmorList,
-			{ id: genId(), type: armyArmorType, quality: armyArmorQuality, count: armyArmorCount }
-		];
-	}
-
-	function addMissile() {
-		armyMissileList = [
-			...armyMissileList,
-			{ id: genId(), type: armyMissileType, quality: armyMissileQuality, count: armyMissileCount }
-		];
-	}
-
-	function createArmyUnit() {
-		if (!$currentFactionId || !armyName.trim()) return;
-		const unit: ArmyUnit = {
-			id: genId(),
-			name: armyName.trim(),
-			branch: 'army',
-			infantry: [...armyInfantryList],
-			armor: [...armyArmorList],
-			missiles: [...armyMissileList]
-		};
+	// 快速创建空单位
+	function quickCreateUnit() {
+		const name = newUnitName.trim();
+		if (!name || !$currentFactionId) return;
+		const id = genId();
+		let unit: MilitaryUnit;
+		switch ($currentBranch) {
+			case 'army':
+				unit = { id, name, branch: 'army', infantry: [], armor: [], missiles: [] };
+				break;
+			case 'navy':
+				unit = { id, name, branch: 'navy', surface: [], submarines: [], support: [] };
+				break;
+			case 'air_force':
+				unit = { id, name, branch: 'air_force', fighters: [], bombers: [], support: [] };
+				break;
+		}
 		addUnit($currentFactionId, unit);
-		armyName = '';
-		armyInfantryList = [];
-		armyArmorList = [];
-		armyMissileList = [];
+		editingUnitId = id;
+		newUnitName = '';
 	}
 
-	// 海军操作
-	function addSurface() {
-		navySurfaceList = [
-			...navySurfaceList,
-			{ id: genId(), type: navySurfaceType, quality: navySurfaceQuality, count: navySurfaceCount }
-		];
+	function toggleEdit(unitId: string) {
+		editingUnitId = editingUnitId === unitId ? null : unitId;
 	}
 
-	function addSubmarine() {
-		navySubList = [
-			...navySubList,
-			{ id: genId(), type: navySubType, quality: navySubQuality, count: navySubCount }
-		];
+	// ============ 添加组件到单位 ============
+	function addInfantryComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'army') return u;
+			return { ...u, infantry: [...u.infantry, { id: genId(), type: armyInfantryType, quality: armyInfantryQuality, count: armyInfantryCount }] };
+		});
 	}
 
-	function addNavalSupport() {
-		navySupportList = [
-			...navySupportList,
-			{ id: genId(), type: navySupportType, quality: navySupportQuality, count: navySupportCount }
-		];
+	function addArmorComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'army') return u;
+			return { ...u, armor: [...u.armor, { id: genId(), type: armyArmorType, quality: armyArmorQuality, count: armyArmorCount }] };
+		});
 	}
 
-	function createNavyUnit() {
-		if (!$currentFactionId || !navyName.trim()) return;
-		const unit: NavyUnit = {
-			id: genId(),
-			name: navyName.trim(),
-			branch: 'navy',
-			surface: [...navySurfaceList],
-			submarines: [...navySubList],
-			support: [...navySupportList]
-		};
-		addUnit($currentFactionId, unit);
-		navyName = '';
-		navySurfaceList = [];
-		navySubList = [];
-		navySupportList = [];
+	function addMissileComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'army') return u;
+			return { ...u, missiles: [...u.missiles, { id: genId(), type: armyMissileType, quality: armyMissileQuality, count: armyMissileCount }] };
+		});
 	}
 
-	// 空军操作
-	function addFighter() {
-		airFighterList = [
-			...airFighterList,
-			{ id: genId(), type: airFighterType, quality: airFighterQuality, count: airFighterCount }
-		];
+	function addSurfaceComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'navy') return u;
+			return { ...u, surface: [...u.surface, { id: genId(), type: navySurfaceType, quality: navySurfaceQuality, count: navySurfaceCount }] };
+		});
 	}
 
-	function addBomber() {
-		airBomberList = [
-			...airBomberList,
-			{ id: genId(), type: airBomberType, quality: airBomberQuality, count: airBomberCount }
-		];
+	function addSubComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'navy') return u;
+			return { ...u, submarines: [...u.submarines, { id: genId(), type: navySubType, quality: navySubQuality, count: navySubCount }] };
+		});
 	}
 
-	function addAirSupport() {
-		airSupportList = [
-			...airSupportList,
-			{ id: genId(), type: airSupportType, quality: airSupportQuality, count: airSupportCount }
-		];
+	function addNavSupportComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'navy') return u;
+			return { ...u, support: [...u.support, { id: genId(), type: navySupportType, quality: navySupportQuality, count: navySupportCount }] };
+		});
 	}
 
-	function createAirForceUnit() {
-		if (!$currentFactionId || !airName.trim()) return;
-		const unit: AirForceUnit = {
-			id: genId(),
-			name: airName.trim(),
-			branch: 'air_force',
-			fighters: [...airFighterList],
-			bombers: [...airBomberList],
-			support: [...airSupportList]
-		};
-		addUnit($currentFactionId, unit);
-		airName = '';
-		airFighterList = [];
-		airBomberList = [];
-		airSupportList = [];
+	function addFighterComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'air_force') return u;
+			return { ...u, fighters: [...u.fighters, { id: genId(), type: airFighterType, quality: airFighterQuality, count: airFighterCount }] };
+		});
+	}
+
+	function addBomberComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'air_force') return u;
+			return { ...u, bombers: [...u.bombers, { id: genId(), type: airBomberType, quality: airBomberQuality, count: airBomberCount }] };
+		});
+	}
+
+	function addAirSupportComp() {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			if (u.branch !== 'air_force') return u;
+			return { ...u, support: [...u.support, { id: genId(), type: airSupportType, quality: airSupportQuality, count: airSupportCount }] };
+		});
+	}
+
+	function removeComponent(compId: string) {
+		if (!$currentFactionId || !editingUnitId) return;
+		updateUnit($currentFactionId, editingUnitId, (u) => {
+			switch (u.branch) {
+				case 'army':
+					return { ...u, infantry: u.infantry.filter((c) => c.id !== compId), armor: u.armor.filter((c) => c.id !== compId), missiles: u.missiles.filter((c) => c.id !== compId) };
+				case 'navy':
+					return { ...u, surface: u.surface.filter((c) => c.id !== compId), submarines: u.submarines.filter((c) => c.id !== compId), support: u.support.filter((c) => c.id !== compId) };
+				case 'air_force':
+					return { ...u, fighters: u.fighters.filter((c) => c.id !== compId), bombers: u.bombers.filter((c) => c.id !== compId), support: u.support.filter((c) => c.id !== compId) };
+			}
+		});
 	}
 
 	// 在地图上放置单位
@@ -263,350 +249,259 @@
 				<button
 					class="branch-btn"
 					class:active={$currentBranch === branch}
-					onclick={() => currentBranch.set(branch)}
+					onclick={() => { currentBranch.set(branch); editingUnitId = null; }}
 				>
 					{BRANCH_LABELS[branch]}
 				</button>
 			{/each}
 		</div>
 
+		<!-- 快速创建 -->
+		<div class="quick-create">
+			<input
+				type="text"
+				bind:value={newUnitName}
+				placeholder="输入单位名称"
+				onkeydown={(e) => { if (e.key === 'Enter') quickCreateUnit(); }}
+			/>
+			<button class="quick-create-btn" onclick={quickCreateUnit} disabled={!newUnitName.trim()}>
+				<Plus size={14} />
+				<span>创建</span>
+			</button>
+		</div>
+
 		<!-- 已有单位列表 -->
 		<div class="unit-list">
 			{#each $currentFaction.units.filter((u) => u.branch === $currentBranch) as unit (unit.id)}
-				<div class="unit-item">
-					<span class="unit-name">{unit.name}</span>
-					<div class="unit-actions">
-						<button
-							class="unit-action-btn place"
-							title="放置到地图"
-							onclick={() => handlePlaceUnit(unit.id)}
-						>
-							<MapPin size={14} />
-						</button>
-						<button
-							class="unit-action-btn delete"
-							title="删除"
-							onclick={() => removeUnit($currentFactionId!, unit.id)}
-						>
-							<Trash2 size={14} />
-						</button>
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="unit-item" class:editing={editingUnitId === unit.id}>
+					<div
+						class="unit-header"
+						onclick={() => toggleEdit(unit.id)}
+						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleEdit(unit.id); }}
+						role="button"
+						tabindex="0"
+					>
+						<div class="unit-info">
+							{#if editingUnitId === unit.id}
+								<ChevronDown size={14} />
+							{:else}
+								<ChevronRight size={14} />
+							{/if}
+							<span class="unit-name">{unit.name}</span>
+						</div>
+						<div class="unit-actions">
+							<button class="unit-action-btn place" title="放置到地图"
+								onclick={(e) => { e.stopPropagation(); handlePlaceUnit(unit.id); }}>
+								<MapPin size={14} />
+							</button>
+							<button class="unit-action-btn delete" title="删除"
+								onclick={(e) => { e.stopPropagation(); removeUnit($currentFactionId!, unit.id); if (editingUnitId === unit.id) editingUnitId = null; }}>
+								<Trash2 size={14} />
+							</button>
+						</div>
 					</div>
 				</div>
 			{/each}
+			{#if $currentFaction.units.filter((u) => u.branch === $currentBranch).length === 0}
+				<p class="empty-hint">暂无单位，输入名称快速创建</p>
+			{/if}
 		</div>
 
-		<!-- 陆军编组面板 -->
-		{#if $currentBranch === 'army'}
-			<div class="custom-unit-panel">
-				<div class="form-group">
-					<label>编组名称</label>
-					<input type="text" bind:value={armyName} placeholder="输入编组名称" />
-				</div>
+		<!-- 编辑面板：选中单位后展开 -->
+		{#if editingUnit}
+			<div class="edit-panel">
+				<div class="edit-header">编辑: {editingUnit.name}</div>
 
-				<!-- 步兵 -->
-				<div class="component-group">
-					<div class="component-title">步兵单位</div>
-					<div class="component-controls">
-						<select bind:value={armyInfantryType}>
-							{#each Object.entries(INFANTRY_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={armyInfantryQuality}>
-							{#each Object.entries(INFANTRY_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={armyInfantryCount} min="1" max="10000" />
-					</div>
-					<button class="add-component-btn" onclick={addInfantry}>
-						<span class="icon">➕</span>
-						<span>添加步兵单位</span>
-					</button>
-					<div class="component-list">
-						{#each armyInfantryList as item, i (item.id)}
+				{#if editingUnit.branch === 'army'}
+					{@const army = editingUnit as ArmyUnit}
+
+					<div class="component-group">
+						<div class="component-title">🪖 步兵</div>
+						{#each army.infantry as comp (comp.id)}
 							<div class="component-item">
-								<span>{INFANTRY_TYPE_LABELS[item.type]} · {INFANTRY_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (armyInfantryList = armyInfantryList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{INFANTRY_TYPE_LABELS[comp.type]} · {INFANTRY_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={armyInfantryType}>
+								{#each Object.entries(INFANTRY_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={armyInfantryQuality}>
+								{#each Object.entries(INFANTRY_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={armyInfantryCount} min="1" max="10000" />
+							<button class="comp-add-btn" onclick={addInfantryComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<!-- 装甲 -->
-				<div class="component-group">
-					<div class="component-title">装甲单位</div>
-					<div class="component-controls">
-						<select bind:value={armyArmorType}>
-							{#each Object.entries(ARMOR_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={armyArmorQuality}>
-							{#each Object.entries(ARMOR_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={armyArmorCount} min="1" max="1000" />
-					</div>
-					<button class="add-component-btn" onclick={addArmor}>
-						<span class="icon">➕</span>
-						<span>添加装甲单位</span>
-					</button>
-					<div class="component-list">
-						{#each armyArmorList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">🛡️ 装甲</div>
+						{#each army.armor as comp (comp.id)}
 							<div class="component-item">
-								<span>{ARMOR_TYPE_LABELS[item.type]} · {ARMOR_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (armyArmorList = armyArmorList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{ARMOR_TYPE_LABELS[comp.type]} · {ARMOR_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={armyArmorType}>
+								{#each Object.entries(ARMOR_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={armyArmorQuality}>
+								{#each Object.entries(ARMOR_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={armyArmorCount} min="1" max="1000" />
+							<button class="comp-add-btn" onclick={addArmorComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<!-- 导弹 -->
-				<div class="component-group">
-					<div class="component-title">导弹单位</div>
-					<div class="component-controls">
-						<select bind:value={armyMissileType}>
-							{#each Object.entries(MISSILE_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={armyMissileQuality}>
-							{#each Object.entries(MISSILE_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={armyMissileCount} min="1" max="500" />
-					</div>
-					<button class="add-component-btn" onclick={addMissile}>
-						<span class="icon">➕</span>
-						<span>添加导弹单位</span>
-					</button>
-					<div class="component-list">
-						{#each armyMissileList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">🚀 导弹</div>
+						{#each army.missiles as comp (comp.id)}
 							<div class="component-item">
-								<span>{MISSILE_TYPE_LABELS[item.type]} · {MISSILE_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (armyMissileList = armyMissileList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{MISSILE_TYPE_LABELS[comp.type]} · {MISSILE_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={armyMissileType}>
+								{#each Object.entries(MISSILE_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={armyMissileQuality}>
+								{#each Object.entries(MISSILE_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={armyMissileCount} min="1" max="500" />
+							<button class="comp-add-btn" onclick={addMissileComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<button class="create-unit-btn" onclick={createArmyUnit} disabled={!armyName.trim()}>
-					<span class="icon">🛠️</span>
-					<span>创建陆军单位</span>
-				</button>
-			</div>
-		{/if}
+				{:else if editingUnit.branch === 'navy'}
+					{@const navy = editingUnit as NavyUnit}
 
-		<!-- 海军编组面板 -->
-		{#if $currentBranch === 'navy'}
-			<div class="custom-unit-panel">
-				<div class="form-group">
-					<label>编组名称</label>
-					<input type="text" bind:value={navyName} placeholder="输入编组名称" />
-				</div>
-
-				<!-- 水面舰艇 -->
-				<div class="component-group">
-					<div class="component-title">水面舰艇</div>
-					<div class="component-controls">
-						<select bind:value={navySurfaceType}>
-							{#each Object.entries(SURFACE_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={navySurfaceQuality}>
-							{#each Object.entries(NAVAL_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={navySurfaceCount} min="1" max="20" />
-					</div>
-					<button class="add-component-btn" onclick={addSurface}>
-						<span class="icon">➕</span>
-						<span>添加水面舰艇</span>
-					</button>
-					<div class="component-list">
-						{#each navySurfaceList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">🚢 水面舰艇</div>
+						{#each navy.surface as comp (comp.id)}
 							<div class="component-item">
-								<span>{SURFACE_TYPE_LABELS[item.type]} · {NAVAL_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (navySurfaceList = navySurfaceList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{SURFACE_TYPE_LABELS[comp.type]} · {NAVAL_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={navySurfaceType}>
+								{#each Object.entries(SURFACE_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={navySurfaceQuality}>
+								{#each Object.entries(NAVAL_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={navySurfaceCount} min="1" max="20" />
+							<button class="comp-add-btn" onclick={addSurfaceComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<!-- 潜艇 -->
-				<div class="component-group">
-					<div class="component-title">潜艇单位</div>
-					<div class="component-controls">
-						<select bind:value={navySubType}>
-							{#each Object.entries(SUBMARINE_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={navySubQuality}>
-							{#each Object.entries(SUBMARINE_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={navySubCount} min="1" max="15" />
-					</div>
-					<button class="add-component-btn" onclick={addSubmarine}>
-						<span class="icon">➕</span>
-						<span>添加潜艇单位</span>
-					</button>
-					<div class="component-list">
-						{#each navySubList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">🔱 潜艇</div>
+						{#each navy.submarines as comp (comp.id)}
 							<div class="component-item">
-								<span>{SUBMARINE_TYPE_LABELS[item.type]} · {SUBMARINE_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (navySubList = navySubList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{SUBMARINE_TYPE_LABELS[comp.type]} · {SUBMARINE_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={navySubType}>
+								{#each Object.entries(SUBMARINE_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={navySubQuality}>
+								{#each Object.entries(SUBMARINE_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={navySubCount} min="1" max="15" />
+							<button class="comp-add-btn" onclick={addSubComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<!-- 支援舰艇 -->
-				<div class="component-group">
-					<div class="component-title">支援舰艇</div>
-					<div class="component-controls">
-						<select bind:value={navySupportType}>
-							{#each Object.entries(NAVAL_SUPPORT_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={navySupportQuality}>
-							{#each Object.entries(NAVAL_SUPPORT_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={navySupportCount} min="1" max="10" />
-					</div>
-					<button class="add-component-btn" onclick={addNavalSupport}>
-						<span class="icon">➕</span>
-						<span>添加支援舰艇</span>
-					</button>
-					<div class="component-list">
-						{#each navySupportList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">⚓ 支援舰艇</div>
+						{#each navy.support as comp (comp.id)}
 							<div class="component-item">
-								<span>{NAVAL_SUPPORT_TYPE_LABELS[item.type]} · {NAVAL_SUPPORT_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (navySupportList = navySupportList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{NAVAL_SUPPORT_TYPE_LABELS[comp.type]} · {NAVAL_SUPPORT_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={navySupportType}>
+								{#each Object.entries(NAVAL_SUPPORT_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={navySupportQuality}>
+								{#each Object.entries(NAVAL_SUPPORT_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={navySupportCount} min="1" max="10" />
+							<button class="comp-add-btn" onclick={addNavSupportComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<button class="create-unit-btn" onclick={createNavyUnit} disabled={!navyName.trim()}>
-					<span class="icon">🛠️</span>
-					<span>创建海军单位</span>
-				</button>
-			</div>
-		{/if}
+				{:else if editingUnit.branch === 'air_force'}
+					{@const air = editingUnit as AirForceUnit}
 
-		<!-- 空军编组面板 -->
-		{#if $currentBranch === 'air_force'}
-			<div class="custom-unit-panel">
-				<div class="form-group">
-					<label>编组名称</label>
-					<input type="text" bind:value={airName} placeholder="输入编组名称" />
-				</div>
-
-				<!-- 战斗机 -->
-				<div class="component-group">
-					<div class="component-title">战斗机单位</div>
-					<div class="component-controls">
-						<select bind:value={airFighterType}>
-							{#each Object.entries(FIGHTER_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={airFighterQuality}>
-							{#each Object.entries(FIGHTER_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={airFighterCount} min="1" max="50" />
-					</div>
-					<button class="add-component-btn" onclick={addFighter}>
-						<span class="icon">➕</span>
-						<span>添加战斗机单位</span>
-					</button>
-					<div class="component-list">
-						{#each airFighterList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">✈️ 战斗机</div>
+						{#each air.fighters as comp (comp.id)}
 							<div class="component-item">
-								<span>{FIGHTER_TYPE_LABELS[item.type]} · {FIGHTER_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (airFighterList = airFighterList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{FIGHTER_TYPE_LABELS[comp.type]} · {FIGHTER_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={airFighterType}>
+								{#each Object.entries(FIGHTER_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={airFighterQuality}>
+								{#each Object.entries(FIGHTER_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={airFighterCount} min="1" max="50" />
+							<button class="comp-add-btn" onclick={addFighterComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<!-- 轰炸机 -->
-				<div class="component-group">
-					<div class="component-title">轰炸机单位</div>
-					<div class="component-controls">
-						<select bind:value={airBomberType}>
-							{#each Object.entries(BOMBER_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={airBomberQuality}>
-							{#each Object.entries(BOMBER_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={airBomberCount} min="1" max="20" />
-					</div>
-					<button class="add-component-btn" onclick={addBomber}>
-						<span class="icon">➕</span>
-						<span>添加轰炸机单位</span>
-					</button>
-					<div class="component-list">
-						{#each airBomberList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">💣 轰炸机</div>
+						{#each air.bombers as comp (comp.id)}
 							<div class="component-item">
-								<span>{BOMBER_TYPE_LABELS[item.type]} · {BOMBER_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (airBomberList = airBomberList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{BOMBER_TYPE_LABELS[comp.type]} · {BOMBER_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={airBomberType}>
+								{#each Object.entries(BOMBER_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={airBomberQuality}>
+								{#each Object.entries(BOMBER_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={airBomberCount} min="1" max="20" />
+							<button class="comp-add-btn" onclick={addBomberComp}>+</button>
+						</div>
 					</div>
-				</div>
 
-				<!-- 支援飞机 -->
-				<div class="component-group">
-					<div class="component-title">支援飞机</div>
-					<div class="component-controls">
-						<select bind:value={airSupportType}>
-							{#each Object.entries(AIR_SUPPORT_TYPE_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<select bind:value={airSupportQuality}>
-							{#each Object.entries(AIR_SUPPORT_QUALITY_LABELS) as [val, label]}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
-						<input type="number" bind:value={airSupportCount} min="1" max="15" />
-					</div>
-					<button class="add-component-btn" onclick={addAirSupport}>
-						<span class="icon">➕</span>
-						<span>添加支援飞机</span>
-					</button>
-					<div class="component-list">
-						{#each airSupportList as item, i (item.id)}
+					<div class="component-group">
+						<div class="component-title">📡 支援飞机</div>
+						{#each air.support as comp (comp.id)}
 							<div class="component-item">
-								<span>{AIR_SUPPORT_TYPE_LABELS[item.type]} · {AIR_SUPPORT_QUALITY_LABELS[item.quality]} × {item.count}</span>
-								<button class="remove-btn" onclick={() => (airSupportList = airSupportList.filter((_, idx) => idx !== i))}>✕</button>
+								<span>{AIR_SUPPORT_TYPE_LABELS[comp.type]} · {AIR_SUPPORT_QUALITY_LABELS[comp.quality]} × {comp.count}</span>
+								<button class="remove-btn" onclick={() => removeComponent(comp.id)}>✕</button>
 							</div>
 						{/each}
+						<div class="component-add">
+							<select bind:value={airSupportType}>
+								{#each Object.entries(AIR_SUPPORT_TYPE_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<select bind:value={airSupportQuality}>
+								{#each Object.entries(AIR_SUPPORT_QUALITY_LABELS) as [v, l]}<option value={v}>{l}</option>{/each}
+							</select>
+							<input type="number" bind:value={airSupportCount} min="1" max="15" />
+							<button class="comp-add-btn" onclick={addAirSupportComp}>+</button>
+						</div>
 					</div>
-				</div>
-
-				<button class="create-unit-btn" onclick={createAirForceUnit} disabled={!airName.trim()}>
-					<span class="icon">🛠️</span>
-					<span>创建空军单位</span>
-				</button>
+				{/if}
 			</div>
 		{/if}
 	{/if}

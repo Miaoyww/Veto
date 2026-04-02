@@ -168,6 +168,17 @@ export function removeUnit(factionId: string, unitId: string) {
 	}));
 }
 
+export function updateUnit(factionId: string, unitId: string, updater: (unit: MilitaryUnit) => MilitaryUnit) {
+	updateCurrentBattle((b) => ({
+		...b,
+		factions: b.factions.map((f) =>
+			f.id === factionId
+				? { ...f, units: f.units.map((u) => (u.id === unitId ? updater(u) : u)) }
+				: f
+		)
+	}));
+}
+
 // ============ 放置单位 ============
 
 export function placeUnit(unitId: string, factionId: string, lat: number, lng: number): string {

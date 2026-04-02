@@ -26,7 +26,35 @@
 		AIR_SUPPORT_TYPE_LABELS,
 		AIR_SUPPORT_QUALITY_LABELS
 	} from '$lib/types';
-	import { X } from '@lucide/svelte';
+	import { X, GripHorizontal } from '@lucide/svelte';
+
+	let pos = $state({ x: 40, y: 100 });
+	let isDragging = $state(false);
+	let dragOffset = $state({ x: 0, y: 0 });
+
+	function onHeaderMouseDown(e: MouseEvent) {
+		isDragging = true;
+		dragOffset = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+		e.preventDefault();
+	}
+
+	$effect(() => {
+		function onMouseMove(e: MouseEvent) {
+			if (!isDragging) return;
+			const x = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - dragOffset.x));
+			const y = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragOffset.y));
+			pos = { x, y };
+		}
+		function onMouseUp() {
+			isDragging = false;
+		}
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+		return () => {
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+		};
+	});
 
 	let unitInfo = $derived.by(() => {
 		const placed = $selectedPlacedUnit;
@@ -41,9 +69,19 @@
 </script>
 
 {#if unitInfo}
-	<div class="blur-backdrop absolute top-25 left-10 z-1000 rounded-lg">
+	<div
+		class="blur-backdrop fixed z-1000 rounded-lg"
+		style:left="{pos.x}px"
+		style:top="{pos.y}px"
+		style:user-select={isDragging ? 'none' : 'auto'}
+	>
 		<div class="prop-panel">
-			<div class="prop-header">
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="prop-header"
+				onmousedown={onHeaderMouseDown}
+				style:cursor={isDragging ? 'grabbing' : 'grab'}
+			>
 				<div class="prop-title">
 					<span class="faction-dot" style:background-color={unitInfo.faction.color}></span>
 					<strong>{unitInfo.unit.name}</strong>

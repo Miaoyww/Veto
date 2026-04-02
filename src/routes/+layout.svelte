@@ -10,7 +10,10 @@
 	import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte';
 	import { ARMYS_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
+	import { page } from '$app/state';
 	let { children } = $props();
+
+	let isCrisis = $derived(page.url.pathname.startsWith('/crisis'));
 </script>
 
 <svelte:head>
@@ -27,47 +30,18 @@
 	</div>
 </div>
 
-<LeftSidebar />
-<UnitPro />
-<Header />
-<Bottom />
-<RightSidebar />
-<SettingsDialog />
-<MyAlertDialog />
+{#if isCrisis}
+	<LeftSidebar />
+	<UnitPro />
+	<Header />
+	<Bottom />
+	<RightSidebar />
+	<SettingsDialog />
+	<MyAlertDialog />
+{/if}
 
 <style>
 	* {
 		margin: 0;
-	}
-
-	.context-menu-item {
-		padding: 8px 15px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		color: var(--text-primary);
-		transition: background 0.2s;
-	}
-
-	.context-menu-item:hover {
-		background: var(--bg-tertiary);
-	}
-
-	.range-legend {
-		position: absolute;
-		bottom: 70px;
-		left: 20px;
-		background: var(--bg-card);
-		padding: 10px;
-		border-radius: 8px;
-		border: 1px solid var(--border-color);
-		box-shadow: var(--shadow);
-		z-index: 1000;
-		max-width: 250px;
-	}
-
-	.range-legend h4 {
-		font-size: 0.9rem;
-		margin-bottom: 8px;
-		color: var(--text-primary);
 	}
 </style>
