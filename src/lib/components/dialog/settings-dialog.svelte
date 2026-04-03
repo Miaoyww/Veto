@@ -2,14 +2,14 @@
 	import { settingOpen } from '$lib/stores/setting-dialog-store';
 	import { Button } from '../ui/button';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import Venue from '$lib/components/dialog/settings/venue.svelte';
-	import General from './settings/general.svelte';
-	import About from './settings/about.svelte';
+	import Venue from '$lib/components/dialog/settings/crisis/venue.svelte';
+	import General from '$lib/components/dialog/settings/crisis/general.svelte';
+	import About from '$lib/components/dialog/settings/crisis/about.svelte';
 	import { fade, scale } from 'svelte/transition';
 	import { X } from '@lucide/svelte';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 
-	let activeTab = $state('venue'); // 控制当前选中 tab
+	let activeTab = $state('about'); // 控制当前选中 tab
 
 	function switchTab(tab: string) {
 		activeTab = tab;
@@ -24,8 +24,6 @@
 		<!-- 左侧边栏 -->
 		<Tabs.Tabs bind:value={activeTab} orientation="vertical" class="flex h-full">
 			<Tabs.List class="mb-4">
-				<Tabs.Trigger value="venue" onclick={() => switchTab('venue')}>会场</Tabs.Trigger>
-				<Tabs.Trigger value="general" onclick={() => switchTab('general')}>常规</Tabs.Trigger>
 				<Tabs.Trigger value="about" onclick={() => switchTab('about')}>关于</Tabs.Trigger>
 			</Tabs.List>
 		</Tabs.Tabs>
@@ -43,8 +41,6 @@
 
 			<div>
 				<ScrollArea class="mt-5 h-180 w-full" scrollbarYClasses="hidden">
-					{#if activeTab === 'venue'}<Venue />{/if}
-					{#if activeTab === 'general'}<General />{/if}
 					{#if activeTab === 'about'}<About />{/if}
 				</ScrollArea>
 			</div>

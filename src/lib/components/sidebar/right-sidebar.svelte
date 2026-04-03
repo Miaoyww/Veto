@@ -33,12 +33,12 @@
 
 	<div class="panel-section">
 		<div class="controls">
-			<RightSidebarMenubutton content="切换网格显示">
+			<RightSidebarMenubutton title="切换网格显示">
 				<Button variant="ghost" size="icon">
 					<Grid3x3 />
 				</Button>
 			</RightSidebarMenubutton>
-			<RightSidebarMenubutton content="比例尺校准">
+			<RightSidebarMenubutton title="测量距离">
 				<Button variant="ghost" size="icon">
 					<Ruler />
 				</Button>
@@ -48,15 +48,15 @@
 
 	<div class="panel-section">
 		<div class="controls">
-			<RightSidebarMenubutton content="保存当前推演状态">
+			<RightSidebarMenubutton title="保存">
 				<Button variant="ghost" size="icon" onclick={() => showAlert('已保存', '当前推演状态已自动保存到浏览器。')}>
 					<Save />
 				</Button>
 			</RightSidebarMenubutton>
-			<RightSidebarMenubutton content="重置推演">
+			<RightSidebarMenubutton title="重置推演">
 				<ResetButton />
 			</RightSidebarMenubutton>
-			<RightSidebarMenubutton content="设置">
+			<RightSidebarMenubutton title="设置">
 				<SettingsButton />
 			</RightSidebarMenubutton>
 		</div>

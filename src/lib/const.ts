@@ -1,1 +1,1 @@
-export const ARMYS_NAME = "WARS";
+export const VETO_NAME = "VETO";

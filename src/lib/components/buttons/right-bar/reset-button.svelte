@@ -2,9 +2,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { RotateCcw } from '@lucide/svelte';
 
-	import { settingOpen } from '$lib/stores/setting-dialog-store';
 	import { resetCurrentBattle } from '$lib/stores/battle-store';
-	import { showAlert } from '$lib/stores/alert-dialog-store';
+	import { showAlert, showConfirm } from '$lib/stores/alert-dialog-store';
 	import { tweened } from 'svelte/motion';
 	import { cubicInOut, linear } from 'svelte/easing';
 
@@ -27,13 +26,14 @@
 		scale.set(1, { duration: 100, easing: cubicInOut });
 	}
 
-	// 点击旋转 360°
+	// 点击旋转 360°，弹出确认框后再执行重置
 	async function handleClick() {
-		await rotate.set(360, { duration: 400, easing: cubicInOut });
-		// 重置为 0°，以便下次点击
-		rotate.set(0, { duration: 0 });
-		resetCurrentBattle();
-		showAlert('已重置', '当前战局已清空所有阵营、单位和日志。');
+		showConfirm('确认重置', '此操作将清空当前战局所有阵营、单位和日志，且无法撤销。是否继续？', async () => {
+			await rotate.set(360, { duration: 400, easing: cubicInOut });
+			rotate.set(0, { duration: 0 });
+			resetCurrentBattle();
+			showAlert('已重置', '当前战局已清空所有阵营、单位和日志。');
+		});
 	}
 </script>
 

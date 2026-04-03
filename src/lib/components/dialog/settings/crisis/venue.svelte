@@ -1,5 +1,5 @@
 <script>
-	import SettingCard from '$lib/components/settings/settings-card.svelte';
+	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 

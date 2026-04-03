@@ -1,17 +1,18 @@
 <script lang="ts">
-	import SettingCard from '$lib/components/settings/settings-card.svelte';
+	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 
 	import { version } from '$app/environment';
-	import favicon from '$lib/assets/favicon.png';
+	import { fade } from 'svelte/transition';
 </script>
 
 <div>
 	<div class="mt-6 pb-10 text-center lg:max-w-4xl ">
 		<div class="mb-4 flex justify-center gap-6 text-gray-600">
-			<img src="{favicon}" alt="App Logo" class="h-64 w-64 rounded-md shadow-md" />
+			<Label class="flex h-50 w-50 justify-center rounded-2xl bg-gray-100">图标还没做</Label>
 		</div>
+		<h1 class="text-4xl font-extrabold tracking-wide">Armysimulation</h1>
 	</div>
 
 	<div class="space-y-3 pb-10 lg:max-w-4xl ">
@@ -25,7 +26,7 @@
 				{id}
 				class="w-24"
 				variant="outline"
-				href="https://github.com/Miaoyww/WarSimulator/blob/master/LICENSE"
+				href="https://github.com/Miaoyww/Armysimulation/blob/main/License"
 			>
 				MIT
 			</Button>
@@ -36,7 +37,7 @@
 				{id}
 				class="w-24"
 				variant="outline"
-				href="https://github.com/Miaoyww/WarSimulator"
+				href="https://github.com/Miaoyww/Armysimulation"
 			>
 				Github
 			</Button>

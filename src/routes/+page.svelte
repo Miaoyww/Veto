@@ -1,14 +1,10 @@
 <script lang="ts">
-	import { ARMYS_NAME } from '$lib/const';
-	import { Swords, Users, Plus, Trash2, Play } from '@lucide/svelte';
+	import { VETO_NAME } from '$lib/const';
+	import { Swords, Users, Plus, CircleHelp, Settings } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import {
-		battles,
-		currentBattleId,
-		createBattle,
-		deleteBattle,
-		loadBattle
-	} from '$lib/stores/battle-store';
+	import { battles, createBattle } from '$lib/stores/battle-store';
+	import BattleCard from '$lib/components/cards/battle/battle-card.svelte';
+	import Button from '$lib/components/ui/button/button.svelte';
 
 	let newBattleName = $state('');
 	let selectedMode = $state<'crisis' | null>(null);
@@ -16,30 +12,24 @@
 	function handleCreate() {
 		const name = newBattleName.trim();
 		if (!name) return;
-		createBattle(name);
+		const id = createBattle(name);
 		newBattleName = '';
-		goto('/crisis');
+		goto(`/crisis/${id}`);
 	}
 
-	function handleLoad(id: string) {
-		loadBattle(id);
-		goto('/crisis');
+	function goToHelp() {
+		goto('/help');
 	}
 
-	function handleDelete(e: MouseEvent, id: string) {
-		e.stopPropagation();
-		deleteBattle(id);
-	}
-
-	function formatDate(ts: number) {
-		return new Date(ts).toLocaleString('zh-CN');
+	function goToSettings() {
+		goto('/settings');
 	}
 </script>
 
 <div class="flex h-screen w-screen flex-col items-center bg-gradient-to-br from-slate-100 to-stone-200 pt-24">
 	<!-- 顶部：模式选择 -->
 	<div class="flex flex-shrink-0 flex-col items-center gap-4 px-6 pb-8">
-		<h1 class="text-4xl font-bold tracking-wide text-stone-800">{ARMYS_NAME}</h1>
+		<h1 class="text-4xl font-bold tracking-wide text-stone-800">{VETO_NAME}</h1>
 		<p class="text-sm text-stone-400">选择模式</p>
 
 		<div class="flex gap-6">
@@ -96,38 +86,7 @@
 						</div>
 					{:else}
 						{#each $battles as battle (battle.id)}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div
-								role="button"
-								tabindex="0"
-								class="group flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white/60 px-5 py-4 text-left shadow-sm backdrop-blur-sm transition-all hover:bg-white/90 hover:shadow-md {$currentBattleId === battle.id ? 'border-stone-500 bg-white/80' : 'border-stone-200'}"
-								onclick={() => handleLoad(battle.id)}
-								onkeydown={(e) => e.key === 'Enter' && handleLoad(battle.id)}
-							>
-								<div class="min-w-0 flex-1">
-									<div class="text-sm font-semibold text-stone-700">{battle.name}</div>
-									<div class="mt-1 flex gap-2 text-xs text-stone-400">
-										<span>{battle.factions.length} 个阵营</span>
-										<span>·</span>
-										<span>{battle.placedUnits.length} 个单位</span>
-										<span>·</span>
-										<span>{formatDate(battle.updatedAt)}</span>
-									</div>
-								</div>
-								<div class="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-									<span class="flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
-										<Play size={12} />
-										进入
-									</span>
-									<button
-										class="flex items-center rounded-lg px-2 py-1.5 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
-										title="删除战局"
-										onclick={(e) => handleDelete(e, battle.id)}
-									>
-										<Trash2 size={14} />
-									</button>
-								</div>
-							</div>
+						<BattleCard {battle} />
 						{/each}
 					{/if}
 				</div>
@@ -138,4 +97,23 @@
 			</div>
 		{/if}
 	</div>
+</div>
+
+<div class="fixed right-6 bottom-6 z-20 flex flex-col gap-3">
+	<Button
+		type="button"
+		class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 bg-white/90 text-stone-700 shadow-md backdrop-blur-sm transition-all hover:scale-105 hover:bg-white"
+		title="帮助"
+		onclick={goToHelp}
+	>
+		<CircleHelp size={20} />
+	</Button>
+	<Button
+		type="button"
+		class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 bg-white/90 text-stone-700 shadow-md backdrop-blur-sm transition-all hover:scale-105 hover:bg-white"
+		title="设置"
+		onclick={goToSettings}
+	>
+		<Settings size={20} />
+	</Button>
 </div>

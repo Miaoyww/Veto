@@ -1,18 +1,13 @@
-<script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+<script>
+	import { Button } from '../ui/button';
 
-    let { content } = $props<{ content: string }>();
-	
+	let { title, children } = $props();
 </script>
 
-<Tooltip.Provider>
-	<Tooltip.Root>
-		<Tooltip.Trigger>
-			<slot />
-		</Tooltip.Trigger>
-		<Tooltip.Content>
-			{content}
-		</Tooltip.Content>
-	</Tooltip.Root>
-</Tooltip.Provider>
+<Button
+	variant="ghost"
+	class="cursor-pointer rounded-md text-sm text-gray-800 transition-all duration-200  active:border-accent active:bg-accent active:text-white"
+	{title}
+>
+	{@render children?.()}
+</Button>

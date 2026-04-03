@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import { Plus, Settings, SquareArrowOutUpRight, RefreshCcw, PanelLeft, PanelsTopLeft, ArrowLeft } from '@lucide/svelte';
+	import {
+		Plus,
+		Settings,
+		SquareArrowOutUpRight,
+		RefreshCcw,
+		PanelLeft,
+		PanelsTopLeft,
+		ArrowLeft
+	} from '@lucide/svelte';
 	import SidebarTrigger from '$lib/components/ui/sidebar/sidebar-trigger.svelte';
 	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -14,9 +22,6 @@
 		selectedPlacedUnit,
 		interactionMode
 	} from '$lib/stores/battle-store';
-	import { UNIT_STATUS_LABELS, BRANCH_LABELS } from '$lib/types';
-	let isBillNow: boolean = $state(false);
-	let isSharing = $state(false);
 
 	type InputType = Exclude<HTMLInputTypeAttribute, 'file'>;
 
@@ -44,22 +49,26 @@
 	});
 
 	let currentFactionName = $derived($currentFaction?.name ?? '未选择');
-	let modeName = $derived({
-		select: '选择单位',
-		place: '放置单位',
-		route: '绘制路线',
-		strike: '设置范围'
-	}[$interactionMode]);
 </script>
 
 <div class={cn('absolute top-5 right-5 left-5 z-1000 flex justify-between', className)}>
 	<!--左-->
 	<div class="blur-backdrop flex items-center gap-3 rounded-lg p-3">
-		<a href="/" class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900" title="返回首页">
+		<a
+			href="/"
+			class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900"
+			title="返回首页"
+		>
 			<ArrowLeft class="h-5 w-5" />
 		</a>
 		<Separator orientation="vertical" class="h-6" />
-		<Button variant="ghost" size="icon" class="-ml-1 text-black" onclick={togglePin}>
+		<Button
+			variant="ghost"
+			class="cursor-pointer rounded-md text-sm text-gray-800 transition-all duration-200  active:border-accent active:bg-accent active:text-white"
+			size="icon"
+			onclick={togglePin}
+			title="切换侧边栏固定"
+		>
 			<PanelsTopLeft />
 		</Button>
 		<div class="flex gap-2">
@@ -73,7 +82,7 @@
 		{/if}
 	</div>
 	<!--右-->
-	<div class="blur-backdrop flex gap-4 rounded-lg px-3 py-3 pl-3 text-sm text-stone-900">
+	<div class="blur-backdrop flex items-center gap-3 rounded-lg p-3 text-sm text-stone-900">
 		<div class="flex flex-col gap-1">
 			<div class="status-label">缩放级别</div>
 			<div class="status-value">{$zoom}</div>
