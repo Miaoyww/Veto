@@ -76,7 +76,8 @@
 				>
 			</CardHeader>
 
-			<CardContent class="sidebar-body px-5 py-4">
+			<CardContent class="sidebar-body grid h-full grid-rows-[auto_1fr_auto] overflow-hidden px-5 py-4">
+				<!-- 行 1: 新建阵营表单 (auto) -->
 				<div class="mt-4 space-y-3">
 					<div class="space-y-2">
 						<Label
@@ -105,50 +106,54 @@
 						添加阵营
 					</Button>
 				</div>
-				{#if $currentBattle}
-					<Label
-						class="mt-6 flex items-center gap-1.5 text-xs tracking-wide text-muted-foreground uppercase"
-					>
-						<List class="h-3.5 w-3.5" />
-						现有阵营
-					</Label>
-					<ScrollArea class="faction-scroll h-[48%] border-t border-dashed pt-5 pr-2 ">
-						<div class="space-y-2 pb-10">
-							{#each $currentBattle.factions as faction (faction.id)}
-								<FactionCard {faction} />
-							{/each}
 
-							{#if $currentBattle.factions.length === 0}
-								<div
-									class="rounded-lg border border-dashed px-3 py-8 text-center text-xs text-muted-foreground"
-								>
-									暂无阵营，请先创建
-								</div>
-							{/if}
+				<!-- 行 2: 现有阵营列表 (1fr，撑满剩余空间) -->
+				<div class="flex min-h-0 flex-col">
+					{#if $currentBattle}
+						<Label
+							class="mt-6 mb-2 flex items-center gap-1.5 text-xs tracking-wide text-muted-foreground uppercase"
+						>
+							<List class="h-3.5 w-3.5" />
+							现有阵营
+						</Label>
+						<ScrollArea class="faction-scroll min-h-0 flex-1 border-t border-dashed pt-5 pr-2">
+							<div class="space-y-2 pb-4">
+								{#each $currentBattle.factions as faction (faction.id)}
+									<FactionCard {faction} />
+								{/each}
+
+								{#if $currentBattle.factions.length === 0}
+									<div
+										class="rounded-lg border border-dashed px-3 py-8 text-center text-xs text-muted-foreground"
+									>
+										暂无阵营，请先创建
+									</div>
+								{/if}
+							</div>
+						</ScrollArea>
+					{:else}
+						<div
+							class="flex h-full items-center justify-center rounded-lg border border-dashed text-center text-sm text-muted-foreground"
+						>
+							请先创建或加载战局
 						</div>
-					</ScrollArea>
-				{:else}
-					<div
-						class="flex h-full items-center justify-center rounded-lg border border-dashed text-center text-sm text-muted-foreground"
-					>
-						请先创建或加载战局
-					</div>
-				{/if}
+					{/if}
+				</div>
+
+				<!-- 行 3: 行动记录 (auto，固定在底部) -->
 				{#if $currentBattle}
-					<div class="mt-auto border-t border-dashed pt-4">
+					<div class="border-t border-dashed pt-3">
 						<Label
 							class="mb-2 flex items-center gap-1.5 text-xs tracking-wide text-muted-foreground uppercase"
 						>
 							<ScrollText class="h-3.5 w-3.5" />
 							行动记录
 						</Label>
-						<ScrollArea class="action-log-scroll h-32 rounded-md border border-dashed bg-muted/30 p-2">
+						<ScrollArea class="action-log-scroll h-60 rounded-md border border-dashed bg-muted/30 p-2">
 							<div class="space-y-0.5 text-xs">
 								{#if $currentBattle.actionLog.length > 0}
 									{#each $currentBattle.actionLog as entry (entry.id)}
-										<p
-											class="flex gap-2 border-b border-border/20 py-1 last:border-0"
-										>
+										<p class="flex gap-2 border-b border-border/20 py-1 last:border-0">
 											<span class="shrink-0 text-muted-foreground"
 												>{new Date(entry.timestamp).toLocaleTimeString('zh-CN')}</span
 											>
