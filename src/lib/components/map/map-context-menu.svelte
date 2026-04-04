@@ -6,8 +6,10 @@
 		currentFactionId,
 		selectedPlacedUnitId,
 		interactionMode,
+		clearRoute,
 		addLog
 	} from '$lib/stores/battle-store';
+	import { gameClock } from '$lib/stores/game-clock.store';
 	import { leftBarPinned } from '$lib/stores/sidebar-store';
 	import { startPendingRoute } from '$lib/stores/pending-route.store';
 
@@ -38,12 +40,17 @@
 	function handleResetRoute() {
 		const unitId = $selectedPlacedUnitId;
 		if (unitId) {
-			const unitName = $currentBattle?.factions
-				.flatMap((f) => f.units)
-				.find((u) => $currentBattle?.placedUnits.find((p) => p.id === unitId)?.unitId === u.id)?.name ?? '单位';
-			startPendingRoute(unitId, unitName, 'reset');
+			const placed = $currentBattle?.placedUnits.find((p) => p.id === unitId);
+			const unitName = $currentBattle?.factions.flatMap((f) => f.units)
+				.find((u) => u.id === placed?.unitId)?.name ?? '单位';
+			if (!$gameClock.isPaused) {
+				startPendingRoute(unitId, unitName, 'reset');
+				addLog('路线改设指令已录入，绘制完成后确认生效');
+			} else {
+				clearRoute(unitId);
+				addLog('已清除路线，点击地图直接添加新路线点');
+			}
 			interactionMode.set('route');
-			addLog('进入路线改设模式，点击地图添加新路线点');
 		}
 		open = false;
 	}
@@ -51,12 +58,16 @@
 	function handleAppendRoute() {
 		const unitId = $selectedPlacedUnitId;
 		if (unitId) {
-			const unitName = $currentBattle?.factions
-				.flatMap((f) => f.units)
-				.find((u) => $currentBattle?.placedUnits.find((p) => p.id === unitId)?.unitId === u.id)?.name ?? '单位';
-			startPendingRoute(unitId, unitName, 'append');
+			const placed = $currentBattle?.placedUnits.find((p) => p.id === unitId);
+			const unitName = $currentBattle?.factions.flatMap((f) => f.units)
+				.find((u) => u.id === placed?.unitId)?.name ?? '单位';
+			if (!$gameClock.isPaused) {
+				startPendingRoute(unitId, unitName, 'append');
+				addLog('路线追加指令已录入，绘制完成后确认生效');
+			} else {
+				addLog('点击地图直接追加路线节点');
+			}
 			interactionMode.set('route');
-			addLog('进入路线追加模式，点击地图追加路线点');
 		}
 		open = false;
 	}

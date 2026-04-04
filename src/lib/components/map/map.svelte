@@ -19,10 +19,12 @@
 		placeUnit,
 		selectedPlacedUnitId,
 		selectedPlacedUnit,
+		addRoutePoint,
 		updatePlacedUnit,
 		addLog,
 		undo
 	} from '$lib/stores/battle-store';
+	import { gameClock } from '$lib/stores/game-clock.store';
 	import {
 		pendingRoute,
 		addPendingPoint,
@@ -192,8 +194,7 @@
 				const polyline = L.polyline(routePoints, {
 					color: faction.color,
 					weight: 3,
-					opacity: 0.7,
-					dashArray: '8 6'
+					opacity: 0.7
 				});
 				routesLayer.addLayer(polyline);
 
@@ -313,9 +314,13 @@
 					interactionMode.set('select');
 				}
 			} else if (mode === 'route') {
-				// 路线模式：写入 pending 路线，不直接修改 battle-store
 				if ($pendingRoute) {
+					// 推演运行中：写入 pending，不立刻提交
 					addPendingPoint(latlng.lat, latlng.lng);
+				} else {
+					// 推演暂停：直接写入路线
+					const placedId = $selectedPlacedUnitId;
+					if (placedId) addRoutePoint(placedId, latlng.lat, latlng.lng);
 				}
 			} else if (mode === 'strike') {
 				const placedId = $selectedPlacedUnitId;
@@ -418,15 +423,14 @@
 
 	// Leaflet pending 虚线实时渲染
 	$effect(() => {
+		// 先读取响应式依赖（必须在任何 return 之前），否则 Svelte 5 无法追踪
+		const pr = $pendingRoute;
+		const battle = $currentBattle;
 		if (!pendingLayer) return;
 		pendingLayer.clearLayers();
-		const pr = $pendingRoute;
 		if (!pr || pr.points.length === 0) return;
 
-		const placed = $currentBattle?.placedUnits.find((p) => p.id === pr.placedId);
-		const info = placed ? findUnit(placed.unitId) : null;
-
-		// 起点：append 模式从现有路线末点开始，reset 或尴路线从单位位置开始
+		const placed = battle?.placedUnits.find((p) => p.id === pr.placedId);
 		const startPoint: [number, number] =
 			pr.type === 'append' && placed && placed.route.length > 0
 				? placed.route[placed.route.length - 1]
@@ -514,10 +518,14 @@
 				{#if $interactionMode === 'place'}
 					<MapPin class="h-4 w-4 text-stone-600" />
 					<span class="text-sm text-stone-700">点击地图放置单位</span>
-				{:else if $interactionMode === 'route'}
-					<Navigation class="h-4 w-4 text-stone-600" />
+		{:else if $interactionMode === 'route'}
+				<Navigation class="h-4 w-4 text-stone-600" />
 				<span class="text-sm text-stone-700">
-					{$pendingRoute?.type === 'reset' ? '改设路线' : '追加路线'}模式，已记录 {$pendingRoute?.points.length ?? 0} 个点，Esc 完成
+					{#if $pendingRoute}
+						{$pendingRoute.type === 'reset' ? '改设路线' : '追加路线'}模式 · 已录入 {$pendingRoute.points.length} 个节点 · Esc 完成并确认
+					{:else}
+						路线绘制模式（直接生效）· Esc 完成
+					{/if}
 				</span>
 				{:else if $interactionMode === 'strike'}
 					<Target class="h-4 w-4 text-stone-600" />

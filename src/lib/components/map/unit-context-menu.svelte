@@ -8,10 +8,12 @@
 		currentBattle,
 		selectedPlacedUnitId,
 		interactionMode,
+		clearRoute,
 		updatePlacedUnit,
 		removePlacedUnit,
 		addLog
 	} from '$lib/stores/battle-store';
+	import { gameClock } from '$lib/stores/game-clock.store';
 	import { startPendingRoute } from '$lib/stores/pending-route.store';
 
 	interface Props {
@@ -77,9 +79,16 @@
 			const placed = $currentBattle?.placedUnits.find((p) => p.id === targetId);
 			const unitName = $currentBattle?.factions.flatMap((f) => f.units)
 				.find((u) => u.id === placed?.unitId)?.name ?? '单位';
-			startPendingRoute(targetId, unitName, 'reset');
+			if (!$gameClock.isPaused) {
+				// 推演运行中：pending 预设流程，Esc 后再确认
+				startPendingRoute(targetId, unitName, 'reset');
+				addLog('路线改设指令已录入，绘制完成后确认生效');
+			} else {
+				// 推演暂停：直接清除旧路线，点击即生效
+				clearRoute(targetId);
+				addLog('已清除路线，点击地图直接添加新路线点');
+			}
 			interactionMode.set('route');
-			addLog('进入路线改设模式，点击地图添加新路线点');
 		}
 		contextUnitId = null;
 		open = false;
@@ -92,9 +101,15 @@
 			const placed = $currentBattle?.placedUnits.find((p) => p.id === targetId);
 			const unitName = $currentBattle?.factions.flatMap((f) => f.units)
 				.find((u) => u.id === placed?.unitId)?.name ?? '单位';
-			startPendingRoute(targetId, unitName, 'append');
+			if (!$gameClock.isPaused) {
+				// 推演运行中：pending 预设流程
+				startPendingRoute(targetId, unitName, 'append');
+				addLog('路线追加指令已录入，绘制完成后确认生效');
+			} else {
+				// 推演暂停：点击即追加
+				addLog('点击地图直接追加路线节点');
+			}
 			interactionMode.set('route');
-			addLog('进入路线追加模式，点击地图追加路线点');
 		}
 		contextUnitId = null;
 		open = false;
