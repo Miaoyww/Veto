@@ -43,19 +43,8 @@
 
 	let virtualAnchor: any = $state(null);
 
-	// 打击目标浮动卡片
-	let strikeDialogOpen = $state(false);
-	let strikePendingUnitId: string | null = $state(null);
+	// 打击目标状态（由 StrikeCard 拥有，通过 bind 同步供 InteractionModeHint 使用）
 	let strikePendingTarget: { lat: number; lng: number } | null = $state(null);
-	let strikePendingRadius = $state(5000);
-	let strikePreviewCircle: L.Circle | null = null;
-	
-	// 鼠标跟踪
-	let strikeMouseX = $state(0);
-	let strikeMouseY = $state(0);
-	let strikePinnedX = $state(0);
-	let strikePinnedY = $state(0);
-	let strikeHoverMarker: L.CircleMarker | null = null;
 
 	// 待确认路线确认卡开关
 	let routeConfirmOpen = $state(false);
@@ -291,31 +280,6 @@
 
 		readyMap.on('mousemove', (e) => {
 			coords.set(e.latlng);
-			strikeMouseX = e.originalEvent.clientX;
-			strikeMouseY = e.originalEvent.clientY;
-
-			if ($interactionMode === 'strike') {
-				if (!strikePendingTarget) {
-					// 阶段1：红点跟随光标
-					if (!strikeHoverMarker) {
-						strikeHoverMarker = L.circleMarker(e.latlng, {
-							radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2
-						}).addTo(readyMap);
-					} else {
-						strikeHoverMarker.setLatLng(e.latlng);
-					}
-				} else {
-					// 阶段2：鼠标到目标距离实时更新半径
-					const dist = readyMap.distance(
-						[strikePendingTarget.lat, strikePendingTarget.lng],
-						e.latlng
-					);
-					if (dist > 100) strikePendingRadius = Math.round(dist);
-				}
-			} else if (strikeHoverMarker && !strikePendingTarget) {
-				strikeHoverMarker.remove();
-				strikeHoverMarker = null;
-			}
 		});
 		readyMap.on('zoomend', () => {
 			zoom.set(readyMap.getZoom());
@@ -344,37 +308,11 @@
 					const placedId = $selectedPlacedUnitId;
 					if (placedId) addRoutePoint(placedId, latlng.lat, latlng.lng);
 				}
-			} else if (mode === 'strike') {
-				const placedId = $selectedPlacedUnitId;
-				if (placedId) {
-					if (!strikePendingTarget) {
-						// 阶段1 → 阶段2：第一次点击，选定目标坐标，卡片开始跟随鼠标
-						strikePendingUnitId = placedId;
-						strikePendingTarget = { lat: latlng.lat, lng: latlng.lng };
-						strikePendingRadius = 5000;
-						if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
-						strikeHoverMarker = L.circleMarker([latlng.lat, latlng.lng], {
-							radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2
-						}).addTo(readyMap);
-					} else {
-						// 阶段2 → 阶段3：第二次点击，固定卡片
-						const CARD_W = 256, CARD_H = 220;
-						const cx = e.originalEvent.clientX, cy = e.originalEvent.clientY;
-						let px = cx + 16;
-						let py = cy - CARD_H / 2;
-						if (px + CARD_W > window.innerWidth - 8) px = cx - CARD_W - 16;
-						if (py < 8) py = 8;
-						if (py + CARD_H > window.innerHeight - 8) py = window.innerHeight - CARD_H - 8;
-						strikePinnedX = px;
-						strikePinnedY = py;
-						strikeDialogOpen = true;
-						interactionMode.set('select');
-					}
-				}
-			} else {
+			} else if (mode === 'select') {
 				// 选择模式：点击空白处取消选中
 				selectedPlacedUnitId.set(null);
 			}
+			// strike 模式由 StrikeCard 内部监听处理
 		});
 
 		readyMap.on('contextmenu', (e) => {
@@ -403,30 +341,6 @@
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
 		return map;
-	}
-
-	function handleCancelStrike() {
-		strikeDialogOpen = false;
-		strikePendingTarget = null;
-		strikePendingUnitId = null;
-		interactionMode.set('select');
-		if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
-	}
-
-	function handleConfirmStrike() {
-		if (strikePendingUnitId && strikePendingTarget) {
-			updatePlacedUnit(strikePendingUnitId, {
-				strikeTarget: strikePendingTarget,
-				strikeRadius: strikePendingRadius
-			}, '设置打击目标');
-			addLog(
-				`设置打击目标 (${strikePendingTarget.lat.toFixed(3)}°N, ${strikePendingTarget.lng.toFixed(3)}°E)，半径 ${(strikePendingRadius / 1000).toFixed(1)} km`
-			);
-		}
-		strikeDialogOpen = false;
-		strikePendingUnitId = null;
-		strikePendingTarget = null;
-		if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
 	}
 
 	// 监听路线模式退出：当 pending 有节点时弹出确认卡片
@@ -480,30 +394,6 @@
 		}
 	});
 
-	// 打击目标预览圆：阶段2和3都显示，跟随半径变化
-	$effect(() => {
-		if (strikePendingTarget && map) {
-			const { lat, lng } = strikePendingTarget;
-			const r = strikePendingRadius;
-			if (!strikePreviewCircle) {
-				strikePreviewCircle = L.circle([lat, lng], {
-					radius: r,
-					color: '#ef4444',
-					weight: 2,
-					fillColor: '#ef4444',
-					fillOpacity: 0.12,
-					dashArray: '6 4'
-				}).addTo(map);
-			} else {
-				strikePreviewCircle.setRadius(r);
-			}
-		} else {
-			if (strikePreviewCircle) {
-				strikePreviewCircle.remove();
-				strikePreviewCircle = null;
-			}
-		}
-	});
 </script>
 
 <!-- 单位处右键菜单 -->
@@ -541,17 +431,7 @@
 <RouteConfirmCard bind:open={routeConfirmOpen} />
 
 <!-- 打击目标浮动卡片 -->
-{#if strikePendingTarget}
-	<StrikeCard
-		phase={strikeDialogOpen ? 'pinned' : 'tracking'}
-		target={strikePendingTarget}
-		bind:radius={strikePendingRadius}
-		x={strikeDialogOpen ? strikePinnedX : strikeMouseX + 18}
-		y={strikeDialogOpen ? strikePinnedY : strikeMouseY - 18}
-		oncancel={handleCancelStrike}
-		onconfirm={handleConfirmStrike}
-	/>
-{/if}
+<StrikeCard {map} bind:pendingTarget={strikePendingTarget} />
 
 <svelte:window
 	onkeydown={(e) => {
@@ -564,12 +444,8 @@
 			return;
 		}
 		if (e.key === 'Escape') {
-			if (strikePendingTarget) {
-				handleCancelStrike();
-			} else {
-				interactionMode.set('select');
-				pendingPlaceUnitId.set(null);
-			}
+			interactionMode.set('select');
+			pendingPlaceUnitId.set(null);
 		}
 	}}
 />
