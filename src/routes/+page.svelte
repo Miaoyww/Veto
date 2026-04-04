@@ -127,13 +127,13 @@
 				</ScrollArea>
 			</div>
 		{:else}
-			<p class="text-lg text-stone-400">↑ 请先选择一个模式</p>
+<div></div>
 		{/if}
 	</main>
 
 	<!-- 页脚 -->
 	<footer class="w-full py-6 text-center text-xs text-stone-400">
-		<p>Copyright © Miaoyww 2025–2026</p>
+		<p>Copyright © <a href="https://github.com/Miaoyww" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-stone-600">Miaoyww</a> 2025–2026</p>
 		<p class="mt-1">
 			Powered by
 			<a

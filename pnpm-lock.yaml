@@ -37,8 +37,8 @@ importers:
         specifier: ^3.12.0
         version: 3.12.0
       '@lucide/svelte':
-        specifier: ^1.7.0
-        version: 1.7.0(svelte@5.40.2)
+        specifier: ^0.577.0
+        version: 0.577.0(svelte@5.40.2)
       '@poppanator/sveltekit-svg':
         specifier: ^6.0.0
         version: 6.0.0(rollup@4.52.4)(svelte@5.40.2)(vite@7.1.10(jiti@2.6.1)(lightningcss@1.30.1))
@@ -425,8 +425,8 @@ packages:
   '@lix-js/server-protocol-schema@0.1.1':
     resolution: {integrity: sha512-jBeALB6prAbtr5q4vTuxnRZZv1M2rKe8iNqRQhFJ4Tv7150unEa0vKyz0hs8Gl3fUGsWaNJBh3J8++fpbrpRBQ==}
 
-  '@lucide/svelte@1.7.0':
-    resolution: {integrity: sha512-YytBKOUBGox7yWcykZnYxOkn5WpR5G1qYXLYXV/j1B79SOTTEKzB+s5yF5Rq9l9OkweDStNH2b4yTqfvhEhV8g==}
+  '@lucide/svelte@0.577.0':
+    resolution: {integrity: sha512-0P6mkySd2MapIEgq08tADPmcN4DHndC/02PWwaLkOerXlx5Sv9aT4BxyXLIY+eccr0g/nEyCYiJesqS61YdBZQ==}
     peerDependencies:
       svelte: ^5
 
@@ -1925,7 +1925,7 @@ snapshots:
 
   '@lix-js/server-protocol-schema@0.1.1': {}
 
-  '@lucide/svelte@1.7.0(svelte@5.40.2)':
+  '@lucide/svelte@0.577.0(svelte@5.40.2)':
     dependencies:
       svelte: 5.40.2
 

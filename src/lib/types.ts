@@ -185,6 +185,16 @@ export interface Faction {
 	units: MilitaryUnit[];
 }
 
+// ============ 突发事件配置 ============
+
+export interface EventSetting {
+	id: string;
+	label: string;
+	enabled: boolean;
+	/** 触发概率 0-100 */
+	probability: number;
+}
+
 // ============ 战局 ============
 
 export interface Battle {
@@ -199,6 +209,16 @@ export interface Battle {
 	placedUnits: PlacedUnit[];
 	/** 行动日志 */
 	actionLog: ActionLogEntry[];
+	/** 推演起始日期（ISO 日期字符串 YYYY-MM-DD） */
+	startDate?: string;
+	/** 时间流速倍率（模拟秒/真实秒） */
+	timeScale?: number;
+	/** 地图比例尺（像素/千米） */
+	pixelsPerKm?: number;
+	/** 图标风格 */
+	iconStyle?: 'nato' | 'simple';
+	/** 突发事件配置列表 */
+	eventSettings?: EventSetting[];
 }
 
 export interface ActionLogEntry {

@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import type { Battle, Faction, MilitaryUnit, PlacedUnit, ActionLogEntry, UnitSide } from '$lib/types';
+import type { Battle, EventSetting, Faction, MilitaryUnit, PlacedUnit, ActionLogEntry, UnitSide } from '$lib/types';
 
 const STORAGE_KEY = 'wars_battles';
 
@@ -127,7 +127,18 @@ function updateCurrentBattle(updater: (battle: Battle) => Battle) {
 
 // ============ 战局 CRUD ============
 
-export function createBattle(name: string, options?: { mapCenter?: [number, number]; mapZoom?: number }): string {
+export function createBattle(
+	name: string,
+	options?: {
+		mapCenter?: [number, number];
+		mapZoom?: number;
+		startDate?: string;
+		timeScale?: number;
+		pixelsPerKm?: number;
+		iconStyle?: 'nato' | 'simple';
+		eventSettings?: EventSetting[];
+	}
+): string {
 	const id = generateId();
 	const battle: Battle = {
 		id,
@@ -138,7 +149,12 @@ export function createBattle(name: string, options?: { mapCenter?: [number, numb
 		mapZoom: options?.mapZoom ?? 5,
 		factions: [],
 		placedUnits: [],
-		actionLog: []
+		actionLog: [],
+		startDate: options?.startDate,
+		timeScale: options?.timeScale,
+		pixelsPerKm: options?.pixelsPerKm,
+		iconStyle: options?.iconStyle,
+		eventSettings: options?.eventSettings ?? []
 	};
 	battles.update((list) => [...list, battle]);
 	currentBattleId.set(id);

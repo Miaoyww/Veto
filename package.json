@@ -16,7 +16,7 @@
 	"devDependencies": {
 		"@inlang/paraglide-js": "^2.3.2",
 		"@internationalized/date": "^3.12.0",
-		"@lucide/svelte": "^1.7.0",
+		"@lucide/svelte": "^0.577.0",
 		"@poppanator/sveltekit-svg": "^6.0.0",
 		"@sveltejs/adapter-auto": "^6.1.0",
 		"@sveltejs/adapter-vercel": "^6.3.3",
