@@ -14,7 +14,7 @@
 		CardDescription
 	} from '$lib/components/ui/card';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
-	import { Plus, Swords, List, Flag, ScrollText } from '@lucide/svelte';
+	import { Plus, Swords, List, Flag, ScrollText, X } from '@lucide/svelte';
 	import FactionCard from '$lib/components/cards/battle/faction-card.svelte';
 	import UnitPanel from '$lib/components/sidebar/unit-panel.svelte';
 
@@ -70,6 +70,15 @@
 				<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
 					<Swords class="h-4 w-4 text-red-500" />
 					阵营控制台
+					<Button
+						variant="ghost"
+						size="icon"
+						class="ml-auto size-6 shrink-0 text-muted-foreground hover:text-foreground"
+						title="关闭"
+						onclick={() => leftBarPinned.set(false)}
+					>
+						<X class="size-3.5" />
+					</Button>
 				</CardTitle>
 				<CardDescription class="text-xs text-muted-foreground"
 					>先选阵营，再进行单位部署</CardDescription

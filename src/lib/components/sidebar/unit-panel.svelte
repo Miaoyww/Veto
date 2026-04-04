@@ -402,6 +402,15 @@
 	<CardHeader class="border-b px-5 py-4">
 		<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
 			<Swords class="size-4" />军事单位
+			<Button
+				variant="ghost"
+				size="icon"
+				class="ml-auto size-6 shrink-0 text-muted-foreground hover:text-foreground"
+				title="关闭"
+				onclick={() => currentFactionId.set(null)}
+			>
+				<X class="size-3.5" />
+			</Button>
 		</CardTitle>
 
 		{#if $currentFaction}

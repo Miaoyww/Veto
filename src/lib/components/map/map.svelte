@@ -21,7 +21,8 @@
 		addRoutePoint,
 		clearRoute,
 		updatePlacedUnit,
-		addLog
+		addLog,
+		undo
 	} from '$lib/stores/battle-store';
 	import { leftBarPinned } from '$lib/stores/sidebar-store';
 	import {
@@ -147,7 +148,8 @@
 			// 拖拽结束更新位置
 			marker.on('dragend', (e) => {
 				const latlng = (e.target as L.Marker).getLatLng();
-				updatePlacedUnit(placed.id, { lat: latlng.lat, lng: latlng.lng });
+				updatePlacedUnit(placed.id, { lat: latlng.lat, lng: latlng.lng }, `移动单位: ${info.unit.name}`);
+				addLog(`移动单位: ${info.unit.name} → (${latlng.lat.toFixed(3)}, ${latlng.lng.toFixed(3)})`);
 			});
 
 			// 右键上下文菜单绑定
@@ -433,7 +435,7 @@
 			updatePlacedUnit(strikePendingUnitId, {
 				strikeTarget: strikePendingTarget,
 				strikeRadius: strikePendingRadius
-			});
+			}, '设置打击目标');
 			addLog(
 				`设置打击目标 (${strikePendingTarget.lat.toFixed(3)}°N, ${strikePendingTarget.lng.toFixed(3)}°E)，半径 ${(strikePendingRadius / 1000).toFixed(1)} km`
 			);
@@ -443,6 +445,20 @@
 		strikePendingTarget = null;
 		if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
 	}
+
+	// 路线完成日志：当交互模式从 route 切换到其他模式时记录
+	let _prevInteractionMode: string = 'select';
+	$effect(() => {
+		const mode = $interactionMode;
+		if (_prevInteractionMode === 'route' && mode !== 'route') {
+			const placed = $selectedPlacedUnit;
+			if (placed && placed.route.length > 0) {
+				const routeInfo = findUnit(placed.unitId);
+				addLog(`完成行动路线: ${routeInfo?.unit.name ?? ''}，共 ${placed.route.length} 个节点`);
+			}
+		}
+		_prevInteractionMode = mode;
+	});
 
 	// 打击目标预览圆：阶段2和3都显示，跟随半径变化
 	$effect(() => {
@@ -498,7 +514,7 @@
 	function handleSetStatus(status: PlacedUnit['status']) {
 		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
 		if (targetId) {
-			updatePlacedUnit(targetId, { status });
+			updatePlacedUnit(targetId, { status }, `单位状态变更: ${UNIT_STATUS_LABELS[status]}`);
 			addLog(`单位状态变更: ${UNIT_STATUS_LABELS[status]}`);
 		}
 		contextPlacedUnitId = null;
@@ -709,6 +725,14 @@
 
 <svelte:window
 	onkeydown={(e) => {
+		if (e.ctrlKey && e.key === 'z') {
+			const target = e.target as HTMLElement;
+			if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+				e.preventDefault();
+				undo();
+			}
+			return;
+		}
 		if (e.key === 'Escape') {
 			if (strikePendingTarget) {
 				handleCancelStrike();
