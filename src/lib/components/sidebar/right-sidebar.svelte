@@ -33,11 +33,6 @@
 
 	<div class="panel-section">
 		<div class="controls">
-			<RightSidebarMenubutton title="切换网格显示">
-				<Button variant="ghost" size="icon">
-					<Grid3x3 />
-				</Button>
-			</RightSidebarMenubutton>
 			<RightSidebarMenubutton title="测量距离">
 				<Button variant="ghost" size="icon">
 					<Ruler />
