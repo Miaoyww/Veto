@@ -16,10 +16,14 @@ export interface SimulationUnit {
 	factionColor: string;
 	/** 当前像素坐标（相对于 800×450 作战剧场） */
 	position: Vec2;
-	/** 剩余路径点（到达每点后弹出） */
+	/** 正在执行的路径点列表（到达每点后弹出） */
 	targetPath: Vec2[];
 	/** 行进速度（km/h） */
 	speed: number;
+	/** 预设（待确认）路径 */
+	pendingPath: Vec2[];
+	/** 是否正在等待指令确认 */
+	isAwaitingConfirmation: boolean;
 }
 
 // ---- 演示用初始单位与路径（像素坐标，剧场 800×450） ----
@@ -39,7 +43,9 @@ export const DEMO_UNITS_INITIAL: Readonly<SimulationUnit[]> = [
 			{ x: 640, y: 140 },
 			{ x: 740, y: 200 }
 		],
-		speed: 5
+		speed: 5,
+		pendingPath: [],
+		isAwaitingConfirmation: false
 	},
 	{
 		id: 'unit-002',
@@ -54,7 +60,9 @@ export const DEMO_UNITS_INITIAL: Readonly<SimulationUnit[]> = [
 			{ x: 680, y: 310 },
 			{ x: 740, y: 370 }
 		],
-		speed: 40
+		speed: 40,
+		pendingPath: [],
+		isAwaitingConfirmation: false
 	}
 ];
 
@@ -63,7 +71,9 @@ function cloneInitial(): SimulationUnit[] {
 	return DEMO_UNITS_INITIAL.map((u) => ({
 		...u,
 		position: { ...u.position },
-		targetPath: u.targetPath.map((p) => ({ ...p }))
+		targetPath: u.targetPath.map((p) => ({ ...p })),
+		pendingPath: [],
+		isAwaitingConfirmation: false
 	}));
 }
 
@@ -73,4 +83,41 @@ export const simulationUnits = writable<SimulationUnit[]>(cloneInitial());
 /** 将所有单位重置回起始位置 */
 export function resetUnits() {
 	simulationUnits.set(cloneInitial());
+}
+
+/**
+ * 向指定单位下达新指令。
+ * 新坐标写入 pendingPath，不影响正在执行的 targetPath。
+ */
+export function issueSimCommand(unitId: string, path: Vec2[]) {
+	simulationUnits.update((units) =>
+		units.map((u) =>
+			u.id === unitId ? { ...u, pendingPath: path, isAwaitingConfirmation: true } : u
+		)
+	);
+}
+
+/**
+ * 确认指令：pendingPath 覆盖 targetPath，单位立即转向新目标。
+ * 引擎下一帧将按新 targetPath 计算位移，无缝衔接。
+ */
+export function applySimCommand(unitId: string) {
+	simulationUnits.update((units) =>
+		units.map((u) =>
+			u.id === unitId
+				? { ...u, targetPath: u.pendingPath, pendingPath: [], isAwaitingConfirmation: false }
+				: u
+		)
+	);
+}
+
+/**
+ * 取消指令：丢弃 pendingPath，算子维持原计划。
+ */
+export function cancelSimCommand(unitId: string) {
+	simulationUnits.update((units) =>
+		units.map((u) =>
+			u.id === unitId ? { ...u, pendingPath: [], isAwaitingConfirmation: false } : u
+		)
+	);
 }

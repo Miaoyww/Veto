@@ -6,6 +6,7 @@
 	import { MapPin, Navigation, X, Target } from '@lucide/svelte';
 	import UnitContextMenu from './unit-context-menu.svelte';
 	import MapContextMenu from './map-context-menu.svelte';
+	import CrisisCommandBar from './crisis-command-bar.svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import UnitPopup from './unit-popup.svelte';
@@ -23,6 +24,7 @@
 		addLog,
 		undo
 	} from '$lib/stores/battle-store';
+	import { issueCrisisCommand, pendingCrisisCommand } from '$lib/stores/unit-command.store';
 	import type { MilitaryUnit, PlacedUnit, Faction } from '$lib/types';
 
 	let map: L.Map;
@@ -302,10 +304,11 @@
 					interactionMode.set('select');
 				}
 			} else if (mode === 'route') {
-				// 路线模式：为选中单位添加路线点
+				// 路线模式：将新节点写入待确认指令，而非直接添加到路线
 				const placedId = $selectedPlacedUnitId;
 				if (placedId) {
-					addRoutePoint(placedId, latlng.lat, latlng.lng);
+					const info = findUnit($selectedPlacedUnit?.unitId ?? '');
+					issueCrisisCommand(placedId, info?.unit.name ?? '单位', latlng.lat, latlng.lng);
 				}
 			} else if (mode === 'strike') {
 				const placedId = $selectedPlacedUnitId;
@@ -459,6 +462,11 @@
 		<TileLayer url={'https://tile.openstreetmap.org/{z}/{x}/{y}.png'} />
 	</Map>
 
+	<!-- 危机指令确认栏（路线模式下点击地图后出现） -->
+	{#if $interactionMode === 'route' || $pendingCrisisCommand}
+		<CrisisCommandBar />
+	{/if}
+
 	<!-- 交互模式提示 -->
 	{#if $interactionMode !== 'select'}
 		<div class="absolute top-20 left-1/2 z-[1001] -translate-x-1/2">
@@ -468,7 +476,7 @@
 					<span class="text-sm text-stone-700">点击地图放置单位</span>
 				{:else if $interactionMode === 'route'}
 					<Navigation class="h-4 w-4 text-stone-600" />
-					<span class="text-sm text-stone-700">点击地图添加路线点（右键结束）</span>
+					<span class="text-sm text-stone-700">点击地图下达路线指令，确认后生效（右键结束）</span>
 				{:else if $interactionMode === 'strike'}
 					<Target class="h-4 w-4 text-stone-600" />
 					<span class="text-sm text-stone-700">
