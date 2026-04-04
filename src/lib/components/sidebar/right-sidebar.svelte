@@ -6,17 +6,17 @@
 	import ResetButton from '$lib/components/buttons/right-bar/reset-button.svelte';
 	import { rightBarPinned } from '$lib/stores/sidebar-store';
 	import PinButton from '../buttons/right-bar/pin-button.svelte';
-	import { showAlert } from '$lib/stores/alert-dialog-store';
+	import { flushRuntimePositions, saveBattlesNow } from '$lib/stores/battle-store';
+	import { toast } from 'svelte-sonner';
 	import SimUnitsCard from '$lib/components/cards/simulation/sim-units-card.svelte';
 
 	// 是否鼠标悬停
 	let hover = $state(false);
 
-	// 计算最终展开状态
-	let expanded = $derived($rightBarPinned || hover);
-
-	function togglePin() {
-		rightBarPinned.update((prev) => !prev);
+	export function save() {
+		flushRuntimePositions();
+		saveBattlesNow();
+		toast.success('已保存', { description: '当前推演状态已保存到浏览器。' });
 	}
 
 	let simUnitsOpen = $state(false);
@@ -56,8 +56,8 @@
 
 	<div class="panel-section">
 		<div class="controls">
-			<RightSidebarMenubutton title="保存">
-				<Button variant="ghost" size="icon" onclick={() => showAlert('已保存', '当前推演状态已自动保存到浏览器。')}>
+			<RightSidebarMenubutton title="保存 (Ctrl+S)">
+				<Button variant="ghost" size="icon" onclick={save}>
 					<Save />
 				</Button>
 			</RightSidebarMenubutton>

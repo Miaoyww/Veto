@@ -32,6 +32,8 @@
 		gameClock.update((c) => ({ ...c, isPaused: !c.isPaused }));
 	}
 
+	const DISPLAY_SCALES = TIME_SCALES.filter((s) => s !== 1);
+
 	function setTimeScale(scale: number) {
 		gameClock.update((c) => ({ ...c, timeScale: scale }));
 	}
@@ -129,7 +131,7 @@
 	<!-- 流速选择 -->
 	<div class="flex items-center gap-1.5">
 		<Gauge size={13} class="text-stone-400" />
-		{#each TIME_SCALES as scale}
+		{#each DISPLAY_SCALES as scale}
 			<Button
 				onclick={() => setTimeScale(scale)}
 				variant={$gameClock.timeScale === scale ? 'default' : 'outline'}

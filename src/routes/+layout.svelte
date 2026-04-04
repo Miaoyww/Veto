@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte';
+	import { Toaster } from '$lib/components/ui/sonner';
 	import { VETO_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
 	let { children } = $props();
@@ -24,6 +25,7 @@
 </svelte:head>
 
 <MyAlertDialog />
+<Toaster richColors position="bottom-right" />
 
 <div>
 	<div>

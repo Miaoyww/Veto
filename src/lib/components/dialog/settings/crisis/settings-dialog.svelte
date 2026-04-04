@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { settingOpen } from '$lib/stores/setting-dialog-store';
-	import { Button } from '../ui/button';
+	import { Button } from '../../../ui/button';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import Venue from '$lib/components/dialog/settings/crisis/venue.svelte';
-	import General from '$lib/components/dialog/settings/crisis/general.svelte';
-	import About from '$lib/components/dialog/settings/crisis/about.svelte';
+	import About from '$lib/components/dialog/settings/crisis/pages/about.svelte';
+	import Battle from '$lib/components/dialog/settings/crisis/pages/battle.svelte';
 	import { fade, scale } from 'svelte/transition';
 	import { X } from '@lucide/svelte';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
@@ -24,6 +23,7 @@
 		<!-- 左侧边栏 -->
 		<Tabs.Tabs bind:value={activeTab} orientation="vertical" class="flex h-full">
 			<Tabs.List class="mb-4">
+				<Tabs.Trigger value="battle" onclick={() => switchTab('battle')}>战局</Tabs.Trigger>
 				<Tabs.Trigger value="about" onclick={() => switchTab('about')}>关于</Tabs.Trigger>
 			</Tabs.List>
 		</Tabs.Tabs>
@@ -42,6 +42,7 @@
 			<div>
 				<ScrollArea class="mt-5 h-180 w-full" scrollbarYClasses="hidden">
 					{#if activeTab === 'about'}<About />{/if}
+					{#if activeTab === 'battle'}<Battle />{/if}
 				</ScrollArea>
 			</div>
 		</div>

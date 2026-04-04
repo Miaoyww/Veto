@@ -1,13 +1,24 @@
 ﻿<script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Trash2, Play } from '@lucide/svelte';
+	import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Zap } from '@lucide/svelte';
 	import type { Battle } from '$lib/types';
-	import { currentBattleId, loadBattle, deleteBattle } from '$lib/stores/battle-store';
+	import { currentBattleId, loadBattle, deleteBattle, renameBattle } from '$lib/stores/battle-store';
 	import { showConfirm } from '$lib/stores/alert-dialog-store';
+	import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 
 	let { battle }: { battle: Battle } = $props();
 
+	let editing = $state(false);
+	let editName = $state(battle.name);
+	let inputRef = $state<HTMLInputElement | null>(null);
+
+	const isActive = $derived($currentBattleId === battle.id);
+	const enabledEvents = $derived((battle.eventSettings ?? []).filter((e) => e.enabled).length);
+
 	function handleLoad() {
+		if (editing) return;
 		loadBattle(battle.id);
 		goto(`/crisis/${battle.id}`);
 	}
@@ -19,45 +30,121 @@
 		);
 	}
 
+	function startEdit(e: MouseEvent) {
+		e.stopPropagation();
+		editName = battle.name;
+		editing = true;
+		setTimeout(() => inputRef?.focus(), 0);
+	}
+
+	function commitEdit() {
+		if (editName.trim()) renameBattle(battle.id, editName);
+		editing = false;
+	}
+
+	function cancelEdit() {
+		editName = battle.name;
+		editing = false;
+	}
+
+	function handleInputKeydown(e: KeyboardEvent) {
+		e.stopPropagation();
+		if (e.key === 'Enter') commitEdit();
+		else if (e.key === 'Escape') cancelEdit();
+	}
+
 	function formatDate(ts: number) {
-		return new Date(ts).toLocaleString('zh-CN');
+		return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' });
 	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
+<Card
 	role="button"
-	tabindex="0"
-	class="group flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white/60 px-5 py-4 text-left shadow-sm backdrop-blur-sm transition-all hover:bg-white/90 hover:shadow-md {$currentBattleId ===
-	battle.id
-		? 'border-stone-500 bg-white/80'
-		: 'border-stone-200'}"
+	tabindex={0}
+	class="group w-full cursor-pointer gap-2 py-4 backdrop-blur-sm transition-all hover:shadow-md {isActive
+		? 'border-stone-400 bg-card/90'
+		: 'bg-card/70 hover:bg-card/90'}"
 	onclick={handleLoad}
 	onkeydown={(e) => e.key === 'Enter' && handleLoad()}
 >
-	<div class="min-w-0 flex-1">
-		<div class="text-sm font-semibold text-stone-700">{battle.name}</div>
-		<div class="mt-1 flex gap-2 text-xs text-stone-400">
-			<span>{battle.factions.length} 个阵营</span>
-			<span>·</span>
-			<span>{battle.placedUnits.length} 个单位</span>
-			<span>·</span>
-			<span>{formatDate(battle.updatedAt)}</span>
+	<CardHeader class="px-5">
+		<CardTitle class="flex min-w-0 items-center gap-1.5 text-sm">
+			{#if editing}
+				<Input
+					bind:ref={inputRef}
+					bind:value={editName}
+					class="h-7 min-w-0 flex-1 text-sm font-semibold"
+					onclick={(e: MouseEvent) => e.stopPropagation()}
+					onkeydown={handleInputKeydown}
+				/>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class="shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700"
+					title="保存"
+					onclick={(e: MouseEvent) => { e.stopPropagation(); commitEdit(); }}
+				>
+					<Check />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class="shrink-0"
+					title="取消"
+					onclick={(e: MouseEvent) => { e.stopPropagation(); cancelEdit(); }}
+				>
+					<X />
+				</Button>
+			{:else}
+				<span class="truncate font-semibold">{battle.name}</span>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+					title="重命名"
+					onclick={startEdit}
+				>
+					<Pencil />
+				</Button>
+			{/if}
+		</CardTitle>
+
+		<CardAction class="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+			<Button
+				variant="outline"
+				size="sm"
+				class="gap-1 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800"
+				onclick={(e: MouseEvent) => { e.stopPropagation(); handleLoad(); }}
+			>
+				<Play class="size-3" />
+				进入
+			</Button>
+			<Button
+				variant="destructive"
+				size="icon-sm"
+				title="删除战局"
+				onclick={handleDelete}
+			>
+				<Trash2 />
+			</Button>
+		</CardAction>
+	</CardHeader>
+
+	<CardContent class="px-5">
+		<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+			<span class="flex items-center gap-1">
+				<CalendarDays class="size-3" />
+				{formatDate(battle.createdAt)}
+			</span>
+			<span class="flex items-center gap-1">
+				<Clock class="size-3" />
+				{battle.startDate ?? '未设置模拟时间'}
+			</span>
+			<span class="flex items-center gap-1">
+				<Zap class="size-3" />
+				{enabledEvents} 个启用事件
+			</span>
 		</div>
-	</div>
-	<div class="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-		<span
-			class="flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700"
-		>
-			<Play size={12} />
-			进入
-		</span>
-		<button
-			class="flex items-center rounded-lg px-2 py-1.5 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
-			title="删除战局"
-			onclick={handleDelete}
-		>
-			<Trash2 size={14} />
-		</button>
-	</div>
-</div>
+	</CardContent>
+</Card>

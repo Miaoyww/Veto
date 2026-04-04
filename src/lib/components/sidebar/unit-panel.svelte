@@ -181,58 +181,82 @@
 		return $currentFaction.units.find((u) => u.id === editingUnitId) ?? null;
 	});
 
-	// 选择单位大类：立即创建单位并进入编辑
+	// 新建单位：待选状态
+	let pendingCategory = $state<ArmyUnitCategory | NavyUnitCategory | AirForceUnitCategory | null>(null);
+	let pendingType = $state<string>('');
+	let pendingCount = $state(1000);
+
+	// 选择单位大类：打开创建面板（再次点击同一类则收起）
 	function selectUnitCategory(cat: ArmyUnitCategory | NavyUnitCategory | AirForceUnitCategory) {
-		const faction = $currentFaction;
-		if (!faction || !$currentFactionId) return;
+		if (pendingCategory === cat) { pendingCategory = null; return; }
+		pendingCategory = cat;
 		const branch = $currentBranch;
+		if (branch === 'army') {
+			if (cat === 'infantry') { pendingType = 'light'; pendingCount = 1000; }
+			else if (cat === 'armor') { pendingType = 'light_tank'; pendingCount = 50; }
+			else { pendingType = 'anti_tank'; pendingCount = 20; }
+		} else if (branch === 'navy') {
+			if (cat === 'surface') { pendingType = 'destroyer'; pendingCount = 2; }
+			else if (cat === 'submarine') { pendingType = 'attack_sub'; pendingCount = 1; }
+			else { pendingType = 'amphibious'; pendingCount = 1; }
+		} else {
+			if (cat === 'fighter') { pendingType = 'air_superiority'; pendingCount = 12; }
+			else if (cat === 'bomber') { pendingType = 'strategic'; pendingCount = 4; }
+			else { pendingType = 'awacs'; pendingCount = 2; }
+		}
+	}
+
+	// 确认创建单位（携带初始组件）
+	function confirmCreateUnit() {
+		const faction = $currentFaction;
+		if (!faction || !$currentFactionId || !pendingCategory) return;
+		const branch = $currentBranch;
+		const cat = pendingCategory;
 		let label = '';
 		if (branch === 'army') label = ARMY_CATEGORY_LABELS[cat as ArmyUnitCategory];
 		else if (branch === 'navy') label = NAVY_CATEGORY_LABELS[cat as NavyUnitCategory];
 		else label = AIR_FORCE_CATEGORY_LABELS[cat as AirForceUnitCategory];
-		const count = faction.units.filter(
+		const existCount = faction.units.filter(
 			(u) => u.branch === branch && (u as ArmyUnit | NavyUnit | AirForceUnit).category === cat
 		).length;
-		const name = `${label}${count + 1}`;
+		const name = `${label}${existCount + 1}`;
 		const id = genId();
 		let unit: MilitaryUnit;
 		switch (branch) {
-			case 'army':
+			case 'army': {
+				const ac = cat as ArmyUnitCategory;
 				unit = {
-					id,
-					name,
-					branch: 'army',
-					category: cat as ArmyUnitCategory,
-					infantry: [],
-					armor: [],
-					missiles: []
+					id, name, branch: 'army', category: ac,
+					infantry: ac === 'infantry' ? [{ id: genId(), type: pendingType as ArmyInfantryType, quality: 'basic', count: pendingCount }] : [],
+					armor: ac === 'armor' ? [{ id: genId(), type: pendingType as ArmyArmorType, quality: 'gen1', count: pendingCount }] : [],
+					missiles: ac === 'missile' ? [{ id: genId(), type: pendingType as ArmyMissileType, quality: 'basic', count: pendingCount }] : []
 				};
 				break;
-			case 'navy':
+			}
+			case 'navy': {
+				const nc = cat as NavyUnitCategory;
 				unit = {
-					id,
-					name,
-					branch: 'navy',
-					category: cat as NavyUnitCategory,
-					surface: [],
-					submarines: [],
-					support: []
+					id, name, branch: 'navy', category: nc,
+					surface: nc === 'surface' ? [{ id: genId(), type: pendingType as NavySurfaceType, quality: 'basic', count: pendingCount }] : [],
+					submarines: nc === 'submarine' ? [{ id: genId(), type: pendingType as NavySubmarineType, quality: 'basic', count: pendingCount }] : [],
+					support: nc === 'support' ? [{ id: genId(), type: pendingType as NavySupportType, quality: 'basic', count: pendingCount }] : []
 				};
 				break;
-			case 'air_force':
+			}
+			case 'air_force': {
+				const afc = cat as AirForceUnitCategory;
 				unit = {
-					id,
-					name,
-					branch: 'air_force',
-					category: cat as AirForceUnitCategory,
-					fighters: [],
-					bombers: [],
-					support: []
+					id, name, branch: 'air_force', category: afc,
+					fighters: afc === 'fighter' ? [{ id: genId(), type: pendingType as AirForceFighterType, quality: 'gen4', count: pendingCount }] : [],
+					bombers: afc === 'bomber' ? [{ id: genId(), type: pendingType as AirForceBomberType, quality: 'basic', count: pendingCount }] : [],
+					support: afc === 'support' ? [{ id: genId(), type: pendingType as AirForceSupportType, quality: 'basic', count: pendingCount }] : []
 				};
 				break;
+			}
 		}
 		addUnit($currentFactionId, unit);
 		editingUnitId = id;
+		pendingCategory = null;
 	}
 
 	// 重命名单位（由列表行组件回调）
@@ -540,6 +564,7 @@
 						onchange={(b) => {
 							currentBranch.set(b);
 							editingUnitId = null;
+							pendingCategory = null;
 						}}
 					/>
 
@@ -548,8 +573,7 @@
 						{#if $currentBranch === 'army'}
 							{#each [{ cat: 'infantry' as ArmyUnitCategory, label: '步兵' }, { cat: 'armor' as ArmyUnitCategory, label: '装甲' }, { cat: 'missile' as ArmyUnitCategory, label: '导弹' }] as opt}
 								<button
-									class="flex items-center justify-center rounded-md border py-1.5 text-xs font-medium transition-all {editingUnit &&
-									(editingUnit as ArmyUnit).category === opt.cat
+									class="flex items-center justify-center rounded-md border py-1.5 text-xs font-medium transition-all {pendingCategory === opt.cat
 										? 'border-transparent bg-primary text-primary-foreground'
 										: 'border-border text-muted-foreground hover:bg-muted'}"
 									onclick={() => selectUnitCategory(opt.cat)}>{opt.label}</button
@@ -558,8 +582,7 @@
 						{:else if $currentBranch === 'navy'}
 							{#each [{ cat: 'surface' as NavyUnitCategory, label: '水面' }, { cat: 'submarine' as NavyUnitCategory, label: '潜艇' }, { cat: 'support' as NavyUnitCategory, label: '支援舰' }] as opt}
 								<button
-									class="flex items-center justify-center rounded-md border py-1.5 text-xs font-medium transition-all {editingUnit &&
-									(editingUnit as NavyUnit).category === opt.cat
+									class="flex items-center justify-center rounded-md border py-1.5 text-xs font-medium transition-all {pendingCategory === opt.cat
 										? 'border-transparent bg-primary text-primary-foreground'
 										: 'border-border text-muted-foreground hover:bg-muted'}"
 									onclick={() => selectUnitCategory(opt.cat)}>{opt.label}</button
@@ -568,8 +591,7 @@
 						{:else}
 							{#each [{ cat: 'fighter' as AirForceUnitCategory, label: '战斗机' }, { cat: 'bomber' as AirForceUnitCategory, label: '轰炸机' }, { cat: 'support' as AirForceUnitCategory, label: '支援机' }] as opt}
 								<button
-									class="flex items-center justify-center rounded-md border py-1.5 text-xs font-medium transition-all {editingUnit &&
-									(editingUnit as AirForceUnit).category === opt.cat
+									class="flex items-center justify-center rounded-md border py-1.5 text-xs font-medium transition-all {pendingCategory === opt.cat
 										? 'border-transparent bg-primary text-primary-foreground'
 										: 'border-border text-muted-foreground hover:bg-muted'}"
 									onclick={() => selectUnitCategory(opt.cat)}>{opt.label}</button
@@ -578,7 +600,63 @@
 						{/if}
 					</div>
 
-
+					<!-- 新建单位面板 -->
+					{#if pendingCategory !== null}
+						<div class="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+							<p class="text-xs font-medium text-muted-foreground">选择类型</p>
+							<div class="grid grid-cols-2 gap-1">
+								{#if $currentBranch === 'army' && pendingCategory === 'infantry'}
+									{#each Object.entries(INFANTRY_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'army' && pendingCategory === 'armor'}
+									{#each Object.entries(ARMOR_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'army' && pendingCategory === 'missile'}
+									{#each Object.entries(MISSILE_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'navy' && pendingCategory === 'surface'}
+									{#each Object.entries(SURFACE_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'navy' && pendingCategory === 'submarine'}
+									{#each Object.entries(SUBMARINE_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'navy' && pendingCategory === 'support'}
+									{#each Object.entries(NAVAL_SUPPORT_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'air_force' && pendingCategory === 'fighter'}
+									{#each Object.entries(FIGHTER_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'air_force' && pendingCategory === 'bomber'}
+									{#each Object.entries(BOMBER_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{:else if $currentBranch === 'air_force' && pendingCategory === 'support'}
+									{#each Object.entries(AIR_SUPPORT_TYPE_LABELS) as [val, lbl]}
+										<button class="rounded-md border py-1.5 text-xs font-medium transition-all {pendingType === val ? 'border-transparent bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}" onclick={() => (pendingType = val)}>{lbl}</button>
+									{/each}
+								{/if}
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="shrink-0 text-xs text-muted-foreground">数量</span>
+								<Input type="number" bind:value={pendingCount} min={1} max={100000} class="h-7 flex-1 text-xs" />
+							</div>
+							<div class="flex justify-end gap-1.5">
+								<Button variant="ghost" size="sm" class="h-7 px-2 text-xs text-muted-foreground" onclick={() => (pendingCategory = null)}>
+									<X class="mr-1 size-3" />取消
+								</Button>
+								<Button size="sm" class="h-7 px-2 text-xs" onclick={confirmCreateUnit}>
+									<Check class="mr-1 size-3" />创建
+								</Button>
+							</div>
+						</div>
+					{/if}
 
 					<!-- 已有单位列表 -->
 					<ScrollArea class="h-[full]">

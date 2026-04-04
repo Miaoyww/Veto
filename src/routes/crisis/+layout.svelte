@@ -3,11 +3,22 @@
 	import RightSidebar from '$lib/components/sidebar/right-sidebar.svelte';
 	import Bottom from '$lib/components/bottom.svelte';
 	import LeftSidebar from '$lib/components/sidebar/left-sidebar.svelte';
-	import SettingsDialog from '$lib/components/dialog/settings-dialog.svelte';
+	import SettingsDialog from '$lib/components/dialog/settings/crisis/settings-dialog.svelte';
 	import { VETO_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
 	let { children } = $props();
+
+	let rightSidebar: RightSidebar;
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.ctrlKey && e.key === 's') {
+			e.preventDefault();
+			rightSidebar?.save();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
 	<title>{VETO_NAME}</title>
@@ -24,7 +35,7 @@
 </div>
 
 <LeftSidebar />
-<RightSidebar />
+<RightSidebar bind:this={rightSidebar} />
 
 <Header />
 <Bottom />

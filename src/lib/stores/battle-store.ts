@@ -28,6 +28,16 @@ function saveBattlesToStorage(battles: Battle[]) {
 	}, 2000);
 }
 
+/** 立即将当前 battles 状态写入 localStorage（绕过防抖），用于手动保存。 */
+export function saveBattlesNow() {
+	if (typeof localStorage === 'undefined') return;
+	if (_saveTimer) {
+		clearTimeout(_saveTimer);
+		_saveTimer = null;
+	}
+	localStorage.setItem(STORAGE_KEY, JSON.stringify(get(battles)));
+}
+
 // ============ 所有战局列表 ============
 export const battles = writable<Battle[]>(loadBattlesFromStorage());
 battles.subscribe(saveBattlesToStorage);
@@ -131,6 +141,12 @@ function updateCurrentBattle(updater: (battle: Battle) => Battle) {
 	);
 }
 
+export function updateCurrentBattleSettings(
+	updates: Partial<Pick<Battle, 'name' | 'startDate' | 'timeScale' | 'pixelsPerKm' | 'iconStyle' | 'eventSettings'>>
+) {
+	updateCurrentBattle((b) => ({ ...b, ...updates }));
+}
+
 // ============ 战局 CRUD ============
 
 export function createBattle(
@@ -173,6 +189,14 @@ export function deleteBattle(id: string) {
 		currentBattleId.set(null);
 		currentFactionId.set(null);
 	}
+}
+
+export function renameBattle(id: string, name: string) {
+	const trimmed = name.trim();
+	if (!trimmed) return;
+	battles.update((list) =>
+		list.map((b) => (b.id === id ? { ...b, name: trimmed, updatedAt: Date.now() } : b))
+	);
 }
 
 export function loadBattle(id: string) {
