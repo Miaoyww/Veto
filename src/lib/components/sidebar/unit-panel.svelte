@@ -7,6 +7,7 @@
 		addUnit,
 		removeUnit,
 		updateUnit,
+		updateFaction,
 		interactionMode,
 		pendingPlaceUnitId
 	} from '$lib/stores/battle-store';
@@ -73,10 +74,13 @@
 		Plane,
 		Bomb,
 		Radio,
-		Crosshair
+		Crosshair,
+		Pencil,
+		Check
 	} from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Separator } from '$lib/components/ui/separator';
 	import UnitCompRow from '$lib/components/cards/units/unit-comp-row.svelte';
@@ -92,6 +96,32 @@
 	// 编辑状态
 	let editingUnitId = $state<string | null>(null);
 	let newUnitName = $state('');
+
+	// 阵营信息编辑
+	let editingFaction = $state(false);
+	let factionEditName = $state('');
+	let factionEditColor = $state('');
+
+	function startEditFaction() {
+		if (!$currentFaction) return;
+		factionEditName = $currentFaction.name;
+		factionEditColor = $currentFaction.color;
+		editingFaction = true;
+	}
+
+	function saveEditFaction() {
+		if (!$currentFactionId) return;
+		const name = factionEditName.trim();
+		if (!name) return;
+		updateFaction($currentFactionId, { name, color: factionEditColor });
+		editingFaction = false;
+	}
+
+	$effect(() => {
+		// 切换阵营时关闭编辑
+		$currentFactionId;
+		editingFaction = false;
+	});
 
 	// 陆军添加表单
 	let armyInfantryType = $state<ArmyInfantryType>('light');
@@ -373,7 +403,77 @@
 		<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
 			<Swords class="size-4" />军事单位
 		</CardTitle>
-		<CardDescription class="text-xs text-muted-foreground">部署军事单位</CardDescription>
+
+		{#if $currentFaction}
+			{#if editingFaction}
+				<!-- 编辑模式 -->
+				<div class="mt-2 space-y-2">
+					<div class="flex items-center gap-2">
+						<div
+							class="h-4 w-4 shrink-0 rounded-full ring-2 ring-background"
+							style:background-color={factionEditColor}
+						></div>
+						<Input
+							class="h-7 flex-1 text-xs"
+							bind:value={factionEditName}
+							placeholder="阵营名称"
+							onkeydown={(e: KeyboardEvent) => {
+								if (e.key === 'Enter') saveEditFaction();
+								if (e.key === 'Escape') editingFaction = false;
+							}}
+						/>
+					</div>
+					<div class="flex items-center gap-2">
+						<Label class="shrink-0 text-xs text-muted-foreground">颜色</Label>
+						<input
+							type="color"
+							bind:value={factionEditColor}
+							class="h-7 w-10 cursor-pointer rounded border border-input bg-transparent p-0.5"
+						/>
+						<div class="ml-auto flex gap-1.5">
+							<Button
+								variant="ghost"
+								size="sm"
+								class="h-7 px-2 text-xs text-muted-foreground"
+								onclick={() => (editingFaction = false)}
+							>
+								<X class="mr-1 size-3" />取消
+							</Button>
+							<Button
+								size="sm"
+								class="h-7 px-2 text-xs"
+								onclick={saveEditFaction}
+								disabled={!factionEditName.trim()}
+							>
+								<Check class="mr-1 size-3" />保存
+							</Button>
+						</div>
+					</div>
+				</div>
+			{:else}
+				<!-- 展示模式 -->
+				<div class="mt-1.5 flex items-center justify-between">
+					<div class="flex min-w-0 items-center gap-2">
+						<span
+							class="h-3 w-3 shrink-0 rounded-full ring-2 ring-background"
+							style:background-color={$currentFaction.color}
+						></span>
+						<span class="truncate text-xs text-muted-foreground">{$currentFaction.name}</span>
+					</div>
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-6 shrink-0 text-muted-foreground hover:text-foreground"
+						title="编辑阵营信息"
+						onclick={startEditFaction}
+					>
+						<Pencil class="size-3" />
+					</Button>
+				</div>
+			{/if}
+		{:else}
+			<CardDescription class="text-xs text-muted-foreground">部署军事单位</CardDescription>
+		{/if}
 	</CardHeader>
 	<CardContent class="sidebar-body overflow-y-auto px-4 py-4">
 		<div class="space-y-3">
