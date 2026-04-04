@@ -12,6 +12,7 @@
 		Clock
 	} from '@lucide/svelte';
 	import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
+	import { currentBattle } from '$lib/stores/battle-store';
 	import type { SimulationUnit } from '$lib/stores/simulation-units.store';
 
 	type CommandType = 'reset' | 'append';
@@ -37,6 +38,14 @@
 	function setTimeScale(scale: number) {
 		gameClock.update((c) => ({ ...c, timeScale: scale }));
 	}
+
+	/** 战局中保存的自定义流速（不在预设档位中时显示） */
+	const savedCustomScale = $derived(
+		($currentBattle?.timeScale != null &&
+			!(DISPLAY_SCALES as readonly number[]).includes($currentBattle.timeScale))
+			? $currentBattle.timeScale
+			: null
+	);
 
 	function formatSimDate(d: Date): string {
 		const Y = d.getFullYear();
@@ -144,6 +153,19 @@
 				{TIME_SCALE_LABELS[scale]}
 			</Button>
 		{/each}
+		{#if savedCustomScale !== null}
+			<Button
+				onclick={() => setTimeScale(savedCustomScale)}
+				variant={$gameClock.timeScale === savedCustomScale ? 'default' : 'outline'}
+				size="sm"
+				class="h-7 rounded-lg px-2.5 text-xs font-medium
+					{$gameClock.timeScale === savedCustomScale
+					? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900'
+					: 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700'}"
+			>
+				{savedCustomScale}秒/秒
+			</Button>
+		{/if}
 	</div>
 
 	<!-- 时间显示 -->

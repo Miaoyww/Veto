@@ -14,8 +14,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import DatePicker from '$lib/components/ui/date-picker.svelte';
 	import EventConfigDialog from '$lib/components/dialog/event-config-dialog.svelte';
-	import { gameClock, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
-	import { Pencil, Check, X, Download, Trash2, ScrollText, Zap } from '@lucide/svelte';
+	import { gameClock } from '$lib/stores/game-clock.store';
+	import { Download, Trash2, ScrollText, Zap } from '@lucide/svelte';
 	import { parseDate } from '@internationalized/date';
 	import type { DateValue } from '@internationalized/date';
 	import type { EventSetting } from '$lib/types';
@@ -28,7 +28,6 @@
 	let startDateDraft = $state<DateValue | undefined>(
 		initial?.startDate ? parseDate(initial.startDate) : undefined
 	);
-	let timeScaleDraft = $state(initial?.timeScale ?? 60);
 	let pixelsPerKmDraft = $state(initial?.pixelsPerKm ?? 10);
 	let iconStyleDraft = $state<'nato' | 'simple'>(initial?.iconStyle ?? 'nato');
 	let eventSettingsDraft = $state<EventSetting[]>([...(initial?.eventSettings ?? [])]);
@@ -56,33 +55,17 @@
 		else nameDraft = get(currentBattle)?.name ?? '';
 	}
 
-	let showCustomInput = $state(false);
-	let customScaleStr = $state('');
+	let customScaleStr = $state(
+		initial?.timeScale != null && !(DISPLAY_SCALES as readonly number[]).includes(initial.timeScale)
+			? String(initial.timeScale)
+			: ''
+	);
 
-	// 预设档位：立即同步至运行时钟
-	function saveTimeScale(scale: number) {
-		timeScaleDraft = scale;
-		updateCurrentBattleSettings({ timeScale: scale });
-		gameClock.update((c) => ({ ...c, timeScale: scale }));
-	}
-
-	// 自定义时间流速：仅持久化保存，不立即影响运行时钟
-	function openCustomInput() {
-		customScaleStr = String(timeScaleDraft);
-		showCustomInput = true;
-	}
-
-	function applyCustomScale() {
+	function saveCustomScale() {
 		const n = parseInt(customScaleStr, 10);
 		if (n > 0) {
-			timeScaleDraft = n;
 			updateCurrentBattleSettings({ timeScale: n });
 		}
-		showCustomInput = false;
-	}
-
-	function focusOnMount(node: HTMLElement) {
-		node.focus();
 	}
 
 	function savePixelsPerKm() {
@@ -125,7 +108,6 @@
 	}
 
 	const enabledEventCount = $derived(eventSettingsDraft.filter((e) => e.enabled).length);
-	const isCustomScale = $derived(!(DISPLAY_SCALES as readonly number[]).includes(timeScaleDraft));
 </script>
 
 <div class="space-y-6 pb-10 lg:max-w-4xl">
@@ -189,50 +171,19 @@
 	<div>
 		<div class="mb-3 text-xl font-bold">模拟设置</div>
 		<div class="space-y-3">
-			<SettingCard let:id title="默认时间流速" description="同步至推演时钟，立即生效。">
-				<div class="flex flex-wrap items-center gap-2">
-					{#each DISPLAY_SCALES as scale}
-						<Button
-							variant={timeScaleDraft === scale ? 'default' : 'outline'}
-							size="sm"
-							onclick={() => saveTimeScale(scale)}
-						>{TIME_SCALE_LABELS[scale]}</Button>
-					{/each}
-					{#if isCustomScale}
-						<Button variant="default" size="sm" onclick={openCustomInput}>
-							{timeScaleDraft}秒/秒
-						</Button>
-					{/if}
-				</div>
-			</SettingCard>
-
-			<SettingCard let:id title="自定义时间流速" description="输入任意整数（秒/秒），回车立即生效。">
+			<SettingCard let:id title="自定义时间流速" description="保存后将在控制栏中作为可选档位显示，不会立即生效。">
 				<div class="flex items-center gap-2">
-					{#if showCustomInput}
-						<input
-							type="number"
-							min="1"
-							bind:value={customScaleStr}
-							use:focusOnMount
-							class="h-8 w-24 rounded-md border border-stone-300 bg-white px-2 text-sm text-stone-700 focus:border-stone-500 focus:outline-none"
-							onkeydown={(e: KeyboardEvent) => {
-								if (e.key === 'Enter') applyCustomScale();
-								if (e.key === 'Escape') showCustomInput = false;
-							}}
-						/>
-						<span class="text-xs text-muted-foreground">秒/秒</span>
-						<Button size="icon" variant="outline" class="h-8 w-8 border-green-300 text-green-600 hover:bg-green-50" onclick={applyCustomScale}>
-							<Check size={13} />
-						</Button>
-						<Button size="icon" variant="outline" class="h-8 w-8" onclick={() => (showCustomInput = false)}>
-							<X size={13} />
-						</Button>
-					{:else}
-						<Button size="sm" variant="outline" onclick={openCustomInput}>
-							<Pencil size={12} class="mr-1.5" />
-							{isCustomScale ? `${timeScaleDraft} 秒/秒` : '设置自定义'}
-						</Button>
-					{/if}
+					<Input
+						{id}
+						type="number"
+						min="1"
+						class="w-24"
+						bind:value={customScaleStr}
+						placeholder="300"
+						onblur={saveCustomScale}
+						onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+					/>
+					<span class="text-sm text-muted-foreground">秒/秒</span>
 				</div>
 			</SettingCard>
 		</div>

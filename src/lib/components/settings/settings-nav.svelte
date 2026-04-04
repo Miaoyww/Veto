@@ -1,21 +1,41 @@
 <script lang="ts">
-	import { cubicInOut } from 'svelte/easing';
-	import { crossfade } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
+	import { Map, Puzzle, Settings, Info } from '@lucide/svelte';
 
-	let className: string | undefined | null = '';
-	export { className as class };
+	type Section = 'venue' | 'mods' | 'general' | 'about';
+
+	interface NavItem {
+		key: Section;
+		label: string;
+		icon: typeof Map;
+	}
+
+	const NAV_ITEMS: NavItem[] = [
+		{ key: 'venue', label: '会场', icon: Map },
+		{ key: 'mods', label: 'Mod 管理', icon: Puzzle },
+		{ key: 'general', label: '常规', icon: Settings },
+		{ key: 'about', label: '关于', icon: Info }
+	];
+
+	let {
+		activeSection = $bindable<Section>('venue'),
+		class: className = ''
+	}: {
+		activeSection?: Section;
+		class?: string;
+	} = $props();
 </script>
 
-<div class={cn('flex w-16 flex-col gap-3 rounded-lg p-3 text-sm blur-backdrop', className)}>
-	<div>
-		<Button class="p-2" variant="ghost">会场</Button>
-	</div>
-	<div>
-		<Button class="p-2" variant="ghost">常规</Button>
-	</div>
-	<div>
-		<Button class="p-2" variant="ghost">关于</Button>
-	</div>
+<div class={cn('flex w-36 flex-col gap-1 rounded-lg p-2', className)}>
+	{#each NAV_ITEMS as item}
+		<Button
+			class="w-full justify-start gap-2 px-3"
+			variant={activeSection === item.key ? 'secondary' : 'ghost'}
+			onclick={() => (activeSection = item.key)}
+		>
+			<item.icon size={15} />
+			<span class="text-sm">{item.label}</span>
+		</Button>
+	{/each}
 </div>

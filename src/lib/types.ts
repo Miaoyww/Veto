@@ -207,6 +207,73 @@ export interface EventSetting {
 	probability: number;
 }
 
+// ============ Mod 系统 ============
+
+/**
+ * Mod 自定义战斗公式覆盖（均为可选，未提供则使用引擎默认值）
+ */
+export interface ModCombatOverrides {
+	/** HP 伤害分配比例（0-1），默认 0.7 */
+	hpDamageRatio?: number;
+	/** Org 伤害分配比例（0-1），默认 0.3 */
+	orgDamageRatio?: number;
+	/** 防御减伤系数，默认 0.5 */
+	defenseCoeff?: number;
+	/** 组织度惩罚阈值（低于此比例时开始衰减），默认 0.2 */
+	orgPenaltyThreshold?: number;
+	/** 战斗结算间隔（真实毫秒），默认 500 */
+	combatIntervalMs?: number;
+}
+
+/**
+ * Mod 自定义单位类型扩展
+ */
+export interface ModUnitTypeDefinition {
+	/** 类型 key，全局唯一 */
+	key: string;
+	/** 显示名称 */
+	label: string;
+	/** 属于哪个军种 */
+	branch: Branch;
+	/** 默认软攻 */
+	defaultSoftAttack?: number;
+	/** 默认硬攻 */
+	defaultHardAttack?: number;
+	/** 默认速度 (km/h) */
+	defaultSpeed?: number;
+}
+
+/**
+ * Mod 自定义标签覆盖（key 为现有 Label 映射中的 key，value 为替换文本）
+ */
+export type ModLabelOverrides = Record<string, string>;
+
+/**
+ * Mod 包定义（纯数据，不执行任何脚本）
+ */
+export interface Mod {
+	/** 全局唯一标识符，建议使用 'author.mod-name' 格式 */
+	id: string;
+	/** 显示名称 */
+	name: string;
+	/** 语义化版本号，如 '1.0.0' */
+	version: string;
+	author?: string;
+	description?: string;
+	/** 必须先加载的 Mod ID 列表 */
+	dependencies?: string[];
+	/** 与之冲突、不可同时启用的 Mod ID 列表 */
+	conflicts?: string[];
+	/** 战斗公式覆盖 */
+	combatOverrides?: ModCombatOverrides;
+	/** 新增单位类型定义 */
+	unitTypes?: ModUnitTypeDefinition[];
+	/** 标签文本覆盖 */
+	labelOverrides?: ModLabelOverrides;
+	/** 新增突发事件预设列表 */
+	eventPresets?: Omit<EventSetting, 'id'>[];
+}
+
 // ============ 战局 ============
 
 export interface Battle {
@@ -231,6 +298,8 @@ export interface Battle {
 	iconStyle?: 'nato' | 'simple';
 	/** 突发事件配置列表 */
 	eventSettings?: EventSetting[];
+	/** 此战局启用的 Mod ID 列表，按加载顺序排列（越靠后优先级越高） */
+	enabledMods?: string[];
 }
 
 export interface ActionLogEntry {
