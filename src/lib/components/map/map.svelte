@@ -16,20 +16,13 @@
 		interactionMode,
 		pendingPlaceUnitId,
 		placeUnit,
-		removePlacedUnit,
 		selectedPlacedUnitId,
 		selectedPlacedUnit,
 		addRoutePoint,
-		clearRoute,
 		updatePlacedUnit,
 		addLog,
 		undo
 	} from '$lib/stores/battle-store';
-	import { leftBarPinned } from '$lib/stores/sidebar-store';
-	import {
-		BRANCH_LABELS,
-		UNIT_STATUS_LABELS
-	} from '$lib/types';
 	import type { MilitaryUnit, PlacedUnit, Faction } from '$lib/types';
 
 	let map: L.Map;
@@ -375,48 +368,6 @@
 		return map;
 	}
 
-	// 上下文菜单操作
-	function handleDeletePlaced() {
-		if (contextPlacedUnitId) {
-			removePlacedUnit(contextPlacedUnitId);
-			contextPlacedUnitId = null;
-		} else if ($selectedPlacedUnitId) {
-			removePlacedUnit($selectedPlacedUnitId);
-		}
-		myOpen = false;
-	}
-
-	function handleDrawRoute() {
-		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
-		if (targetId) {
-			selectedPlacedUnitId.set(targetId);
-			interactionMode.set('route');
-			addLog('进入路线绘制模式，点击地图添加路线点');
-		}
-		contextPlacedUnitId = null;
-		myOpen = false;
-	}
-
-	function handleClearRoute() {
-		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
-		if (targetId) {
-			clearRoute(targetId);
-		}
-		contextPlacedUnitId = null;
-		myOpen = false;
-	}
-
-	function handleSetStrikeRange() {
-		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
-		if (targetId) {
-			selectedPlacedUnitId.set(targetId);
-			interactionMode.set('strike');
-			addLog('点击地图选择打击目标位置');
-		}
-		contextPlacedUnitId = null;
-		myOpen = false;
-	}
-
 	function handleCancelStrike() {
 		strikeDialogOpen = false;
 		strikePendingTarget = null;
@@ -479,70 +430,21 @@
 			}
 		}
 	});
-
-	function handleViewProperties() {
-		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
-		if (targetId) {
-			selectedPlacedUnitId.set(targetId);
-			const marker = markersMap[targetId];
-			if (marker) {
-				marker.openPopup();
-			}
-		}
-		contextPlacedUnitId = null;
-		myOpen = false;
-	}
-
-	function handleLocateUnit() {
-		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
-		if (targetId) {
-			const placed = $currentBattle?.placedUnits.find((u) => u.id === targetId);
-			if (placed && map) {
-				map.flyTo([placed.lat, placed.lng], Math.max(map.getZoom(), 8), { duration: 1 });
-			}
-			selectedPlacedUnitId.set(targetId);
-		}
-		contextPlacedUnitId = null;
-		myOpen = false;
-	}
-
-	function handleSetStatus(status: PlacedUnit['status']) {
-		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
-		if (targetId) {
-			updatePlacedUnit(targetId, { status }, `单位状态变更: ${UNIT_STATUS_LABELS[status]}`);
-			addLog(`单位状态变更: ${UNIT_STATUS_LABELS[status]}`);
-		}
-		contextPlacedUnitId = null;
-		myOpen = false;
-	}
-
-	// 空白处右键：选择势力后打开左侧栏并切换势力
-	function handleSelectFactionForNewUnit(factionId: string) {
-		currentFactionId.set(factionId);
-		leftBarPinned.set(true);
-		mapMenuOpen = false;
-	}
 </script>
 
 <!-- 单位处右键菜单 -->
 <UnitContextMenu
 	bind:open={myOpen}
+	bind:contextUnitId={contextPlacedUnitId}
 	{virtualAnchor}
-	contextUnitId={contextPlacedUnitId}
-	onviewproperties={handleViewProperties}
-	onlocateunit={handleLocateUnit}
-	ondrawroute={handleDrawRoute}
-	onclearroute={handleClearRoute}
-	onsetstrike={handleSetStrikeRange}
-	onsetstatus={handleSetStatus}
-	ondelete={handleDeletePlaced}
+	{map}
+	{markersMap}
 />
 
 <!-- 空白处右键菜单 -->
 <MapContextMenu
 	bind:open={mapMenuOpen}
 	virtualAnchor={mapVirtualAnchor}
-	onselectfaction={handleSelectFactionForNewUnit}
 />
 
 <div class="relative h-full w-full">

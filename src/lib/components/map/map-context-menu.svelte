@@ -1,18 +1,17 @@
 <script lang="ts">
 	import { ContextMenu } from 'bits-ui';
 	import { UserPlus } from '@lucide/svelte';
-	import { currentBattle } from '$lib/stores/battle-store';
+	import { currentBattle, currentFactionId } from '$lib/stores/battle-store';
+	import { leftBarPinned } from '$lib/stores/sidebar-store';
 
 	interface Props {
 		open: boolean;
 		virtualAnchor: any;
-		onselectfaction?: (factionId: string) => void;
 	}
 
 	let {
 		open = $bindable(false),
-		virtualAnchor,
-		onselectfaction
+		virtualAnchor
 	}: Props = $props();
 
 	function getOpen() {
@@ -21,6 +20,12 @@
 
 	function setOpen(v: boolean) {
 		open = v;
+	}
+
+	function handleSelectFaction(factionId: string) {
+		currentFactionId.set(factionId);
+		leftBarPinned.set(true);
+		open = false;
 	}
 </script>
 
@@ -45,7 +50,7 @@
 						{#each $currentBattle.factions as faction (faction.id)}
 							<ContextMenu.Item
 								class="rounded-button flex h-9 items-center gap-2 py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
-								onSelect={() => onselectfaction?.(faction.id)}
+								onSelect={() => handleSelectFaction(faction.id)}
 							>
 								<span class="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full" style="background: {faction.color};"></span>
 								{faction.name}
