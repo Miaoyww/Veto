@@ -53,9 +53,6 @@
 					<Save />
 				</Button>
 			</RightSidebarMenubutton>
-			<RightSidebarMenubutton title="重置推演">
-				<ResetButton />
-			</RightSidebarMenubutton>
 			<RightSidebarMenubutton title="设置">
 				<SettingsButton />
 			</RightSidebarMenubutton>

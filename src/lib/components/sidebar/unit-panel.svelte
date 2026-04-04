@@ -72,13 +72,16 @@
 		Anchor,
 		Plane,
 		Bomb,
-		Radio
+		Radio,
+		Crosshair
 	} from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Separator } from '$lib/components/ui/separator';
 	import UnitCompRow from '$lib/components/cards/units/unit-comp-row.svelte';
+	import BranchSelector from '$lib/components/buttons/branch-selector.svelte';
+	import { mapFlyTo } from '$lib/stores/map-store';
 	import {
 		Card,
 		CardContent,
@@ -86,8 +89,6 @@
 		CardTitle,
 		CardDescription
 	} from '$lib/components/ui/card';
-	const branches: Branch[] = ['army', 'navy', 'air_force'];
-
 	// 编辑状态
 	let editingUnitId = $state<string | null>(null);
 	let newUnitName = $state('');
@@ -344,6 +345,20 @@
 		});
 	}
 
+	// 定位到当前军种已放置单位
+	function locateBranch() {
+		const battle = $currentBattle;
+		const faction = $currentFaction;
+		if (!battle || !faction) return;
+		const branchUnitIds = new Set(
+			faction.units.filter((u) => u.branch === $currentBranch).map((u) => u.id)
+		);
+		const placed = battle.placedUnits.find(
+			(p) => p.factionId === faction.id && branchUnitIds.has(p.unitId)
+		);
+		if (placed) mapFlyTo.set({ lat: placed.lat, lng: placed.lng });
+	}
+
 	// 在地图上放置单位
 	function handlePlaceUnit(unitId: string) {
 		pendingPlaceUnitId.set(unitId);
@@ -367,23 +382,13 @@
 					<p class="py-4 text-center text-xs text-muted-foreground">请先选择阵营</p>
 				{:else}
 					<!-- 军种选择 -->
-					<div class="flex gap-1 rounded-lg bg-muted p-1">
-						{#each branches as branch (branch)}
-							<button
-								class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors
-						{$currentBranch === branch
-									? 'bg-background text-foreground shadow-sm'
-									: 'text-muted-foreground hover:text-foreground'}"
-								onclick={() => {
-									currentBranch.set(branch);
-									editingUnitId = null;
-								}}
-							>
-								{BRANCH_LABELS[branch]}
-							</button>
-						{/each}
-					</div>
-
+					<BranchSelector
+						value={$currentBranch}
+						onchange={(b) => {
+							currentBranch.set(b);
+							editingUnitId = null;
+						}}
+					/>
 					<!-- 快速创建 -->
 					<div class="flex gap-2">
 						<Input
@@ -423,6 +428,22 @@
 										<span class="truncate">{unit.name}</span>
 									</div>
 									<div class="flex shrink-0 gap-0.5">
+										{#each [$currentBattle?.placedUnits.find((p) => p.unitId === unit.id && p.factionId === $currentFactionId)] as placed}
+											{#if placed}
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													title="定位到地图"
+													class="size-6 text-muted-foreground hover:text-blue-500"
+													onclick={(e) => {
+														e.stopPropagation();
+														mapFlyTo.set({ lat: placed.lat, lng: placed.lng });
+													}}
+												>
+													<Crosshair class="size-3.5" />
+												</Button>
+											{/if}
+										{/each}
 										<Button
 											variant="ghost"
 											size="icon-sm"

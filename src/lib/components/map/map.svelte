@@ -2,12 +2,13 @@
 	import { onMount, tick, mount } from 'svelte';
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
-	import { coords, zoom } from '$lib/stores/map-store';
+	import { coords, zoom, mapFlyTo } from '$lib/stores/map-store';
 	import { ContextMenu, Portal } from 'bits-ui';
 	import { CirclePlus, Trash2, Route, Target, Eye, ArrowRightLeft, MapPin, Navigation, X, Activity, UserPlus, LocateFixed } from '@lucide/svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import UnitPopup from './unit-popup.svelte';
+	import StrikeCard from './strike-card.svelte';
 	import {
 		currentBattle,
 		currentFactionId,
@@ -38,6 +39,19 @@
 	let mapVirtualAnchor: any = $state(null);
 
 	let virtualAnchor: any = $state(null);
+
+	// 打击目标浮动卡片
+	let strikeDialogOpen = $state(false);
+	let strikePendingUnitId: string | null = $state(null);
+	let strikePendingTarget: { lat: number; lng: number } | null = $state(null);
+	let strikePendingRadius = $state(5000);
+	let strikePreviewCircle: L.Circle | null = null;
+	// 鼠标跟踪
+	let strikeMouseX = $state(0);
+	let strikeMouseY = $state(0);
+	let strikePinnedX = $state(0);
+	let strikePinnedY = $state(0);
+	let strikeHoverMarker: L.CircleMarker | null = null;
 
 	// 地图上的图层引用
 	let markersLayer: L.LayerGroup;
@@ -197,7 +211,10 @@
 
 			// 打击范围
 			if (placed.strikeRadius > 0) {
-				const circle = L.circle([placed.lat, placed.lng], {
+				const center = placed.strikeTarget
+					? ([placed.strikeTarget.lat, placed.strikeTarget.lng] as L.LatLngExpression)
+					: ([placed.lat, placed.lng] as L.LatLngExpression);
+				const circle = L.circle(center, {
 					radius: placed.strikeRadius,
 					color: faction.color,
 					weight: 1,
@@ -206,6 +223,21 @@
 					dashArray: '4 4'
 				});
 				rangesLayer.addLayer(circle);
+				// 从单位到打击目标的连线
+				if (placed.strikeTarget) {
+					const line = L.polyline(
+						[[placed.lat, placed.lng], [placed.strikeTarget.lat, placed.strikeTarget.lng]],
+						{ color: faction.color, weight: 1, opacity: 0.5, dashArray: '4 4' }
+					);
+					rangesLayer.addLayer(line);
+					const dot = L.circleMarker([placed.strikeTarget.lat, placed.strikeTarget.lng], {
+						radius: 4,
+						color: faction.color,
+						fillColor: faction.color,
+						fillOpacity: 0.9
+					});
+					rangesLayer.addLayer(dot);
+				}
 			}
 		}
 	}
@@ -219,6 +251,14 @@
 		renderMapElements();
 	});
 
+	// 响应外部定位请求
+	$effect(() => {
+		const pos = $mapFlyTo;
+		if (!pos || !map) return;
+		map.flyTo([pos.lat, pos.lng], Math.max(map.getZoom(), 10), { duration: 1 });
+		Promise.resolve().then(() => mapFlyTo.set(null));
+	});
+
 	onMount(async () => {
 		const readyMap = await waitForMapReady();
 
@@ -228,6 +268,31 @@
 
 		readyMap.on('mousemove', (e) => {
 			coords.set(e.latlng);
+			strikeMouseX = e.originalEvent.clientX;
+			strikeMouseY = e.originalEvent.clientY;
+
+			if ($interactionMode === 'strike') {
+				if (!strikePendingTarget) {
+					// 阶段1：红点跟随光标
+					if (!strikeHoverMarker) {
+						strikeHoverMarker = L.circleMarker(e.latlng, {
+							radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2
+						}).addTo(readyMap);
+					} else {
+						strikeHoverMarker.setLatLng(e.latlng);
+					}
+				} else {
+					// 阶段2：鼠标到目标距离实时更新半径
+					const dist = readyMap.distance(
+						[strikePendingTarget.lat, strikePendingTarget.lng],
+						e.latlng
+					);
+					if (dist > 100) strikePendingRadius = Math.round(dist);
+				}
+			} else if (strikeHoverMarker && !strikePendingTarget) {
+				strikeHoverMarker.remove();
+				strikeHoverMarker = null;
+			}
 		});
 		readyMap.on('zoomend', () => {
 			zoom.set(readyMap.getZoom());
@@ -254,12 +319,31 @@
 					addRoutePoint(placedId, latlng.lat, latlng.lng);
 				}
 			} else if (mode === 'strike') {
-				// 打击范围模式：以点击位置到单位距离设置打击范围
-				const placed = $selectedPlacedUnit;
-				if (placed) {
-					const dist = readyMap.distance([placed.lat, placed.lng], latlng);
-					updatePlacedUnit(placed.id, { strikeRadius: Math.round(dist) });
-					interactionMode.set('select');
+				const placedId = $selectedPlacedUnitId;
+				if (placedId) {
+					if (!strikePendingTarget) {
+						// 阶段1 → 阶段2：第一次点击，选定目标坐标，卡片开始跟随鼠标
+						strikePendingUnitId = placedId;
+						strikePendingTarget = { lat: latlng.lat, lng: latlng.lng };
+						strikePendingRadius = 5000;
+						if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
+						strikeHoverMarker = L.circleMarker([latlng.lat, latlng.lng], {
+							radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2
+						}).addTo(readyMap);
+					} else {
+						// 阶段2 → 阶段3：第二次点击，固定卡片
+						const CARD_W = 256, CARD_H = 220;
+						const cx = e.originalEvent.clientX, cy = e.originalEvent.clientY;
+						let px = cx + 16;
+						let py = cy - CARD_H / 2;
+						if (px + CARD_W > window.innerWidth - 8) px = cx - CARD_W - 16;
+						if (py < 8) py = 8;
+						if (py + CARD_H > window.innerHeight - 8) py = window.innerHeight - CARD_H - 8;
+						strikePinnedX = px;
+						strikePinnedY = py;
+						strikeDialogOpen = true;
+						interactionMode.set('select');
+					}
 				}
 			} else {
 				// 选择模式：点击空白处取消选中
@@ -330,11 +414,60 @@
 		if (targetId) {
 			selectedPlacedUnitId.set(targetId);
 			interactionMode.set('strike');
-			addLog('进入打击范围模式，点击地图设置范围');
+			addLog('点击地图选择打击目标位置');
 		}
 		contextPlacedUnitId = null;
 		setOpen(false);
 	}
+
+	function handleCancelStrike() {
+		strikeDialogOpen = false;
+		strikePendingTarget = null;
+		strikePendingUnitId = null;
+		interactionMode.set('select');
+		if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
+	}
+
+	function handleConfirmStrike() {
+		if (strikePendingUnitId && strikePendingTarget) {
+			updatePlacedUnit(strikePendingUnitId, {
+				strikeTarget: strikePendingTarget,
+				strikeRadius: strikePendingRadius
+			});
+			addLog(
+				`设置打击目标 (${strikePendingTarget.lat.toFixed(3)}°N, ${strikePendingTarget.lng.toFixed(3)}°E)，半径 ${(strikePendingRadius / 1000).toFixed(1)} km`
+			);
+		}
+		strikeDialogOpen = false;
+		strikePendingUnitId = null;
+		strikePendingTarget = null;
+		if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
+	}
+
+	// 打击目标预览圆：阶段2和3都显示，跟随半径变化
+	$effect(() => {
+		if (strikePendingTarget && map) {
+			const { lat, lng } = strikePendingTarget;
+			const r = strikePendingRadius;
+			if (!strikePreviewCircle) {
+				strikePreviewCircle = L.circle([lat, lng], {
+					radius: r,
+					color: '#ef4444',
+					weight: 2,
+					fillColor: '#ef4444',
+					fillOpacity: 0.12,
+					dashArray: '6 4'
+				}).addTo(map);
+			} else {
+				strikePreviewCircle.setRadius(r);
+			}
+		} else {
+			if (strikePreviewCircle) {
+				strikePreviewCircle.remove();
+				strikePreviewCircle = null;
+			}
+		}
+	});
 
 	function handleViewProperties() {
 		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
@@ -424,13 +557,13 @@
 					清除路线
 				</ContextMenu.Item>
 
-				<!-- 设置打击范围 -->
+				<!-- 设置打击目标 -->
 				<ContextMenu.Item
 					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
 					onSelect={handleSetStrikeRange}
 				>
 					<Target class="mr-2 size-4" />
-					设置打击范围
+					设置打击目标
 				</ContextMenu.Item>
 
 				<!-- 设置状态子菜单 -->
@@ -541,7 +674,9 @@
 					<span class="text-sm text-stone-700">点击地图添加路线点（右键结束）</span>
 				{:else if $interactionMode === 'strike'}
 					<Target class="h-4 w-4 text-stone-600" />
-					<span class="text-sm text-stone-700">点击地图设置打击范围</span>
+					<span class="text-sm text-stone-700">
+						{strikePendingTarget ? '再次点击地图确认打击半径' : '点击地图选择打击目标位置'}
+					</span>
 				{/if}
 				<div class="mx-1 h-4 w-px bg-stone-200"></div>
 				<Button
@@ -559,11 +694,28 @@
 	{/if}
 </div>
 
+<!-- 打击目标浮动卡片 -->
+{#if strikePendingTarget}
+	<StrikeCard
+		phase={strikeDialogOpen ? 'pinned' : 'tracking'}
+		target={strikePendingTarget}
+		bind:radius={strikePendingRadius}
+		x={strikeDialogOpen ? strikePinnedX : strikeMouseX + 18}
+		y={strikeDialogOpen ? strikePinnedY : strikeMouseY - 18}
+		oncancel={handleCancelStrike}
+		onconfirm={handleConfirmStrike}
+	/>
+{/if}
+
 <svelte:window
 	onkeydown={(e) => {
 		if (e.key === 'Escape') {
-			interactionMode.set('select');
-			pendingPlaceUnitId.set(null);
+			if (strikePendingTarget) {
+				handleCancelStrike();
+			} else {
+				interactionMode.set('select');
+				pendingPlaceUnitId.set(null);
+			}
 		}
 	}}
 />

@@ -135,6 +135,8 @@ export interface PlacedUnit {
 	lng: number;
 	/** 行动路线坐标点 */
 	route: [number, number][];
+	/** 打击目标坐标 */
+	strikeTarget?: { lat: number; lng: number };
 	/** 打击范围半径(米) */
 	strikeRadius: number;
 	/** 单位状态 */
