@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, mount } from 'svelte';
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
 	import { coords, zoom } from '$lib/stores/map-store';
@@ -7,6 +7,7 @@
 	import { CirclePlus, Trash2, Route, Target, Eye, ArrowRightLeft, MapPin, Navigation, X } from '@lucide/svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import UnitPopup from './unit-popup.svelte';
 	import {
 		currentBattle,
 		currentFactionId,
@@ -52,29 +53,9 @@
 
 	// 构建单位 Popup 内容节点
 	function createPopupElement(unit: MilitaryUnit, faction: Faction, placed: PlacedUnit): HTMLElement {
-		const wrap = document.createElement('div');
-		wrap.style.cssText = 'min-width: 160px; font-family: inherit; padding: 2px 0;';
-
-		const name = document.createElement('p');
-		name.style.cssText = 'font-weight: 600; font-size: 0.875rem; color: #1c1917; margin: 0 0 5px 0;';
-		name.textContent = unit.name;
-
-		const meta = document.createElement('p');
-		meta.style.cssText = 'font-size: 0.75rem; color: #78716c; margin: 0 0 3px 0; display: flex; align-items: center; gap: 5px;';
-		const dot = document.createElement('span');
-		dot.style.cssText = `color: ${faction.color}; font-size: 0.55rem; line-height: 1;`;
-		dot.textContent = '●';
-		meta.appendChild(dot);
-		meta.appendChild(document.createTextNode(`${faction.name} · ${BRANCH_LABELS[unit.branch]}`));
-
-		const statusEl = document.createElement('p');
-		statusEl.style.cssText = 'font-size: 0.75rem; color: #a8a29e; margin: 0;';
-		statusEl.textContent = `状态：${UNIT_STATUS_LABELS[placed.status]}`;
-
-		wrap.appendChild(name);
-		wrap.appendChild(meta);
-		wrap.appendChild(statusEl);
-		return wrap;
+		const el = document.createElement('div');
+		mount(UnitPopup, { target: el, props: { unit, faction, placed } });
+		return el;
 	}
 
 	// 查找单位信息
