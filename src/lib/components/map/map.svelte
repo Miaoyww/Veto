@@ -3,14 +3,14 @@
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
 	import { coords, zoom, mapFlyTo } from '$lib/stores/map-store';
-	import { MapPin, Navigation, X, Target, AlertTriangle, Check } from '@lucide/svelte';
-	import { fly } from 'svelte/transition';
 	import UnitContextMenu from './unit-context-menu.svelte';
 	import MapContextMenu from './map-context-menu.svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import UnitPopup from './unit-popup.svelte';
 	import StrikeCard from './strike-card.svelte';
+	import InteractionModeHint from './interaction-mode-hint.svelte';
+	import RouteConfirmCard from './route-confirm-card.svelte';
 	import {
 		currentBattle,
 		currentFactionId,
@@ -28,7 +28,6 @@
 	import {
 		pendingRoute,
 		addPendingPoint,
-		applyPendingRoute,
 		cancelPendingRoute
 	} from '$lib/stores/pending-route.store';
 	import type { MilitaryUnit, PlacedUnit, Faction, NatoUnitType, UnitSide } from '$lib/types';
@@ -50,6 +49,7 @@
 	let strikePendingTarget: { lat: number; lng: number } | null = $state(null);
 	let strikePendingRadius = $state(5000);
 	let strikePreviewCircle: L.Circle | null = null;
+	
 	// 鼠标跟踪
 	let strikeMouseX = $state(0);
 	let strikeMouseY = $state(0);
@@ -534,88 +534,11 @@
 	</Map>
 
 	<!-- 交互模式提示 -->
-	{#if $interactionMode !== 'select'}
-		<div class="absolute top-20 left-1/2 z-[1001] -translate-x-1/2">
-			<div class="flex items-center gap-3 rounded-xl border border-stone-200 bg-white/90 px-4 py-2.5 shadow-md backdrop-blur-sm">
-				{#if $interactionMode === 'place'}
-					<MapPin class="h-4 w-4 text-stone-600" />
-					<span class="text-sm text-stone-700">点击地图放置单位</span>
-		{:else if $interactionMode === 'route'}
-				<Navigation class="h-4 w-4 text-stone-600" />
-				<span class="text-sm text-stone-700">
-					{#if $pendingRoute}
-						{$pendingRoute.type === 'reset' ? '改设路线' : '追加路线'}模式 · 已录入 {$pendingRoute.points.length} 个节点 · Esc 完成并确认
-					{:else}
-						路线绘制模式（直接生效）· Esc 完成
-					{/if}
-				</span>
-				{:else if $interactionMode === 'strike'}
-					<Target class="h-4 w-4 text-stone-600" />
-					<span class="text-sm text-stone-700">
-						{strikePendingTarget ? '再次点击地图确认打击半径' : '点击地图选择打击目标位置'}
-					</span>
-				{/if}
-				<div class="mx-1 h-4 w-px bg-stone-200"></div>
-				<Button
-					variant="ghost"
-					size="sm"
-					class="h-7 gap-1.5 px-2 text-xs text-stone-500 hover:text-stone-800"
-					onclick={() => { interactionMode.set('select'); pendingPlaceUnitId.set(null); }}
-				>
-					<X class="h-3 w-3" />
-					取消
-					<Kbd.Root class="ml-0.5 text-[10px]">Esc</Kbd.Root>
-				</Button>
-			</div>
-		</div>
-	{/if}
+	<InteractionModeHint {strikePendingTarget} />
 </div>
 
 <!-- 路线指令待确认卡片（Esc 退出绘制后弹出） -->
-{#if routeConfirmOpen && $pendingRoute}
-	{@const pr = $pendingRoute}
-	<div
-		class="pointer-events-none fixed inset-0 z-[2000] flex items-end justify-center pb-8"
-		in:fly={{ y: 16, duration: 220, opacity: 0 }}
-		out:fly={{ y: 16, duration: 160, opacity: 0 }}
-	>
-		<div class="pointer-events-auto flex w-[440px] flex-col gap-3 rounded-2xl border border-amber-200 bg-white/95 p-5 shadow-xl backdrop-blur-sm">
-			<div class="flex items-start gap-3">
-				<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50">
-					<AlertTriangle class="h-4 w-4 text-amber-500" />
-				</div>
-				<div>
-					<p class="text-sm font-semibold text-stone-800">路线指令已录入</p>
-					<p class="mt-0.5 text-xs text-stone-500">
-						单位 <span class="font-medium text-stone-700">{pr.unitName}</span> ·
-						{pr.type === 'reset' ? '重置路线' : '追加路线'} ·
-						共 <span class="font-medium text-stone-700">{pr.points.length}</span> 个新节点
-					</p>
-					<p class="mt-1.5 text-xs text-stone-400">是否更新该单位的行动路线？</p>
-				</div>
-			</div>
-			<div class="flex justify-end gap-2">
-				<button
-					class="rounded-lg border border-stone-200 px-4 py-1.5 text-sm text-stone-600 transition-colors hover:border-stone-400 hover:text-stone-800"
-					onclick={() => { routeConfirmOpen = false; cancelPendingRoute(); }}
-				>
-					放弃
-				</button>
-				<button
-					class="flex items-center gap-1.5 rounded-lg bg-stone-800 px-4 py-1.5 text-sm text-white transition-colors hover:bg-stone-900"
-					onclick={() => {
-						applyPendingRoute();
-						addLog(`路线更新: ${pr.unitName}，${pr.type === 'reset' ? '重置' : '追加'} ${pr.points.length} 个节点`);
-						routeConfirmOpen = false;
-					}}
-				>
-					<Check class="h-3.5 w-3.5" />
-					确认更新
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
+<RouteConfirmCard bind:open={routeConfirmOpen} />
 
 <!-- 打击目标浮动卡片 -->
 {#if strikePendingTarget}
