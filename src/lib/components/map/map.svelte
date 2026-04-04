@@ -4,7 +4,7 @@
 	import * as L from 'leaflet';
 	import { coords, zoom } from '$lib/stores/map-store';
 	import { ContextMenu, Portal } from 'bits-ui';
-	import { CirclePlus, Trash2, Route, Target, Eye, ArrowRightLeft, MapPin, Navigation, X, Activity } from '@lucide/svelte';
+	import { CirclePlus, Trash2, Route, Target, Eye, ArrowRightLeft, MapPin, Navigation, X, Activity, UserPlus, LocateFixed } from '@lucide/svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import UnitPopup from './unit-popup.svelte';
@@ -22,6 +22,7 @@
 		updatePlacedUnit,
 		addLog
 	} from '$lib/stores/battle-store';
+	import { leftBarPinned } from '$lib/stores/sidebar-store';
 	import {
 		BRANCH_LABELS,
 		UNIT_STATUS_LABELS
@@ -32,12 +33,17 @@
 	let myOpen = $state(false);
 	let contextPlacedUnitId: string | null = $state(null);
 
-	let virtualAnchor: any = null;
+	// 空白处右键菜单
+	let mapMenuOpen = $state(false);
+	let mapVirtualAnchor: any = $state(null);
+
+	let virtualAnchor: any = $state(null);
 
 	// 地图上的图层引用
 	let markersLayer: L.LayerGroup;
 	let routesLayer: L.LayerGroup;
 	let rangesLayer: L.LayerGroup;
+	const markersMap: Record<string, L.Marker> = {};
 
 	function getOpen() {
 		return myOpen;
@@ -99,6 +105,7 @@
 		markersLayer.clearLayers();
 		routesLayer.clearLayers();
 		rangesLayer.clearLayers();
+		for (const key in markersMap) delete markersMap[key];
 
 		const battle = $currentBattle;
 		if (!battle) return;
@@ -147,6 +154,7 @@
 				setOpen(true);
 			});
 
+			markersMap[placed.id] = marker;
 			markersLayer.addLayer(marker);
 
 			// 高亮选中
@@ -260,8 +268,20 @@
 		});
 
 		readyMap.on('contextmenu', (e) => {
-			// 阻止浏览器默认右键菜单，但不打开自定义菜单（仅单位右键触发）
 			e.originalEvent.preventDefault();
+			// 空白处右键：打开地图菜单
+			mapVirtualAnchor = {
+				getBoundingClientRect: () => ({
+					width: 0,
+					height: 0,
+					top: e.originalEvent.clientY,
+					bottom: e.originalEvent.clientY,
+					left: e.originalEvent.clientX,
+					right: e.originalEvent.clientX
+				}),
+				contextElement: document.body
+			};
+			mapMenuOpen = true;
 		});
 
 		renderMapElements();
@@ -320,6 +340,23 @@
 		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
 		if (targetId) {
 			selectedPlacedUnitId.set(targetId);
+			const marker = markersMap[targetId];
+			if (marker) {
+				marker.openPopup();
+			}
+		}
+		contextPlacedUnitId = null;
+		setOpen(false);
+	}
+
+	function handleLocateUnit() {
+		const targetId = contextPlacedUnitId || $selectedPlacedUnitId;
+		if (targetId) {
+			const placed = $currentBattle?.placedUnits.find((u) => u.id === targetId);
+			if (placed && map) {
+				map.flyTo([placed.lat, placed.lng], Math.max(map.getZoom(), 8), { duration: 1 });
+			}
+			selectedPlacedUnitId.set(targetId);
 		}
 		contextPlacedUnitId = null;
 		setOpen(false);
@@ -334,8 +371,16 @@
 		contextPlacedUnitId = null;
 		setOpen(false);
 	}
+
+	// 空白处右键：选择势力后打开左侧栏并切换势力
+	function handleSelectFactionForNewUnit(factionId: string) {
+		currentFactionId.set(factionId);
+		leftBarPinned.set(true);
+		mapMenuOpen = false;
+	}
 </script>
 
+<!-- 单位处右键菜单 -->
 <ContextMenu.Root bind:open={getOpen, setOpen}>
 	<ContextMenu.Portal>
 		<ContextMenu.Content
@@ -350,6 +395,15 @@
 				>
 					<Eye class="mr-2 size-4" />
 					查看属性
+				</ContextMenu.Item>
+
+				<!-- 定位单位 -->
+				<ContextMenu.Item
+					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
+					onSelect={handleLocateUnit}
+				>
+					<LocateFixed class="mr-2 size-4" />
+					定位单位
 				</ContextMenu.Item>
 
 				<!-- 绘制路线 -->
@@ -422,6 +476,47 @@
 	</ContextMenu.Portal>
 </ContextMenu.Root>
 
+<!-- 空白处右键菜单 -->
+<ContextMenu.Root bind:open={mapMenuOpen}>
+	<ContextMenu.Portal>
+		<ContextMenu.Content
+			class="absolute z-[9999] w-[220px] rounded-xl border border-muted bg-background px-1 py-1.5 shadow-popover outline-none"
+			customAnchor={mapVirtualAnchor}
+		>
+			{#if $currentBattle && $currentBattle.factions.length > 0}
+				<ContextMenu.Sub>
+					<ContextMenu.SubTrigger
+						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-medium select-none focus-visible:outline-none data-highlighted:bg-muted data-[state=open]:bg-muted"
+					>
+						<UserPlus class="mr-2 size-4" />
+						新建单位
+					</ContextMenu.SubTrigger>
+					<ContextMenu.SubContent
+						class="z-[10000] w-[180px] rounded-xl border border-muted bg-background px-1 py-1.5 shadow-popover outline-none"
+						sideOffset={10}
+					>
+						{#each $currentBattle.factions as faction (faction.id)}
+							<ContextMenu.Item
+								class="rounded-button flex h-9 items-center gap-2 py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
+								onSelect={() => handleSelectFactionForNewUnit(faction.id)}
+							>
+								<span class="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full" style="background: {faction.color};"></span>
+								{faction.name}
+							</ContextMenu.Item>
+						{/each}
+					</ContextMenu.SubContent>
+				</ContextMenu.Sub>
+			{:else}
+				<ContextMenu.Item
+					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none opacity-50 focus-visible:outline-none"
+					disabled
+				>
+					暂无阵营，请先创建阵营
+				</ContextMenu.Item>
+			{/if}
+		</ContextMenu.Content>
+	</ContextMenu.Portal>
+</ContextMenu.Root>
 <div class="relative h-full w-full">
 	<Map
 		bind:instance={map}
