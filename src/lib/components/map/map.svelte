@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, mount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
 	import { coords, zoom, mapFlyTo } from '$lib/stores/map-store';
@@ -20,7 +21,8 @@
 		addRoutePoint,
 		updatePlacedUnit,
 		addLog,
-		undo
+		undo,
+		runtimePositions
 	} from '$lib/stores/battle-store';
 	import { gameClock } from '$lib/stores/game-clock.store';
 	import {
@@ -53,6 +55,8 @@
 	let rangesLayer: L.LayerGroup;
 	let pendingLayer: L.LayerGroup;
 	const markersMap: Record<string, L.Marker> = {};
+	/** 各单位行动路线 polyline 引用（快速路径更新用） */
+	const routePolylinesMap: Record<string, L.Polyline> = {};
 
 	// 构建单位 Popup 内容节点
 	function createPopupElement(unit: MilitaryUnit, faction: Faction, placed: PlacedUnit): HTMLElement {
@@ -80,6 +84,7 @@
 		routesLayer.clearLayers();
 		rangesLayer.clearLayers();
 		for (const key in markersMap) delete markersMap[key];
+		for (const key in routePolylinesMap) delete routePolylinesMap[key];
 
 		const battle = $currentBattle;
 		if (!battle) return;
@@ -145,6 +150,8 @@
 					opacity: 0.7
 				});
 				routesLayer.addLayer(polyline);
+				// 存储引用，供快速路径更新
+				routePolylinesMap[placed.id] = polyline;
 
 				// 路线终点箭头标记
 				const lastPoint = placed.route[placed.route.length - 1];
@@ -190,13 +197,55 @@
 		}
 	}
 
-	// 响应式更新地图
+	// 响应式更新地图（结构性重建：添加/删除单位、切换互动模式时触发）
 	$effect(() => {
 		// 读取依赖以触发响应
 		$currentBattle;
 		$selectedPlacedUnitId;
 		$interactionMode;
 		renderMapElements();
+	});
+
+	// 快速路径：推演运行时仅更新 marker 位置和路线，不重建 DOM
+	$effect(() => {
+		const positions = $runtimePositions;
+		if (!map || !markersLayer) return;
+
+		for (const [id, pos] of Object.entries(positions)) {
+			// 更新 marker 位置
+			const marker = markersMap[id];
+			if (marker) {
+				marker.setLatLng([pos.lat, pos.lng]);
+			}
+
+			// 更新路线 polyline（或在到达终点时移除）
+			if (pos.route.length === 0) {
+				const poly = routePolylinesMap[id];
+				if (poly) {
+					routesLayer.removeLayer(poly);
+					delete routePolylinesMap[id];
+				}
+			} else {
+				const routePoints: L.LatLngExpression[] = [[pos.lat, pos.lng], ...pos.route];
+				const poly = routePolylinesMap[id];
+				if (poly) {
+					poly.setLatLngs(routePoints);
+				} else {
+					// 首次创建（runtimePositions 初始化后 markersMap 可能还没有对应 polyline）
+				const battle = get(currentBattle);
+					const placed = battle?.placedUnits.find((p) => p.id === id);
+					if (placed) {
+						const faction = battle?.factions.find((f) =>
+							f.units.some((u) => u.id === placed.unitId)
+						);
+						const color = faction?.color ?? '#888';
+						const newPoly = L.polyline(routePoints, { color, weight: 3, opacity: 0.7 });
+						routesLayer.addLayer(newPoly);
+						routePolylinesMap[id] = newPoly;
+					}
+				}
+			}
+		}
 	});
 
 	// 响应外部定位请求

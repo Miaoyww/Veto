@@ -14,6 +14,8 @@ export interface SimulationUnit {
 	type: UnitType;
 	/** CSS 颜色字符串 */
 	factionColor: string;
+	/** 阵营标识（相同 factionId 为友方） */
+	factionId: string;
 	/** 当前像素坐标（相对于 800×450 作战剧场） */
 	position: Vec2;
 	/** 正在执行的路径点列表（到达每点后弹出） */
@@ -24,6 +26,25 @@ export interface SimulationUnit {
 	pendingPath: Vec2[];
 	/** 是否正在等待指令确认 */
 	isAwaitingConfirmation: boolean;
+	// ── 战斗属性 ──
+	/** 最大生命值 */
+	maxHp: number;
+	/** 当前生命值 */
+	hp: number;
+	/** 最大组织度 */
+	maxOrg: number;
+	/** 当前组织度（低于 20% 时速度和攻击力线性衰减） */
+	org: number;
+	/** 软攻（对步兵有效） */
+	softAttack: number;
+	/** 硬攻（对装甲/载具有效） */
+	hardAttack: number;
+	/** 防御力（减伤系数） */
+	defense: number;
+	/** 攻击射程（km） */
+	attackRange: number;
+	/** 是否正在交战（由战斗引擎每 tick 更新） */
+	isEngaged: boolean;
 }
 
 // ---- 演示用初始单位与路径（像素坐标，剧场 800×450） ----
@@ -35,45 +56,67 @@ export const DEMO_UNITS_INITIAL: Readonly<SimulationUnit[]> = [
 		name: '第1步兵旅',
 		type: 'infantry',
 		factionColor: '#dc2626',
-		position: { x: 60, y: 180 },
+		factionId: 'red',
+		position: { x: 60, y: 220 },
 		targetPath: [
-			{ x: 200, y: 160 },
-			{ x: 360, y: 130 },
-			{ x: 500, y: 170 },
-			{ x: 640, y: 140 },
-			{ x: 740, y: 200 }
+			{ x: 200, y: 210 },
+			{ x: 380, y: 215 },
+			{ x: 550, y: 210 },
+			{ x: 740, y: 220 }
 		],
 		speed: 5,
 		pendingPath: [],
-		isAwaitingConfirmation: false
+		isAwaitingConfirmation: false,
+		maxHp: 100,
+		hp: 100,
+		maxOrg: 100,
+		org: 100,
+		softAttack: 8,
+		hardAttack: 3,
+		defense: 4,
+		attackRange: 15,
+		isEngaged: false
 	},
 	{
 		id: 'unit-002',
 		name: '第3装甲团',
 		type: 'armor',
 		factionColor: '#2563eb',
-		position: { x: 60, y: 340 },
+		factionId: 'blue',
+		position: { x: 740, y: 240 },
 		targetPath: [
-			{ x: 220, y: 300 },
-			{ x: 390, y: 340 },
-			{ x: 530, y: 280 },
-			{ x: 680, y: 310 },
-			{ x: 740, y: 370 }
+			{ x: 600, y: 230 },
+			{ x: 420, y: 225 },
+			{ x: 250, y: 230 },
+			{ x: 60, y: 240 }
 		],
-		speed: 40,
+		speed: 30,
 		pendingPath: [],
-		isAwaitingConfirmation: false
+		isAwaitingConfirmation: false,
+		maxHp: 150,
+		hp: 150,
+		maxOrg: 80,
+		org: 80,
+		softAttack: 10,
+		hardAttack: 18,
+		defense: 8,
+		attackRange: 12,
+		isEngaged: false
 	}
 ];
 
-/** 深拷贝初始数据，生成新的可变单位列表 */
+/** 深拷贝初始数据，生成新的可变单位列表（同时重置所有战斗状态） */
 function cloneInitial(): SimulationUnit[] {
 	return DEMO_UNITS_INITIAL.map((u) => ({
 		...u,
 		position: { ...u.position },
 		targetPath: u.targetPath.map((p) => ({ ...p })),
 		pendingPath: [],
-		isAwaitingConfirmation: false
+		isAwaitingConfirmation: false,
+		// 重置战斗状态
+		hp: u.maxHp,
+		org: u.maxOrg,
+		isEngaged: false
 	}));
 }
 

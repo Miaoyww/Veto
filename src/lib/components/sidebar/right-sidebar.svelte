@@ -1,12 +1,13 @@
 <script lang="ts">
 	import RightSidebarMenubutton from '$lib/components/buttons/right-sidebar-menubutton.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Grid3x3, Ruler, Save } from '@lucide/svelte';
+	import { Grid3x3, Ruler, Save, Activity } from '@lucide/svelte';
 	import SettingsButton from '$lib/components/buttons/right-bar/settings-button.svelte';
 	import ResetButton from '$lib/components/buttons/right-bar/reset-button.svelte';
 	import { rightBarPinned } from '$lib/stores/sidebar-store';
 	import PinButton from '../buttons/right-bar/pin-button.svelte';
 	import { showAlert } from '$lib/stores/alert-dialog-store';
+	import SimUnitsCard from '$lib/components/cards/simulation/sim-units-card.svelte';
 
 	// 是否鼠标悬停
 	let hover = $state(false);
@@ -17,6 +18,8 @@
 	function togglePin() {
 		rightBarPinned.update((prev) => !prev);
 	}
+
+	let simUnitsOpen = $state(false);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -38,6 +41,16 @@
 					<Ruler />
 				</Button>
 			</RightSidebarMenubutton>
+			<RightSidebarMenubutton title="推演单位态势">
+				<Button
+					variant="ghost"
+					size="icon"
+					class={simUnitsOpen ? 'text-foreground' : ''}
+					onclick={() => (simUnitsOpen = !simUnitsOpen)}
+				>
+					<Activity />
+				</Button>
+			</RightSidebarMenubutton>
 		</div>
 	</div>
 
@@ -54,6 +67,8 @@
 		</div>
 	</div>
 </div>
+
+<SimUnitsCard bind:open={simUnitsOpen} />
 
 <style>
 	.sidebar {

@@ -17,9 +17,14 @@ function loadBattlesFromStorage(): Battle[] {
 	}
 }
 
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 function saveBattlesToStorage(battles: Battle[]) {
 	if (typeof localStorage === 'undefined') return;
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(battles));
+	// 节流：最多每 2 秒存一次，避免 tick 每帧写 localStorage
+	if (_saveTimer) clearTimeout(_saveTimer);
+	_saveTimer = setTimeout(() => {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(battles));
+	}, 2000);
 }
 
 // ============ 所有战局列表 ============
@@ -299,7 +304,8 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
 		hardAttack: 10,
 		airAttack: 5,
 		defense: 25,
-		speed: 8
+		speed: 8,
+		attackRange: 15
 	};
 	updateCurrentBattle((b) => ({
 		...b,
@@ -395,3 +401,131 @@ export const interactionMode = writable<InteractionMode>('select');
 
 /** 待放置的单位ID (place模式使用) */
 export const pendingPlaceUnitId = writable<string | null>(null);
+
+// ============ 运行时位置（60fps 更新，不写 battles，不触发 localStorage） ============
+
+export interface RuntimeUnitPosition {
+	lat: number;
+	lng: number;
+	route: [number, number][];
+	status: PlacedUnit['status'];
+	/** 当前生命值（高频更新，不触发 localStorage） */
+	hp: number;
+	/** 当前组织度（高频更新，不触发 localStorage） */
+	org: number;
+	/** 是否正在交战（由引擎战斗结算更新） */
+	isEngaged: boolean;
+}
+
+/**
+ * 运行时位置 store：仅在内存中存储当前战局各 PlacedUnit 的实时位置。
+ * 由引擎 tick 驱动（60fps），不触发 battles/localStorage 写入。
+ * 地图组件监听此 store，用 setLatLng() 快速更新 Marker，避免重建 DOM。
+ */
+export const runtimePositions = writable<Record<string, RuntimeUnitPosition>>({});
+
+/**
+ * 初始化运行时位置（引擎启动时调用）。
+ * 将当前 battle 的 placedUnits 位置快照写入 runtimePositions。
+ */
+export function initRuntimePositions() {
+	const battle = get(currentBattle);
+	if (!battle) return;
+	const snapshot: Record<string, RuntimeUnitPosition> = {};
+	for (const u of battle.placedUnits) {
+		snapshot[u.id] = {
+			lat: u.lat,
+			lng: u.lng,
+			route: [...u.route],
+			status: u.status,
+			hp: u.hp,
+			org: u.org,
+			isEngaged: false
+		};
+	}
+	runtimePositions.set(snapshot);
+}
+
+/**
+ * 将运行时位置写回 battles store（引擎停止/暂停时调用）。
+ * 这样位置才会持久化到 localStorage。
+ */
+export function flushRuntimePositions() {
+	const positions = get(runtimePositions);
+	const id = get(currentBattleId);
+	if (!id || Object.keys(positions).length === 0) return;
+	battles.update((list) =>
+		list.map((b) => {
+			if (b.id !== id) return b;
+			return {
+				...b,
+				placedUnits: b.placedUnits.map((u) => {
+					const pos = positions[u.id];
+					return pos
+						? { ...u, lat: pos.lat, lng: pos.lng, route: pos.route, status: pos.status, hp: pos.hp, org: pos.org }
+						: u;
+				})
+			};
+		})
+	);
+}
+
+/**
+ * 按模拟时间步长推进当前战局中所有有路线的 PlacedUnit。
+ * 仅写 runtimePositions（不触发 battles/localStorage），地图通过快速路径 setLatLng 响应。
+ *
+ * 使用近似平面地球公式：
+ *   1° 纬度 ≈ 111 km
+ *   1° 经度 ≈ 111 × cos(lat) km
+ */
+export function tickMapMovement(deltaSimSec: number) {
+	runtimePositions.update((positions) => {
+		const next: Record<string, RuntimeUnitPosition> = {};
+		for (const [id, cur] of Object.entries(positions)) {
+			if (cur.route.length === 0) {
+				// 已到达，状态置 idle
+				next[id] = cur.status === 'idle' ? cur : { ...cur, status: 'idle' };
+				continue;
+			}
+
+			// 找到对应 PlacedUnit 的速度（从 battles 中读一次；仅读不写）
+			const battle = get(currentBattle);
+			const placed = battle?.placedUnits.find((p) => p.id === id);
+			const speed = placed?.speed ?? 10; // km/h，无法找到则默认 10
+
+			let remainKm = (speed / 3600) * deltaSimSec;
+			let lat = cur.lat;
+			let lng = cur.lng;
+			let route = cur.route as [number, number][];
+
+			while (remainKm > 1e-9 && route.length > 0) {
+				const [tLat, tLng] = route[0];
+				const dLatKm = (tLat - lat) * 111;
+				const dLngKm = (tLng - lng) * 111 * Math.cos((lat * Math.PI) / 180);
+				const distKm = Math.sqrt(dLatKm * dLatKm + dLngKm * dLngKm);
+
+				if (distKm < 1e-9) {
+					route = route.slice(1);
+					continue;
+				}
+
+				if (remainKm >= distKm) {
+					lat = tLat;
+					lng = tLng;
+					route = route.slice(1);
+					remainKm -= distKm;
+				} else {
+					const ratio = remainKm / distKm;
+					lat += (dLatKm / 111) * ratio;
+					const cosLat = Math.cos((lat * Math.PI) / 180);
+					lng += cosLat > 1e-9 ? (dLngKm / (111 * cosLat)) * ratio : 0;
+					remainKm = 0;
+				}
+			}
+
+			const status: PlacedUnit['status'] = route.length === 0 ? 'idle' : 'moving';
+			next[id] = { lat, lng, route, status };
+		}
+		return next;
+	});
+}

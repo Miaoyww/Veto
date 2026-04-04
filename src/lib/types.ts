@@ -170,6 +170,8 @@ export interface PlacedUnit {
 	defense: number;
 	/** 移动速度 km/h */
 	speed: number;
+	/** 攻击射程 (km)，用于战斗结算 */
+	attackRange: number;
 }
 
 // ============ 势力 ============

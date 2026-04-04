@@ -1,18 +1,12 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
 		ChevronLeft,
-		Play,
-		Pause,
-		RotateCcw,
 		Clock,
-		Gauge,
 		MapPin,
 		Check,
 		X,
 		AlertTriangle,
-		MousePointerClick,
 		Navigation,
 		MoreHorizontal,
 		ChevronRight,
@@ -24,7 +18,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { ContextMenu } from 'bits-ui';
 
-	import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
+	import { gameClock } from '$lib/stores/game-clock.store';
 	import {
 		simulationUnits,
 		resetUnits,
@@ -35,7 +29,8 @@
 		resetApplySimPath
 	} from '$lib/stores/simulation-units.store';
 	import type { Vec2 } from '$lib/stores/simulation-units.store';
-	import { startEngine, stopEngine, PIXELS_PER_KM } from '$lib/engine/simulation-engine';
+	import { resetEngineTimers, PIXELS_PER_KM } from '$lib/engine/simulation-engine';
+	import SimControlBar from '$lib/components/header/control-bar.svelte';
 
 	// ── 作战剧场尺寸（像素） ──
 	const W = 800;
@@ -124,35 +119,26 @@
 
 	// ── 控制操作 ──
 
-	function togglePause() {
-		gameClock.update((c) => ({ ...c, isPaused: !c.isPaused }));
-	}
-
-	function setTimeScale(scale: number) {
-		gameClock.update((c) => ({ ...c, timeScale: scale }));
-	}
-
 	function resetAll() {
 		gameClock.update((c) => ({ ...c, currentDate: new Date('2026-01-01T00:00:00'), isPaused: true }));
 		resetUnits();
+		resetEngineTimers();
 		commandMode = null;
 	}
 
 	// ── 生命周期 ──
 
-	onMount(() => {
-		startEngine();
-	});
-
-	onDestroy(() => {
-		stopEngine();
-		gameClock.update((c) => ({ ...c, isPaused: true }));
-	});
+	// 引擎生命周期由 header-right.svelte 统一管理
 
 	// 待确认单位集合（响应式）
 	const awaitingUnitIds = $derived(
 		new Set($simulationUnits.filter((u) => u.isAwaitingConfirmation).map((u) => u.id))
 	);
+
+	// 交战单位集合与交火数量（响应式）
+	const engagedUnits = $derived($simulationUnits.filter((u) => u.isEngaged));
+	/** 交火点数量（每两个交战单位 = 1 处交火） */
+	const firefightCount = $derived(Math.ceil(engagedUnits.length / 2));
 
 	// 指令模式时将鼠标切换为十字准星
 	$effect(() => {
@@ -242,68 +228,12 @@
 	</header>
 
 	<!-- ════ 控制栏 ════ -->
-	<div
-		class="flex shrink-0 items-center gap-3 border-b border-stone-200 bg-white/50 px-5 py-2.5"
-		in:fly={{ y: -8, duration: 320, opacity: 0, delay: 60 }}
-	>
-		<button
-			onclick={togglePause}
-			title={$gameClock.isPaused ? '开始推演' : '暂停推演'}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-all
-				{$gameClock.isPaused
-				? 'border-stone-300 bg-white text-stone-600 hover:border-stone-500 hover:text-stone-800'
-				: 'border-green-400 bg-green-50 text-green-700 shadow-sm shadow-green-200 hover:bg-green-100'}"
-		>
-			{#if $gameClock.isPaused}
-				<Play size={15} />
-			{:else}
-				<Pause size={15} />
-			{/if}
-		</button>
-
-		<button
-			onclick={resetAll}
-			title="重置推演"
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 transition-all hover:border-stone-400 hover:text-stone-700"
-		>
-			<RotateCcw size={14} />
-		</button>
-
-		<div class="h-5 w-px bg-stone-200"></div>
-
-		<div class="flex items-center gap-1.5">
-			<Gauge size={13} class="text-stone-400" />
-			{#each TIME_SCALES as scale}
-				<button
-					onclick={() => setTimeScale(scale)}
-					class="rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all
-						{$gameClock.timeScale === scale
-						? 'border-stone-700 bg-stone-800 text-white shadow-sm'
-						: 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700'}"
-				>
-					{TIME_SCALE_LABELS[scale]}
-				</button>
-			{/each}
-		</div>
-
-		<div class="ml-auto flex items-center gap-2">
-			{#if commandMode}
-				<span class="flex items-center gap-1.5 text-xs font-medium text-amber-600">
-					<MousePointerClick size={13} />
-					{commandMode.type === 'reset' ? '点击剧场设置新路线终点（替换全部）' : '持续点击追加路线节点，Esc 结束'}
-				</span>
-				<button
-					onclick={() => (commandMode = null)}
-					class="rounded-full border border-stone-200 bg-white px-2 py-0.5 text-xs text-stone-500 hover:border-stone-400"
-				>
-					{commandMode.type === 'append' ? '完成' : '取消'}
-				</button>
-			{:else}
-				<span class="h-2 w-2 rounded-full {$gameClock.isPaused ? 'bg-stone-300' : 'animate-pulse bg-green-400'}"></span>
-				<span class="text-xs text-stone-500">{$gameClock.isPaused ? '已暂停' : '推演运行中'}</span>
-			{/if}
-		</div>
-	</div>
+	<SimControlBar
+		bind:commandMode
+		{engagedUnits}
+		{firefightCount}
+		onReset={resetAll}
+	/>
 
 	<!-- ════ 主内容区 ════ -->
 	<div class="flex flex-1 flex-col items-center gap-4 overflow-auto p-4">
@@ -455,7 +385,9 @@
 					class="pointer-events-none absolute select-none"
 					style="left:{unit.position.x}px; top:{unit.position.y}px; transform:translate(-50%,-50%); will-change:left,top;"
 				>
-					{#if isAwaiting}
+					{#if unit.isEngaged}
+						<div class="animate-ping absolute -inset-3 rounded-full bg-red-500 opacity-30"></div>
+					{:else if isAwaiting}
 						<div class="animate-ping absolute -inset-3 rounded-full bg-amber-400 opacity-25"></div>
 					{/if}
 
@@ -463,9 +395,9 @@
 						class="flex items-center justify-center border-2 font-black text-[11px]"
 						style="
 							width:{U_W}px; height:{U_H}px;
-							border-color:{isAwaiting ? '#f59e0b' : unit.factionColor};
+							border-color:{unit.isEngaged ? '#ef4444' : isAwaiting ? '#f59e0b' : unit.factionColor};
 							background:white;
-							color:{isAwaiting ? '#f59e0b' : unit.factionColor};
+							color:{unit.isEngaged ? '#ef4444' : isAwaiting ? '#f59e0b' : unit.factionColor};
 							position:relative;
 						"
 					>
@@ -484,9 +416,9 @@
 
 					<div
 						class="mt-0.5 whitespace-nowrap rounded px-1 text-center text-[9px] font-semibold leading-tight"
-						style="color:{isAwaiting ? '#b45309' : unit.factionColor}; background:rgba(255,255,255,0.9); outline:1px solid {isAwaiting ? '#f59e0b88' : unit.factionColor+'44'};"
+						style="color:{unit.isEngaged ? '#dc2626' : isAwaiting ? '#b45309' : unit.factionColor}; background:rgba(255,255,255,0.9); outline:1px solid {unit.isEngaged ? '#ef444488' : isAwaiting ? '#f59e0b88' : unit.factionColor+'44'};"
 					>
-						{unit.name}{isAwaiting ? ' ⚠' : ''}
+						{unit.name}{unit.isEngaged ? ' ⚔' : isAwaiting ? ' ⚠' : ''}
 					</div>
 				</div>
 			{/each}
@@ -548,7 +480,7 @@
 					>
 						<div
 							class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-black"
-							style="border-color:{isAwaiting ? '#f59e0b' : unit.factionColor}; color:{isAwaiting ? '#b45309' : unit.factionColor}; background:{isAwaiting ? '#fef9ee' : unit.factionColor+'15'};"
+							style="border-color:{unit.isEngaged ? '#ef4444' : isAwaiting ? '#f59e0b' : unit.factionColor}; color:{unit.isEngaged ? '#dc2626' : isAwaiting ? '#b45309' : unit.factionColor}; background:{unit.isEngaged ? '#fef2f2' : isAwaiting ? '#fef9ee' : unit.factionColor+'15'};"
 						>
 							{unitSymbol(unit.type)}
 						</div>
@@ -557,6 +489,11 @@
 							<div class="flex items-baseline gap-2">
 								<span class="text-sm font-semibold text-stone-700">{unit.name}</span>
 								<span class="text-xs text-stone-400">{unitLabel(unit.type)}</span>
+								{#if unit.hp <= 0}
+									<span class="text-xs font-medium text-stone-400">☠ 已阵亡</span>
+								{:else if unit.isEngaged}
+									<span class="text-xs font-medium text-red-600">⚔ 交战中</span>
+								{/if}
 								{#if isAwaiting}
 									<span class="text-xs font-medium text-amber-600">⚠ 有待确认指令</span>
 								{/if}
@@ -568,11 +505,36 @@
 								</span>
 								<span>{unit.speed} km/h</span>
 								<span class="font-mono text-stone-400">{displaySpeedPxPerSec(unit.speed)} px/s</span>
-								{#if unit.targetPath.length === 0 && !isAwaiting}
+								{#if unit.hp <= 0}
+									<span class="text-stone-400">已无战斗力</span>
+								{:else if unit.targetPath.length === 0 && !isAwaiting}
 									<span class="text-stone-400">已到达终点</span>
 								{:else if unit.targetPath.length > 0}
 									<span class="text-green-600">行进中 · {unit.targetPath.length} 节点剩余</span>
 								{/if}
+							</div>
+							<!-- HP / 组织度进度条 -->
+							<div class="mt-1.5 flex flex-col gap-1">
+								<div class="flex items-center gap-1.5">
+									<span class="w-6 text-[10px] text-stone-400">HP</span>
+									<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-100">
+										<div
+											class="h-full rounded-full transition-all {unit.hp / unit.maxHp > 0.5 ? 'bg-green-400' : unit.hp / unit.maxHp > 0.25 ? 'bg-yellow-400' : 'bg-red-400'}"
+											style="width:{(unit.hp / unit.maxHp) * 100}%"
+										></div>
+									</div>
+									<span class="w-14 text-right font-mono text-[10px] text-stone-400">{Math.round(unit.hp)}/{unit.maxHp}</span>
+								</div>
+								<div class="flex items-center gap-1.5">
+									<span class="w-6 text-[10px] text-stone-400">组织</span>
+									<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-100">
+										<div
+											class="h-full rounded-full transition-all {unit.org / unit.maxOrg < 0.2 ? 'bg-orange-400' : 'bg-blue-400'}"
+											style="width:{(unit.org / unit.maxOrg) * 100}%"
+										></div>
+									</div>
+									<span class="w-14 text-right font-mono text-[10px] {unit.org / unit.maxOrg < 0.2 ? 'text-orange-500' : 'text-stone-400'}">{Math.round(unit.org)}/{unit.maxOrg}{unit.org / unit.maxOrg < 0.2 ? ' ⚠' : ''}</span>
+								</div>
 							</div>
 						</div>
 
