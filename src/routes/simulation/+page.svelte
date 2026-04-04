@@ -13,20 +13,26 @@
 		X,
 		AlertTriangle,
 		MousePointerClick,
-		Navigation
+		Navigation,
+		MoreHorizontal,
+		ChevronRight,
+		PlusCircle,
+		RefreshCw
 	} from '@lucide/svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { ContextMenu } from 'bits-ui';
 
 	import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
 	import {
 		simulationUnits,
-		DEMO_UNITS_INITIAL,
 		resetUnits,
 		issueSimCommand,
 		applySimCommand,
-		cancelSimCommand
+		cancelSimCommand,
+		appendToSimPath,
+		resetApplySimPath
 	} from '$lib/stores/simulation-units.store';
 	import type { Vec2 } from '$lib/stores/simulation-units.store';
 	import { startEngine, stopEngine, PIXELS_PER_KM } from '$lib/engine/simulation-engine';
@@ -41,8 +47,38 @@
 
 	// 鼠标悬停坐标
 	let hoverPos: Vec2 | null = $state(null);
-	// 当前正在下达指令的单位 ID（指令模式）
-	let commandMode = $state<string | null>(null);
+	// 当前指令模式：reset = 重新设置路线，append = 追加路线节点
+	type CommandType = 'reset' | 'append';
+	let commandMode = $state<{ unitId: string; type: CommandType } | null>(null);
+
+	// 上下文菜单状态
+	let ctxMenuOpen = $state(false);
+	let ctxMenuUnitId = $state<string | null>(null);
+	let ctxVirtualAnchor: any = $state(null);
+
+	function openUnitContextMenu(e: MouseEvent, unitId: string) {
+		e.preventDefault();
+		e.stopPropagation();
+		ctxMenuUnitId = unitId;
+		ctxVirtualAnchor = {
+			getBoundingClientRect: () => ({
+				width: 0, height: 0,
+				top: e.clientY, bottom: e.clientY,
+				left: e.clientX, right: e.clientX
+			}),
+			contextElement: document.body
+		};
+		ctxMenuOpen = true;
+	}
+
+	function startRouteCommand(type: CommandType) {
+		if (!ctxMenuUnitId) return;
+		commandMode = { unitId: ctxMenuUnitId, type };
+		ctxMenuOpen = false;
+	}
+
+	function ctxGetOpen() { return ctxMenuOpen; }
+	function ctxSetOpen(v: boolean) { ctxMenuOpen = v; }
 
 	// ── 工具函数 ──
 
@@ -138,8 +174,22 @@
 			const rect = theaterEl.getBoundingClientRect();
 			const x = e.clientX - rect.left;
 			const y = e.clientY - rect.top;
-			issueSimCommand(commandMode, [{ x, y }]);
-			commandMode = null;
+			const { unitId, type } = commandMode;
+			const isRunning = !$gameClock.isPaused;
+			if (type === 'reset') {
+				if (isRunning) {
+					// 推演运行中：直接应用，无需确认
+					resetApplySimPath(unitId, { x, y });
+				} else {
+					// 推演暂停：走 pendingPath 确认流程
+					issueSimCommand(unitId, [{ x, y }]);
+				}
+				commandMode = null; // reset 模式单击一次即退出
+			} else {
+				// append 模式：直接追加节点，保持模式以允许继续点击
+				appendToSimPath(unitId, { x, y });
+				// commandMode 保持，让用户继续点击追加更多节点
+			}
 		}
 		function handleMouseMove(e: MouseEvent) {
 			const rect = theaterEl.getBoundingClientRect();
@@ -240,13 +290,13 @@
 			{#if commandMode}
 				<span class="flex items-center gap-1.5 text-xs font-medium text-amber-600">
 					<MousePointerClick size={13} />
-					点击剧场下达新路线终点
+					{commandMode.type === 'reset' ? '点击剧场设置新路线终点（替换全部）' : '持续点击追加路线节点，Esc 结束'}
 				</span>
 				<button
 					onclick={() => (commandMode = null)}
 					class="rounded-full border border-stone-200 bg-white px-2 py-0.5 text-xs text-stone-500 hover:border-stone-400"
 				>
-					取消
+					{commandMode.type === 'append' ? '完成' : '取消'}
 				</button>
 			{:else}
 				<span class="h-2 w-2 rounded-full {$gameClock.isPaused ? 'bg-stone-300' : 'animate-pulse bg-green-400'}"></span>
@@ -379,13 +429,17 @@
 					{/if}
 				{/each}
 
-				<!-- 指令模式实时预览线（当前单位位置 → 鼠标） -->
+				<!-- 指令模式实时预览线 -->
 				{#if commandMode && hoverPos}
-					{@const u = $simulationUnits.find((u) => u.id === commandMode)}
+					{@const _cmd = commandMode}
+					{@const u = $simulationUnits.find((u) => u.id === _cmd.unitId)}
 					{#if u}
+						{@const previewFrom = _cmd.type === 'append' && u.targetPath.length > 0
+							? u.targetPath[u.targetPath.length - 1]
+							: u.position}
 						<line
-							x1={u.position.x} y1={u.position.y}
-							x2={hoverPos.x}   y2={hoverPos.y}
+							x1={previewFrom.x} y1={previewFrom.y}
+							x2={hoverPos.x}    y2={hoverPos.y}
 							stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4" opacity="0.7"
 						/>
 						<circle cx={hoverPos.x} cy={hoverPos.y} r="5" fill="#f59e0b" opacity="0.8" />
@@ -454,7 +508,7 @@
 			{#if commandMode}
 				<div class="pointer-events-none absolute inset-0 rounded-2xl border-2 border-amber-400/60" in:fade={{ duration: 150 }}></div>
 				<div class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-1.5 text-xs font-medium text-amber-700 shadow-sm">
-					点击地图下达新路线终点
+					{commandMode.type === 'reset' ? '点击设置新路线终点（替换全部路线）' : '连续点击追加节点 · Esc 结束'}
 				</div>
 			{:else if $gameClock.isPaused}
 				<div class="absolute inset-0 flex items-center justify-center" style="background:rgba(255,255,255,0.12);">
@@ -487,7 +541,11 @@
 			<div class="divide-y divide-stone-50">
 				{#each $simulationUnits as unit (unit.id)}
 					{@const isAwaiting = unit.isAwaitingConfirmation}
-					<div class="flex items-center gap-4 px-4 py-3">
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="flex items-center gap-4 px-4 py-3"
+						oncontextmenu={(e) => { e.preventDefault(); openUnitContextMenu(e, unit.id); }}
+					>
 						<div
 							class="flex h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-black"
 							style="border-color:{isAwaiting ? '#f59e0b' : unit.factionColor}; color:{isAwaiting ? '#b45309' : unit.factionColor}; background:{isAwaiting ? '#fef9ee' : unit.factionColor+'15'};"
@@ -536,17 +594,26 @@
 								>
 									<X size={11} />取消
 								</Button>
-							{:else}
+							{:else if commandMode?.unitId === unit.id}
+								<span class="text-xs text-amber-600">
+									{commandMode.type === 'reset' ? '点击剧场设置新终点' : '持续点击追加节点'}
+								</span>
 								<Button
-									variant="outline"
+									variant="ghost"
 									size="sm"
-									class="h-7 gap-1 border-stone-200 px-2.5 text-xs transition-all
-										{commandMode === unit.id ? 'border-amber-400 bg-amber-50 text-amber-700' : 'text-stone-500 hover:border-stone-400'}"
-									onclick={() => { commandMode = commandMode === unit.id ? null : unit.id; }}
+									class="h-7 gap-1 px-2 text-xs text-stone-500 hover:text-stone-700"
+									onclick={() => { commandMode = null; }}
 								>
-									<Navigation size={11} />
-									{commandMode === unit.id ? '取消指令' : '下达指令'}
+									<X size={11} />完成
 								</Button>
+							{:else}
+								<button
+									class="flex h-7 items-center gap-1 rounded-lg border border-stone-200 px-2.5 text-xs text-stone-500 transition-all hover:border-stone-400 hover:text-stone-700"
+									onclick={(e) => openUnitContextMenu(e, unit.id)}
+								>
+									<MoreHorizontal size={11} />
+									路线指令
+								</button>
 							{/if}
 						</div>
 					</div>
@@ -554,10 +621,52 @@
 			</div>
 
 			<div class="border-t border-stone-100 px-4 py-2 text-xs text-stone-400">
-				下达指令 → 点击剧场目标点 → 出现确认栏 → 执行（覆盖 targetPath）/ 取消（丢弃 pendingPath） ·
-				pendingPath 与 RAF 位移循环完全解耦，confirm 后下一帧立即生效
+				右键单位行 / 点击「路线指令」→ 重新设置路线（暂停时需确认）或 绘制路线节点（直接追加） ·
+				推演运行中路线修改直接生效，无需确认 · pendingPath 与 RAF 位移循环完全解耦
 			</div>
 		</div>
 	</div>
 </div>
+
+<!-- 单位路线指令上下文菜单 -->
+<ContextMenu.Root bind:open={ctxGetOpen, ctxSetOpen}>
+	<ContextMenu.Portal>
+		<ContextMenu.Content
+			class="z-[9999] min-w-[160px] rounded-xl border border-stone-200 bg-white px-1 py-1.5 shadow-lg outline-none"
+			customAnchor={ctxVirtualAnchor}
+		>
+			<ContextMenu.Sub>
+				<ContextMenu.SubTrigger
+					class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-stone-700 select-none outline-none focus-visible:outline-none data-highlighted:bg-stone-100"
+				>
+					<span class="flex items-center gap-2">
+						<Navigation class="h-3.5 w-3.5 text-stone-500" />
+						路线指令
+					</span>
+					<ChevronRight class="h-3.5 w-3.5 text-stone-400" />
+				</ContextMenu.SubTrigger>
+				<ContextMenu.SubContent
+					class="z-[10000] min-w-[180px] rounded-xl border border-stone-200 bg-white px-1 py-1.5 shadow-lg outline-none"
+				>
+					<ContextMenu.Item
+						class="flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-700 select-none outline-none focus-visible:outline-none data-highlighted:bg-stone-100"
+						onSelect={() => startRouteCommand('reset')}
+					>
+						<RefreshCw class="h-3.5 w-3.5 text-stone-500" />
+						重新设置路线
+						<span class="ml-auto text-[10px] text-stone-400">清空并重绘</span>
+					</ContextMenu.Item>
+					<ContextMenu.Item
+						class="flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-700 select-none outline-none focus-visible:outline-none data-highlighted:bg-stone-100"
+						onSelect={() => startRouteCommand('append')}
+					>
+						<PlusCircle class="h-3.5 w-3.5 text-stone-500" />
+						绘制路线节点
+						<span class="ml-auto text-[10px] text-stone-400">继续追加</span>
+					</ContextMenu.Item>
+				</ContextMenu.SubContent>
+			</ContextMenu.Sub>
+		</ContextMenu.Content>
+	</ContextMenu.Portal>
+</ContextMenu.Root>
 

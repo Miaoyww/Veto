@@ -121,3 +121,29 @@ export function cancelSimCommand(unitId: string) {
 		)
 	);
 }
+
+/**
+ * 直接向 targetPath 末尾追加一个路径节点（不经确认）。
+ * 适用于"绘制路线节点"模式——保持指令模式以允许连续点击。
+ */
+export function appendToSimPath(unitId: string, point: Vec2) {
+	simulationUnits.update((units) =>
+		units.map((u) =>
+			u.id === unitId ? { ...u, targetPath: [...u.targetPath, point] } : u
+		)
+	);
+}
+
+/**
+ * 清空当前路线并直接以新终点替代（不经确认）。
+ * 适用于推演运行中的"重新设置路线"——无需弹出确认。
+ */
+export function resetApplySimPath(unitId: string, point: Vec2) {
+	simulationUnits.update((units) =>
+		units.map((u) =>
+			u.id === unitId
+				? { ...u, targetPath: [point], pendingPath: [], isAwaitingConfirmation: false }
+				: u
+		)
+	);
+}

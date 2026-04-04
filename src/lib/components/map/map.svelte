@@ -3,10 +3,10 @@
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
 	import { coords, zoom, mapFlyTo } from '$lib/stores/map-store';
-	import { MapPin, Navigation, X, Target } from '@lucide/svelte';
+	import { MapPin, Navigation, X, Target, AlertTriangle, Check } from '@lucide/svelte';
+	import { fly } from 'svelte/transition';
 	import UnitContextMenu from './unit-context-menu.svelte';
 	import MapContextMenu from './map-context-menu.svelte';
-	import CrisisCommandBar from './crisis-command-bar.svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import UnitPopup from './unit-popup.svelte';
@@ -19,12 +19,16 @@
 		placeUnit,
 		selectedPlacedUnitId,
 		selectedPlacedUnit,
-		addRoutePoint,
 		updatePlacedUnit,
 		addLog,
 		undo
 	} from '$lib/stores/battle-store';
-	import { issueCrisisCommand, pendingCrisisCommand } from '$lib/stores/unit-command.store';
+	import {
+		pendingRoute,
+		addPendingPoint,
+		applyPendingRoute,
+		cancelPendingRoute
+	} from '$lib/stores/pending-route.store';
 	import type { MilitaryUnit, PlacedUnit, Faction } from '$lib/types';
 
 	let map: L.Map;
@@ -50,10 +54,14 @@
 	let strikePinnedY = $state(0);
 	let strikeHoverMarker: L.CircleMarker | null = null;
 
+	// 待确认路线确认卡开关
+	let routeConfirmOpen = $state(false);
+
 	// 地图上的图层引用
 	let markersLayer: L.LayerGroup;
 	let routesLayer: L.LayerGroup;
 	let rangesLayer: L.LayerGroup;
+	let pendingLayer: L.LayerGroup;
 	const markersMap: Record<string, L.Marker> = {};
 
 	// 构建单位 Popup 内容节点
@@ -256,6 +264,7 @@
 		markersLayer = L.layerGroup().addTo(readyMap);
 		routesLayer = L.layerGroup().addTo(readyMap);
 		rangesLayer = L.layerGroup().addTo(readyMap);
+		pendingLayer = L.layerGroup().addTo(readyMap);
 
 		readyMap.on('mousemove', (e) => {
 			coords.set(e.latlng);
@@ -304,11 +313,9 @@
 					interactionMode.set('select');
 				}
 			} else if (mode === 'route') {
-				// 路线模式：将新节点写入待确认指令，而非直接添加到路线
-				const placedId = $selectedPlacedUnitId;
-				if (placedId) {
-					const info = findUnit($selectedPlacedUnit?.unitId ?? '');
-					issueCrisisCommand(placedId, info?.unit.name ?? '单位', latlng.lat, latlng.lng);
+				// 路线模式：写入 pending 路线，不直接修改 battle-store
+				if ($pendingRoute) {
+					addPendingPoint(latlng.lat, latlng.lng);
 				}
 			} else if (mode === 'strike') {
 				const placedId = $selectedPlacedUnitId;
@@ -395,18 +402,56 @@
 		if (strikeHoverMarker) { strikeHoverMarker.remove(); strikeHoverMarker = null; }
 	}
 
-	// 路线完成日志：当交互模式从 route 切换到其他模式时记录
+	// 监听路线模式退出：当 pending 有节点时弹出确认卡片
 	let _prevInteractionMode: string = 'select';
 	$effect(() => {
 		const mode = $interactionMode;
 		if (_prevInteractionMode === 'route' && mode !== 'route') {
-			const placed = $selectedPlacedUnit;
-			if (placed && placed.route.length > 0) {
-				const routeInfo = findUnit(placed.unitId);
-				addLog(`完成行动路线: ${routeInfo?.unit.name ?? ''}，共 ${placed.route.length} 个节点`);
+			if ($pendingRoute && $pendingRoute.points.length > 0) {
+				routeConfirmOpen = true;
+			} else {
+				cancelPendingRoute();
 			}
 		}
 		_prevInteractionMode = mode;
+	});
+
+	// Leaflet pending 虚线实时渲染
+	$effect(() => {
+		if (!pendingLayer) return;
+		pendingLayer.clearLayers();
+		const pr = $pendingRoute;
+		if (!pr || pr.points.length === 0) return;
+
+		const placed = $currentBattle?.placedUnits.find((p) => p.id === pr.placedId);
+		const info = placed ? findUnit(placed.unitId) : null;
+
+		// 起点：append 模式从现有路线末点开始，reset 或尴路线从单位位置开始
+		const startPoint: [number, number] =
+			pr.type === 'append' && placed && placed.route.length > 0
+				? placed.route[placed.route.length - 1]
+				: [placed?.lat ?? pr.points[0][0], placed?.lng ?? pr.points[0][1]];
+
+		const allPoints: [number, number][] = [startPoint, ...pr.points];
+
+		L.polyline(allPoints, {
+			color: '#f59e0b',
+			weight: 3,
+			opacity: 0.85,
+			dashArray: '10 6'
+		}).addTo(pendingLayer);
+
+		for (let i = 1; i < allPoints.length; i++) {
+			const [lat, lng] = allPoints[i];
+			const isLast = i === allPoints.length - 1;
+			L.circleMarker([lat, lng], {
+				radius: isLast ? 7 : 4,
+				color: '#f59e0b',
+				fillColor: '#f59e0b',
+				fillOpacity: isLast ? 0.9 : 0.5,
+				weight: 2
+			}).addTo(pendingLayer);
+		}
 	});
 
 	// 打击目标预览圆：阶段2和3都显示，跟随半径变化
@@ -462,11 +507,6 @@
 		<TileLayer url={'https://tile.openstreetmap.org/{z}/{x}/{y}.png'} />
 	</Map>
 
-	<!-- 危机指令确认栏（路线模式下点击地图后出现） -->
-	{#if $interactionMode === 'route' || $pendingCrisisCommand}
-		<CrisisCommandBar />
-	{/if}
-
 	<!-- 交互模式提示 -->
 	{#if $interactionMode !== 'select'}
 		<div class="absolute top-20 left-1/2 z-[1001] -translate-x-1/2">
@@ -476,7 +516,9 @@
 					<span class="text-sm text-stone-700">点击地图放置单位</span>
 				{:else if $interactionMode === 'route'}
 					<Navigation class="h-4 w-4 text-stone-600" />
-					<span class="text-sm text-stone-700">点击地图下达路线指令，确认后生效（右键结束）</span>
+				<span class="text-sm text-stone-700">
+					{$pendingRoute?.type === 'reset' ? '改设路线' : '追加路线'}模式，已记录 {$pendingRoute?.points.length ?? 0} 个点，Esc 完成
+				</span>
 				{:else if $interactionMode === 'strike'}
 					<Target class="h-4 w-4 text-stone-600" />
 					<span class="text-sm text-stone-700">
@@ -498,6 +540,52 @@
 		</div>
 	{/if}
 </div>
+
+<!-- 路线指令待确认卡片（Esc 退出绘制后弹出） -->
+{#if routeConfirmOpen && $pendingRoute}
+	{@const pr = $pendingRoute}
+	<div
+		class="pointer-events-none fixed inset-0 z-[2000] flex items-end justify-center pb-8"
+		in:fly={{ y: 16, duration: 220, opacity: 0 }}
+		out:fly={{ y: 16, duration: 160, opacity: 0 }}
+	>
+		<div class="pointer-events-auto flex w-[440px] flex-col gap-3 rounded-2xl border border-amber-200 bg-white/95 p-5 shadow-xl backdrop-blur-sm">
+			<div class="flex items-start gap-3">
+				<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50">
+					<AlertTriangle class="h-4 w-4 text-amber-500" />
+				</div>
+				<div>
+					<p class="text-sm font-semibold text-stone-800">路线指令已录入</p>
+					<p class="mt-0.5 text-xs text-stone-500">
+						单位 <span class="font-medium text-stone-700">{pr.unitName}</span> ·
+						{pr.type === 'reset' ? '重置路线' : '追加路线'} ·
+						共 <span class="font-medium text-stone-700">{pr.points.length}</span> 个新节点
+					</p>
+					<p class="mt-1.5 text-xs text-stone-400">是否更新该单位的行动路线？</p>
+				</div>
+			</div>
+			<div class="flex justify-end gap-2">
+				<button
+					class="rounded-lg border border-stone-200 px-4 py-1.5 text-sm text-stone-600 transition-colors hover:border-stone-400 hover:text-stone-800"
+					onclick={() => { routeConfirmOpen = false; cancelPendingRoute(); }}
+				>
+					放弃
+				</button>
+				<button
+					class="flex items-center gap-1.5 rounded-lg bg-stone-800 px-4 py-1.5 text-sm text-white transition-colors hover:bg-stone-900"
+					onclick={() => {
+						applyPendingRoute();
+						addLog(`路线更新: ${pr.unitName}，${pr.type === 'reset' ? '重置' : '追加'} ${pr.points.length} 个节点`);
+						routeConfirmOpen = false;
+					}}
+				>
+					<Check class="h-3.5 w-3.5" />
+					确认更新
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <!-- 打击目标浮动卡片 -->
 {#if strikePendingTarget}

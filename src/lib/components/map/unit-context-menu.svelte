@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ContextMenu } from 'bits-ui';
-	import { Eye, LocateFixed, Route, ArrowRightLeft, Target, Activity, Trash2, Check } from '@lucide/svelte';
+	import { Eye, LocateFixed, Route, RefreshCw, PlusCircle, ChevronRight, Target, Activity, Trash2, Check } from '@lucide/svelte';
 	import { UNIT_STATUS_LABELS } from '$lib/types';
 	import type { PlacedUnit } from '$lib/types';
 	import * as L from 'leaflet';
@@ -8,11 +8,11 @@
 		currentBattle,
 		selectedPlacedUnitId,
 		interactionMode,
-		clearRoute,
 		updatePlacedUnit,
 		removePlacedUnit,
 		addLog
 	} from '$lib/stores/battle-store';
+	import { startPendingRoute } from '$lib/stores/pending-route.store';
 
 	interface Props {
 		open: boolean;
@@ -70,21 +70,31 @@
 		open = false;
 	}
 
-	function handleDrawRoute() {
+	function handleResetRoute() {
 		const targetId = contextUnitId || $selectedPlacedUnitId;
 		if (targetId) {
 			selectedPlacedUnitId.set(targetId);
+			const placed = $currentBattle?.placedUnits.find((p) => p.id === targetId);
+			const unitName = $currentBattle?.factions.flatMap((f) => f.units)
+				.find((u) => u.id === placed?.unitId)?.name ?? '单位';
+			startPendingRoute(targetId, unitName, 'reset');
 			interactionMode.set('route');
-			addLog('进入路线绘制模式，点击地图添加路线点');
+			addLog('进入路线改设模式，点击地图添加新路线点');
 		}
 		contextUnitId = null;
 		open = false;
 	}
 
-	function handleClearRoute() {
+	function handleAppendRoute() {
 		const targetId = contextUnitId || $selectedPlacedUnitId;
 		if (targetId) {
-			clearRoute(targetId);
+			selectedPlacedUnitId.set(targetId);
+			const placed = $currentBattle?.placedUnits.find((p) => p.id === targetId);
+			const unitName = $currentBattle?.factions.flatMap((f) => f.units)
+				.find((u) => u.id === placed?.unitId)?.name ?? '单位';
+			startPendingRoute(targetId, unitName, 'append');
+			interactionMode.set('route');
+			addLog('进入路线追加模式，点击地图追加路线点');
 		}
 		contextUnitId = null;
 		open = false;
@@ -145,21 +155,36 @@
 					定位单位
 				</ContextMenu.Item>
 
-				<ContextMenu.Item
-					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
-					onSelect={handleDrawRoute}
-				>
-					<Route class="mr-2 size-4" />
-					绘制行动路线
-				</ContextMenu.Item>
-
-				<ContextMenu.Item
-					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
-					onSelect={handleClearRoute}
-				>
-					<ArrowRightLeft class="mr-2 size-4" />
-					清除路线
-				</ContextMenu.Item>
+				<ContextMenu.Sub>
+					<ContextMenu.SubTrigger
+						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-medium select-none focus-visible:outline-none data-highlighted:bg-muted data-[state=open]:bg-muted"
+					>
+						<Route class="mr-2 size-4" />
+						路线指令
+						<ChevronRight class="ml-auto size-4 opacity-50" />
+					</ContextMenu.SubTrigger>
+					<ContextMenu.SubContent
+						class="z-[10000] w-[200px] rounded-xl border border-muted bg-background px-1 py-1.5 shadow-popover outline-none"
+						sideOffset={10}
+					>
+						<ContextMenu.Item
+							class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
+							onSelect={handleResetRoute}
+						>
+							<RefreshCw class="mr-2 size-4" />
+							重新设置路线
+							<span class="ml-auto text-xs opacity-50">清空并重绘</span>
+						</ContextMenu.Item>
+						<ContextMenu.Item
+							class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
+							onSelect={handleAppendRoute}
+						>
+							<PlusCircle class="mr-2 size-4" />
+							绘制路线节点
+							<span class="ml-auto text-xs opacity-50">继续追加</span>
+						</ContextMenu.Item>
+					</ContextMenu.SubContent>
+				</ContextMenu.Sub>
 
 				<ContextMenu.Item
 					class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none data-highlighted:bg-muted"
