@@ -352,7 +352,7 @@
 </script>
 
 <Card
-	class="absolute z-[1000] h-full w-[24rem] gap-0 border-border/70 bg-background/75 py-0 shadow-xl backdrop-blur-md"
+	class="absolute z-[100] h-full w-[24rem] gap-0 border-border/70 bg-background/75 py-0 shadow-xl backdrop-blur-md"
 >
 	<CardHeader class="border-b px-5 py-4">
 		<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">

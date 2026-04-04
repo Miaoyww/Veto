@@ -16,7 +16,7 @@
 	<Select.Trigger size="sm" class="h-7 flex-1 text-xs">
 		{items[value] ?? value}
 	</Select.Trigger>
-	<Select.Content>
+	<Select.Content class="z-[1001]">
 		<Select.Group>
 			{#if label}
 				<Select.Label>{label}</Select.Label>
