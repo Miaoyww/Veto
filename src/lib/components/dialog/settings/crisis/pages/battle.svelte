@@ -68,12 +68,6 @@
 		}
 	}
 
-	function savePixelsPerKm() {
-		const v = Math.max(1, Math.round(pixelsPerKmDraft));
-		pixelsPerKmDraft = v;
-		updateCurrentBattleSettings({ pixelsPerKm: v });
-	}
-
 	function saveIconStyle(style: 'nato' | 'simple') {
 		iconStyleDraft = style;
 		updateCurrentBattleSettings({ iconStyle: style });
@@ -126,7 +120,7 @@
 			</SettingCard>
 
 			<SettingCard let:id title="推演起始日期" description="战局时间轴的起始点。">
-				<DatePicker bind:value={startDateDraft} class="w-44" />
+				<DatePicker bind:value={startDateDraft} class="w-44 z-1001" />
 			</SettingCard>
 		</div>
 	</div>
@@ -150,20 +144,6 @@
 				</div>
 			</SettingCard>
 
-			<SettingCard let:id title="地图比例尺" description="像素/千米，影响地图上的距离换算。">
-				<div class="flex items-center gap-2">
-					<Input
-						{id}
-						type="number"
-						min="1"
-						class="w-24"
-						bind:value={pixelsPerKmDraft}
-						onblur={savePixelsPerKm}
-						onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
-					/>
-					<span class="text-sm text-muted-foreground">px/km</span>
-				</div>
-			</SettingCard>
 		</div>
 	</div>
 
