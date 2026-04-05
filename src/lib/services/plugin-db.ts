@@ -1,3 +1,11 @@
+import { writable } from 'svelte/store';
+
+/**
+ * 每次调用 dbSavePlugin / dbDeletePlugin 后递增。
+ * 组件订阅此 store 即可响应式感知已安装列表变化。
+ */
+export const installedPluginsRevision = writable(0);
+
 /**
  * plugin-db.ts — IndexedDB 持久化层，存储用户已安装的插件数据。
  *
@@ -76,7 +84,7 @@ export async function dbSavePlugin(plugin: InstalledPlugin): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const tx = db.transaction(STORE, 'readwrite');
 		tx.objectStore(STORE).put(plugin);
-		tx.oncomplete = () => resolve();
+		tx.oncomplete = () => { installedPluginsRevision.update((n) => n + 1); resolve(); };
 		tx.onerror = () => reject(tx.error);
 	});
 }
@@ -104,7 +112,7 @@ export async function dbDeletePlugin(id: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const tx = db.transaction(STORE, 'readwrite');
 		tx.objectStore(STORE).delete(id);
-		tx.oncomplete = () => resolve();
+		tx.oncomplete = () => { installedPluginsRevision.update((n) => n + 1); resolve(); };
 		tx.onerror = () => reject(tx.error);
 	});
 }

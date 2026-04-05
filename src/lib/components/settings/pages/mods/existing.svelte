@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { PackageCheck, Trash2 } from '@lucide/svelte';
-	import { dbGetAllPlugins, dbDeletePlugin, dbDeletePluginAssets } from '$lib/services/plugin-db';
+	import { dbGetAllPlugins, dbDeletePlugin, dbDeletePluginAssets, installedPluginsRevision } from '$lib/services/plugin-db';
 	import type { InstalledPlugin } from '$lib/services/plugin-db';
 	import { Button } from '$lib/components/ui/button';
 
 	let dbPlugins = $state<InstalledPlugin[]>([]);
+	let rev = $state(0);
+	$effect(() => installedPluginsRevision.subscribe((v) => { rev = v; }));
 
-	async function loadDb() {
-		dbPlugins = await dbGetAllPlugins();
-	}
+	$effect(() => {
+		void rev;
+		dbGetAllPlugins().then((p) => { dbPlugins = p; });
+	});
 
 	async function handleUninstall(plugin: InstalledPlugin) {
 		await dbDeletePlugin(plugin.id);
 		if (plugin.assetKeys?.length) {
 			await dbDeletePluginAssets(plugin.assetKeys);
 		}
-		await loadDb();
 	}
-
-	$effect(() => { loadDb(); });
 </script>
 
 <div class="space-y-4">

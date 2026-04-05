@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { ExternalLink } from '@lucide/svelte';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import { registry } from '$lib/registry/mod-registry';
+	import { registry, registryRevision } from '$lib/registry/mod-registry';
 	import AllMods from './mods/all.svelte';
 	import ExistingMods from './mods/existing.svelte';
 	import InstallMod from './mods/install.svelte';
 
-	const stats = $derived({
-		branches: registry.branches.size,
-		categories: registry.categories.size,
-		templates: registry.unitTemplates.size
+	let rev = $state(0);
+	$effect(() => registryRevision.subscribe((v) => { rev = v; }));
+
+	const stats = $derived.by(() => {
+		void rev;
+		return {
+			branches: registry.branches.size,
+			categories: registry.categories.size,
+			templates: registry.unitTemplates.size
+		};
 	});
 </script>
 

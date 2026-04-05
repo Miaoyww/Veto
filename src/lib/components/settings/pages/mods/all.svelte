@@ -1,14 +1,12 @@
 <script lang="ts">
 	import { Puzzle } from '@lucide/svelte';
-	import { registry } from '$lib/registry/mod-registry';
+	import { registry, registryRevision } from '$lib/registry/mod-registry';
 	import ModCard from '$lib/components/cards/settings/mod-card.svelte';
 
-	let modList = $state(registry.getModList());
+	let rev = $state(0);
+	$effect(() => registryRevision.subscribe((v) => { rev = v; }));
 
-	function refresh() {
-		modList = registry.getModList();
-	}
-
+	const modList = $derived.by(() => { void rev; return registry.getModList(); });
 	const userMods = $derived(modList.filter((m) => m.source === 'user'));
 	const systemMods = $derived(modList.filter((m) => m.source === 'system'));
 </script>
@@ -22,7 +20,7 @@
 			</p>
 			<div class="flex flex-col gap-2">
 				{#each systemMods as entry (entry.mod.id)}
-					<ModCard {entry} ontoggle={refresh} />
+				<ModCard {entry} ontoggle={() => {}} />
 				{/each}
 			</div>
 		</div>
@@ -36,7 +34,7 @@
 			</p>
 			<div class="flex flex-col gap-2">
 				{#each userMods as entry (entry.mod.id)}
-					<ModCard {entry} ontoggle={refresh} />
+				<ModCard {entry} ontoggle={() => {}} />
 				{/each}
 			</div>
 		</div>

@@ -28,6 +28,8 @@
 		registry.setModEnabled(mod.id!, val);
 		ontoggle?.();
 	}
+
+	console.log('ModCard: entry updated', entry);
 </script>
 
 <div
