@@ -9,7 +9,7 @@
 </script>
 
 <div>
-	<div class="mb-1 text-xl font-bold text-stone-800">会场</div>
+	<div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">会场</div>
 	<p class="mb-4 text-sm text-muted-foreground">配置新建战局时的默认值。</p>
 	<div class="space-y-3">
 		<SettingCard title="默认图标风格" description="新建战局时使用的单位图标样式。">

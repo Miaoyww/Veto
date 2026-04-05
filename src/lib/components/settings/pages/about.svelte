@@ -10,7 +10,7 @@
 <div class="grid h-full grid-rows-2">
 	<div>
 		<div class="mb-6 flex flex-col items-center gap-2 text-center">
-			<h2 class="text-3xl font-extrabold tracking-wide text-stone-800">{VETO_NAME}</h2>
+			<h2 class="text-3xl font-extrabold tracking-wide text-stone-800 dark:text-stone-100">{VETO_NAME}</h2>
 			<p class="text-sm text-muted-foreground">模拟联合国会议系统</p>
 		</div>
 		<div class="space-y-3">

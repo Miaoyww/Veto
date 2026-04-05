@@ -4,7 +4,7 @@
 </script>
 
 <div>
-	<div class="mb-1 text-xl font-bold text-stone-800">Mod 管理</div>
+	<div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">Mod 管理</div>
 	<p class="mb-4 text-sm text-muted-foreground">
 		管理已安装的扩展包，Mod 以 JSON 格式导入。可在
 		<a

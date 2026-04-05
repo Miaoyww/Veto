@@ -2,6 +2,7 @@
 	import '../app.css';
 	import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
+	import { ModeWatcher } from 'mode-watcher';
 	import { VETO_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
 	let { children } = $props();
@@ -24,6 +25,7 @@
 	<link rel="icon" type="image/x-icon" href={logo} />
 </svelte:head>
 
+<ModeWatcher />
 <MyAlertDialog />
 <Toaster richColors position="bottom-right" />
 

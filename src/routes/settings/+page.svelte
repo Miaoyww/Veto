@@ -14,7 +14,7 @@
 </script>
 
 <div
-	class="flex h-screen w-screen items-center  justify-center bg-gradient-to-br from-slate-100 to-stone-200"
+	class="flex h-screen w-screen items-center  justify-center bg-gradient-to-br from-slate-100 to-stone-200 dark:from-slate-900 dark:to-stone-900"
 >
 	<div
 		class="flex h-screen w-screen max-w-5xl flex-col"
@@ -22,10 +22,10 @@
 	>
 		<!-- 顶栏 -->
 		<header class="flex shrink-0 items-center gap-3 py-4">
-			<Button variant="ghost" size="icon" onclick={() => goto('/')}>
+			<Button variant="ghost" size="icon" onclick={() => goto('/')} class="cursor-pointer">
 				<ArrowLeft size={18} />
 			</Button>
-			<h1 class="text-lg font-semibold text-stone-700">设置</h1>
+			<h1 class="text-lg font-semibold text-stone-700 dark:text-stone-200">设置</h1>
 		</header>
 
 		<!-- 主体 -->

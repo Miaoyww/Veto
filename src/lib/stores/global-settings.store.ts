@@ -3,12 +3,15 @@ import { writable } from 'svelte/store';
 export interface GlobalSettings {
 	/** 新建战局时的默认图标风格 */
 	defaultIconStyle: 'nato' | 'simple';
+	/** 界面语言 */
+	language: 'zh-cn' | 'en';
 }
 
 const STORAGE_KEY = 'veto_global_settings';
 
 const DEFAULTS: GlobalSettings = {
-	defaultIconStyle: 'nato'
+	defaultIconStyle: 'nato',
+	language: 'zh-cn'
 };
 
 function loadSettings(): GlobalSettings {

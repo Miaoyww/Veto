@@ -30,7 +30,7 @@
 <div class={cn('flex w-36 flex-col gap-1 rounded-lg p-2', className)}>
 	{#each NAV_ITEMS as item}
 		<Button
-			class="w-full justify-start gap-2 px-3"
+			class="w-full justify-start gap-2 px-3 cursor-pointer"
 			variant={activeSection === item.key ? 'secondary' : 'ghost'}
 			onclick={() => (activeSection = item.key)}
 		>
