@@ -12,7 +12,7 @@
 		pendingPlaceUnitId
 	} from '$lib/stores/battle-store';
 	import type { UnitTemplate, UnitSide } from '$lib/types';
-	import { registry } from '$lib/registry/mod-registry';
+	import { registry, registryRevision } from '$lib/registry/mod-registry';
 	import type { CategoryDefinition, ComponentTypeGroup } from '$lib/registry/types';
 	import {
 		X,
@@ -68,8 +68,15 @@
 		editingUnitId = null;
 	});
 
-	// ── 注册表衍生数据 ──
-	const branchCategories = $derived(registry.getBranchCategories($currentBranch));
+	// 桥接 registryRevision writable store → 本地 $state
+	let _rev = $state(0);
+	$effect(() => registryRevision.subscribe((v) => { _rev = v; }));
+
+	// ── 注册表衍生数据（依赖 _rev 以响应 Mod 切换） ──
+	const branchCategories = $derived.by(() => {
+		void _rev;
+		return registry.getBranchCategories($currentBranch);
+	});
 
 	// 新建单位：待选状态
 	let pendingCategoryId = $state<string | null>(null);

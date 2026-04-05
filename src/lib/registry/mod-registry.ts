@@ -1,4 +1,11 @@
+import { writable } from 'svelte/store';
 import type { BranchDefinition, CategoryDefinition, UnitTemplate, ModData } from './types';
+
+/**
+ * 每次 registry 数据变化（inject / setModEnabled）时递增。
+ * Svelte 组件订阅此 store 即可响应式感知注册表更新。
+ */
+export const registryRevision = writable(0);
 
 export interface LoadedMod {
 	mod: ModData;
@@ -68,8 +75,18 @@ class ModRegistry {
 		const id = mod.id ?? `_anon_${this._mods.length}`;
 		const normalized = { ...mod, id };
 		if (this._mods.some((m) => m.mod.id === id)) return;
-		this._mods.push({ mod: normalized, enabled: true, source });
-		this._applyModData(normalized);
+
+		// faction / scenario / ruleset / campaign 需战局显式激活，默认禁用
+		// utility / dependency 以及系统数据立即激活
+		const DEFERRED_TYPES = new Set(['faction', 'scenario', 'ruleset', 'campaign']);
+		const enabledByDefault =
+			source === 'system' || !DEFERRED_TYPES.has(normalized.type ?? '');
+
+		this._mods.push({ mod: normalized, enabled: enabledByDefault, source });
+		if (enabledByDefault) {
+			this._applyModData(normalized);
+			registryRevision.update((n) => n + 1);
+		}
 	}
 
 	/** 实际将 mod 数据写入各 Map */
@@ -87,14 +104,12 @@ class ModRegistry {
 		if (i18nData) {
 			const firstVal = Object.values(i18nData)[0];
 			if (firstVal !== undefined && typeof firstVal === 'object') {
-				// 分层格式：{ "zh-CN": { ... }, "en": { ... } }
 				for (const [locale, keys] of Object.entries(i18nData as Record<string, Record<string, string>>)) {
 					if (!this._i18n.has(locale)) this._i18n.set(locale, new Map());
 					const localeMap = this._i18n.get(locale)!;
 					for (const [key, val] of Object.entries(keys)) localeMap.set(key, val);
 				}
 			} else {
-				// 扁平格式（兼容旧版）：视为默认语言
 				if (!this._i18n.has(this._locale)) this._i18n.set(this._locale, new Map());
 				const localeMap = this._i18n.get(this._locale)!;
 				for (const [key, val] of Object.entries(i18nData as Record<string, string>)) localeMap.set(key, val);
@@ -107,6 +122,7 @@ class ModRegistry {
 		const entry = this._mods.find((m) => m.mod.id === id);
 		if (!entry || entry.enabled === enabled) return;
 		entry.enabled = enabled;
+		console.log(`Mod ${enabled ? 'enabled' : 'disabled'}:`, entry.mod.name);
 		this._rebuild();
 	}
 
@@ -119,6 +135,7 @@ class ModRegistry {
 		for (const { mod, enabled } of this._mods) {
 			if (enabled) this._applyModData(mod);
 		}
+		registryRevision.update((n) => n + 1);
 	}
 
 	/** 获取所有已加载 Mod 列表（含启用状态） */

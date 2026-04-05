@@ -190,7 +190,7 @@
 		{#if fetchState === 'idle'}
 			<div class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-500">
 				<Store size={28} class="opacity-40" />
-				<p class="text-sm">从 VetoExpress 官方注册中心获取插件列表</p>
+				<p class="text-sm">从 VetoExpress 官方插件库获取插件列表</p>
 				<Button variant="outline" size="sm" class="gap-1.5" onclick={loadRegistry}>
 					<RefreshCw class="size-3.5" />获取列表
 				</Button>
@@ -198,7 +198,7 @@
 		{:else if fetchState === 'loading'}
 			<div class="flex min-h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
 				<Loader class="size-7 animate-spin opacity-60" />
-				<p class="text-sm">正在从注册中心拉取…</p>
+				<p class="text-sm">正在从插件库拉取…</p>
 			</div>
 		{:else if fetchState === 'error'}
 			<div class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-destructive/40 text-destructive/70">
@@ -224,7 +224,7 @@
 					/>
 				{/each}
 				{#if remotePlugins.length === 0}
-					<p class="py-8 text-center text-sm text-muted-foreground">注册中心暂无插件</p>
+					<p class="py-8 text-center text-sm text-muted-foreground">暂无插件</p>
 				{/if}
 			</div>
 		{/if}

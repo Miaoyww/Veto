@@ -60,7 +60,7 @@ export const currentFaction = derived(
 );
 
 // ============ 当前选中的军种分支 ============
-export const currentBranch = writable<string>('army');
+export const currentBranch = writable<string>('');
 
 // ============ 当前选中的已放置单位ID ============
 export const selectedPlacedUnitId = writable<string | null>(null);
@@ -158,6 +158,7 @@ export function createBattle(
 		pixelsPerKm?: number;
 		iconStyle?: 'nato' | 'simple';
 		eventSettings?: EventSetting[];
+		enabledMods?: string[];
 	}
 ): string {
 	const id = generateId();
@@ -175,10 +176,13 @@ export function createBattle(
 		timeScale: options?.timeScale,
 		pixelsPerKm: options?.pixelsPerKm,
 		iconStyle: options?.iconStyle,
-		eventSettings: options?.eventSettings ?? []
+		eventSettings: options?.eventSettings ?? [],
+		enabledMods: options?.enabledMods ?? []
 	};
 	battles.update((list) => [...list, battle]);
 	currentBattleId.set(id);
+
+	console.log('Created battle with ID:', battle);
 	return id;
 }
 

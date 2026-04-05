@@ -8,7 +8,9 @@
 	import logo from '$lib/assets/logo.svg';
 	import { browser } from '$app/environment';
 	import { dbGetAllPlugins } from '$lib/services/plugin-db';
-	import { injectToRegistry } from '$lib/services/plugin-registry';
+	import { injectToRegistry, activateBattleMods } from '$lib/services/plugin-registry';
+	import { currentBattleId, battles } from '$lib/stores/battle-store';
+	import { get } from 'svelte/store';
 	let { children } = $props();
 
 	// 从 IndexedDB 恢复用户已安装的插件到运行时 ModRegistry
@@ -16,6 +18,12 @@
 		dbGetAllPlugins().then((plugins) => {
 			for (const plugin of plugins) {
 				injectToRegistry(plugin);
+			}
+			// 注入完成后，若已进入战局则立即按战局配置激活对应 Mod
+			const battleId = get(currentBattleId);
+			if (battleId) {
+				const battle = get(battles).find((b) => b.id === battleId);
+				if (battle) activateBattleMods(battle.enabledMods);
 			}
 		});
 	}

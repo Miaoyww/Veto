@@ -23,7 +23,7 @@
 	onMount(() => {
 		function onStarsLoaded(e: Event) {
 			const map = (e as CustomEvent<Record<string, number>>).detail;
-			localStars = map[`${manifest.repo}`];];
+			localStars = map[`${manifest.repo}`];
 		}
 		window.addEventListener('veto:stars-loaded', onStarsLoaded);
 		return () => window.removeEventListener('veto:stars-loaded', onStarsLoaded);

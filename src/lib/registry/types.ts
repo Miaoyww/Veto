@@ -130,6 +130,12 @@ export interface ModData {
 	version?: string;
 	author?: string;
 	description?: string;
+	/**
+	 * Mod 类型。
+	 * - faction / scenario / ruleset / campaign：需由战局显式激活才加载
+	 * - utility / dependency：注入时立即激活
+	 */
+	type?: 'faction' | 'scenario' | 'ruleset' | 'campaign' | 'utility' | 'dependency';
 	dependencies?: string[];
 	conflicts?: string[];
 	/** 新增军种定义（后注入可覆盖同 id 的条目） */
