@@ -166,6 +166,7 @@ export interface PlacedUnit {
 	status: 'idle' | 'moving' | 'attacking' | 'defending' | 'retreating' | 'destroyed';
 	/** 北约图标类型（覆盖自动推导） */
 	natoType?: NatoUnitType;
+	
 	/** 生命值 */
 	hp: number;
 	maxHp: number;

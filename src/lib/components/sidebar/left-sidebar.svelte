@@ -32,6 +32,10 @@
 	let leftBarVisible = $state($leftBarPinned);
 
 	$effect(() => {
+		unitPanelVisible.set($currentFaction != null);
+	});
+
+	$effect(() => {
 		if ($leftBarPinned) {
 			leftBarVisible = true;
 		} else {
@@ -53,7 +57,6 @@
 		newFactionColor = randomColor();
 	}
 
-
 	$effect(() => {
 		void $currentBattle?.actionLog.length;
 		logBottom?.scrollIntoView({ block: 'end' });
@@ -73,7 +76,7 @@
 		in:fly={{ x: -20, duration: 240, easing: quintOut }}
 		out:fade={{ duration: 180 }}
 	>
-		<Card class="h-full gap-0 py-0 bg-background/75 backdrop-blur-md">
+		<Card class="h-full gap-0 bg-background/75 py-0 backdrop-blur-md">
 			<CardHeader class="border-b px-5 py-4">
 				<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
 					<Swords class="h-4 w-4 text-red-500" />
@@ -93,7 +96,9 @@
 				>
 			</CardHeader>
 
-			<CardContent class="sidebar-body grid h-full grid-rows-[auto_1fr_auto] overflow-hidden px-5 py-4">
+			<CardContent
+				class="sidebar-body grid h-full grid-rows-[auto_1fr_auto] overflow-hidden px-5 py-4"
+			>
 				<!-- 行 1: 新建阵营表单 (auto) -->
 				<div class="mt-4 space-y-3">
 					<div class="space-y-2">
@@ -166,7 +171,9 @@
 							<ScrollText class="h-3.5 w-3.5" />
 							行动记录
 						</Label>
-						<ScrollArea class="action-log-scroll h-60 rounded-md border border-dashed bg-muted/30 p-2">
+						<ScrollArea
+							class="action-log-scroll h-60 rounded-md border border-dashed bg-muted/30 p-2"
+						>
 							<div class="space-y-0.5 text-xs">
 								{#if $currentBattle.actionLog.length > 0}
 									{#each $currentBattle.actionLog as entry (entry.id)}
