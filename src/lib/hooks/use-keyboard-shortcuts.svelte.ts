@@ -6,7 +6,14 @@
  * 快捷键元数据 `SHORTCUT_DEFS` 可直接导入用于设置页面展示。
  */
 
-import { undo, interactionMode, pendingPlaceUnitId, saveBattlesNow, flushRuntimePositions } from '$lib/stores/battle-store';
+import {
+	undo,
+	interactionMode,
+	pendingPlaceUnitId,
+	saveBattlesNow,
+	flushRuntimePositions
+} from '$lib/stores/battle-store';
+import { toast } from 'svelte-sonner';
 
 export interface ShortcutDef {
 	/** 显示用按键（大写），例如 'S'、'Z'、'Escape' */
@@ -29,8 +36,10 @@ export const SHORTCUT_DEFS: ShortcutDef[] = [
 ];
 
 function isInInput(e: KeyboardEvent): boolean {
-	const tag = (e.target as HTMLElement)?.tagName;
-	return tag === 'INPUT' || tag === 'TEXTAREA';
+	const el = e.target as HTMLElement;
+	if (!el) return false;
+	const tag = el.tagName;
+	return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -39,6 +48,7 @@ function handleKeydown(e: KeyboardEvent) {
 		e.preventDefault();
 		flushRuntimePositions();
 		saveBattlesNow();
+		toast.success('已保存', { description: '当前推演状态已保存到浏览器。' });
 		return;
 	}
 
@@ -56,7 +66,7 @@ function handleKeydown(e: KeyboardEvent) {
 	}
 
 	// M：切换测量模式（输入框内不触发）
-	if (e.key === 'm' && !e.ctrlKey && !e.altKey && !isInInput(e)) {
+	if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.altKey && !isInInput(e)) {
 		interactionMode.update((mode) => (mode === 'measure' ? 'select' : 'measure'));
 	}
 }
