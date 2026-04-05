@@ -23,6 +23,7 @@
 		clearRoute,
 		updatePlacedUnit,
 		removePlacedUnit,
+		removeUnit,
 		addLog,
 		runtimePositions
 	} from '$lib/stores/battle-store';
@@ -193,12 +194,14 @@
 	}
 
 	function handleDeletePlaced() {
-		if (contextUnitId) {
-			removePlacedUnit(contextUnitId);
-			contextUnitId = null;
-		} else if ($selectedPlacedUnitId) {
-			removePlacedUnit($selectedPlacedUnitId);
+		const targetId = contextUnitId || $selectedPlacedUnitId;
+		if (targetId) {
+			const placed = $currentBattle?.placedUnits.find((u) => u.id === targetId);
+			if (placed) {
+				removeUnit(placed.factionId, placed.unitId);
+			}
 		}
+		contextUnitId = null;
 		open = false;
 	}
 </script>

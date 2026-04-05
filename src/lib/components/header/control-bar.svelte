@@ -2,32 +2,21 @@
 	import { fly } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import {
-		Play,
-		Pause,
-		RotateCcw,
-		Gauge,
-		MousePointerClick,
-		AlertTriangle,
-		Clock
-	} from '@lucide/svelte';
+	import { Play, Pause, Gauge, MousePointerClick, AlertTriangle, Clock } from '@lucide/svelte';
 	import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
-	import { currentBattle } from '$lib/stores/battle-store';
-	import type { SimulationUnit } from '$lib/stores/simulation-units.store';
+	import { currentBattle, currentFaction, selectedPlacedUnit, runtimePositions } from '$lib/stores/battle-store';
+	import { onMount, onDestroy } from 'svelte';
+	import { startEngine, stopEngine, resetEngineTimers } from '$lib/engine/simulation-engine';
+
+	onMount(() => startEngine());
+	onDestroy(() => {
+		stopEngine();
+		gameClock.update((c) => ({ ...c, isPaused: true }));
+	});
 
 	type CommandType = 'reset' | 'append';
-
-	let {
-		commandMode = $bindable(null),
-		engagedUnits = [],
-		firefightCount = 0,
-		onReset = () => {}
-	}: {
-		commandMode?: { unitId: string; type: CommandType } | null;
-		engagedUnits?: SimulationUnit[];
-		firefightCount?: number;
-		onReset?: () => void;
-	} = $props();
+	const engagedCount = $derived(Object.values($runtimePositions).filter((p) => p.isEngaged).length);
+	const firefightCount = $derived(Math.ceil(engagedCount / 2));
 
 	function togglePause() {
 		gameClock.update((c) => ({ ...c, isPaused: !c.isPaused }));
@@ -41,8 +30,8 @@
 
 	/** 战局中保存的自定义流速（不在预设档位中时显示） */
 	const savedCustomScale = $derived(
-		($currentBattle?.timeScale != null &&
-			!(DISPLAY_SCALES as readonly number[]).includes($currentBattle.timeScale))
+		$currentBattle?.timeScale != null &&
+			!(DISPLAY_SCALES as readonly number[]).includes($currentBattle.timeScale)
 			? $currentBattle.timeScale
 			: null
 	);
@@ -73,37 +62,22 @@
 >
 	<!-- 右侧状态区 -->
 	<div class="ml-auto flex items-center gap-2">
-		{#if commandMode}
-			<span class="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-				<MousePointerClick size={13} />
-				{commandMode.type === 'reset'
-					? '点击剧场设置新路线终点（替换全部）'
-					: '持续点击追加路线节点，Esc 结束'}
-			</span>
-			<Button
-				onclick={() => (commandMode = null)}
-				variant="outline"
-				size="sm"
-				class="h-6 rounded-full px-2.5 text-xs text-muted-foreground"
-			>
-				{commandMode.type === 'append' ? '完成' : '取消'}
-			</Button>
-		{:else}
-			{#if engagedUnits.length >= 2}
-				<span
-					class="flex animate-pulse items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
-				>
-					<AlertTriangle size={11} />
-					检测到 {firefightCount} 处交火中
-				</span>
-			{/if}
+		{#if engagedCount >= 2}
 			<span
-				class="h-2 w-2 rounded-full {$gameClock.isPaused
-					? 'bg-stone-300 dark:bg-stone-600'
-					: 'animate-pulse bg-green-400'}"
-			></span>
-			<span class="text-xs text-muted-foreground">{$gameClock.isPaused ? '已暂停' : '推演运行中'}</span>
+				class="flex animate-pulse items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
+			>
+				<AlertTriangle size={11} />
+				检测到 {firefightCount} 处交火中
+			</span>
 		{/if}
+		<span
+			class="h-2 w-2 rounded-full {$gameClock.isPaused
+				? 'bg-stone-300 dark:bg-stone-600'
+				: 'animate-pulse bg-green-400'}"
+		></span>
+		<span class="text-xs text-muted-foreground"
+			>{$gameClock.isPaused ? '已暂停' : '推演运行中'}</span
+		>
 		<Separator orientation="vertical" class="h-4" />
 	</div>
 	<!-- 播放 / 暂停 -->
@@ -122,17 +96,6 @@
 		{:else}
 			<Pause size={15} />
 		{/if}
-	</Button>
-
-	<!-- 重置 -->
-	<Button
-		onclick={onReset}
-		title="重置推演"
-		variant="outline"
-		size="icon"
-		class="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
-	>
-		<RotateCcw size={14} />
 	</Button>
 
 	<Separator orientation="vertical" class="h-5" />

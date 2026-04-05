@@ -35,6 +35,11 @@
 	const org = $derived(runtimePos?.org ?? placed?.org ?? null);
 	const maxOrg = $derived(placed?.maxOrg ?? null);
 	const isEngaged = $derived(runtimePos?.isEngaged ?? false);
+	const isDestroyed = $derived(
+		runtimePos
+			? runtimePos.status === 'destroyed' || runtimePos.hp <= 0
+			: placed != null && (placed.status === 'destroyed' || placed.hp <= 0)
+	);
 
 	function startRename() {
 		renameValue = unit.name;
@@ -131,7 +136,9 @@
 						>
 					</div>
 				{/if}
-				{#if isEngaged}
+				{#if isDestroyed}
+					<span class="text-[9px] font-medium text-red-500">✕ 已阵亡</span>
+				{:else if isEngaged}
 					<span class="text-[9px] font-medium text-red-600 dark:text-red-400">⚔ 交战中</span>
 				{/if}
 			</div>
@@ -145,26 +152,28 @@
 		onclick={(e) => e.stopPropagation()}
 		onkeydown={() => {}}
 	>
-		{#if placed}
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				title="定位到地图"
-				class="size-6 text-muted-foreground hover:text-blue-500"
-				onclick={onLocate}
-			>
-				<Crosshair class="size-3.5" />
-			</Button>
-		{:else}
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				title="放置到地图"
-				class="size-6 text-muted-foreground hover:text-green-600"
-				onclick={onPlace}
-			>
-				<MapPin class="size-3.5" />
-			</Button>
+		{#if !isDestroyed}
+			{#if placed}
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					title="定位到地图"
+					class="size-6 text-muted-foreground hover:text-blue-500"
+					onclick={onLocate}
+				>
+					<Crosshair class="size-3.5" />
+				</Button>
+			{:else}
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					title="放置到地图"
+					class="size-6 text-muted-foreground hover:text-green-600"
+					onclick={onPlace}
+				>
+					<MapPin class="size-3.5" />
+				</Button>
+			{/if}
 		{/if}
 		<Button
 			variant="ghost"
