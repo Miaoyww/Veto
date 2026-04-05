@@ -118,6 +118,11 @@
 			marker.on('dragend', (e) => {
 				const latlng = (e.target as L.Marker).getLatLng();
 				updatePlacedUnit(placed.id, { lat: latlng.lat, lng: latlng.lng }, `移动单位: ${info.unit.name}`);
+				// 同步更新 runtimePositions，防止引擎用旧坐标覆盖回拖拽位置
+				runtimePositions.update((pos) => {
+					if (!pos[placed.id]) return pos;
+					return { ...pos, [placed.id]: { ...pos[placed.id], lat: latlng.lat, lng: latlng.lng } };
+				});
 				addLog(`移动单位: ${info.unit.name} → (${latlng.lat.toFixed(3)}, ${latlng.lng.toFixed(3)})`);
 			});
 
