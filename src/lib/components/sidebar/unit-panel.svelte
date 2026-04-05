@@ -425,7 +425,7 @@
 </script>
 
 <Card
-	class="absolute z-[100] h-full w-[24rem] gap-0 border-border/70 bg-background/75 py-0 shadow-xl backdrop-blur-md"
+	class="absolute z-[100] h-full w-[24rem] gap-0 py-0 bg-background/75 backdrop-blur-md"
 >
 	<CardHeader class="border-b px-5 py-4">
 		<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
@@ -477,7 +477,7 @@
 									class="rounded border px-2 py-0.5 text-[11px] font-medium transition-all {factionEditSide ===
 									opt.v
 										? 'border-transparent text-white'
-										: 'border-stone-200 text-stone-500 hover:border-stone-400'}"
+										: 'border-stone-200 text-stone-500 hover:border-stone-400 dark:border-stone-600 dark:text-stone-400 dark:hover:border-stone-400'}"
 									style={factionEditSide === opt.v ? `background:${opt.c}` : ''}
 									onclick={() => (factionEditSide = opt.v)}>{opt.l}</button
 								>

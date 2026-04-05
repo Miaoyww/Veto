@@ -3,7 +3,7 @@
 </script>
 
 <div class="bottom-5 left-5 right-5 bottom-status flex justify-end z-1000 absolute">
-	<div class="coordinates rounded-lg blur-backdrop">
+	<div class="coordinates rounded-lg bg-background/75 backdrop-blur-md">
 		坐标: {$coords.lat.toFixed(5)}, {$coords.lng.toFixed(5)}
 	</div>
 </div>

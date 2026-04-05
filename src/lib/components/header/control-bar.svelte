@@ -74,7 +74,7 @@
 	<!-- 右侧状态区 -->
 	<div class="ml-auto flex items-center gap-2">
 		{#if commandMode}
-			<span class="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+			<span class="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
 				<MousePointerClick size={13} />
 				{commandMode.type === 'reset'
 					? '点击剧场设置新路线终点（替换全部）'
@@ -84,7 +84,7 @@
 				onclick={() => (commandMode = null)}
 				variant="outline"
 				size="sm"
-				class="h-6 rounded-full px-2.5 text-xs text-stone-500"
+				class="h-6 rounded-full px-2.5 text-xs text-muted-foreground"
 			>
 				{commandMode.type === 'append' ? '完成' : '取消'}
 			</Button>
@@ -99,10 +99,10 @@
 			{/if}
 			<span
 				class="h-2 w-2 rounded-full {$gameClock.isPaused
-					? 'bg-stone-300'
+					? 'bg-stone-300 dark:bg-stone-600'
 					: 'animate-pulse bg-green-400'}"
 			></span>
-			<span class="text-xs text-stone-500">{$gameClock.isPaused ? '已暂停' : '推演运行中'}</span>
+			<span class="text-xs text-muted-foreground">{$gameClock.isPaused ? '已暂停' : '推演运行中'}</span>
 		{/if}
 		<Separator orientation="vertical" class="h-4" />
 	</div>
@@ -114,8 +114,8 @@
 		size="icon"
 		class="h-9 w-9 shrink-0 rounded-full border-2 transition-all
 			{$gameClock.isPaused
-			? 'border-stone-300 bg-white text-stone-600 hover:border-stone-500 hover:text-stone-800'
-			: 'border-green-400 bg-green-50 text-green-700 shadow-sm shadow-green-200 hover:bg-green-100'}"
+			? 'border-stone-300 bg-white text-stone-600 hover:border-stone-500 hover:text-stone-800 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-400 dark:hover:border-stone-400 dark:hover:text-stone-200'
+			: 'border-green-400 bg-green-50 text-green-700 shadow-sm shadow-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:shadow-green-900/30 dark:hover:bg-green-900/50'}"
 	>
 		{#if $gameClock.isPaused}
 			<Play size={15} />
@@ -130,7 +130,7 @@
 		title="重置推演"
 		variant="outline"
 		size="icon"
-		class="h-9 w-9 shrink-0 rounded-full text-stone-500"
+		class="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
 	>
 		<RotateCcw size={14} />
 	</Button>
@@ -139,7 +139,7 @@
 
 	<!-- 流速选择 -->
 	<div class="flex items-center gap-1.5">
-		<Gauge size={13} class="text-stone-400" />
+		<Gauge size={13} class="text-muted-foreground" />
 		{#each DISPLAY_SCALES as scale}
 			<Button
 				onclick={() => setTimeScale(scale)}
@@ -147,8 +147,8 @@
 				size="sm"
 				class="h-7 rounded-lg px-2.5 text-xs font-medium
 					{$gameClock.timeScale === scale
-					? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900'
-					: 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700'}"
+					? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900 dark:border-stone-500 dark:bg-stone-700'
+					: 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400 dark:hover:border-stone-500 dark:hover:text-stone-300'}"
 			>
 				{TIME_SCALE_LABELS[scale]}
 			</Button>
@@ -160,8 +160,8 @@
 				size="sm"
 				class="h-7 rounded-lg px-2.5 text-xs font-medium
 					{$gameClock.timeScale === savedCustomScale
-					? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900'
-					: 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700'}"
+					? 'border-stone-700 bg-stone-800 text-white shadow-sm hover:bg-stone-900 dark:border-stone-500 dark:bg-stone-700'
+					: 'border-stone-200 bg-white text-stone-500 hover:border-stone-400 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400 dark:hover:border-stone-500 dark:hover:text-stone-300'}"
 			>
 				{savedCustomScale}秒/秒
 			</Button>
@@ -169,14 +169,14 @@
 	</div>
 
 	<!-- 时间显示 -->
-	<div class="flex items-center gap-1.5 font-mono text-sm text-stone-600">
-		<Clock size={13} class="text-stone-400" />
+	<div class="flex items-center gap-1.5 font-mono text-sm text-stone-600 dark:text-stone-400">
+		<Clock size={13} class="text-muted-foreground" />
 		<span>{formatSimDate($gameClock.currentDate)}</span>
 	</div>
 	<span
 		class="rounded-md px-2 py-0.5 font-mono text-xs {$gameClock.isPaused
-			? 'bg-stone-100 text-stone-400'
-			: 'bg-green-50 text-green-700'}"
+			? 'bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500'
+			: 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-400'}"
 	>
 		{formatElapsed($gameClock.currentDate)}
 	</span>

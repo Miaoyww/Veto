@@ -1,14 +1,13 @@
 <script lang="ts">
 	import RightSidebarMenubutton from '$lib/components/buttons/right-sidebar-menubutton.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Grid3x3, Ruler, Save, Activity } from '@lucide/svelte';
+	import { Ruler, Save, Activity } from '@lucide/svelte';
 	import SettingsButton from '$lib/components/buttons/right-bar/settings-button.svelte';
-	import ResetButton from '$lib/components/buttons/right-bar/reset-button.svelte';
 	import { rightBarPinned } from '$lib/stores/sidebar-store';
 	import PinButton from '../buttons/right-bar/pin-button.svelte';
 	import { flushRuntimePositions, saveBattlesNow } from '$lib/stores/battle-store';
 	import { toast } from 'svelte-sonner';
-	import SimUnitsCard from '$lib/components/cards/simulation/sim-units-card.svelte';
+	import UnitsCard from '$lib/components/map/cards/units-card.svelte';
 
 	// 是否鼠标悬停
 	let hover = $state(false);
@@ -25,7 +24,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore event_directive_deprecated -->
 <div
-	class="sidebar blur-backdrop absolute top-30 bottom-30 z-1000 flex w-15 flex-1 flex-col justify-between overflow-hidden rounded-lg"
+	class="sidebar absolute top-30 bottom-30 z-1000 flex w-15 flex-1 flex-col justify-between overflow-hidden rounded-lg bg-background/75 backdrop-blur-md"
 	style:right={$rightBarPinned ? '20px' : hover ? '0px' : '-50px'}
 	on:mouseenter={() => (hover = true)}
 	on:mouseleave={() => (hover = false)}
@@ -68,7 +67,7 @@
 	</div>
 </div>
 
-<SimUnitsCard bind:open={simUnitsOpen} />
+<UnitsCard bind:open={simUnitsOpen} />
 
 <style>
 	.sidebar {

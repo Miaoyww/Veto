@@ -2,9 +2,14 @@
 	import { fly } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Separator } from '$lib/components/ui/separator/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
 	import type { EventSetting } from '$lib/types';
-	import { ZapIcon, XIcon, PlusIcon } from '@lucide/svelte/icons';
+	import { Zap, X, Plus } from '@lucide/svelte';
 	import EventCard from '$lib/components/cards/settings/event-card.svelte';
+	import { cn } from '$lib/utils.js';
 
 	const PRESET_IDS = new Set([
 		'natural_disaster',
@@ -17,10 +22,12 @@
 
 	let {
 		open = $bindable(false),
-		eventSettings = $bindable<EventSetting[]>([])
+		eventSettings = $bindable<EventSetting[]>([]),
+		containerClass = ''
 	}: {
 		open: boolean;
 		eventSettings: EventSetting[];
+		containerClass?: string;
 	} = $props();
 
 	let localDraft = $state<EventSetting[]>([]);
@@ -49,12 +56,7 @@
 		if (!label) return;
 		localDraft = [
 			...localDraft,
-			{
-				id: `custom_${Date.now()}`,
-				label,
-				enabled: true,
-				probability: newProbability
-			}
+			{ id: `custom_${Date.now()}`, label, enabled: true, probability: newProbability }
 		];
 		newLabel = '';
 		newProbability = 50;
@@ -68,85 +70,94 @@
 </script>
 
 {#if open}
-	<!-- 面板本体：fixed，贴紧对话框右侧（对话框 max-w-xl=36rem，右边缘约 50vw+18rem） -->
 	<div
 		transition:fly={{ x: -180, duration: 280 }}
-		class="fixed left-[calc(50%+19rem)] top-1/2 -translate-y-1/2 z-[60] flex w-[380px] max-h-[85vh] flex-col
-			   bg-white border border-stone-200 rounded-lg shadow-lg"
+		class={cn(
+			'flex flex-col overflow-hidden rounded-xl border shadow-xl bg-background/100',
+			containerClass
+		)}
 	>
 		<!-- 头部 -->
-		<div class="flex shrink-0 items-start justify-between border-b border-stone-200 bg-stone-50 px-5 py-4 rounded-t-lg">
-			<div>
-				<div class="flex items-center gap-2">
-					<ZapIcon size={14} class="text-amber-500 shrink-0" />
-					<h2 class="text-sm font-semibold text-stone-700 tracking-widest uppercase">
-						突发事件配置
-					</h2>
+		<div class="flex shrink-0 items-center justify-between px-5 py-4">
+			<div class="flex items-center gap-2.5">
+				<Zap size={15} class="shrink-0 text-amber-500" />
+				<div>
+					<p class="text-sm font-semibold">突发事件配置</p>
+					<p class="text-xs text-muted-foreground">
+						已启用
+						<Badge variant="secondary" class="mx-0.5 h-4 px-1.5 text-[10px]">{enabledCount} / {localDraft.length}</Badge>
+						项
+					</p>
 				</div>
-				<p class="mt-1.5 text-[11px] leading-relaxed text-stone-400">
-					已启用
-					<span class="text-amber-500 font-medium tabular-nums">{enabledCount}</span>
-					/ {localDraft.length} 项
-				</p>
 			</div>
-			<button
-				type="button"
-				class="rounded-md p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-				onclick={close}
-			>
-				<XIcon size={15} />
-			</button>
+			<Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={close}>
+				<X size={14} />
+			</Button>
 		</div>
+
+		<Separator />
 
 		<!-- 事件列表 -->
-		<div class="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-			{#each localDraft as _, i (localDraft[i].id)}
-				<EventCard
-					bind:event={localDraft[i]}
-					canDelete={!PRESET_IDS.has(localDraft[i].id)}
-					ondelete={() => deleteEvent(localDraft[i].id)}
-				/>
-			{/each}
-
-			<!-- 新增自定义事件表单 -->
-			<div class="rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-3.5 space-y-3 mt-1">
-				<p class="text-[11px] font-medium text-stone-500 uppercase tracking-wider">新增自定义事件</p>
-				<Input
-					placeholder="事件名称"
-					bind:value={newLabel}
-					class="h-8 text-sm bg-white"
-					onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') addCustomEvent(); }}
-				/>
-				<div class="space-y-1.5">
-					<div class="flex justify-between items-center">
-						<span class="text-[11px] text-stone-500">初始触发概率</span>
-						<span class="text-xs font-mono font-semibold text-amber-600 tabular-nums">{newProbability}%</span>
-					</div>
-					<input
-						type="range"
-						min="0"
-						max="100"
-						step="5"
-						bind:value={newProbability}
-						style="--val: {newProbability}%"
-						class="prob-slider w-full cursor-pointer"
+		<div class="scrollbar min-h-0 flex-1 overflow-y-auto">
+			<div class="flex flex-col gap-2 px-4 py-3">
+				{#each localDraft as _, i (localDraft[i].id)}
+					<EventCard
+						bind:event={localDraft[i]}
+						canDelete={!PRESET_IDS.has(localDraft[i].id)}
+						ondelete={() => deleteEvent(localDraft[i].id)}
 					/>
-				</div>
-				<Button
-					variant="outline"
-					size="sm"
-					class="w-full h-8 text-[11px] gap-1.5 border-stone-300 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50"
-					onclick={addCustomEvent}
-					disabled={!newLabel.trim()}
-				>
-					<PlusIcon size={12} />
-					添加事件
-				</Button>
+				{/each}
+
+				<!-- 新增自定义事件 -->
+				<Card.Root class="mt-1 border-dashed shadow-none">
+					<Card.Header class="pb-2">
+						<Card.Title class="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+							新增自定义事件
+						</Card.Title>
+					</Card.Header>
+					<Card.Content class="flex flex-col gap-3">
+						<Input
+							placeholder="事件名称"
+							bind:value={newLabel}
+							class="h-8 text-sm"
+							onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') addCustomEvent(); }}
+						/>
+						<div class="space-y-1.5">
+							<div class="flex items-center justify-between">
+								<Label class="text-xs text-muted-foreground">初始触发概率</Label>
+								<span class="font-mono text-xs font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+									{newProbability}%
+								</span>
+							</div>
+							<input
+								type="range"
+								min="0"
+								max="100"
+								step="5"
+								bind:value={newProbability}
+								style="--val: {newProbability}%"
+								class="prob-slider w-full cursor-pointer"
+							/>
+						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-8 w-full gap-1.5 text-xs"
+							onclick={addCustomEvent}
+							disabled={!newLabel.trim()}
+						>
+							<Plus size={13} />
+							添加事件
+						</Button>
+					</Card.Content>
+				</Card.Root>
 			</div>
 		</div>
 
-		<!-- 底部 -->
-		<div class="shrink-0 flex gap-3 border-t border-stone-200 bg-stone-50 px-4 py-4 rounded-b-lg">
+		<Separator />
+
+		<!-- 底部操作 -->
+		<div class="flex shrink-0 gap-2 px-4 py-3 bg-background/100 ">
 			<Button variant="outline" class="flex-1" onclick={close}>取消</Button>
 			<Button class="flex-1" onclick={handleApply}>应用事件预设</Button>
 		</div>
@@ -154,39 +165,21 @@
 {/if}
 
 <style>
-	.prob-slider {
-		appearance: none;
-		height: 6px;
+	.scrollbar {
+		scrollbar-width: thin;
+		scrollbar-color: hsl(var(--border)) transparent;
+	}
+	.scrollbar::-webkit-scrollbar {
+		width: 4px;
+	}
+	.scrollbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.scrollbar::-webkit-scrollbar-thumb {
+		background-color: hsl(var(--border));
 		border-radius: 9999px;
-		background: linear-gradient(
-			to right,
-			#f59e0b 0%,
-			#f59e0b var(--val, 50%),
-			#e5e7eb var(--val, 50%),
-			#e5e7eb 100%
-		);
-		outline: none;
 	}
-	.prob-slider::-webkit-slider-thumb {
-		appearance: none;
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background: #f59e0b;
-		border: 2px solid #ffffff;
-		box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4);
-		cursor: pointer;
-		transition: box-shadow 0.15s;
-	}
-	.prob-slider::-webkit-slider-thumb:hover {
-		box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.25);
-	}
-	.prob-slider::-moz-range-thumb {
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background: #f59e0b;
-		border: 2px solid #ffffff;
-		cursor: pointer;
+	.scrollbar::-webkit-scrollbar-thumb:hover {
+		background-color: hsl(var(--muted-foreground) / 0.5);
 	}
 </style>

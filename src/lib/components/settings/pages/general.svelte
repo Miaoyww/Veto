@@ -147,7 +147,7 @@
 				<Button
 					variant="outline"
 					size="sm"
-					class="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+					class="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300"
 					onclick={handleClearAll}
 				>
 					<Trash2 size={13} class="mr-1.5" />

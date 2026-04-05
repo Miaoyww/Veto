@@ -50,7 +50,7 @@
 </script>
 
 <div class="flex flex-col items-end gap-2">
-	<div class="blur-backdrop flex items-center gap-3 rounded-lg p-3 text-sm text-stone-900">
+	<div class="bg-background/75 backdrop-blur-md flex items-center gap-3 rounded-lg p-3 text-sm text-foreground">
 		<ControlBar bind:commandMode {engagedUnits} {firefightCount} {onReset} />
 
 		<div class="flex flex-col gap-1">

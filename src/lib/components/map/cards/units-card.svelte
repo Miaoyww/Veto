@@ -72,7 +72,7 @@
 {#if open}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed z-[1500] flex w-[26rem] flex-col overflow-hidden rounded-xl border border-border/70 bg-background/90 shadow-2xl backdrop-blur-md"
+		class="fixed z-[1500] flex w-[26rem] flex-col overflow-hidden rounded-xl border bg-background/75 backdrop-blur-md"
 		style="left:{pos.x}px; top:{pos.y}px;"
 	>
 		<!-- 拖拽标题栏 -->
@@ -86,12 +86,12 @@
 
 			<!-- 状态徽标 -->
 			{#if engagedCount > 0}
-				<span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-600">
+				<span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-600 dark:bg-red-900/30 dark:text-red-400">
 					⚔ {engagedCount} 交战
 				</span>
 			{/if}
 			{#if hasPendingRoute}
-				<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+				<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
 					⚠ 待确认路线
 				</span>
 			{/if}
@@ -151,10 +151,10 @@
 									{#if hp <= 0}
 										<span class="text-xs font-medium text-muted-foreground">☠ 已阵亡</span>
 									{:else if isEngaged}
-										<span class="text-xs font-medium text-red-600">⚔ 交战中</span>
+									<span class="text-xs font-medium text-red-600 dark:text-red-400">⚔ 交战中</span>
 									{/if}
 									{#if isPendingForThis}
-										<span class="text-xs font-medium text-amber-600">
+									<span class="text-xs font-medium text-amber-600 dark:text-amber-400">
 											<Navigation class="inline size-2.5 mr-0.5" />
 											{$pendingRoute?.type === 'reset' ? '路线重置待确认' : '路线追加待确认'}
 										</span>
@@ -173,7 +173,7 @@
 									{:else if route.length === 0}
 										<span class="text-muted-foreground/60">原地待命</span>
 									{:else}
-										<span class="text-green-600">行进中 · {route.length} 节点剩余</span>
+										<span class="text-green-600 dark:text-green-400">行进中 · {route.length} 节点剩余</span>
 									{/if}
 								</div>
 

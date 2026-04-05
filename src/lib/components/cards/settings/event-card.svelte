@@ -72,8 +72,8 @@
 
 <div
 	class="rounded-lg border p-3.5 space-y-3 transition-all duration-200 {event.enabled
-		? 'border-stone-200 bg-white'
-		: 'border-stone-100 bg-stone-50/60 opacity-60'}"
+		? 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800'
+		: 'border-stone-100 bg-stone-50/60 opacity-60 dark:border-stone-800 dark:bg-stone-900/60'}"
 >
 	<!-- 标题行 -->
 	<div class="flex items-start justify-between gap-3">
@@ -85,11 +85,11 @@
 				</div>
 			{/if}
 			<div class="min-w-0 flex-1">
-				<p class="text-sm font-medium text-stone-700 leading-none">{event.label}</p>
+				<p class="text-sm font-medium text-stone-700 leading-none dark:text-stone-300">{event.label}</p>
 				{#if meta}
-					<p class="text-[11px] text-stone-400 mt-1.5 leading-snug">{meta.description}</p>
+					<p class="text-[11px] text-stone-400 mt-1.5 leading-snug dark:text-muted-foreground">{meta.description}</p>
 				{:else}
-					<p class="text-[11px] text-stone-400 mt-1 leading-snug">自定义事件</p>
+					<p class="text-[11px] text-stone-400 mt-1 leading-snug dark:text-muted-foreground">自定义事件</p>
 				{/if}
 			</div>
 		</div>
@@ -97,7 +97,7 @@
 			{#if canDelete}
 				<button
 					type="button"
-					class="rounded p-0.5 text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+					class="rounded p-0.5 text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors dark:text-stone-600 dark:hover:text-red-400 dark:hover:bg-red-900/30"
 					onclick={ondelete}
 					aria-label="删除事件"
 				>
@@ -111,8 +111,8 @@
 	<!-- 概率滑块（始终显示） -->
 	<div class="space-y-1.5">
 		<div class="flex justify-between items-center">
-			<span class="text-[11px] text-stone-500">触发概率</span>
-			<span class="text-xs font-mono font-semibold text-amber-600 tabular-nums"
+			<span class="text-[11px] text-muted-foreground">触发概率</span>
+			<span class="text-xs font-mono font-semibold text-amber-600 tabular-nums dark:text-amber-400"
 				>{event.probability}%</span
 			>
 		</div>
@@ -133,40 +133,3 @@
 	</div>
 </div>
 
-<style>
-	.prob-slider {
-		appearance: none;
-		height: 6px;
-		border-radius: 9999px;
-		background: linear-gradient(
-			to right,
-			#f59e0b 0%,
-			#f59e0b var(--val, 50%),
-			#e5e7eb var(--val, 50%),
-			#e5e7eb 100%
-		);
-		outline: none;
-	}
-	.prob-slider::-webkit-slider-thumb {
-		appearance: none;
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background: #f59e0b;
-		border: 2px solid #ffffff;
-		box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4);
-		cursor: pointer;
-		transition: box-shadow 0.15s;
-	}
-	.prob-slider::-webkit-slider-thumb:hover {
-		box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.25);
-	}
-	.prob-slider::-moz-range-thumb {
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background: #f59e0b;
-		border: 2px solid #ffffff;
-		cursor: pointer;
-	}
-</style>

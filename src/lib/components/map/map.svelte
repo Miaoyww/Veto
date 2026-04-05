@@ -4,12 +4,12 @@
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
 	import { coords, zoom, mapFlyTo } from '$lib/stores/map-store';
-	import UnitContextMenu from './unit-context-menu.svelte';
-	import MapContextMenu from './map-context-menu.svelte';
-	import UnitPopup from './unit-popup.svelte';
-	import StrikeCard from './strike-card.svelte';
-	import InteractionModeHint from './interaction-mode-hint.svelte';
-	import RouteConfirmCard from './route-confirm-card.svelte';
+	import UnitContextMenu from './context-menus/unit-context-menu.svelte';
+	import MapContextMenu from './context-menus/map-context-menu.svelte';
+	import UnitPopup from './cards/unit-popup.svelte';
+	import StrikeCard from './cards/strike-card.svelte';
+	import InteractionModeHint from './cards/interaction-mode-hint.svelte';
+	import RouteConfirmCard from './cards/route-confirm-card.svelte';
 	import {
 		currentBattle,
 		currentFactionId,

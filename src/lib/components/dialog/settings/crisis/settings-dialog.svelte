@@ -21,15 +21,15 @@
 		transition:fade={{ duration: 150 }}
 	>
 		<!-- 左侧边栏 -->
-		<Tabs.Tabs bind:value={activeTab} orientation="vertical" class="flex h-full">
-			<Tabs.List class="mb-4">
+		<Tabs.Tabs bind:value={activeTab} orientation="vertical" class="flex h-full bg-background/75 backdrop-blur-md rounded-lg">
+			<Tabs.List>
 				<Tabs.Trigger value="battle" onclick={() => switchTab('battle')}>战局</Tabs.Trigger>
 				<Tabs.Trigger value="about" onclick={() => switchTab('about')}>关于</Tabs.Trigger>
 			</Tabs.List>
 		</Tabs.Tabs>
 
 		<!-- 页面内容 -->
-		<div class="blur-backdrop ml-6 flex h-200 w-240 flex-1 flex-col rounded-lg p-6">
+		<div class="bg-background/75 backdrop-blur-md ml-6 flex h-200 w-240 flex-1 flex-col rounded-lg p-6">
 			<Button
 				variant="ghost"
 				size="icon"

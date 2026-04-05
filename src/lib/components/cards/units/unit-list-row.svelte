@@ -126,13 +126,13 @@
 						</div>
 						<span
 							class="w-10 shrink-0 text-right font-mono text-[9px] {org / maxOrg < 0.2
-								? 'text-orange-500'
+								? 'text-orange-500 dark:text-orange-400'
 								: 'text-muted-foreground'}">{Math.round(org)}/{maxOrg}</span
 						>
 					</div>
 				{/if}
 				{#if isEngaged}
-					<span class="text-[9px] font-medium text-red-600">⚔ 交战中</span>
+					<span class="text-[9px] font-medium text-red-600 dark:text-red-400">⚔ 交战中</span>
 				{/if}
 			</div>
 		{/if}

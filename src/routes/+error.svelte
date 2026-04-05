@@ -10,7 +10,7 @@
 </script>
 
 <div
-	class="flex h-screen w-screen flex-col items-center justify-center gap-8 overflow-auto bg-gradient-to-br from-slate-100 to-stone-200 px-6 py-12 dark:from-slate-900 dark:to-stone-950"
+	class="flex min-h-screen w-screen flex-col items-center justify-center gap-6 overflow-auto bg-gradient-to-br from-slate-100 to-stone-200 px-6 py-10 sm:gap-8 sm:py-12 dark:from-slate-900 dark:to-stone-950"
 >
 	<!-- HTTP Cat 图片 -->
 	<div
@@ -19,7 +19,7 @@
 		<img
 			src={catUrl}
 			alt="HTTP {status} — {message}"
-			class="block h-64 w-auto object-cover sm:h-80"
+			class="block h-48 w-auto object-cover sm:h-80"
 			onerror={(e) => {
 				(e.currentTarget as HTMLImageElement).style.display = 'none';
 			}}
@@ -33,26 +33,26 @@
 		>
 			HTTP {status}
 		</span>
-		<h1 class="text-3xl font-bold text-stone-800 dark:text-stone-100">
+		<h1 class="text-2xl font-bold text-stone-800 sm:text-3xl dark:text-stone-100">
 			{message}
 		</h1>
-		<p class="max-w-sm text-sm text-stone-400 dark:text-stone-500">
+		<p class="max-w-xs text-sm text-stone-400 sm:max-w-sm dark:text-stone-500">
 			糟糕，出了点儿问题。你可以尝试刷新页面，或者返回首页。
 		</p>
 	</div>
 
 	<!-- 操作按钮 -->
-	<div class="flex gap-3">
+	<div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
 		<button
 			onclick={() => goto('/')}
-			class="flex items-center gap-2 rounded-xl bg-stone-800 px-5 py-2.5 text-sm font-medium text-white shadow transition hover:bg-stone-700 active:scale-95 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
+			class="flex w-full items-center justify-center gap-2 rounded-xl bg-stone-800 px-5 py-3 text-sm font-medium text-white shadow transition hover:bg-stone-700 active:scale-95 sm:w-auto sm:py-2.5 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
 		>
 			<Home class="size-4" />
 			返回首页
 		</button>
 		<button
 			onclick={() => location.reload()}
-			class="flex items-center gap-2 rounded-xl border border-stone-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-stone-700 shadow backdrop-blur-sm transition hover:bg-white active:scale-95 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300 dark:hover:bg-stone-800"
+			class="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white/60 px-5 py-3 text-sm font-medium text-stone-700 shadow backdrop-blur-sm transition hover:bg-white active:scale-95 sm:w-auto sm:py-2.5 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300 dark:hover:bg-stone-800"
 		>
 			<RefreshCw class="size-4" />
 			刷新页面

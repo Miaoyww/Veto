@@ -1,6 +1,6 @@
 @import 'tailwindcss';
-
 @import 'tw-animate-css';
+@import './theme.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -33,18 +33,15 @@ body {
 	font-family: 'HarmonyOS SansSC', sans-serif;
 }
 
+/* background colours are defined in theme.css; only structural rules here */
 .blur-backdrop {
-	background: rgba(255, 255, 255, 0.3); /* 半透明白色，可换成暗色模式 */
-	-webkit-backdrop-filter: blur(10px); /* Safari 支持 */
-	backdrop-filter: blur(10px); /* 模糊效果 */
-
-	box-shadow: var(--shadow);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
 }
 
 .blur-setting-card {
-	background: rgba(255, 255, 255, 0.5); /* 半透明白色，可换成暗色模式 */
-	-webkit-backdrop-filter: blur(10px); /* Safari 支持 */
-	backdrop-filter: blur(10px); /* 模糊效果 */
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
 }
 
 
@@ -192,4 +189,11 @@ body {
 	body {
 		@apply bg-background text-foreground;
 	}
+}
+
+/* Expose custom gradient tokens as Tailwind colour utilities:
+   from-page-from  /  to-page-to                              */
+@theme inline {
+	--color-page-from: var(--page-bg-from);
+	--color-page-to: var(--page-bg-to);
 }

@@ -63,7 +63,7 @@
 	role="button"
 	tabindex={0}
 	class="group w-full cursor-pointer gap-2 py-4 backdrop-blur-sm transition-all hover:shadow-md {isActive
-		? 'border-stone-400 bg-card/90'
+			? 'border-stone-400 bg-card/90 dark:border-stone-500'
 		: 'bg-card/70 hover:bg-card/90'}"
 	onclick={handleLoad}
 	onkeydown={(e) => e.key === 'Enter' && handleLoad()}
@@ -81,7 +81,7 @@
 				<Button
 					variant="ghost"
 					size="icon-sm"
-					class="shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700"
+					class="shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300"
 					title="保存"
 					onclick={(e: MouseEvent) => { e.stopPropagation(); commitEdit(); }}
 				>
@@ -114,7 +114,7 @@
 			<Button
 				variant="outline"
 				size="sm"
-				class="gap-1 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800"
+				class="gap-1 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
 				onclick={(e: MouseEvent) => { e.stopPropagation(); handleLoad(); }}
 			>
 				<Play class="size-3" />

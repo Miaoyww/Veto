@@ -15,7 +15,7 @@
 	} from '$lib/components/ui/card';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Plus, Swords, List, Flag, ScrollText, X } from '@lucide/svelte';
-	import FactionCard from '$lib/components/cards/battle/faction-card.svelte';
+	import FactionCard from '$lib/components/map/cards/faction-card.svelte';
 	import UnitPanel from '$lib/components/sidebar/unit-panel.svelte';
 
 	function randomColor() {
@@ -26,7 +26,6 @@
 	let newFactionName = $state('');
 	let newFactionColor = $state(randomColor());
 	const nameInputId = 'new-faction-name';
-	const colorInputId = 'new-faction-color';
 
 	// 分离两个可见状态，使 unit-panel 先于 leftbar 关闭
 	let leftBarVisible = $state($leftBarPinned);
@@ -78,7 +77,7 @@
 		in:fly={{ x: -28, duration: 260, easing: quintOut }}
 		out:fade={{ duration: 220 }}
 	>
-		<Card class="h-full gap-0 border-border/70 bg-background/75 py-0 shadow-xl backdrop-blur-md">
+		<Card class="h-full gap-0 py-0 bg-background/75 backdrop-blur-md">
 			<CardHeader class="border-b px-5 py-4">
 				<CardTitle class="flex items-center gap-2 text-sm font-semibold tracking-wide">
 					<Swords class="h-4 w-4 text-red-500" />
@@ -197,7 +196,7 @@
 
 {#if unitPanelVisible}
 	<div
-		class="absolute top-24 bottom-24 z-[999] w-[24rem] overflow-hidden rounded-xl border border-border/70 bg-background/75 shadow-xl backdrop-blur-md"
+		class="absolute top-24 bottom-24 z-[999] w-[24rem] overflow-hidden rounded-xl border"
 		style="left: calc(20px + 22rem + 12px)"
 		in:fly={{ x: -20, duration: 240, easing: quintOut }}
 		out:fade={{ duration: 180 }}

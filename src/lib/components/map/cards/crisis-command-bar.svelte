@@ -18,23 +18,23 @@
 		out:fly={{ y: 16, duration: 160, opacity: 0 }}
 	>
 		<div
-			class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-white/95 px-4 py-3 shadow-xl shadow-amber-100/60 backdrop-blur-md"
+			class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-white/95 px-4 py-3 shadow-xl shadow-amber-100/60 backdrop-blur-md dark:border-amber-800 dark:bg-stone-900/95 dark:shadow-amber-900/20"
 		>
 			<!-- 警示图标 -->
 			<div
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30"
 			>
-				<AlertTriangle class="h-4 w-4 text-amber-500" />
+				<AlertTriangle class="h-4 w-4 text-amber-500 dark:text-amber-400" />
 			</div>
 
 			<!-- 指令信息 -->
 			<div class="flex flex-col gap-0.5">
-				<p class="text-sm font-semibold text-stone-800">
-					<span class="mr-1 text-amber-600">收到新指令</span>
-					<span class="text-stone-500 font-normal">— {cmd.unitName}</span>
+				<p class="text-sm font-semibold text-foreground">
+					<span class="mr-1 text-amber-600 dark:text-amber-400">收到新指令</span>
+					<span class="font-normal text-muted-foreground">&mdash; {cmd.unitName}</span>
 				</p>
-				<div class="flex items-center gap-1.5 text-xs text-stone-500">
-					<Navigation class="h-3 w-3 text-stone-400" />
+				<div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+					<Navigation class="h-3 w-3 text-muted-foreground" />
 					<span class="font-mono">
 						{cmd.lat.toFixed(4)}°N, {cmd.lng.toFixed(4)}°E
 					</span>
@@ -49,7 +49,7 @@
 			<div class="flex items-center gap-2">
 				<Button
 					size="sm"
-					class="h-8 gap-1.5 bg-stone-800 px-3 text-xs text-white hover:bg-stone-900"
+					class="h-8 gap-1.5 bg-stone-800 px-3 text-xs text-white hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600"
 					onclick={applyCrisisCommand}
 				>
 					<Check class="h-3.5 w-3.5" />
@@ -58,7 +58,7 @@
 				<Button
 					variant="outline"
 					size="sm"
-					class="h-8 gap-1.5 border-stone-200 px-3 text-xs text-stone-600 hover:border-stone-400"
+					class="h-8 gap-1.5 border-stone-200 px-3 text-xs text-stone-600 hover:border-stone-400 dark:border-stone-600 dark:text-stone-400 dark:hover:border-stone-400"
 					onclick={cancelCrisisCommand}
 				>
 					<X class="h-3.5 w-3.5" />

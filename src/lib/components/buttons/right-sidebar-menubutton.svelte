@@ -6,7 +6,7 @@
 
 <Button
 	variant="ghost"
-	class="cursor-pointer rounded-md text-sm text-gray-800 transition-all duration-200  active:border-accent active:bg-accent active:text-white"
+	class="cursor-pointer rounded-md text-sm text-gray-800 transition-all duration-200  active:border-accent active:bg-accent active:text-white dark:text-stone-300"
 	{title}
 >
 	{@render children?.()}

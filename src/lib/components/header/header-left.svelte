@@ -12,10 +12,10 @@
 	}
 </script>
 
-<div class="blur-backdrop flex items-center gap-3 rounded-lg p-3">
+<div class="flex items-center gap-3 rounded-lg p-3 bg-background/75 backdrop-blur-md">
 	<a
 		href="/"
-		class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900"
+		class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-700/50 dark:hover:text-stone-100"
 		title="返回首页"
 	>
 		<ArrowLeft class="h-5 w-5" />
@@ -23,7 +23,7 @@
 	<Separator orientation="vertical" class="h-6" />
 	<Button
 		variant="ghost"
-		class="cursor-pointer rounded-md text-sm text-gray-800 transition-all duration-200 active:border-accent active:bg-accent active:text-white"
+		class="cursor-pointer rounded-md text-sm text-gray-800 transition-all duration-200 active:border-accent active:bg-accent active:text-white dark:text-stone-300"
 		size="icon"
 		onclick={togglePin}
 		title="切换侧边栏固定"
@@ -37,6 +37,6 @@
 	</div>
 	{#if $currentBattle}
 		<Separator orientation="vertical" class="h-6" />
-		<span class="text-sm font-medium text-stone-700">{$currentBattle.name}</span>
+		<span class="text-sm font-medium text-stone-700 dark:text-stone-300">{$currentBattle.name}</span>
 	{/if}
 </div>

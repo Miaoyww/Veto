@@ -11,14 +11,14 @@
 			href="https://github.com/VetoExpress/veto-plugins"
 			target="_blank"
 			rel="noreferrer"
-			class="inline-flex items-center gap-1 text-stone-600 underline underline-offset-2 hover:text-stone-900"
+			class="inline-flex items-center gap-1 text-stone-600 underline underline-offset-2 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
 		>
 			veto-plugins <ExternalLink size={11} />
 		</a>
 		浏览社区 Mod。
 	</p>
 	<div
-		class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 py-16 text-stone-400"
+		class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 py-16 text-stone-400 dark:border-stone-700 dark:text-stone-500"
 	>
 		<Puzzle size={36} class="opacity-40" />
 		<span class="text-sm">暂无已安装的 Mod</span>

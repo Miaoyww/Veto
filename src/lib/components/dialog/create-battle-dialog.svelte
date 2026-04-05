@@ -91,21 +91,25 @@
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
 	<Dialog.Portal>
 		<Dialog.Overlay />
-		<Dialog.Content class="max-w-xl">
+		<Dialog.Content class="max-w-xl ">
 			<Dialog.Header class="pb-1">
 				<Dialog.Title class="text-base font-semibold tracking-wide">新建战局</Dialog.Title>
-				<Dialog.Description class="text-xs text-stone-500">
+				<Dialog.Description class="text-xs text-muted-foreground">
 					配置推演参数。所有设置仅在点击「初始化战局」后写入系统。
 				</Dialog.Description>
 			</Dialog.Header>
 
 			<!-- 事件配置面板，渲染在 Dialog 外，用 fixed 定位贴着对话框右边 -->
-			<EventConfigDrawer bind:open={eventDrawerOpen} bind:eventSettings={draft.eventSettings} />
+			<EventConfigDrawer
+				bind:open={eventDrawerOpen}
+				bind:eventSettings={draft.eventSettings}
+				containerClass="fixed left-[calc(50%+19rem)] top-1/2 -translate-y-1/2 z-[60] w-[380px] max-h-[85vh]"
+			/>
 
 			<div class="flex flex-col gap-0 py-2">
 				<!-- ── 战局名称 ── -->
-				<section class="border-b border-stone-200 px-1 py-3">
-					<Label for="battle-name" class="mb-2 block text-xs text-stone-500">战局代号</Label>
+				<section class="border-b border-stone-200 px-1 py-3 dark:border-stone-700">
+					<Label for="battle-name" class="mb-2 block text-xs text-muted-foreground">战局代号</Label>
 					<Input
 						id="battle-name"
 						bind:value={draft.name}
@@ -116,23 +120,23 @@
 				</section>
 
 				<!-- ── 时间参数（两列） ── -->
-				<section class="border-b border-stone-200 px-1 py-3">
+				<section class="border-b border-stone-200 px-1 py-3 dark:border-stone-700">
 					<div class="mb-3 flex items-center gap-1.5">
-						<CalendarDaysIcon size={12} class="text-stone-400" />
-						<span class="text-[11px] font-medium tracking-widest text-stone-400 uppercase"
+						<CalendarDaysIcon size={12} class="text-muted-foreground" />
+						<span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase"
 							>时间参数</span
 						>
 					</div>
 					<div class="grid grid-cols-2 gap-3">
 						<!-- 起始推演日期 -->
 						<div>
-							<Label class="mb-1.5 block text-xs text-stone-500">模拟日期</Label>
+							<Label class="mb-1.5 block text-xs text-muted-foreground">模拟日期</Label>
 							<DatePicker bind:value={draft.startDate} class="h-9 w-full text-sm" />
 						</div>
 						<!-- 时间流速倍率 -->
 						<div>
-							<Label class="mb-1.5 block text-xs text-stone-500">
-								<GaugeIcon size={11} class="mr-1 inline text-stone-400" />
+							<Label class="mb-1.5 block text-xs text-muted-foreground">
+								<GaugeIcon size={11} class="mr-1 inline text-muted-foreground" />
 								时间流速 (模拟秒/真实秒)
 							</Label>
 							<input
@@ -143,7 +147,8 @@
 									   px-3 text-sm text-stone-800
 									   transition-colors outline-none focus:border-stone-400
 									   focus:ring-2 focus:ring-stone-300/60
-									   [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+									   dark:border-stone-600 dark:bg-stone-800
+									   dark:text-stone-200 dark:focus:border-stone-400 dark:focus:ring-stone-600/40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 							/>
 							<div class="mt-1.5 flex flex-wrap gap-1">
 								{#each TIME_SCALES as scale}
@@ -151,8 +156,8 @@
 										type="button"
 										class="rounded border px-2 py-0.5 text-[11px] transition-all
 											   {draft.timeScale === scale
-											? 'border-stone-600 bg-stone-700 text-white'
-											: 'border-stone-300 bg-white text-stone-500 hover:border-stone-400 hover:bg-stone-50'}"
+											? 'border-stone-600 bg-stone-700 text-white dark:border-stone-500 dark:bg-stone-600'
+											: 'border-stone-300 bg-white text-stone-500 hover:border-stone-400 hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-400 dark:hover:border-stone-500'}"
 										onclick={() => (draft.timeScale = scale)}
 									>
 										{TIME_SCALE_LABELS[scale]}
@@ -164,17 +169,17 @@
 				</section>
 
 				<!-- ── 地图参数（两列） ── -->
-				<section class="border-b border-stone-200 px-1 py-3">
+				<section class="border-b border-stone-200 px-1 py-3 dark:border-stone-700">
 					<div class="mb-3 flex items-center gap-1.5">
-						<MapIcon size={12} class="text-stone-400" />
-						<span class="text-[11px] font-medium tracking-widest text-stone-400 uppercase"
+						<MapIcon size={12} class="text-muted-foreground" />
+						<span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase"
 							>地图参数</span
 						>
 					</div>
 					<div class="grid grid-cols-2 gap-3">
 						<!-- 比例尺 -->
 						<div>
-							<Label for="pixels-per-km" class="mb-1.5 block text-xs text-stone-500"
+							<Label for="pixels-per-km" class="mb-1.5 block text-xs text-muted-foreground"
 								>比例尺 (px/km)</Label
 							>
 							<input
@@ -188,20 +193,21 @@
 									   px-3 text-sm text-stone-800
 									   transition-colors outline-none focus:border-stone-400
 									   focus:ring-2 focus:ring-stone-300/60
-									   [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+									   dark:border-stone-600 dark:bg-stone-800
+									   dark:text-stone-200 dark:focus:border-stone-400 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 							/>
 						</div>
 						<!-- 地图区域 -->
 						<div>
-							<Label class="mb-1.5 block text-xs text-stone-500">初始区域</Label>
+							<Label class="mb-1.5 block text-xs text-muted-foreground">初始区域</Label>
 							<div class="flex flex-wrap gap-1.5">
 								{#each MAP_PRESETS as preset, i}
 									<button
 										type="button"
 										class="rounded-md border px-2.5 py-1 text-xs transition-all
 											   {draft.mapPreset === i
-											? 'border-stone-600 bg-stone-700 text-white'
-											: 'border-stone-300 bg-white text-stone-600 hover:border-stone-400 hover:bg-stone-50'}"
+											? 'border-stone-600 bg-stone-700 text-white dark:border-stone-500 dark:bg-stone-600'
+											: 'border-stone-300 bg-white text-stone-600 hover:border-stone-400 hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-400 dark:hover:border-stone-500'}"
 										onclick={() => (draft.mapPreset = i)}
 									>
 										{preset.label}
@@ -213,10 +219,10 @@
 				</section>
 
 				<!-- ── 视觉标准 ── -->
-				<section class="border-b border-stone-200 px-1 py-3">
+				<section class="border-b border-stone-200 px-1 py-3 dark:border-stone-700">
 					<div class="mb-3 flex items-center gap-1.5">
-						<ShieldIcon size={12} class="text-stone-400" />
-						<span class="text-[11px] font-medium tracking-widest text-stone-400 uppercase"
+						<ShieldIcon size={12} class="text-muted-foreground" />
+						<span class="text-[11px] font-medium tracking-widest text-muted-foreground uppercase"
 							>视觉标准</span
 						>
 					</div>
@@ -225,8 +231,8 @@
 							type="button"
 							class="flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs
 								   transition-all {draft.iconStyle === 'nato'
-								? 'border-sky-500 bg-sky-50 text-sky-700'
-								: 'border-stone-300 bg-white text-stone-500 hover:border-stone-400 hover:bg-stone-50'}"
+								? 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-400'
+								: 'border-stone-300 bg-white text-stone-500 hover:border-stone-400 hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-400 dark:hover:border-stone-500'}"
 							onclick={() => (draft.iconStyle = 'nato')}
 						>
 							<ShieldIcon size={13} />
@@ -236,8 +242,8 @@
 							type="button"
 							class="flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs
 								   transition-all {draft.iconStyle === 'simple'
-								? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-								: 'border-stone-300 bg-white text-stone-500 hover:border-stone-400 hover:bg-stone-50'}"
+								? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+								: 'border-stone-300 bg-white text-stone-500 hover:border-stone-400 hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-400 dark:hover:border-stone-500'}"
 							onclick={() => (draft.iconStyle = 'simple')}
 						>
 							<LayersIcon size={13} />
@@ -252,25 +258,27 @@
 						type="button"
 						class="group flex w-full items-center justify-between rounded-lg border
 							   border-dashed border-stone-300 bg-stone-50 px-4 py-3
-							   transition-all hover:border-amber-400 hover:bg-amber-50"
+							   transition-all hover:border-amber-400 hover:bg-amber-50
+							   dark:border-stone-600 dark:bg-stone-800/60 dark:hover:border-amber-600 dark:hover:bg-amber-900/20"
 						onclick={() => (eventDrawerOpen = true)}
 					>
 						<div class="flex items-center gap-3">
-							<ZapIcon size={15} class="shrink-0 text-amber-500" />
+							<ZapIcon size={15} class="shrink-0 text-amber-500 dark:text-amber-400" />
 							<div class="text-left">
 								<p
-									class="text-sm font-medium text-stone-700 transition-colors group-hover:text-amber-700"
+									class="text-sm font-medium text-stone-700 transition-colors group-hover:text-amber-700 dark:text-stone-300 dark:group-hover:text-amber-400"
 								>
 									配置突发事件
 								</p>
-								<p class="mt-0.5 text-[11px] text-stone-400">
+								<p class="mt-0.5 text-[11px] text-muted-foreground">
 									{enabledEventCount} / {draft.eventSettings.length} 项已启用
 								</p>
 							</div>
 						</div>
 						<div
 							class="rounded border border-stone-300 px-2 py-0.5 text-[10px] text-stone-400
-								   transition-colors group-hover:border-amber-400 group-hover:text-amber-600"
+								   transition-colors group-hover:border-amber-400 group-hover:text-amber-600
+								   dark:border-stone-600 dark:text-stone-500 dark:group-hover:border-amber-600 dark:group-hover:text-amber-400"
 						>
 							配置 →
 						</div>

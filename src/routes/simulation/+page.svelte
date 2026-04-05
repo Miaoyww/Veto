@@ -200,28 +200,28 @@
 	});
 </script>
 
-<div class="flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-br from-slate-100 to-stone-200">
+<div class="flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-br from-page-from to-page-to">
 	<!-- ════ 顶部导航栏 ════ -->
 	<header
-		class="flex h-13 shrink-0 items-center gap-3 border-b border-stone-200 bg-white/70 px-5 backdrop-blur-sm"
+		class="flex h-13 shrink-0 items-center gap-3 border-b border-stone-200 bg-white/70 px-5 backdrop-blur-sm dark:border-stone-700 dark:bg-stone-900/70"
 		in:fly={{ y: -12, duration: 300, opacity: 0 }}
 	>
 		<button
 			onclick={() => goto('/')}
-			class="flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-stone-800"
+			class="flex items-center gap-1 text-sm text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
 		>
 			<ChevronLeft size={15} />
 			返回
 		</button>
-		<div class="h-4 w-px bg-stone-200"></div>
-		<span class="text-sm font-semibold text-stone-700">时间-位移同步引擎 · 演示</span>
+		<div class="h-4 w-px bg-stone-200 dark:bg-stone-700"></div>
+		<span class="text-sm font-semibold text-stone-700 dark:text-stone-300">时间-位移同步引擎 &middot; 演示</span>
 
 		<div class="ml-auto flex items-center gap-3">
-			<div class="flex items-center gap-1.5 font-mono text-sm text-stone-600">
-				<Clock size={13} class="text-stone-400" />
+			<div class="flex items-center gap-1.5 font-mono text-sm text-stone-600 dark:text-stone-400">
+				<Clock size={13} class="text-muted-foreground" />
 				<span>{formatSimDate($gameClock.currentDate)}</span>
 			</div>
-			<span class="rounded-md px-2 py-0.5 font-mono text-xs {$gameClock.isPaused ? 'bg-stone-100 text-stone-400' : 'bg-green-50 text-green-700'}">
+			<span class="rounded-md px-2 py-0.5 font-mono text-xs {$gameClock.isPaused ? 'bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500' : 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-400'}">
 				{formatElapsed($gameClock.currentDate)}
 			</span>
 		</div>
@@ -245,23 +245,23 @@
 				in:fly={{ y: -8, duration: 220, opacity: 0 }}
 				out:fly={{ y: -8, duration: 160, opacity: 0 }}
 			>
-				<div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-sm backdrop-blur-sm">
-					<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-white">
+				<div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-amber-800 dark:bg-amber-900/20">
+					<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-white dark:border-amber-800 dark:bg-stone-800">
 						<AlertTriangle class="h-4 w-4 text-amber-500" />
 					</div>
 
 					<div class="min-w-0 flex-1">
-						<p class="text-sm font-semibold text-stone-800">
-							<span class="text-amber-600">收到新指令</span>
-							<span class="ml-1.5 font-normal text-stone-500">— {unit.name}</span>
+						<p class="text-sm font-semibold text-foreground">
+							<span class="text-amber-600 dark:text-amber-400">收到新指令</span>
+							<span class="ml-1.5 font-normal text-muted-foreground">&mdash; {unit.name}</span>
 						</p>
-						<div class="mt-0.5 flex items-center gap-1.5 text-xs text-stone-500">
-							<Navigation size={10} class="text-stone-400" />
+						<div class="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+							<Navigation size={10} class="text-muted-foreground" />
 							{#if unit.pendingPath.length > 0}
 								{@const ep = unit.pendingPath[unit.pendingPath.length - 1]}
 								<span class="font-mono">目标坐标 ({posKm(ep.x)}, {posKm(ep.y)}) km</span>
 							{/if}
-							<span class="text-stone-300">·</span>
+							<span class="text-muted-foreground/60">·</span>
 							<span>是否执行？</span>
 						</div>
 					</div>
@@ -271,7 +271,7 @@
 					<div class="flex shrink-0 items-center gap-2">
 						<Button
 							size="sm"
-							class="h-8 gap-1.5 bg-stone-800 px-3 text-xs text-white hover:bg-stone-900"
+							class="h-8 gap-1.5 bg-stone-800 px-3 text-xs text-white hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600"
 							onclick={() => applySimCommand(unit.id)}
 						>
 							<Check size={13} />
@@ -280,7 +280,7 @@
 						<Button
 							variant="outline"
 							size="sm"
-							class="h-8 gap-1.5 border-stone-200 px-3 text-xs text-stone-600 hover:border-stone-400"
+							class="h-8 gap-1.5 border-stone-200 px-3 text-xs text-stone-600 hover:border-stone-400 dark:border-stone-600 dark:text-stone-400 dark:hover:border-stone-400"
 							onclick={() => cancelSimCommand(unit.id)}
 						>
 							<X size={13} />
@@ -425,7 +425,7 @@
 
 			<!-- 坐标悬浮标签 -->
 			{#if hoverPos}
-				<div class="pointer-events-none absolute bottom-10 left-3 rounded font-mono text-[10px] text-stone-500" style="background:rgba(255,255,255,0.8);padding:2px 6px;">
+				<div class="pointer-events-none absolute bottom-10 left-3 rounded bg-white/80 px-1.5 py-0.5 font-mono text-[10px] text-stone-500 dark:bg-stone-800/90 dark:text-stone-400">
 					({posKm(hoverPos.x)}, {posKm(hoverPos.y)}) km
 				</div>
 			{/if}
