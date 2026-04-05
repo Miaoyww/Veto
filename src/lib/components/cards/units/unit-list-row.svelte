@@ -31,9 +31,9 @@
 	let renameValue = $state('');
 
 	const hp = $derived(runtimePos?.hp ?? placed?.hp ?? null);
-	const maxHp = $derived(placed?.maxHp ?? null);
+	const maxHp = $derived(placed?.stats.maxHp ?? null);
 	const org = $derived(runtimePos?.org ?? placed?.org ?? null);
-	const maxOrg = $derived(placed?.maxOrg ?? null);
+	const maxOrg = $derived(placed?.stats.maxOrg ?? null);
 	const isEngaged = $derived(runtimePos?.isEngaged ?? false);
 	const isDestroyed = $derived(
 		runtimePos

@@ -1,0 +1,98 @@
+{
+  "branch": {
+    "army": "陆军",
+    "navy": "海军",
+    "air_force": "空军"
+  },
+  "armyCategory": {
+    "infantry": "步兵",
+    "armor": "装甲",
+    "missile": "导弹"
+  },
+  "navyCategory": {
+    "surface": "水面舰艇",
+    "submarine": "潜艇",
+    "support": "支援舰艇"
+  },
+  "airForceCategory": {
+    "fighter": "战斗机",
+    "bomber": "轰炸机",
+    "support": "支援飞机"
+  },
+  "infantryType": {
+    "light": "轻步兵",
+    "mechanized": "机械化步兵",
+    "airborne": "空降兵",
+    "marine": "海军陆战队"
+  },
+  "armorType": {
+    "light_tank": "轻型坦克",
+    "main_tank": "主战坦克",
+    "apc": "装甲运兵车",
+    "ifv": "步兵战车"
+  },
+  "missileType": {
+    "anti_tank": "反坦克导弹",
+    "surface_air": "防空导弹",
+    "cruise": "巡航导弹",
+    "ballistic": "弹道导弹"
+  },
+  "surfaceType": {
+    "destroyer": "驱逐舰",
+    "frigate": "护卫舰",
+    "cruiser": "巡洋舰",
+    "carrier": "航空母舰"
+  },
+  "submarineType": {
+    "attack_sub": "攻击潜艇",
+    "missile_sub": "导弹潜艇",
+    "nuclear_sub": "核潜艇",
+    "ssbn": "弹道导弹潜艇"
+  },
+  "navalSupportType": {
+    "amphibious": "两栖攻击舰",
+    "logistics": "后勤支援舰",
+    "mine": "扫雷舰",
+    "patrol": "巡逻舰"
+  },
+  "fighterType": {
+    "air_superiority": "制空战斗机",
+    "multi_role": "多用途战斗机",
+    "interceptor": "拦截机",
+    "stealth": "隐身战斗机"
+  },
+  "bomberType": {
+    "strategic": "战略轰炸机",
+    "tactical": "战术轰炸机",
+    "stealth_bomber": "隐身轰炸机",
+    "fighter_bomber": "战斗轰炸机"
+  },
+  "airSupportType": {
+    "awacs": "预警机",
+    "tanker": "加油机",
+    "transport": "运输机",
+    "recon": "侦察机"
+  },
+  "unitStatus": {
+    "idle": "待命",
+    "moving": "行军",
+    "attacking": "攻击",
+    "defending": "防御",
+    "retreating": "撤退",
+    "destroyed": "阵亡"
+  },
+  "unitSide": {
+    "blue": "蓝方",
+    "red": "红方",
+    "neutral": "中立"
+  },
+  "natoUnitType": {
+    "infantry": "步兵",
+    "armor": "装甲",
+    "artillery": "炮兵",
+    "mechanized": "机械化",
+    "aviation": "航空",
+    "navy": "海军",
+    "headquarters": "司令部"
+  }
+}

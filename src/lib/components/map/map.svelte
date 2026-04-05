@@ -174,10 +174,10 @@
 			}
 
 			// 攻击射程圆圈（仅选中时可见）
-			if (placed.attackRange > 0) {
+			if (placed.stats.attackRange > 0) {
 				const isSelected = placed.id === $selectedPlacedUnitId;
 				const attackCircle = L.circle([placed.lat, placed.lng], {
-					radius: placed.attackRange * 1000, // km → meters
+					radius: placed.stats.attackRange * 1000, // km → meters
 					color: faction.color,
 					weight: isSelected ? 1 : 0,
 					fillColor: faction.color,

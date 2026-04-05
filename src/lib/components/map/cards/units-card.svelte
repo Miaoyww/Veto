@@ -117,9 +117,9 @@
 					{#each placedUnits as placed (placed.id)}
 						{@const rt = $runtimePositions[placed.id]}
 						{@const hp = rt?.hp ?? placed.hp}
-						{@const maxHp = placed.maxHp}
-						{@const org = rt?.org ?? placed.org}
-						{@const maxOrg = placed.maxOrg}
+					{@const maxHp = placed.stats.maxHp}
+					{@const org = rt?.org ?? placed.org}
+					{@const maxOrg = placed.stats.maxOrg}
 						{@const isEngaged = rt?.isEngaged ?? false}
 						{@const route = rt?.route ?? placed.route}
 						{@const lat = rt?.lat ?? placed.lat}
@@ -167,7 +167,7 @@
 										<MapPin class="size-2.5" />
 										{lat.toFixed(3)}°N, {lng.toFixed(3)}°E
 									</span>
-									<span>{placed.speed} km/h</span>
+									<span>{placed.stats.speed} km/h</span>
 									{#if hp <= 0}
 										<span class="text-muted-foreground/60">已无战斗力</span>
 									{:else if route.length === 0}

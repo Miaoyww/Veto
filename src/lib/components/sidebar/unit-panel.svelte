@@ -53,7 +53,7 @@
 		FIGHTER_TYPE_LABELS,
 		BOMBER_TYPE_LABELS,
 		AIR_SUPPORT_TYPE_LABELS,
-	} from '$lib/types';
+	} from '$units';
 	import {
 		X,
 		Swords,
@@ -198,6 +198,12 @@
 		const name = `${label}${existCount + 1}`;
 		const id = genId();
 		let unit: MilitaryUnit;
+		const defaultStats = {
+			maxHp: 100, maxOrg: 80,
+			softAttack: 20, hardAttack: 10, airAttack: 0,
+			defense: 20, speed: 10, attackRange: 5,
+			hardness: 0.1
+		};
 		switch (branch) {
 			case 'army': {
 				const ac = cat as ArmyUnitCategory;
@@ -205,7 +211,8 @@
 					id, name, branch: 'army', category: ac,
 					infantry: ac === 'infantry' ? [{ id: genId(), type: pendingType as ArmyInfantryType, quality: 'basic', count: pendingCount }] : [],
 					armor: ac === 'armor' ? [{ id: genId(), type: pendingType as ArmyArmorType, quality: 'gen1', count: pendingCount }] : [],
-					missiles: ac === 'missile' ? [{ id: genId(), type: pendingType as ArmyMissileType, quality: 'basic', count: pendingCount }] : []
+					missiles: ac === 'missile' ? [{ id: genId(), type: pendingType as ArmyMissileType, quality: 'basic', count: pendingCount }] : [],
+					stats: { ...defaultStats }
 				};
 				break;
 			}
@@ -215,7 +222,8 @@
 					id, name, branch: 'navy', category: nc,
 					surface: nc === 'surface' ? [{ id: genId(), type: pendingType as NavySurfaceType, quality: 'basic', count: pendingCount }] : [],
 					submarines: nc === 'submarine' ? [{ id: genId(), type: pendingType as NavySubmarineType, quality: 'basic', count: pendingCount }] : [],
-					support: nc === 'support' ? [{ id: genId(), type: pendingType as NavySupportType, quality: 'basic', count: pendingCount }] : []
+					support: nc === 'support' ? [{ id: genId(), type: pendingType as NavySupportType, quality: 'basic', count: pendingCount }] : [],
+					stats: { ...defaultStats, hardness: 0.4, speed: 40, attackRange: 80 }
 				};
 				break;
 			}
@@ -225,7 +233,8 @@
 					id, name, branch: 'air_force', category: afc,
 					fighters: afc === 'fighter' ? [{ id: genId(), type: pendingType as AirForceFighterType, quality: 'gen4', count: pendingCount }] : [],
 					bombers: afc === 'bomber' ? [{ id: genId(), type: pendingType as AirForceBomberType, quality: 'basic', count: pendingCount }] : [],
-					support: afc === 'support' ? [{ id: genId(), type: pendingType as AirForceSupportType, quality: 'basic', count: pendingCount }] : []
+					support: afc === 'support' ? [{ id: genId(), type: pendingType as AirForceSupportType, quality: 'basic', count: pendingCount }] : [],
+					stats: { ...defaultStats, hardness: 0.05, speed: 1200, attackRange: 500 }
 				};
 				break;
 			}

@@ -1,6 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import type { Battle, EventSetting, Faction, MilitaryUnit, PlacedUnit, ActionLogEntry, UnitSide, ArmyUnit } from '$lib/types';
-import { MISSILE_ATTACK_RANGE_KM } from '$lib/types';
+import type { Battle, EventSetting, Faction, MilitaryUnit, PlacedUnit, ActionLogEntry, UnitSide } from '$lib/types';
 
 const STORAGE_KEY = 'wars_battles';
 
@@ -314,20 +313,6 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
 	const id = generateId();
 
 	// 根据单位组成派生攻击射程（km）
-	function deriveAttackRange(u: MilitaryUnit | undefined): number {
-		if (!u) return 15;
-		if (u.branch === 'army') {
-			let maxRange = 15;
-			for (const m of (u as ArmyUnit).missiles) {
-				const r = MISSILE_ATTACK_RANGE_KM[m.type];
-				if (r > maxRange) maxRange = r;
-			}
-			return maxRange;
-		}
-		if (u.branch === 'navy') return 80;
-		if (u.branch === 'air_force') return 150;
-		return 15;
-	}
 
 	const placed: PlacedUnit = {
 		id,
@@ -338,16 +323,16 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
 		route: [],
 		strikeRadius: 0,
 		status: 'idle',
-		hp: 100,
-		maxHp: 100,
-		org: 100,
-		maxOrg: 100,
-		softAttack: 30,
-		hardAttack: 10,
-		airAttack: 5,
-		defense: 25,
-		speed: 8,
-		attackRange: deriveAttackRange(unit)
+		hp: unit?.stats.maxHp ?? 100,
+		org: unit?.stats.maxOrg ?? 100,
+		stats: unit?.stats
+			? { ...unit.stats }
+			: {
+					maxHp: 100, maxOrg: 100,
+					softAttack: 20, hardAttack: 10, airAttack: 5,
+					defense: 20, speed: 10, attackRange: 15,
+					hardness: 0.1
+			  }
 	};
 	updateCurrentBattle((b) => ({
 		...b,
@@ -616,7 +601,7 @@ export function tickMapMovement(deltaSimSec: number) {
 			// 找到对应 PlacedUnit 的速度（从 battles 中读一次；仅读不写）
 			const battle = get(currentBattle);
 			const placed = battle?.placedUnits.find((p) => p.id === id);
-			const speed = placed?.speed ?? 10; // km/h，无法找到则默认 10
+			const speed = placed?.stats.speed ?? 10; // km/h，无法找到则默认 10
 
 			let remainKm = (speed / 3600) * deltaSimSec;
 			let lat = cur.lat;

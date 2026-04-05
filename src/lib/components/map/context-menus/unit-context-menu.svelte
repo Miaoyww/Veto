@@ -13,7 +13,7 @@
 		Trash2,
 		Check
 	} from '@lucide/svelte';
-	import { UNIT_STATUS_LABELS } from '$lib/types';
+	import { UNIT_STATUS_LABELS } from '$units';
 	import type { PlacedUnit } from '$lib/types';
 	import * as L from 'leaflet';
 	import {

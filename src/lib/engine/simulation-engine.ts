@@ -65,7 +65,7 @@ function handlePlacedCombat() {
 			const attackerPlaced = placedMap.get(attackerId);
 			if (!attackerPlaced) continue;
 
-			const rangeKm = attackerPlaced.attackRange;
+			const rangeKm = attackerPlaced.stats.attackRange;
 			let engaged = false;
 
 			for (const [targetId, targetPos] of Object.entries(positions)) {
@@ -88,19 +88,18 @@ function handlePlacedCombat() {
 
 				// 组织度效率惩罚（Org < 20% 时线性衰减）
 				const orgRatio =
-					attackerPlaced.maxOrg > 0 ? attackerPos.org / attackerPlaced.maxOrg : 1;
+					attackerPlaced.stats.maxOrg > 0 ? attackerPos.org / attackerPlaced.stats.maxOrg : 1;
 				const efficiency = orgRatio < 0.2 ? orgRatio / 0.2 : 1;
-				// 根据分支选择攻击类型
+				// 根据目标装甲度（hardness）选择软攻/硬攻权重；对空目标（branch=air_force）使用 airAttack
+				const th = targetPlaced.stats.hardness;
 				const targetMilUnit = battle.factions
 					.flatMap((f) => f.units)
 					.find((u) => u.id === targetPlaced.unitId);
 				const atkBase =
 					targetMilUnit?.branch === 'air_force'
-						? attackerPlaced.airAttack
-						: targetMilUnit?.branch === 'navy'
-							? attackerPlaced.hardAttack
-							: attackerPlaced.softAttack;
-				const netDmg = Math.max(0, atkBase * efficiency - targetPlaced.defense * 0.5);
+						? attackerPlaced.stats.airAttack
+						: attackerPlaced.stats.softAttack * (1 - th) + attackerPlaced.stats.hardAttack * th;
+				const netDmg = Math.max(0, atkBase * efficiency - targetPlaced.stats.defense * 0.5);
 
 				// 70% HP + 30% Org
 				next[targetId] = {

@@ -1,0 +1,200 @@
+[
+  {
+    "id": "af-air-superiority",
+    "name": "制空战斗机中队",
+    "branch": "air_force",
+    "category": "fighter",
+    "fighters": [
+      { "id": "f-as-1", "type": "air_superiority", "quality": "gen4plus", "count": 12 }
+    ],
+    "bombers": [],
+    "support": [],
+    "stats": {
+      "maxHp": 80,
+      "maxOrg": 82,
+      "softAttack": 5,
+      "hardAttack": 8,
+      "airAttack": 95,
+      "defense": 25,
+      "speed": 2200,
+      "attackRange": 250,
+      "hardness": 0.05
+    }
+  },
+  {
+    "id": "af-multi-role",
+    "name": "多用途战斗机联队",
+    "branch": "air_force",
+    "category": "fighter",
+    "fighters": [
+      { "id": "f-mr-1", "type": "multi_role", "quality": "gen4plus", "count": 24 }
+    ],
+    "bombers": [],
+    "support": [],
+    "stats": {
+      "maxHp": 100,
+      "maxOrg": 80,
+      "softAttack": 40,
+      "hardAttack": 55,
+      "airAttack": 60,
+      "defense": 22,
+      "speed": 1900,
+      "attackRange": 600,
+      "hardness": 0.05
+    }
+  },
+  {
+    "id": "af-stealth-fighter",
+    "name": "隐身战斗机中队",
+    "branch": "air_force",
+    "category": "fighter",
+    "fighters": [
+      { "id": "f-st-1", "type": "stealth", "quality": "gen5", "count": 12 }
+    ],
+    "bombers": [],
+    "support": [],
+    "stats": {
+      "maxHp": 90,
+      "maxOrg": 85,
+      "softAttack": 30,
+      "hardAttack": 40,
+      "airAttack": 80,
+      "defense": 30,
+      "speed": 2000,
+      "attackRange": 800,
+      "hardness": 0.05
+    }
+  },
+  {
+    "id": "af-interceptor",
+    "name": "拦截机大队",
+    "branch": "air_force",
+    "category": "fighter",
+    "fighters": [
+      { "id": "f-int-1", "type": "interceptor", "quality": "gen4", "count": 16 }
+    ],
+    "bombers": [],
+    "support": [],
+    "stats": {
+      "maxHp": 75,
+      "maxOrg": 78,
+      "softAttack": 3,
+      "hardAttack": 5,
+      "airAttack": 88,
+      "defense": 20,
+      "speed": 2500,
+      "attackRange": 200,
+      "hardness": 0.05
+    }
+  },
+  {
+    "id": "af-tactical-bomber",
+    "name": "战术轰炸机中队",
+    "branch": "air_force",
+    "category": "bomber",
+    "fighters": [],
+    "bombers": [
+      { "id": "b-tac-1", "type": "tactical", "quality": "advanced", "count": 12 }
+    ],
+    "support": [],
+    "stats": {
+      "maxHp": 110,
+      "maxOrg": 76,
+      "softAttack": 80,
+      "hardAttack": 100,
+      "airAttack": 10,
+      "defense": 15,
+      "speed": 1200,
+      "attackRange": 1500,
+      "hardness": 0.06
+    }
+  },
+  {
+    "id": "af-strategic-bomber",
+    "name": "战略轰炸机大队",
+    "branch": "air_force",
+    "category": "bomber",
+    "fighters": [],
+    "bombers": [
+      { "id": "b-str-1", "type": "strategic", "quality": "advanced", "count": 6 }
+    ],
+    "support": [],
+    "stats": {
+      "maxHp": 150,
+      "maxOrg": 72,
+      "softAttack": 180,
+      "hardAttack": 150,
+      "airAttack": 5,
+      "defense": 12,
+      "speed": 1000,
+      "attackRange": 5000,
+      "hardness": 0.06
+    }
+  },
+  {
+    "id": "af-stealth-bomber",
+    "name": "隐身轰炸机中队",
+    "branch": "air_force",
+    "category": "bomber",
+    "fighters": [],
+    "bombers": [
+      { "id": "b-st-1", "type": "stealth_bomber", "quality": "stealth", "count": 4 }
+    ],
+    "support": [],
+    "stats": {
+      "maxHp": 130,
+      "maxOrg": 78,
+      "softAttack": 200,
+      "hardAttack": 180,
+      "airAttack": 8,
+      "defense": 20,
+      "speed": 1100,
+      "attackRange": 6000,
+      "hardness": 0.06
+    }
+  },
+  {
+    "id": "af-awacs",
+    "name": "预警机大队",
+    "branch": "air_force",
+    "category": "support",
+    "fighters": [],
+    "bombers": [],
+    "support": [
+      { "id": "aew-1", "type": "awacs", "quality": "advanced", "count": 4 }
+    ],
+    "stats": {
+      "maxHp": 60,
+      "maxOrg": 75,
+      "softAttack": 0,
+      "hardAttack": 0,
+      "airAttack": 5,
+      "defense": 8,
+      "speed": 850,
+      "attackRange": 400,
+      "hardness": 0.04
+    }
+  },
+  {
+    "id": "af-transport",
+    "name": "运输机大队",
+    "branch": "air_force",
+    "category": "support",
+    "fighters": [],
+    "bombers": [],
+    "support": [
+      { "id": "tp-1", "type": "transport", "quality": "standard", "count": 8 }
+    ],
+    "stats": {
+      "maxHp": 55,
+      "maxOrg": 70,
+      "softAttack": 0,
+      "hardAttack": 0,
+      "airAttack": 0,
+      "defense": 5,
+      "speed": 800,
+      "attackRange": 5000,
+      "hardness": 0.04
+    }
+  }
+]

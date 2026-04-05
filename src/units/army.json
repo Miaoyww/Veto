@@ -1,0 +1,248 @@
+[
+  {
+    "id": "army-light-infantry",
+    "name": "轻步兵营",
+    "branch": "army",
+    "category": "infantry",
+    "infantry": [
+      { "id": "li-1", "type": "light", "quality": "standard", "count": 3 }
+    ],
+    "armor": [],
+    "missiles": [],
+    "stats": {
+      "maxHp": 100,
+      "maxOrg": 80,
+      "softAttack": 28,
+      "hardAttack": 4,
+      "airAttack": 2,
+      "defense": 20,
+      "speed": 5,
+      "attackRange": 2,
+      "hardness": 0.05
+    }
+  },
+  {
+    "id": "army-airborne-battalion",
+    "name": "空降兵营",
+    "branch": "army",
+    "category": "infantry",
+    "infantry": [
+      { "id": "ab-1", "type": "airborne", "quality": "advanced", "count": 2 }
+    ],
+    "armor": [],
+    "missiles": [],
+    "stats": {
+      "maxHp": 90,
+      "maxOrg": 85,
+      "softAttack": 32,
+      "hardAttack": 5,
+      "airAttack": 3,
+      "defense": 18,
+      "speed": 5,
+      "attackRange": 2,
+      "hardness": 0.05
+    }
+  },
+  {
+    "id": "army-mechanized-infantry",
+    "name": "机械化步兵旅",
+    "branch": "army",
+    "category": "infantry",
+    "infantry": [
+      { "id": "mi-1", "type": "mechanized", "quality": "standard", "count": 3 }
+    ],
+    "armor": [
+      { "id": "mi-apc-1", "type": "ifv", "quality": "gen3", "count": 2 }
+    ],
+    "missiles": [],
+    "stats": {
+      "maxHp": 160,
+      "maxOrg": 82,
+      "softAttack": 45,
+      "hardAttack": 25,
+      "airAttack": 6,
+      "defense": 32,
+      "speed": 55,
+      "attackRange": 3,
+      "hardness": 0.35
+    }
+  },
+  {
+    "id": "army-marine-battalion",
+    "name": "海军陆战队营",
+    "branch": "army",
+    "category": "infantry",
+    "infantry": [
+      { "id": "mar-1", "type": "marine", "quality": "advanced", "count": 2 }
+    ],
+    "armor": [],
+    "missiles": [],
+    "stats": {
+      "maxHp": 95,
+      "maxOrg": 88,
+      "softAttack": 35,
+      "hardAttack": 6,
+      "airAttack": 4,
+      "defense": 22,
+      "speed": 8,
+      "attackRange": 2,
+      "hardness": 0.06
+    }
+  },
+  {
+    "id": "army-light-tank",
+    "name": "轻型装甲团",
+    "branch": "army",
+    "category": "armor",
+    "infantry": [],
+    "armor": [
+      { "id": "lt-1", "type": "light_tank", "quality": "gen3", "count": 3 }
+    ],
+    "missiles": [],
+    "stats": {
+      "maxHp": 220,
+      "maxOrg": 75,
+      "softAttack": 22,
+      "hardAttack": 65,
+      "airAttack": 8,
+      "defense": 45,
+      "speed": 70,
+      "attackRange": 4,
+      "hardness": 0.72
+    }
+  },
+  {
+    "id": "army-mbt-regiment",
+    "name": "主战坦克团",
+    "branch": "army",
+    "category": "armor",
+    "infantry": [],
+    "armor": [
+      { "id": "mbt-1", "type": "main_tank", "quality": "gen4", "count": 3 }
+    ],
+    "missiles": [],
+    "stats": {
+      "maxHp": 320,
+      "maxOrg": 72,
+      "softAttack": 18,
+      "hardAttack": 110,
+      "airAttack": 5,
+      "defense": 70,
+      "speed": 50,
+      "attackRange": 3,
+      "hardness": 0.9
+    }
+  },
+  {
+    "id": "army-apc-battalion",
+    "name": "装甲运兵营",
+    "branch": "army",
+    "category": "armor",
+    "infantry": [
+      { "id": "apc-inf-1", "type": "mechanized", "quality": "standard", "count": 2 }
+    ],
+    "armor": [
+      { "id": "apc-1", "type": "apc", "quality": "gen3", "count": 3 }
+    ],
+    "missiles": [],
+    "stats": {
+      "maxHp": 140,
+      "maxOrg": 78,
+      "softAttack": 30,
+      "hardAttack": 18,
+      "airAttack": 4,
+      "defense": 28,
+      "speed": 65,
+      "attackRange": 2,
+      "hardness": 0.4
+    }
+  },
+  {
+    "id": "army-atgm-unit",
+    "name": "反坦克导弹分队",
+    "branch": "army",
+    "category": "missile",
+    "infantry": [],
+    "armor": [],
+    "missiles": [
+      { "id": "atgm-1", "type": "anti_tank", "quality": "precision", "count": 2 }
+    ],
+    "stats": {
+      "maxHp": 60,
+      "maxOrg": 70,
+      "softAttack": 5,
+      "hardAttack": 85,
+      "airAttack": 0,
+      "defense": 10,
+      "speed": 12,
+      "attackRange": 5,
+      "hardness": 0.08
+    }
+  },
+  {
+    "id": "army-sam-battery",
+    "name": "防空导弹营",
+    "branch": "army",
+    "category": "missile",
+    "infantry": [],
+    "armor": [],
+    "missiles": [
+      { "id": "sam-1", "type": "surface_air", "quality": "guided", "count": 3 }
+    ],
+    "stats": {
+      "maxHp": 80,
+      "maxOrg": 75,
+      "softAttack": 2,
+      "hardAttack": 5,
+      "airAttack": 75,
+      "defense": 15,
+      "speed": 30,
+      "attackRange": 60,
+      "hardness": 0.15
+    }
+  },
+  {
+    "id": "army-cruise-battery",
+    "name": "巡航导弹旅",
+    "branch": "army",
+    "category": "missile",
+    "infantry": [],
+    "armor": [],
+    "missiles": [
+      { "id": "cruise-1", "type": "cruise", "quality": "precision", "count": 2 }
+    ],
+    "stats": {
+      "maxHp": 55,
+      "maxOrg": 65,
+      "softAttack": 120,
+      "hardAttack": 90,
+      "airAttack": 0,
+      "defense": 5,
+      "speed": 20,
+      "attackRange": 300,
+      "hardness": 0.1
+    }
+  },
+  {
+    "id": "army-ballistic-brigade",
+    "name": "弹道导弹旅",
+    "branch": "army",
+    "category": "missile",
+    "infantry": [],
+    "armor": [],
+    "missiles": [
+      { "id": "ballistic-1", "type": "ballistic", "quality": "advanced", "count": 1 }
+    ],
+    "stats": {
+      "maxHp": 70,
+      "maxOrg": 65,
+      "softAttack": 220,
+      "hardAttack": 160,
+      "airAttack": 0,
+      "defense": 8,
+      "speed": 15,
+      "attackRange": 1000,
+      "hardness": 0.12
+    }
+  }
+]

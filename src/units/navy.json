@@ -1,0 +1,201 @@
+[
+  {
+    "id": "navy-destroyer",
+    "name": "驱逐舰编队",
+    "branch": "navy",
+    "category": "surface",
+    "surface": [
+      { "id": "dd-1", "type": "destroyer", "quality": "advanced", "count": 2 }
+    ],
+    "submarines": [],
+    "support": [],
+    "stats": {
+      "maxHp": 300,
+      "maxOrg": 80,
+      "softAttack": 20,
+      "hardAttack": 60,
+      "airAttack": 55,
+      "defense": 30,
+      "speed": 55,
+      "attackRange": 150,
+      "hardness": 0.45
+    }
+  },
+  {
+    "id": "navy-frigate",
+    "name": "护卫舰大队",
+    "branch": "navy",
+    "category": "surface",
+    "surface": [
+      { "id": "ff-1", "type": "frigate", "quality": "guided", "count": 3 }
+    ],
+    "submarines": [],
+    "support": [],
+    "stats": {
+      "maxHp": 200,
+      "maxOrg": 75,
+      "softAttack": 15,
+      "hardAttack": 40,
+      "airAttack": 35,
+      "defense": 20,
+      "speed": 50,
+      "attackRange": 100,
+      "hardness": 0.38
+    }
+  },
+  {
+    "id": "navy-cruiser",
+    "name": "巡洋舰",
+    "branch": "navy",
+    "category": "surface",
+    "surface": [
+      { "id": "cg-1", "type": "cruiser", "quality": "advanced", "count": 1 }
+    ],
+    "submarines": [],
+    "support": [],
+    "stats": {
+      "maxHp": 450,
+      "maxOrg": 78,
+      "softAttack": 30,
+      "hardAttack": 85,
+      "airAttack": 65,
+      "defense": 50,
+      "speed": 52,
+      "attackRange": 200,
+      "hardness": 0.52
+    }
+  },
+  {
+    "id": "navy-carrier-group",
+    "name": "航母战斗群",
+    "branch": "navy",
+    "category": "surface",
+    "surface": [
+      { "id": "cv-1", "type": "carrier", "quality": "cutting_edge", "count": 1 },
+      { "id": "cv-dd-1", "type": "destroyer", "quality": "advanced", "count": 2 }
+    ],
+    "submarines": [],
+    "support": [],
+    "stats": {
+      "maxHp": 900,
+      "maxOrg": 88,
+      "softAttack": 15,
+      "hardAttack": 30,
+      "airAttack": 30,
+      "defense": 45,
+      "speed": 50,
+      "attackRange": 600,
+      "hardness": 0.5
+    }
+  },
+  {
+    "id": "navy-attack-sub",
+    "name": "攻击型潜艇",
+    "branch": "navy",
+    "category": "submarine",
+    "surface": [],
+    "submarines": [
+      { "id": "ssn-1", "type": "attack_sub", "quality": "advanced", "count": 1 }
+    ],
+    "support": [],
+    "stats": {
+      "maxHp": 240,
+      "maxOrg": 80,
+      "softAttack": 10,
+      "hardAttack": 110,
+      "airAttack": 0,
+      "defense": 55,
+      "speed": 37,
+      "attackRange": 60,
+      "hardness": 0.6
+    }
+  },
+  {
+    "id": "navy-missile-sub",
+    "name": "导弹潜艇",
+    "branch": "navy",
+    "category": "submarine",
+    "surface": [],
+    "submarines": [
+      { "id": "ssgn-1", "type": "missile_sub", "quality": "advanced", "count": 1 }
+    ],
+    "support": [],
+    "stats": {
+      "maxHp": 260,
+      "maxOrg": 78,
+      "softAttack": 120,
+      "hardAttack": 100,
+      "airAttack": 0,
+      "defense": 50,
+      "speed": 35,
+      "attackRange": 300,
+      "hardness": 0.62
+    }
+  },
+  {
+    "id": "navy-nuclear-sub",
+    "name": "核潜艇",
+    "branch": "navy",
+    "category": "submarine",
+    "surface": [],
+    "submarines": [
+      { "id": "ssn-n-1", "type": "nuclear_sub", "quality": "stealth", "count": 1 }
+    ],
+    "support": [],
+    "stats": {
+      "maxHp": 300,
+      "maxOrg": 82,
+      "softAttack": 15,
+      "hardAttack": 130,
+      "airAttack": 0,
+      "defense": 65,
+      "speed": 45,
+      "attackRange": 80,
+      "hardness": 0.65
+    }
+  },
+  {
+    "id": "navy-amphibious-fleet",
+    "name": "两栖登陆舰队",
+    "branch": "navy",
+    "category": "support",
+    "surface": [],
+    "submarines": [],
+    "support": [
+      { "id": "lhd-1", "type": "amphibious", "quality": "advanced", "count": 2 }
+    ],
+    "stats": {
+      "maxHp": 350,
+      "maxOrg": 72,
+      "softAttack": 10,
+      "hardAttack": 15,
+      "airAttack": 20,
+      "defense": 20,
+      "speed": 40,
+      "attackRange": 30,
+      "hardness": 0.35
+    }
+  },
+  {
+    "id": "navy-logistics-group",
+    "name": "后勤补给舰队",
+    "branch": "navy",
+    "category": "support",
+    "surface": [],
+    "submarines": [],
+    "support": [
+      { "id": "aoe-1", "type": "logistics", "quality": "standard", "count": 2 }
+    ],
+    "stats": {
+      "maxHp": 200,
+      "maxOrg": 70,
+      "softAttack": 0,
+      "hardAttack": 0,
+      "airAttack": 5,
+      "defense": 10,
+      "speed": 35,
+      "attackRange": 10,
+      "hardness": 0.25
+    }
+  }
+]

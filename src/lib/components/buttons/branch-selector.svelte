@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Crosshair } from '@lucide/svelte';
 	import type { Branch } from '$lib/types';
-	import { BRANCH_LABELS } from '$lib/types';
+	import { BRANCH_LABELS } from '$units';
 	import { cn } from '$lib/utils';
 
 	const BRANCHES: Branch[] = ['army', 'navy', 'air_force'];

@@ -28,8 +28,8 @@ export function getNatoIcon(
 	const symSvg = getMilSymbolSVG(natoType, side, 35, faction.color);
 	const anchor = getMilSymbolAnchor(natoType, side, 35);
 
-	const hpPct = placed.maxHp > 0 ? Math.max(0, Math.min(1, placed.hp / placed.maxHp)) : 1;
-	const orgPct = placed.maxOrg > 0 ? Math.max(0, Math.min(1, placed.org / placed.maxOrg)) : 1;
+	const hpPct = placed.stats.maxHp > 0 ? Math.max(0, Math.min(1, placed.hp / placed.stats.maxHp)) : 1;
+	const orgPct = placed.stats.maxOrg > 0 ? Math.max(0, Math.min(1, placed.org / placed.stats.maxOrg)) : 1;
 	const hpW = Math.round(56 * hpPct);
 	const orgW = Math.round(56 * orgPct);
 	const hpColor = hpPct > 0.5 ? '#22c55e' : hpPct > 0.25 ? '#f59e0b' : '#ef4444';

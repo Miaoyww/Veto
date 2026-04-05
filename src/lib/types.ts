@@ -114,11 +114,50 @@ export interface AirSupportComponent {
 	count: number;
 }
 
+// ============ 单位基础战斗属性 ============
+
+/**
+ * 单位库中定义的基础战斗属性（模板值）。
+ * PlacedUnit 的实时战斗状态基于此初始化，运行时可能因战损、Mod 等发生偏离。
+ */
+export interface UnitStats {
+	/** 最大生命值 */
+	maxHp: number;
+	/** 最大组织度 */
+	maxOrg: number;
+	/** 对软目标（步兵等）的攻击力 */
+	softAttack: number;
+	/** 对硬目标（装甲等）的攻击力 */
+	hardAttack: number;
+	/** 对空目标的攻击力 */
+	airAttack: number;
+	/** 防御力 */
+	defense: number;
+	/** 移动速度 (km/h) */
+	speed: number;
+	/** 攻击射程 (km) */
+	attackRange: number;
+	/**
+	 * 装甲度（0-1）：受到攻击时，有多大比例的伤害需要用 hardAttack 结算。
+	 * 0 = 纯软目标（步兵），1 = 纯硬目标（重型装甲）。
+	 */
+	hardness: number;
+}
+
 // ============ 军事单位 ============
 
-export interface ArmyUnit {
+/**
+ * 所有军事单位的公共基础字段。
+ */
+export interface BaseMilitaryUnit {
 	id: string;
 	name: string;
+	branch: Branch;
+	/** 基础战斗属性 */
+	stats: UnitStats;
+}
+
+export interface ArmyUnit extends BaseMilitaryUnit {
 	branch: 'army';
 	category: ArmyUnitCategory;
 	infantry: InfantryComponent[];
@@ -126,9 +165,7 @@ export interface ArmyUnit {
 	missiles: MissileComponent[];
 }
 
-export interface NavyUnit {
-	id: string;
-	name: string;
+export interface NavyUnit extends BaseMilitaryUnit {
 	branch: 'navy';
 	category: NavyUnitCategory;
 	surface: SurfaceShipComponent[];
@@ -136,9 +173,7 @@ export interface NavyUnit {
 	support: NavalSupportComponent[];
 }
 
-export interface AirForceUnit {
-	id: string;
-	name: string;
+export interface AirForceUnit extends BaseMilitaryUnit {
 	branch: 'air_force';
 	category: AirForceUnitCategory;
 	fighters: FighterComponent[];
@@ -149,7 +184,6 @@ export interface AirForceUnit {
 export type MilitaryUnit = ArmyUnit | NavyUnit | AirForceUnit;
 
 // ============ 地图上放置的单位 ============
-
 export interface PlacedUnit {
 	id: string;
 	unitId: string;
@@ -166,23 +200,19 @@ export interface PlacedUnit {
 	status: 'idle' | 'moving' | 'attacking' | 'defending' | 'retreating' | 'destroyed';
 	/** 北约图标类型（覆盖自动推导） */
 	natoType?: NatoUnitType;
-	
-	/** 生命值 */
+
+	/** 当前生命值（运行时状态，耗尽则单位被摧毁） */
 	hp: number;
-	maxHp: number;
-	/** 组织度 */
+	/** 当前组织度（运行时状态，耗尽则单位溃退） */
 	org: number;
-	maxOrg: number;
-	/** 攻击力 */
-	softAttack: number;
-	hardAttack: number;
-	airAttack: number;
-	/** 防御力 */
-	defense: number;
-	/** 移动速度 km/h */
-	speed: number;
-	/** 攻击射程 (km)，用于战斗结算 */
-	attackRange: number;
+
+	/**
+	 * 战斗属性（从所引用 MilitaryUnit.stats 初始化，运行时可因战损、Mod 等动态调整）。
+	 * - stats.maxHp / stats.maxOrg：上限值
+	 * - stats.hardness：装甲度（0=纯软目标，1=纯硬目标）
+	 * - 伤害公式：effectiveDamage = softAttack × (1 - target.stats.hardness) + hardAttack × target.stats.hardness
+	 */
+	stats: UnitStats;
 }
 
 // ============ 势力 ============
@@ -308,135 +338,3 @@ export interface ActionLogEntry {
 	timestamp: number;
 	message: string;
 }
-
-// ============ 名称映射(用于显示) ============
-
-export const BRANCH_LABELS: Record<Branch, string> = {
-	army: '陆军',
-	navy: '海军',
-	air_force: '空军'
-};
-
-export const INFANTRY_TYPE_LABELS: Record<ArmyInfantryType, string> = {
-	light: '轻步兵',
-	mechanized: '机械化步兵',
-	airborne: '空降兵',
-	marine: '海军陆战队'
-};
-
-
-export const ARMOR_TYPE_LABELS: Record<ArmyArmorType, string> = {
-	light_tank: '轻型坦克',
-	main_tank: '主战坦克',
-	apc: '装甲运兵车',
-	ifv: '步兵战车'
-};
-
-
-export const MISSILE_TYPE_LABELS: Record<ArmyMissileType, string> = {
-	anti_tank: '反坦克导弹',
-	surface_air: '防空导弹',
-	cruise: '巡航导弹',
-	ballistic: '弹道导弹'
-};
-
-
-export const SURFACE_TYPE_LABELS: Record<NavySurfaceType, string> = {
-	destroyer: '驱逐舰',
-	frigate: '护卫舰',
-	cruiser: '巡洋舰',
-	carrier: '航空母舰'
-};
-
-
-export const SUBMARINE_TYPE_LABELS: Record<NavySubmarineType, string> = {
-	attack_sub: '攻击潜艇',
-	missile_sub: '导弹潜艇',
-	nuclear_sub: '核潜艇',
-	ssbn: '弹道导弹潜艇'
-};
-
-
-export const NAVAL_SUPPORT_TYPE_LABELS: Record<NavySupportType, string> = {
-	amphibious: '两栖攻击舰',
-	logistics: '后勤支援舰',
-	mine: '扫雷舰',
-	patrol: '巡逻舰'
-};
-
-export const FIGHTER_TYPE_LABELS: Record<AirForceFighterType, string> = {
-	air_superiority: '制空战斗机',
-	multi_role: '多用途战斗机',
-	interceptor: '拦截机',
-	stealth: '隐身战斗机'
-};
-
-export const BOMBER_TYPE_LABELS: Record<AirForceBomberType, string> = {
-	strategic: '战略轰炸机',
-	tactical: '战术轰炸机',
-	stealth_bomber: '隐身轰炸机',
-	fighter_bomber: '战斗轰炸机'
-};
-
-
-export const AIR_SUPPORT_TYPE_LABELS: Record<AirForceSupportType, string> = {
-	awacs: '预警机',
-	tanker: '加油机',
-	transport: '运输机',
-	recon: '侦察机'
-};
-
-
-export const ARMY_CATEGORY_LABELS: Record<ArmyUnitCategory, string> = {
-	infantry: '步兵',
-	armor: '装甲',
-	missile: '导弹'
-};
-
-export const NAVY_CATEGORY_LABELS: Record<NavyUnitCategory, string> = {
-	surface: '水面舰艇',
-	submarine: '潜艇',
-	support: '支援舰艇'
-};
-
-export const AIR_FORCE_CATEGORY_LABELS: Record<AirForceUnitCategory, string> = {
-	fighter: '战斗机',
-	bomber: '轰炸机',
-	support: '支援飞机'
-};
-
-export const UNIT_STATUS_LABELS: Record<PlacedUnit['status'], string> = {
-	idle: '待命',
-	moving: '行军',
-	attacking: '攻击',
-	defending: '防御',
-	retreating: '撤退',
-	destroyed: '阵亡'
-};
-
-/**
- * 每种导弹类型的最大攻击射程（km）。
- * 用于推演引擎战斗结算及地图显示攻击半径。
- */
-export const MISSILE_ATTACK_RANGE_KM: Record<ArmyMissileType, number> = {
-	anti_tank:   5,    // 反坦克导弹（ATGMs）
-	surface_air: 50,   // 地空导弹（SAM）
-	cruise:      300,  // 巡航导弹
-	ballistic:   1000  // 弹道导弹
-};
-
-export const UNIT_SIDE_LABELS: Record<UnitSide, string> = {
-	blue: '蓝方',
-	red: '红方',
-	neutral: '中立'
-};
-
-export const NATO_UNIT_TYPE_LABELS: Record<NatoUnitType, string> = {
-	infantry: '步兵',
-	armor: '装甲',
-	artillery: '炮兵',
-	mechanized: '机械化',
-	aviation: '航空',
-	navy: '海军',
-	headquarters: '司令部'
-};

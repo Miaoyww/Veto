@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BRANCH_LABELS, UNIT_STATUS_LABELS, NATO_UNIT_TYPE_LABELS } from '$lib/types';
+	import { BRANCH_LABELS, UNIT_STATUS_LABELS, NATO_UNIT_TYPE_LABELS } from '$units';
 	import type { MilitaryUnit, PlacedUnit, Faction, NatoUnitType, UnitSide } from '$lib/types';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import {
@@ -39,8 +39,8 @@
 	const liveOrg = $derived(liveRt?.org ?? placed.org);
 	const liveStatus = $derived((liveRt?.status ?? placed.status) as PlacedUnit['status']);
 
-	const hpPct = $derived(placed.maxHp > 0 ? (liveHp / placed.maxHp) * 100 : 100);
-	const orgPct = $derived(placed.maxOrg > 0 ? (liveOrg / placed.maxOrg) * 100 : 100);
+	const hpPct = $derived(placed.stats.maxHp > 0 ? (liveHp / placed.stats.maxHp) * 100 : 100);
+	const orgPct = $derived(placed.stats.maxOrg > 0 ? (liveOrg / placed.stats.maxOrg) * 100 : 100);
 	const hpBarClass = $derived(
 		hpPct > 50 ? 'bg-green-500' : hpPct > 25 ? 'bg-amber-400' : 'bg-red-500'
 	);
@@ -77,7 +77,7 @@
 			<div class="flex flex-1 flex-col gap-0.5">
 				<div class="flex items-center justify-between">
 					<span class="text-[10px] font-medium text-muted-foreground">生命值</span>
-					<span class="font-mono text-[10px] text-muted-foreground">{Math.round(liveHp)}/{placed.maxHp}</span>
+						<span class="font-mono text-[10px] text-muted-foreground">{Math.round(liveHp)}/{placed.stats.maxHp}</span>
 				</div>
 				<div class="h-1.5 w-full overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
 					<div
@@ -93,7 +93,7 @@
 			<div class="flex flex-1 flex-col gap-0.5">
 				<div class="flex items-center justify-between">
 					<span class="text-[10px] font-medium text-muted-foreground">组织度</span>
-					<span class="font-mono text-[10px] text-muted-foreground">{Math.round(liveOrg)}/{placed.maxOrg}</span>
+						<span class="font-mono text-[10px] text-muted-foreground">{Math.round(liveOrg)}/{placed.stats.maxOrg}</span>
 				</div>
 				<div class="h-1.5 w-full overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
 					<div
@@ -113,35 +113,35 @@
 			<Swords class="h-3 w-3 flex-shrink-0 text-orange-500" />
 			<span class="text-[10px] text-muted-foreground">软攻击</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
-				>{placed.softAttack}</span
+				>{placed.stats.softAttack}</span
 			>
 		</div>
 		<div class="flex items-center gap-1.5">
 			<Wrench class="h-3 w-3 flex-shrink-0 text-zinc-500" />
 			<span class="text-[10px] text-muted-foreground">硬攻击</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
-				>{placed.hardAttack}</span
+				>{placed.stats.hardAttack}</span
 			>
 		</div>
 		<div class="flex items-center gap-1.5">
 			<PlaneTakeoff class="h-3 w-3 flex-shrink-0 text-sky-500" />
 			<span class="text-[10px] text-muted-foreground">空攻击</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
-				>{placed.airAttack}</span
+				>{placed.stats.airAttack}</span
 			>
 		</div>
 		<div class="flex items-center gap-1.5">
 			<ShieldHalf class="h-3 w-3 flex-shrink-0 text-blue-500" />
 			<span class="text-[10px] text-muted-foreground">防御</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
-				>{placed.defense}</span
+				>{placed.stats.defense}</span
 			>
 		</div>
 		<div class="col-span-2 flex items-center gap-1.5">
 			<Gauge class="h-3 w-3 flex-shrink-0 text-green-500" />
 			<span class="text-[10px] text-muted-foreground">速度</span>
 			<span class="ml-auto font-mono text-[10px] font-semibold text-foreground"
-				>{placed.speed} km/h</span
+				>{placed.stats.speed} km/h</span
 			>
 		</div>
 	</div>
