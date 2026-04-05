@@ -465,6 +465,54 @@ export function resetCurrentBattle() {
 	selectedPlacedUnitId.set(null);
 }
 
+/** 清除所有战局数据（localStorage 同步清理） */
+export function clearAllBattles() {
+	battles.set([]);
+	currentBattleId.set(null);
+	currentFactionId.set(null);
+	selectedPlacedUnitId.set(null);
+	if (typeof localStorage !== 'undefined') {
+		localStorage.removeItem(STORAGE_KEY);
+	}
+}
+
+/**
+ * 从 JSON 导入一个或多个战局。
+ * - 已存在相同 id 的战局：跳过（不覆盖）
+ * - 否则追加到列表末尾
+ * 返回 [导入数量, 跳过数量]
+ */
+export function importBattles(data: unknown): [number, number] {
+	const list: Battle[] = Array.isArray(data) ? data : [data];
+	const existing = get(battles);
+	const existingIds = new Set(existing.map((b) => b.id));
+	let imported = 0;
+	let skipped = 0;
+	const toAdd: Battle[] = [];
+	for (const item of list) {
+		if (
+			typeof item !== 'object' ||
+			item === null ||
+			typeof (item as Battle).id !== 'string' ||
+			typeof (item as Battle).name !== 'string'
+		) {
+			skipped++;
+			continue;
+		}
+		if (existingIds.has((item as Battle).id)) {
+			skipped++;
+		} else {
+			toAdd.push(item as Battle);
+			imported++;
+		}
+	}
+	if (toAdd.length > 0) {
+		battles.update((list) => [...list, ...toAdd]);
+		saveBattlesNow();
+	}
+	return [imported, skipped];
+}
+
 // ============ 交互模式 ============
 
 export type InteractionMode = 'select' | 'place' | 'route' | 'strike';

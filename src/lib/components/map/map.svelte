@@ -467,20 +467,3 @@
 <!-- 打击目标浮动卡片 -->
 <StrikeCard {map} bind:pendingTarget={strikePendingTarget} />
 
-<svelte:window
-	onkeydown={(e) => {
-		if (e.ctrlKey && e.key === 'z') {
-			const target = e.target as HTMLElement;
-			if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
-				e.preventDefault();
-				undo();
-			}
-			return;
-		}
-		if (e.key === 'Escape') {
-			interactionMode.set('select');
-			pendingPlaceUnitId.set(null);
-		}
-	}}
-/>
-

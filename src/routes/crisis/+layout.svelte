@@ -6,19 +6,11 @@
 	import SettingsDialog from '$lib/components/dialog/settings/crisis/settings-dialog.svelte';
 	import { VETO_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
+	import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte';
 	let { children } = $props();
 
-	let rightSidebar: RightSidebar;
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.ctrlKey && e.key === 's') {
-			e.preventDefault();
-			rightSidebar?.save();
-		}
-	}
+	useKeyboardShortcuts();
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
 	<title>{VETO_NAME}</title>
@@ -35,7 +27,7 @@
 </div>
 
 <LeftSidebar />
-<RightSidebar bind:this={rightSidebar} />
+<RightSidebar />
 
 <Header />
 <Bottom />
