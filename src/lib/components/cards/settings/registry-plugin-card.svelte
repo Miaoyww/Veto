@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Download, CheckCircle2, Loader, Tag, User, Package } from '@lucide/svelte';
+	import { Download, CheckCircle2, Loader, Tag, User, Package, Star } from '@lucide/svelte';
 	import type { PluginManifest } from '$lib/services/plugin-db';
 	import { installPlugin } from '$lib/services/plugin-registry';
 	import { Button } from '$lib/components/ui/button';
+	import { onMount } from 'svelte';
 
 	let {
 		manifest,
@@ -17,6 +18,16 @@
 	let installing = $state(false);
 	let error = $state<string | null>(null);
 	let done = $state(installed);
+	let localStars = $state<number | undefined>(undefined);
+
+	onMount(() => {
+		function onStarsLoaded(e: Event) {
+			const map = (e as CustomEvent<Record<string, number>>).detail;
+			localStars = map[`${manifest.repo}`];];
+		}
+		window.addEventListener('veto:stars-loaded', onStarsLoaded);
+		return () => window.removeEventListener('veto:stars-loaded', onStarsLoaded);
+	});
 
 	const TYPE_LABEL: Record<string, string> = {
 		faction: '阵营包',
@@ -63,6 +74,11 @@
 					<span>v{manifest.version}</span>
 					{#if manifest.license}
 						<span>{manifest.license}</span>
+					{/if}
+					{#if localStars !== undefined && localStars > 0}
+						<span class="flex items-center gap-0.5 text-amber-500 dark:text-amber-400">
+							<Star class="size-3 fill-current" />{localStars}
+						</span>
 					{/if}
 				</div>
 			</div>

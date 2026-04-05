@@ -16,7 +16,7 @@
 <div class="flex flex-col">
 	<div class="mb-1 text-xl font-bold text-stone-800 dark:text-stone-100">Mod 管理</div>
 	<p class="mb-4 text-sm text-muted-foreground">
-		管理已安装的扩展包，Mod 以 JSON 格式导入。可在
+		管理已安装的扩展包，Mod 以 <code class="rounded bg-muted px-1 py-0.5 text-xs font-mono">.csmod</code> 格式导入。可在
 		<a
 			href="https://github.com/VetoExpress/veto-plugins"
 			target="_blank"

@@ -54,6 +54,7 @@
 		"@vercel/analytics": "^2.0.1",
 		"@vercel/speed-insights": "^2.0.0",
 		"animejs": "^4.2.2",
+		"jszip": "^3.10.1",
 		"leaflet": "^1.9.4",
 		"milsymbol": "^3.0.4",
 		"sveaflet": "^0.1.4"
