@@ -9,6 +9,7 @@
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import CreateBattleDialog from '$lib/components/dialog/create-battle-dialog.svelte';
 	import { fly } from 'svelte/transition';
+	import Footer from '$lib/components/footer.svelte';
 
 	// ---- 地图预设 ----（已移至 CreateBattleDialog 组件）
 
@@ -57,7 +58,7 @@
 						class="h-9 w-9 transition-colors {selectedMode === 'crisis'
 							? 'text-red-600'
 							: 'text-stone-600 group-hover:text-red-600'}"
-					/>	
+					/>
 					<span class="text-base font-semibold text-stone-700">危机推演</span>
 					<span class="text-xs text-stone-400">战棋模拟 · 行军作战</span>
 				</button>
@@ -83,10 +84,7 @@
 				<!-- 搜索 + 新建 -->
 				<div class="flex gap-3">
 					<InputGroup.Root class="flex w-full">
-						<InputGroup.Input
-							bind:value={query}
-							placeholder="搜索战局..."
-						/>
+						<InputGroup.Input bind:value={query} placeholder="搜索战局..." />
 						<InputGroup.Addon>
 							<Search class="h-4 w-4" />
 						</InputGroup.Addon>
@@ -127,30 +125,11 @@
 				</ScrollArea>
 			</div>
 		{:else}
-<div></div>
+			<div></div>
 		{/if}
 	</main>
 
-	<!-- 页脚 -->
-	<footer class="w-full py-6 text-center text-xs text-stone-400">
-		<p>Copyright © <a href="https://github.com/Miaoyww" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-stone-600">Miaoyww</a> 2025–2026</p>
-		<p class="mt-1">
-			Powered by
-			<a
-				href="https://svelte.dev"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="transition-colors hover:text-stone-600">Svelte</a
-			>
-			·
-			<a
-				href="https://vercel.com"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="transition-colors hover:text-stone-600">Vercel</a
-			>
-		</p>
-	</footer>
+	<Footer />
 </div>
 
 <div class="fixed right-6 bottom-6 z-20 flex flex-col gap-3">

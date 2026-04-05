@@ -1,0 +1,64 @@
+<script lang="ts">
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { Home, RefreshCw } from '@lucide/svelte';
+	import Footer from '$lib/components/footer.svelte';
+
+	const status = $derived(page.status ?? 500);
+	const message = $derived(page.error?.message ?? 'An unexpected error occurred');
+	const catUrl = $derived(`https://http.cat/${status}`);
+</script>
+
+<div
+	class="flex h-screen w-screen flex-col items-center justify-center gap-8 overflow-auto bg-gradient-to-br from-slate-100 to-stone-200 px-6 py-12 dark:from-slate-900 dark:to-stone-950"
+>
+	<!-- HTTP Cat 图片 -->
+	<div
+		class="relative overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-200 dark:ring-stone-700"
+	>
+		<img
+			src={catUrl}
+			alt="HTTP {status} — {message}"
+			class="block h-64 w-auto object-cover sm:h-80"
+			onerror={(e) => {
+				(e.currentTarget as HTMLImageElement).style.display = 'none';
+			}}
+		/>
+	</div>
+
+	<!-- 错误信息 -->
+	<div class="flex flex-col items-center gap-3 text-center">
+		<span
+			class="rounded-full bg-stone-200 px-4 py-1 text-xs font-semibold tracking-widest text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+		>
+			HTTP {status}
+		</span>
+		<h1 class="text-3xl font-bold text-stone-800 dark:text-stone-100">
+			{message}
+		</h1>
+		<p class="max-w-sm text-sm text-stone-400 dark:text-stone-500">
+			糟糕，出了点儿问题。你可以尝试刷新页面，或者返回首页。
+		</p>
+	</div>
+
+	<!-- 操作按钮 -->
+	<div class="flex gap-3">
+		<button
+			onclick={() => goto('/')}
+			class="flex items-center gap-2 rounded-xl bg-stone-800 px-5 py-2.5 text-sm font-medium text-white shadow transition hover:bg-stone-700 active:scale-95 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
+		>
+			<Home class="size-4" />
+			返回首页
+		</button>
+		<button
+			onclick={() => location.reload()}
+			class="flex items-center gap-2 rounded-xl border border-stone-300 bg-white/60 px-5 py-2.5 text-sm font-medium text-stone-700 shadow backdrop-blur-sm transition hover:bg-white active:scale-95 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300 dark:hover:bg-stone-800"
+		>
+			<RefreshCw class="size-4" />
+			刷新页面
+		</button>
+	</div>
+
+	<!-- 页脚 -->
+	<Footer />
+</div>
