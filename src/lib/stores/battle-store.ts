@@ -515,7 +515,7 @@ export function importBattles(data: unknown): [number, number] {
 
 // ============ 交互模式 ============
 
-export type InteractionMode = 'select' | 'place' | 'route' | 'strike';
+export type InteractionMode = 'select' | 'place' | 'route' | 'strike' | 'measure';
 export const interactionMode = writable<InteractionMode>('select');
 
 /** 待放置的单位ID (place模式使用) */

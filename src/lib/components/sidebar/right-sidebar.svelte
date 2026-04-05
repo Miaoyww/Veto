@@ -5,7 +5,7 @@
 	import SettingsButton from '$lib/components/buttons/right-bar/settings-button.svelte';
 	import { rightBarPinned } from '$lib/stores/sidebar-store';
 	import PinButton from '../buttons/right-bar/pin-button.svelte';
-	import { flushRuntimePositions, saveBattlesNow } from '$lib/stores/battle-store';
+	import { flushRuntimePositions, saveBattlesNow, interactionMode } from '$lib/stores/battle-store';
 	import { toast } from 'svelte-sonner';
 	import UnitsCard from '$lib/components/map/cards/units-card.svelte';
 
@@ -35,8 +35,13 @@
 
 	<div class="panel-section">
 		<div class="controls">
-			<RightSidebarMenubutton title="测量距离">
-				<Button variant="ghost" size="icon">
+			<RightSidebarMenubutton title="测量距离 (M)">
+				<Button
+					variant="ghost"
+					size="icon"
+					class={$interactionMode === 'measure' ? 'text-amber-500' : ''}
+					onclick={() => interactionMode.set($interactionMode === 'measure' ? 'select' : 'measure')}
+				>
 					<Ruler />
 				</Button>
 			</RightSidebarMenubutton>

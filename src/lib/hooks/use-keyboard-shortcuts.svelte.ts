@@ -24,6 +24,7 @@ export interface ShortcutDef {
 export const SHORTCUT_DEFS: ShortcutDef[] = [
 	{ key: 'S', ctrl: true, description: '保存战局', group: '危机推演' },
 	{ key: 'Z', ctrl: true, description: '撤销操作', group: '危机推演' },
+	{ key: 'M', description: '切换测量距离模式', group: '危机推演' },
 	{ key: 'Escape', description: '退出当前交互模式', group: '危机推演' }
 ];
 
@@ -52,6 +53,11 @@ function handleKeydown(e: KeyboardEvent) {
 	if (e.key === 'Escape') {
 		interactionMode.set('select');
 		pendingPlaceUnitId.set(null);
+	}
+
+	// M：切换测量模式（输入框内不触发）
+	if (e.key === 'm' && !e.ctrlKey && !e.altKey && !isInInput(e)) {
+		interactionMode.update((mode) => (mode === 'measure' ? 'select' : 'measure'));
 	}
 }
 

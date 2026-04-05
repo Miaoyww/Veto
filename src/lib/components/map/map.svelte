@@ -8,6 +8,7 @@
 	import MapContextMenu from './context-menus/map-context-menu.svelte';
 	import UnitPopup from './cards/unit-popup.svelte';
 	import StrikeCard from './cards/strike-card.svelte';
+	import MeasureCard from './cards/measure-card.svelte';
 	import InteractionModeHint from './cards/interaction-mode-hint.svelte';
 	import RouteConfirmCard from './cards/route-confirm-card.svelte';
 	import {
@@ -471,4 +472,7 @@
 
 <!-- 打击目标浮动卡片 -->
 <StrikeCard {map} bind:pendingTarget={strikePendingTarget} />
+
+<!-- 测量距离浮动卡片 -->
+<MeasureCard {map} />
 

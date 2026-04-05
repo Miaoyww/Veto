@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin, Navigation, X, Target } from '@lucide/svelte';
+	import { MapPin, Navigation, X, Target, Ruler } from '@lucide/svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { interactionMode, pendingPlaceUnitId } from '$lib/stores/battle-store';
@@ -32,6 +32,9 @@
 				<span class="text-sm text-stone-700 dark:text-stone-300">
 					{strikePendingTarget ? '再次点击地图确认打击半径' : '点击地图选择打击目标位置'}
 				</span>
+			{:else if $interactionMode === 'measure'}
+				<Ruler class="h-4 w-4 text-amber-500" />
+				<span class="text-sm text-stone-700 dark:text-stone-300">点击添加测量点 · Esc 退出</span>
 			{/if}
 			<div class="mx-1 h-4 w-px bg-stone-200 dark:bg-stone-700"></div>
 			<Button
