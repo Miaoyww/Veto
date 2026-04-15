@@ -5,8 +5,11 @@
 	import SettingsDialog from '$lib/components/dialog/settings/crisis/settings-dialog.svelte';
 	import { VETO_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
+	import { browser } from '$app/environment';
 	import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte';
 	let { children } = $props();
+
+	const isTauri = browser && '__TAURI_INTERNALS__' in window;
 
 	useKeyboardShortcuts();
 </script>
@@ -27,7 +30,7 @@
 
 <LeftSidebar />
 
-<Header />
+<Header class={isTauri ? 'top-14' : ''} />
 <Bottom />
 <SettingsDialog />
 

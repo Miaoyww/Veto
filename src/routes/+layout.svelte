@@ -6,6 +6,7 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { VETO_NAME } from '$lib/const';
 	import logo from '$lib/assets/logo.svg';
+	import TitleBar from '$lib/components/titlebar.svelte';
 	import { browser } from '$app/environment';
 	import { dbGetAllPlugins } from '$lib/services/plugin-db';
 	import { injectToRegistry } from '$lib/services/plugin-registry';
@@ -47,11 +48,12 @@
 	<link rel="icon" type="image/x-icon" href={logo} />
 </svelte:head>
 
+<TitleBar />
 <ModeWatcher />
 <MyAlertDialog />
 <Toaster richColors position="bottom-right" />
 
-<div>
+<div class={isTauri ? 'pt-9' : ''}>
 	<div>
 		<main>
 			{@render children?.()}
