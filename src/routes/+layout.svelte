@@ -29,16 +29,16 @@
 		});
 	}
 
-	// Vercel Analytics
+	// Vercel Analytics & Speed Insights（仅在非 Tauri 环境下注入）
 	import { dev } from '$app/environment';
 	import { injectAnalytics } from '@vercel/analytics/sveltekit';
-
-	injectAnalytics({ mode: dev ? 'development' : 'production' });
-
-	// Vercel Speed Insights
 	import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
 
-	injectSpeedInsights();
+	const isTauri = browser && '__TAURI_INTERNALS__' in window;
+	if (!isTauri) {
+		injectAnalytics({ mode: dev ? 'development' : 'production' });
+		injectSpeedInsights();
+	}
 </script>
 
 <svelte:head>
