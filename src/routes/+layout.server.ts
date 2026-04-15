@@ -1,11 +1,3 @@
-import { error } from '@sveltejs/kit';
-import type { LayoutServerLoad } from './$types';
+// 移动端检测已迁移到 +layout.ts（客户端执行），以兼容 adapter-static / Tauri
+export {};
 
-const MOBILE_UA_REGEX = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-
-export const load: LayoutServerLoad = ({ request }) => {
-	const ua = request.headers.get('user-agent') ?? '';
-	if (MOBILE_UA_REGEX.test(ua)) {
-		error(403, '暂不支持移动设备访问');
-	}
-};
