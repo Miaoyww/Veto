@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { zoom } from '$lib/stores/map-store';
-	import { currentBattle, currentFaction, selectedPlacedUnit } from '$lib/stores/battle-store';
-	import { gameClock } from '$lib/stores/game-clock.store';
-	import { startEngine, stopEngine, resetEngineTimers } from '$lib/engine/simulation-engine';
-	import { flushRuntimePositions } from '$lib/stores/battle-store';
+	import { zoom } from '$lib/stores/crisis/map-store';
+	import { currentBattle, currentFaction, selectedPlacedUnit } from '$lib/stores/crisis/battle-store';
+	import { gameClock } from '$lib/stores/crisis/game-clock.store';
+	import { startEngine, stopEngine, resetEngineTimers } from '$lib/stores/crisis/simulation-engine';
+	import { flushRuntimePositions } from '$lib/stores/crisis/battle-store';
 	import ControlBar from '$lib/components/header/control-bar.svelte';
 
 	

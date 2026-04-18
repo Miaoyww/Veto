@@ -15,18 +15,17 @@ import {
 	currentBattle,
 	currentFactionId,
 	selectedPlacedUnit
-} from '$lib/stores/battle-store';
+} from '$lib/stores/crisis/battle-store';
 import {
 	closeTopLayer,
 	leftBarPinned,
 	unitPanelVisible,
 	unitsCardOpen,
 	rightBarPinned
-} from '$lib/stores/ui-store';
+} from '$lib/stores/crisis/crisis-ui-store';
 import { toast } from 'svelte-sonner';
-import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
+import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/crisis/game-clock.store';
 import { get } from 'svelte/store';
-import { currentFaction, runtimePositions } from '$lib/stores/battle-store';
 
 export interface ShortcutDef {
 	/** 显示用按键（大写），例如 'S'、'Z'、'Escape' */

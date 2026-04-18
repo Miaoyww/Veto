@@ -26,9 +26,9 @@
 		removeUnit,
 		addLog,
 		runtimePositions
-	} from '$lib/stores/battle-store';
-	import { gameClock } from '$lib/stores/game-clock.store';
-	import { startPendingRoute } from '$lib/stores/pending-route.store';
+	} from '$lib/stores/crisis/battle-store';
+	import { gameClock } from '$lib/stores/crisis/game-clock.store';
+	import { startPendingRoute } from '$lib/stores/crisis/pending-route.store';
 
 	interface Props {
 		open: boolean;

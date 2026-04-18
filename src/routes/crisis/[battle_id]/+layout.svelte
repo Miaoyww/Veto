@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
-	import { battles, currentBattleId } from '$lib/stores/battle-store';
+	import { battles, currentBattleId } from '$lib/stores/crisis/battle-store';
 	import { registry } from '$lib/registry/mod-registry';
 
 	onMount(() => {

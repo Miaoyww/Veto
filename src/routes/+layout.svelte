@@ -11,7 +11,7 @@
 	import { dbGetAllPlugins } from '$lib/services/plugin-db';
 	import { injectToRegistry } from '$lib/services/plugin-registry';
 	import { registry } from '$lib/registry/mod-registry';
-	import { currentBattleId, battles } from '$lib/stores/battle-store';
+	import { currentBattleId, battles } from '$lib/stores/crisis/battle-store';
 	import { get } from 'svelte/store';
 	let { children } = $props();
 

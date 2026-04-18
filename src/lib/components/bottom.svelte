@@ -1,14 +1,14 @@
 <script lang="ts">
 	import SettingsButton from '$lib/components/buttons/right-bar/settings-button.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { coords } from '$lib/stores/map-store';
-	import { leftBarPinned, unitsCardOpen } from '$lib/stores/ui-store';
+	import { coords } from '$lib/stores/crisis/map-store';
+	import { leftBarPinned, unitsCardOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import {
 		flushRuntimePositions,
 		interactionMode,
 		saveBattlesNow,
 		selectFaction
-	} from '$lib/stores/battle-store';
+	} from '$lib/stores/crisis/battle-store';
 	import { Activity, PanelsTopLeft, Ruler, Save, Swords } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 

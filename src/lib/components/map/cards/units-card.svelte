@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { currentBattle, runtimePositions } from '$lib/stores/battle-store';
+	import { currentBattle, runtimePositions } from '$lib/stores/crisis/battle-store';
 	import { registry } from '$lib/registry/mod-registry';
-	import { pendingRoute } from '$lib/stores/pending-route.store';
+	import { pendingRoute } from '$lib/stores/crisis/pending-route.store';
 	import { Button } from '$lib/components/ui/button';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { MapPin, X, Activity, GripHorizontal, Navigation } from '@lucide/svelte';

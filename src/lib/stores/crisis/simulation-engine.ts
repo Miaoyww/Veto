@@ -15,15 +15,15 @@
  */
 
 import { get } from 'svelte/store';
-import { gameClock } from '../stores/game-clock.store';
+import { gameClock } from './game-clock.store';
 import {
 	tickMapMovement,
 	initRuntimePositions,
 	flushRuntimePositions,
 	currentBattle,
 	runtimePositions
-} from '../stores/battle-store';
-import type { RuntimeUnitPosition } from '../stores/battle-store';
+} from './battle-store';
+import type { RuntimeUnitPosition } from './battle-store';
 
 // ---- 引擎状态（模块级单例） ----
 let rafId: number | null = null;

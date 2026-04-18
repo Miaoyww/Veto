@@ -3,9 +3,9 @@
 	import { Kbd, KbdGroup } from '$lib/components/ui/kbd';
 	import { Button } from '$lib/components/ui/button';
 	import { SHORTCUT_DEFS } from '$lib/hooks/use-keyboard-shortcuts.svelte';
-	import { clearAllBattles, importBattles } from '$lib/stores/battle-store';
+	import { clearAllBattles, importBattles } from '$lib/stores/crisis/battle-store';
 	import { globalSettings } from '$lib/stores/global-settings.store';
-	import { showConfirm } from '$lib/stores/alert-dialog-store';
+	import { showConfirm } from '$lib/stores/global-ui-store';
 	import { toast } from 'svelte-sonner';
 	import { Upload, Trash2, Sun, Moon } from '@lucide/svelte';
 	import { setMode, userPrefersMode } from 'mode-watcher';

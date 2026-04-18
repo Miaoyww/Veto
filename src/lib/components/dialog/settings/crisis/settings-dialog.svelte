@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settingOpen } from '$lib/stores/setting-dialog-store';
+	import { settingOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import { Button } from '../../../ui/button';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import About from '$lib/components/settings/pages/about.svelte';

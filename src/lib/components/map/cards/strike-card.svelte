@@ -11,7 +11,7 @@
 		selectedPlacedUnitId,
 		updatePlacedUnit,
 		addLog
-	} from '$lib/stores/battle-store';
+	} from '$lib/stores/crisis/battle-store';
 
 	let {
 		map,

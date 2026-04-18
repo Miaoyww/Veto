@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { currentFactionId, selectFaction, removeFaction } from '$lib/stores/battle-store';
+	import { currentFactionId, selectFaction, removeFaction } from '$lib/stores/crisis/battle-store';
 	import { Button } from '$lib/components/ui/button';
 	import { Trash2 } from '@lucide/svelte';
 	import type { Faction } from '$lib/types';

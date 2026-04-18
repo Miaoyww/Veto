@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settingOpen } from '$lib/stores/setting-dialog-store';
+	import { settingOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import { Button } from '../../ui/button';
 	import { Settings } from '@lucide/svelte';
 	import { tweened } from 'svelte/motion';

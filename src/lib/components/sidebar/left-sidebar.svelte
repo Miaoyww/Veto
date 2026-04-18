@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { leftBarPinned } from '$lib/stores/ui-store';
+	import { leftBarPinned } from '$lib/stores/crisis/crisis-ui-store';
 	import { quintOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
-	import { currentBattle, currentFaction, addFaction } from '$lib/stores/battle-store';
+	import { currentBattle, currentFaction, addFaction } from '$lib/stores/crisis/battle-store';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -17,7 +17,7 @@
 	import { Plus, Swords, List, Flag, ScrollText, X } from '@lucide/svelte';
 	import FactionCard from '$lib/components/map/cards/faction-card.svelte';
 	import UnitPanel from '$lib/components/sidebar/unit-panel.svelte';
-	import { unitPanelVisible } from '$lib/stores/ui-store';
+	import { unitPanelVisible } from '$lib/stores/crisis/crisis-ui-store';
 
 	function randomColor() {
 		const hue = Math.floor(Math.random() * 360);

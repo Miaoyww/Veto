@@ -2,11 +2,11 @@
 	import { fly } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import { Play, Pause, Gauge, MousePointerClick, AlertTriangle, Clock } from '@lucide/svelte';
-	import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/game-clock.store';
-	import { currentBattle, currentFaction, selectedPlacedUnit, runtimePositions } from '$lib/stores/battle-store';
+	import { Play, Pause, Gauge, AlertTriangle, Clock } from '@lucide/svelte';
+	import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/crisis/game-clock.store';
+	import { currentBattle, runtimePositions } from '$lib/stores/crisis/battle-store';
 	import { onMount, onDestroy } from 'svelte';
-	import { startEngine, stopEngine, resetEngineTimers } from '$lib/engine/simulation-engine';
+	import { startEngine, stopEngine } from '$lib/stores/crisis/simulation-engine';
 
 	onMount(() => startEngine());
 	onDestroy(() => {

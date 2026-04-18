@@ -11,12 +11,13 @@
  *   4. 推演单位态势卡片 (unitsCardOpen)
  *   5. 非选择交互模式   (interactionMode !== 'select')
  */
-import { currentBattle, currentFaction, addFaction } from '$lib/stores/battle-store';
 import { get, writable } from 'svelte/store';
-import { alertDialogStore, hideAlert } from '$lib/stores/alert-dialog-store';
-import { settingOpen } from '$lib/stores/setting-dialog-store';
-import { interactionMode, pendingPlaceUnitId } from '$lib/stores/battle-store';
-import { cancelPendingRoute } from '$lib/stores/pending-route.store';
+import { alertDialogStore, hideAlert } from '$lib/stores/global-ui-store';
+import { interactionMode, pendingPlaceUnitId } from './battle-store';
+import { cancelPendingRoute } from './pending-route.store';
+
+export const settingOpen = writable<boolean>(false);
+export const currentTab = writable<string>('general');
 
 // ── 面板开关 ───────────────────────────────────────────────
 

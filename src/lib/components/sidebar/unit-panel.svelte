@@ -10,7 +10,7 @@
 		updateFaction,
 		interactionMode,
 		pendingPlaceUnitId
-	} from '$lib/stores/battle-store';
+	} from '$lib/stores/crisis/battle-store';
 	import type { UnitTemplate, UnitSide } from '$lib/types';
 	import { registry, registryRevision } from '$lib/registry/mod-registry';
 	import type { CategoryDefinition, ComponentTypeGroup } from '$lib/registry/types';
@@ -25,7 +25,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import BranchSelector from '$lib/components/buttons/branch-selector.svelte';
-	import { mapFlyTo } from '$lib/stores/map-store';
+	import { mapFlyTo } from '$lib/stores/crisis/map-store';
 	import {
 		Card,
 		CardContent,
@@ -33,7 +33,7 @@
 		CardTitle,
 		CardDescription
 	} from '$lib/components/ui/card';
-	import { runtimePositions } from '$lib/stores/battle-store';
+	import { runtimePositions } from '$lib/stores/crisis/battle-store';
 	import UnitListRow from '$lib/components/cards/units/unit-list-row.svelte';
 
 	// 编辑状态

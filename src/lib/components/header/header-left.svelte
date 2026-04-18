@@ -2,7 +2,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { ArrowLeft } from '@lucide/svelte';
 	import MapTypeButton from '$lib/components/buttons/map-type-button.svelte';
-	import { currentBattle } from '$lib/stores/battle-store';
+	import { currentBattle } from '$lib/stores/crisis/battle-store';
 </script>
 
 <div class="flex items-center gap-3 rounded-lg bg-background/75 p-3 backdrop-blur-md">

@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import Map from '$lib/components/map/map.svelte';
-	import { battles, currentBattleId } from '$lib/stores/battle-store';
+	import { battles, currentBattleId } from '$lib/stores/crisis/battle-store';
 	import { registry } from '$lib/registry/mod-registry';
 	import { get } from 'svelte/store';
 

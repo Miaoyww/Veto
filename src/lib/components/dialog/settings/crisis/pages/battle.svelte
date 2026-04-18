@@ -6,15 +6,14 @@
 		updateCurrentBattleSettings,
 		clearLog,
 		deleteBattle
-	} from '$lib/stores/battle-store';
-	import { showConfirm } from '$lib/stores/alert-dialog-store';
-	import { settingOpen } from '$lib/stores/setting-dialog-store';
+	} from '$lib/stores/crisis/battle-store';
+	import { showConfirm } from '$lib/stores/global-ui-store';
+	import { settingOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import DatePicker from '$lib/components/ui/date-picker.svelte';
 	import EventConfigDialog from '$lib/components/dialog/event-config-dialog.svelte';
-	import { gameClock } from '$lib/stores/game-clock.store';
 	import { Download, Trash2, ScrollText, Zap } from '@lucide/svelte';
 	import { parseDate } from '@internationalized/date';
 	import type { DateValue } from '@internationalized/date';

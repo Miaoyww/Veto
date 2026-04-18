@@ -3,7 +3,7 @@
 	import { get } from 'svelte/store';
 	import { Map, TileLayer, Marker, Popup } from 'sveaflet';
 	import * as L from 'leaflet';
-	import { coords, zoom, mapFlyTo } from '$lib/stores/map-store';
+	import { coords, zoom, mapFlyTo } from '$lib/stores/crisis/map-store';
 	import UnitContextMenu from './context-menus/unit-context-menu.svelte';
 	import MapContextMenu from './context-menus/map-context-menu.svelte';
 	import UnitPopup from './cards/unit-popup.svelte';
@@ -11,7 +11,7 @@
 	import MeasureCard from './cards/measure-card.svelte';
 	import InteractionModeHint from './cards/interaction-mode-hint.svelte';
 	import RouteConfirmCard from './cards/route-confirm-card.svelte';
-	import { routeConfirmOpen } from '$lib/stores/ui-store';
+	import { routeConfirmOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import {
 		currentBattle,
 		currentFactionId,
@@ -19,19 +19,16 @@
 		pendingPlaceUnitId,
 		placeUnit,
 		selectedPlacedUnitId,
-		selectedPlacedUnit,
 		addRoutePoint,
 		updatePlacedUnit,
 		addLog,
-		undo,
 		runtimePositions
-	} from '$lib/stores/battle-store';
-	import { gameClock } from '$lib/stores/game-clock.store';
+	} from '$lib/stores/crisis/battle-store';
 	import {
 		pendingRoute,
 		addPendingPoint,
 		cancelPendingRoute
-	} from '$lib/stores/pending-route.store';
+	} from '$lib/stores/crisis/pending-route.store';
 	import type { UnitTemplate, PlacedUnit, Faction } from '$lib/types';
 	import {  getNatoIcon } from '$lib/utils/unit-icon';
 
