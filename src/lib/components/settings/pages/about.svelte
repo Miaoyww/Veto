@@ -1,16 +1,23 @@
 <script lang="ts">
-	import { version } from '$app/environment';
 	import { ExternalLink, FileText, ShieldCheck } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
 	import { VETO_NAME } from '$lib/const';
+	import { isTauri } from '@tauri-apps/api/core';
+	const version = __APP_VERSION__;
+
+	const API_URL = 'https://api.github.com/repos/Miaoyww/Veto/releases/latest';
+	async function checkForUpdates() {
+	}
 </script>
 
 <div class="grid h-full grid-rows-2">
 	<div>
 		<div class="mb-6 flex flex-col items-center gap-2 text-center">
-			<h2 class="text-3xl font-extrabold tracking-wide text-stone-800 dark:text-stone-100">{VETO_NAME}</h2>
+			<h2 class="text-3xl font-extrabold tracking-wide text-stone-800 dark:text-stone-100">
+				{VETO_NAME}
+			</h2>
 			<p class="text-sm text-muted-foreground">模拟联合国会议系统</p>
 		</div>
 		<div class="space-y-3">
@@ -34,7 +41,12 @@
 					Miaoyww/Veto
 				</Button>
 			</SettingCard>
+
+			{#if isTauri()}
+				<SettingCard title="检查更新" description="跟上新版本!">
+					<Button variant="outline" size="sm" onclick={checkForUpdates}>检查更新</Button>
+				</SettingCard>
+			{/if}
 		</div>
 	</div>
-
 </div>

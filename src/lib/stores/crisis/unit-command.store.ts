@@ -45,7 +45,7 @@ export function applyCrisisCommand() {
 	if (!cmd) return;
 	addRoutePoint(cmd.placedId, cmd.lat, cmd.lng);
 	addLog(
-		`✅ 指令确认：${cmd.unitName} 添加路线节点 (${cmd.lat.toFixed(4)}°N, ${cmd.lng.toFixed(4)}°E)`
+		` 指令确认：${cmd.unitName} 添加路线节点 (${cmd.lat.toFixed(4)}°N, ${cmd.lng.toFixed(4)}°E)`
 	);
 	pendingCrisisCommand.set(null);
 }
@@ -56,7 +56,7 @@ export function applyCrisisCommand() {
 export function cancelCrisisCommand() {
 	const cmd = get(pendingCrisisCommand);
 	if (cmd) {
-		addLog(`❌ 指令取消：${cmd.unitName} 路线节点 (${cmd.lat.toFixed(4)}°N, ${cmd.lng.toFixed(4)}°E) 已撤销`);
+		addLog(` 指令取消：${cmd.unitName} 路线节点 (${cmd.lat.toFixed(4)}°N, ${cmd.lng.toFixed(4)}°E) 已撤销`);
 	}
 	pendingCrisisCommand.set(null);
 }

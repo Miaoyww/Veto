@@ -5,15 +5,14 @@
 	import { currentBattle } from '$lib/stores/crisis/battle-store';
 	import { VETO_NAME } from '$lib/const';
 	import { Button } from '$lib/components/ui/button';
-
-	const isTauri = browser && '__TAURI_INTERNALS__' in window;
+	import { isTauri } from '@tauri-apps/api/core';
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let appWindow = $state<any>(null);
 	let isMaximized = $state(false);
 
 	$effect(() => {
-		if (!isTauri) return;
+		if (!isTauri()) return;
 		import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
 			const win = getCurrentWindow();
 			appWindow = win;
@@ -31,13 +30,13 @@
 	}
 </script>
 
-{#if isTauri}
+{#if isTauri()}
 	<div
 		class="fixed top-0 right-0 left-0 z-[9999] flex h-9 items-stretch border-b border-border/30 bg-background select-none"
 	>
 		<!-- 左：应用名 -->
 		<div class="flex w-28 shrink-0 items-center pl-4" onmousedown={onDragMouseDown}>
-			<span class="text-xs font-semibold tracking-[0.2em] text-foreground/50 uppercase">
+			<span class="text-sm font-semibold tracking-[0.2em] text-foreground/50 uppercase">
 				{VETO_NAME}
 			</span>
 		</div>

@@ -1,6 +1,6 @@
 [package]
-name = "veto"
-version = "0.1.0"
+name = "Veto"
+version = "0.11.0"
 description = "veto"
 authors = ["miaoyww"]
 license = ""

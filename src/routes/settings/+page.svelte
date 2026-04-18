@@ -42,9 +42,6 @@
 					{#if activeSection === 'about'}<AboutPage />{/if}
 				</div>
 			</div>
-
-			<!-- 右侧占位，与左侧导航等宽，使内容区视觉居中 -->
-			<div class="w-36 shrink-0"></div>
 		</div>
 
 		<Footer />
