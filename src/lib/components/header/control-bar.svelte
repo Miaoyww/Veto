@@ -55,7 +55,7 @@
 </script>
 
 <div
-	class="flex shrink-0 items-center gap-3 px-5"
+	class="flex shrink-0 items-center gap-3 px-2"
 	in:fly={{ y: -8, duration: 320, opacity: 0, delay: 60 }}
 >
 	<!-- 右侧状态区 -->

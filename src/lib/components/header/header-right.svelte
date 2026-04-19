@@ -1,14 +1,10 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { zoom } from '$lib/stores/crisis/map-store';
-	import { currentBattle, currentFaction, selectedPlacedUnit } from '$lib/stores/crisis/battle-store';
-	import { gameClock } from '$lib/stores/crisis/game-clock.store';
-	import { startEngine, stopEngine, resetEngineTimers } from '$lib/stores/crisis/simulation-engine';
-	import { flushRuntimePositions } from '$lib/stores/crisis/battle-store';
+	import { currentBattle, selectedPlacedUnit } from '$lib/stores/crisis/battle-store';
 	import ControlBar from '$lib/components/header/control-bar.svelte';
-
-	
-	
+	import { cn, type WithElementRef } from '$lib/utils';
+	import type { HTMLInputAttributes } from 'svelte/elements';
+	import type { InputType } from 'jszip';
 
 	let unitCount = $derived($currentBattle?.placedUnits.length ?? 0);
 
@@ -23,23 +19,36 @@
 		return '无';
 	});
 
+	type Props = WithElementRef<
+		Omit<HTMLInputAttributes, 'type'> &
+			({ type: 'file'; files?: FileList } | { type?: InputType; files?: undefined })
+	>;
+	let { class: className }: Props = $props();
 </script>
 
-<div class="flex flex-col items-end gap-2">
-	<div class="bg-background/75 backdrop-blur-md flex items-center gap-3 rounded-lg p-3 text-sm text-foreground">
+<div class={cn('flex flex-col items-end', className)}>
+	<div
+		class="rounded-t-xl rounded-bl-xl border-b border-white/5 bg-background/80 p-2 shadow-lg backdrop-blur-md"
+	>
 		<ControlBar />
+	</div>
 
-		<div class="flex flex-col gap-1">
-			<div class="status-label">缩放级别</div>
-			<div class="status-value">{$zoom}</div>
+	<div
+		class="-mt-[1px] flex gap-4 rounded-tl-none rounded-b-xl border-t border-white/10 bg-background/80 px-3 py-1.5 shadow-lg backdrop-blur-md"
+	>
+		<div class="flex flex-col gap-0.5">
+			<div class="status-label text-[10px] tracking-wider uppercase opacity-60">缩放</div>
+			<div class="status-value font-mono text-xs">{$zoom}</div>
 		</div>
-		<div class="flex flex-col gap-1">
-			<div class="status-label">单位数量</div>
-			<div class="status-value">{unitCount}</div>
+
+		<div class="flex flex-col gap-0.5">
+			<div class="status-label text-[10px] tracking-wider uppercase opacity-60">单位</div>
+			<div class="status-value font-mono text-xs">{unitCount}</div>
 		</div>
-		<div class="flex flex-col gap-1">
-			<div class="status-label">选中单位</div>
-			<div class="status-value">{selectedUnitName}</div>
+
+		<div class="flex flex-col gap-0.5">
+			<div class="status-label text-[10px] tracking-wider uppercase opacity-60">选中</div>
+			<div class="status-value text-xs font-medium text-blue-400">{selectedUnitName}</div>
 		</div>
 	</div>
 </div>

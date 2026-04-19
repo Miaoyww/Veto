@@ -33,7 +33,6 @@
 <Header class={isTauri ? 'top-14' : ''} />
 <Bottom />
 <SettingsDialog />
-
 <style>
 	* {
 		margin: 0;

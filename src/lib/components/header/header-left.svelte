@@ -3,9 +3,24 @@
 	import { ArrowLeft } from '@lucide/svelte';
 	import MapTypeButton from '$lib/components/buttons/map-type-button.svelte';
 	import { currentBattle } from '$lib/stores/crisis/battle-store';
+	import { cn, type WithElementRef } from '$lib/utils';
+	import type { HTMLInputAttributes } from 'svelte/elements';
+	import type { InputType } from 'jszip';
+	import { isTauri } from '@tauri-apps/api/core';
+
+	type Props = WithElementRef<
+		Omit<HTMLInputAttributes, 'type'> &
+			({ type: 'file'; files?: FileList } | { type?: InputType; files?: undefined })
+	>;
+	let { class: className }: Props = $props();
 </script>
 
-<div class="flex items-center gap-3 rounded-lg bg-background/75 p-3 backdrop-blur-md">
+<div
+	class={cn(
+		'flex items-center gap-3 rounded-lg  bg-background/80 p-2 shadow-lg backdrop-blur-md',
+		className
+	)}
+>
 	<a
 		href="/"
 		class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-700/50 dark:hover:text-stone-100"
@@ -13,14 +28,16 @@
 	>
 		<ArrowLeft class="h-5 w-5" />
 	</a>
-	<Separator orientation="vertical" class="h-6" />
 	<div class="flex gap-2">
 		<MapTypeButton>标准</MapTypeButton>
 		<MapTypeButton>地形</MapTypeButton>
 		<MapTypeButton>卫星</MapTypeButton>
 	</div>
 	{#if $currentBattle}
-		<Separator orientation="vertical" class="h-6" />
-		<span class="text-sm font-medium text-stone-700 dark:text-stone-300">{$currentBattle.name}</span>
+		{#if !isTauri()}
+			<span class="text-sm font-medium text-stone-700 dark:text-stone-300"
+				>{$currentBattle.name}</span
+			>
+		{/if}
 	{/if}
 </div>

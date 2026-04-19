@@ -7,7 +7,7 @@
 	import PinButton from '../buttons/right-bar/pin-button.svelte';
 	import { flushRuntimePositions, saveBattlesNow, interactionMode } from '$lib/stores/crisis/battle-store';
 	import { toast } from 'svelte-sonner';
-	import UnitsCard from '$lib/components/map/cards/units-card.svelte';
+	import UnitsCard from '$lib/components/map/cards/floating/unit-state-card.svelte';
 	import { unitsCardOpen } from '$lib/stores/crisis/crisis-ui-store';
 
 	// 是否鼠标悬停

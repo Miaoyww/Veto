@@ -12,7 +12,7 @@
 		Gauge,
 		MapPin
 	} from '@lucide/svelte';
-	import NatoSymbol from '../nato-symbol.svelte';
+	import NatoSymbol from '../../nato-symbol.svelte';
 	import { runtimePositions } from '$lib/stores/crisis/battle-store';
 
 	let { unit, faction, placed }: { unit: UnitTemplate; faction: Faction; placed: PlacedUnit } =

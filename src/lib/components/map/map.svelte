@@ -6,11 +6,11 @@
 	import { coords, zoom, mapFlyTo } from '$lib/stores/crisis/map-store';
 	import UnitContextMenu from './context-menus/unit-context-menu.svelte';
 	import MapContextMenu from './context-menus/map-context-menu.svelte';
-	import UnitPopup from './cards/unit-popup.svelte';
+	import UnitPopup from './cards/floating/unit-popup.svelte';
 	import StrikeCard from './cards/strike-card.svelte';
-	import MeasureCard from './cards/measure-card.svelte';
-	import InteractionModeHint from './cards/interaction-mode-hint.svelte';
-	import RouteConfirmCard from './cards/route-confirm-card.svelte';
+	import MeasureCard from './cards/floating/measure-card.svelte';
+	import InteractionModeHint from './cards/floating/interaction-mode-hint.svelte';
+	import RouteConfirmCard from './cards/floating/route-confirm-card.svelte';
 	import { routeConfirmOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import {
 		currentBattle,

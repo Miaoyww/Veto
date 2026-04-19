@@ -187,7 +187,7 @@
 
 {#if $interactionMode === 'measure'}
 	<!-- 底部中央浮动面板 -->
-	<div class="absolute bottom-8 left-1/2 z-[1002] -translate-x-1/2">
+	<div class="absolute bottom-35 left-1/2 z-[1002] -translate-x-1/2">
 		<div class="flex min-w-72 flex-col gap-2 rounded-xl border border-stone-200 bg-white/90 p-3 shadow-lg backdrop-blur-sm dark:border-stone-700 dark:bg-stone-900/90">
 			<!-- 头部 -->
 			<div class="flex items-center justify-between">

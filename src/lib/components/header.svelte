@@ -12,7 +12,12 @@
 	let { class: className, ...restProps }: Props = $props();
 </script>
 
-<div class={cn('absolute top-5 right-5 left-5 z-1000 flex justify-between ', className)}>
-	<HeaderLeft />
-	<HeaderRight />
+<div class={cn('absolute top-5 right-5 left-5 z-1000', className)}>
+    <div class="absolute left-0 top-0">
+        <HeaderLeft />
+    </div>
+
+    <div class="absolute right-0 top-0">
+        <HeaderRight />
+    </div>
 </div>
