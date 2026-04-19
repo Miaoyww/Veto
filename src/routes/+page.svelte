@@ -26,8 +26,10 @@
 </script>
 
 <Tooltip.Provider>
-	<div class="flex h-screen w-screen flex-col bg-gradient-to-br from-page-from to-page-to">
-		<main class="flex flex-1 flex-col items-center justify-center gap-8 px-6 pt-10">
+	<div
+		class="flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-br from-page-from to-page-to"
+	>
+		<main class="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-6 pt-10">
 			<!-- 标题与模式选择 -->
 			<div class="flex flex-col items-center gap-4" in:fly={{ y: -20, duration: 400, opacity: 0 }}>
 				<h1 class="text-4xl font-bold tracking-wide text-foreground">{VETO_NAME}</h1>

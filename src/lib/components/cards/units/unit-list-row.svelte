@@ -65,14 +65,11 @@
 	role="button"
 	tabindex="0"
 >
-	<div class="min-w-0 flex-1">
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div class="min-w-0 flex-1" >
 		<!-- 单位名称 / 重命名 Input -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="flex items-center gap-1"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={() => {}}
-		>
+		<div class="flex items-center gap-1" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
 			{#if renaming}
 				<Input
 					class="h-6 flex-1 text-xs"

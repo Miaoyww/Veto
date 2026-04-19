@@ -7,7 +7,6 @@
 	import UnitContextMenu from './context-menus/unit-context-menu.svelte';
 	import MapContextMenu from './context-menus/map-context-menu.svelte';
 	import UnitPopup from './cards/floating/unit-popup.svelte';
-	import StrikeCard from './cards/strike-card.svelte';
 	import MeasureCard from './cards/floating/measure-card.svelte';
 	import InteractionModeHint from './cards/floating/interaction-mode-hint.svelte';
 	import RouteConfirmCard from './cards/floating/route-confirm-card.svelte';
@@ -30,7 +29,8 @@
 		cancelPendingRoute
 	} from '$lib/stores/crisis/pending-route.store';
 	import type { UnitTemplate, PlacedUnit, Faction } from '$lib/types';
-	import {  getNatoIcon } from '$lib/utils/unit-icon';
+	import { getNatoIcon } from '$lib/utils/unit-icon';
+	import { fly } from 'svelte/transition';
 
 	let map: L.Map;
 	let myOpen = $state(false);
@@ -59,7 +59,11 @@
 	const iconStateCache: Record<string, { hp: number; org: number; status: string }> = {};
 
 	// 构建单位 Popup 内容节点
-	function createPopupElement(unit: UnitTemplate, faction: Faction, placed: PlacedUnit): HTMLElement {
+	function createPopupElement(
+		unit: UnitTemplate,
+		faction: Faction,
+		placed: PlacedUnit
+	): HTMLElement {
 		const el = document.createElement('div');
 		mount(UnitPopup, { target: el, props: { unit, faction, placed } });
 		return el;
@@ -113,13 +117,19 @@
 			// 拖拽结束更新位置
 			marker.on('dragend', (e) => {
 				const latlng = (e.target as L.Marker).getLatLng();
-				updatePlacedUnit(placed.id, { lat: latlng.lat, lng: latlng.lng }, `移动单位: ${info.unit.name}`);
+				updatePlacedUnit(
+					placed.id,
+					{ lat: latlng.lat, lng: latlng.lng },
+					`移动单位: ${info.unit.name}`
+				);
 				// 同步更新 runtimePositions，防止引擎用旧坐标覆盖回拖拽位置
 				runtimePositions.update((pos) => {
 					if (!pos[placed.id]) return pos;
 					return { ...pos, [placed.id]: { ...pos[placed.id], lat: latlng.lat, lng: latlng.lng } };
 				});
-				addLog(`移动单位: ${info.unit.name} → (${latlng.lat.toFixed(3)}, ${latlng.lng.toFixed(3)})`);
+				addLog(
+					`移动单位: ${info.unit.name} → (${latlng.lat.toFixed(3)}, ${latlng.lng.toFixed(3)})`
+				);
 			});
 
 			// 右键上下文菜单绑定
@@ -146,10 +156,7 @@
 
 			// 行动路线
 			if (placed.route.length > 0) {
-				const routePoints: L.LatLngExpression[] = [
-					[placed.lat, placed.lng],
-					...placed.route
-				];
+				const routePoints: L.LatLngExpression[] = [[placed.lat, placed.lng], ...placed.route];
 				const polyline = L.polyline(routePoints, {
 					color: faction.color,
 					weight: 3,
@@ -203,7 +210,10 @@
 				// 从单位到打击目标的连线
 				if (placed.strikeTarget) {
 					const line = L.polyline(
-						[[placed.lat, placed.lng], [placed.strikeTarget.lat, placed.strikeTarget.lng]],
+						[
+							[placed.lat, placed.lng],
+							[placed.strikeTarget.lat, placed.strikeTarget.lng]
+						],
 						{ color: faction.color, weight: 1, opacity: 0.5, dashArray: '4 4' }
 					);
 					rangesLayer.addLayer(line);
@@ -281,7 +291,7 @@
 					poly.setLatLngs(routePoints);
 				} else {
 					// 首次创建（runtimePositions 初始化后 markersMap 可能还没有对应 polyline）
-				const battle = get(currentBattle);
+					const battle = get(currentBattle);
 					const placed = battle?.placedUnits.find((p) => p.id === id);
 					if (placed) {
 						const faction = battle?.factions.find((f) =>
@@ -428,7 +438,6 @@
 			}).addTo(pendingLayer);
 		}
 	});
-
 </script>
 
 <!-- 单位处右键菜单 -->
@@ -441,12 +450,9 @@
 />
 
 <!-- 空白处右键菜单 -->
-<MapContextMenu
-	bind:open={mapMenuOpen}
-	virtualAnchor={mapVirtualAnchor}
-/>
+<MapContextMenu bind:open={mapMenuOpen} virtualAnchor={mapVirtualAnchor} />
 
-<div class="relative h-full w-full">
+<div class="relative h-full w-full" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
 	<Map
 		bind:instance={map}
 		options={{
@@ -465,9 +471,5 @@
 <!-- 路线指令待确认卡片（Esc 退出绘制后弹出） -->
 <RouteConfirmCard bind:open={$routeConfirmOpen} />
 
-<!-- 打击目标浮动卡片 -->
-<StrikeCard {map} bind:pendingTarget={strikePendingTarget} />
-
 <!-- 测量距离浮动卡片 -->
 <MeasureCard {map} />
-
