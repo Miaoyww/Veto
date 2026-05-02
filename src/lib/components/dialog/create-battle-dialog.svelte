@@ -9,8 +9,8 @@
 	import PuzzleIcon from '@lucide/svelte/icons/puzzle';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { createBattle } from '$lib/stores/crisis/battle-store';
-	import { TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/crisis/game-clock.store';
+	import { createBattle } from '$lib/stores/battle/battle-store';
+	import { TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/battle/game-clock.store';
 	import { CalendarDate, type DateValue } from '@internationalized/date';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -117,7 +117,7 @@
 			enabledMods
 		});
 		open = false;
-		goto(`/crisis/${id}`);
+		goto(`/battle/${id}`);
 	}
 
 	function handleOpenChange(value: boolean) {

@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { Minus, X, Settings, Square, SquaresUnite } from '@lucide/svelte';
-	import { currentBattle } from '$lib/stores/crisis/battle-store';
+	import { currentBattle } from '$lib/stores/battle/battle-store';
 	import { VETO_NAME } from '$lib/const';
 	import { Button } from '$lib/components/ui/button';
 	import { isTauri } from '@tauri-apps/api/core';

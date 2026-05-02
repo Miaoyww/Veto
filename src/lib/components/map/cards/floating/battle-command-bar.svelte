@@ -7,7 +7,7 @@
 		pendingCrisisCommand,
 		applyCrisisCommand,
 		cancelCrisisCommand
-	} from '$lib/stores/crisis/unit-command.store';
+	} from '$lib/stores/battle/unit-command.store';
 </script>
 
 {#if $pendingCrisisCommand}

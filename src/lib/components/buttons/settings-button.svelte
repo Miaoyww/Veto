@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { settingOpen } from '$lib/stores/crisis/crisis-ui-store';
-	import { Button } from '../../ui/button';
+	import { Button } from '$lib/components/ui/button';
 	import { Settings } from '@lucide/svelte';
 	import { tweened } from 'svelte/motion';
 	import { cubicInOut, linear } from 'svelte/easing';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	const battleId = page.params.battle_id ?? null;
 
 	const rotate = tweened(0, { duration: 300, easing: cubicInOut });
 	const scale = tweened(1, { duration: 200, easing: cubicInOut });
@@ -29,8 +31,7 @@
 	}
 
 	async function openSetting() {
-		settingOpen.update((prev) => !prev);
-		console.log($settingOpen);
+		goto(`/battle/${battleId}/settings`);
 
 		await rotate.set(180, { duration: 400, easing: cubicInOut });
 		rotate.set(0, { duration: 0 });

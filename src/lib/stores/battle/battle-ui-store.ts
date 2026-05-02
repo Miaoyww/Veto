@@ -16,7 +16,6 @@ import { alertDialogStore, hideAlert } from '$lib/stores/global-ui-store';
 import { interactionMode, pendingPlaceUnitId } from './battle-store';
 import { cancelPendingRoute } from './pending-route.store';
 
-export const settingOpen = writable<boolean>(false);
 export const currentTab = writable<string>('general');
 
 // ── 面板开关 ───────────────────────────────────────────────
@@ -53,12 +52,6 @@ export function closeTopLayer(): boolean {
 	if (get(routeConfirmOpen)) {
 		routeConfirmOpen.set(false);
 		cancelPendingRoute();
-		return true;
-	}
-
-	// 3. 设置对话框
-	if (get(settingOpen)) {
-		settingOpen.set(false);
 		return true;
 	}
 

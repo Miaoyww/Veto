@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { currentBattle } from '$lib/stores/crisis/battle-store';
+	import { currentBattle } from '$lib/stores/battle/battle-store';
 </script>
 
 <div class="panel-section">

@@ -15,16 +15,16 @@ import {
 	currentBattle,
 	currentFactionId,
 	selectedPlacedUnit
-} from '$lib/stores/crisis/battle-store';
+} from '$lib/stores/battle/battle-store';
 import {
 	closeTopLayer,
 	leftBarPinned,
 	unitPanelVisible,
 	unitsCardOpen,
 	rightBarPinned
-} from '$lib/stores/crisis/crisis-ui-store';
+} from '$lib/stores/battle/battle-ui-store';
 import { toast } from 'svelte-sonner';
-import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/crisis/game-clock.store';
+import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/battle/game-clock.store';
 import { get } from 'svelte/store';
 
 export interface ShortcutDef {

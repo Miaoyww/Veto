@@ -8,10 +8,10 @@
 		interactionMode,
 		clearRoute,
 		addLog
-	} from '$lib/stores/crisis/battle-store';
-	import { gameClock } from '$lib/stores/crisis/game-clock.store';
-	import { leftBarPinned } from '$lib/stores/crisis/crisis-ui-store';
-	import { startPendingRoute } from '$lib/stores/crisis/pending-route.store';
+	} from '$lib/stores/battle/battle-store';
+	import { gameClock } from '$lib/stores/battle/game-clock.store';
+	import { leftBarPinned } from '$lib/stores/battle/battle-ui-store';
+	import { startPendingRoute } from '$lib/stores/battle/pending-route.store';
 
 	interface Props {
 		open: boolean;

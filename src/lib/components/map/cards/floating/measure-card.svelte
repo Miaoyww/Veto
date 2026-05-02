@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { interactionMode } from '$lib/stores/crisis/battle-store';
+	import { interactionMode } from '$lib/stores/battle/battle-store';
 	import { fly } from 'svelte/transition';
 
 	let { map }: { map: L.Map | undefined } = $props();

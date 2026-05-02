@@ -5,10 +5,10 @@
 		currentBattleId,
 		updateCurrentBattleSettings,
 		clearLog,
-		deleteBattle
-	} from '$lib/stores/crisis/battle-store';
+		deleteBattle,
+		getBattleById
+	} from '$lib/stores/battle/battle-store';
 	import { showConfirm } from '$lib/stores/global-ui-store';
-	import { settingOpen } from '$lib/stores/crisis/crisis-ui-store';
 	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
@@ -19,15 +19,24 @@
 	import type { DateValue } from '@internationalized/date';
 	import type { EventSetting } from '$lib/types';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 
 	const DISPLAY_SCALES = [60, 3600, 86400] as const;
+	const battleId = page.params.battle_id ?? null;
 
-	const initial = get(currentBattle);
+	let initial = get(currentBattle);
+	onMount(() => {
+		if (!initial && battleId) {
+			// 如果当前没有战局但 URL 中有 battleId，说明用户直接访问了设置页，这时需要加载战局数据
+			const battle = getBattleById(battleId);
+			if (battle) initial = battle;
+		}
+	});
 	let nameDraft = $state(initial?.name ?? '');
 	let startDateDraft = $state<DateValue | undefined>(
 		initial?.startDate ? parseDate(initial.startDate) : undefined
 	);
-	let pixelsPerKmDraft = $state(initial?.pixelsPerKm ?? 10);
 	let iconStyleDraft = $state<'nato' | 'simple'>(initial?.iconStyle ?? 'nato');
 	let eventSettingsDraft = $state<EventSetting[]>([...(initial?.eventSettings ?? [])]);
 	let eventDrawerOpen = $state(false);
@@ -36,7 +45,10 @@
 	let _dateInit = false;
 	$effect(() => {
 		const d = startDateDraft;
-		if (!_dateInit) { _dateInit = true; return; }
+		if (!_dateInit) {
+			_dateInit = true;
+			return;
+		}
 		updateCurrentBattleSettings({ startDate: d?.toString() });
 	});
 
@@ -44,7 +56,10 @@
 	let _eventsInit = false;
 	$effect(() => {
 		const ev = eventSettingsDraft;
-		if (!_eventsInit) { _eventsInit = true; return; }
+		if (!_eventsInit) {
+			_eventsInit = true;
+			return;
+		}
 		updateCurrentBattleSettings({ eventSettings: [...ev] });
 	});
 
@@ -94,7 +109,6 @@
 		const id = get(currentBattleId);
 		if (!battle || !id) return;
 		showConfirm(`删除战局 "${battle.name}"`, '此操作不可撤销，战局数据将永久删除。', () => {
-			settingOpen.set(false);
 			deleteBattle(id);
 			goto('/');
 		});
@@ -103,7 +117,7 @@
 	const enabledEventCount = $derived(eventSettingsDraft.filter((e) => e.enabled).length);
 </script>
 
-<div class="space-y-6 pb-10 lg:max-w-4xl">
+<div class="space-y-6 pb-10">
 	<!-- 基本信息 -->
 	<div>
 		<div class="mb-3 text-xl font-bold">基本信息</div>
@@ -114,12 +128,14 @@
 					class="w-56"
 					bind:value={nameDraft}
 					onblur={saveName}
-					onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+					onkeydown={(e: KeyboardEvent) => {
+						if (e.key === 'Enter') (e.target as HTMLElement).blur();
+					}}
 				/>
 			</SettingCard>
 
 			<SettingCard let:id title="推演起始日期" description="战局时间轴的起始点。">
-				<DatePicker bind:value={startDateDraft} class="w-44 z-1001" />
+				<DatePicker bind:value={startDateDraft} class="z-1001 w-44" />
 			</SettingCard>
 		</div>
 	</div>
@@ -133,16 +149,15 @@
 					<Button
 						variant={iconStyleDraft === 'nato' ? 'default' : 'outline'}
 						size="sm"
-						onclick={() => saveIconStyle('nato')}
-					>北约标准</Button>
+						onclick={() => saveIconStyle('nato')}>北约标准</Button
+					>
 					<Button
 						variant={iconStyleDraft === 'simple' ? 'default' : 'outline'}
 						size="sm"
-						onclick={() => saveIconStyle('simple')}
-					>简单图标</Button>
+						onclick={() => saveIconStyle('simple')}>简单图标</Button
+					>
 				</div>
 			</SettingCard>
-
 		</div>
 	</div>
 
@@ -150,7 +165,11 @@
 	<div>
 		<div class="mb-3 text-xl font-bold">模拟设置</div>
 		<div class="space-y-3">
-			<SettingCard let:id title="自定义时间流速" description="保存后将在控制栏中作为可选档位显示，不会立即生效。">
+			<SettingCard
+				let:id
+				title="自定义时间流速"
+				description="保存后将在控制栏中作为可选档位显示，不会立即生效。"
+			>
 				<div class="flex items-center gap-2">
 					<Input
 						{id}
@@ -160,7 +179,9 @@
 						bind:value={customScaleStr}
 						placeholder="300"
 						onblur={saveCustomScale}
-						onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+						onkeydown={(e: KeyboardEvent) => {
+							if (e.key === 'Enter') (e.target as HTMLElement).blur();
+						}}
 					/>
 					<span class="text-sm text-muted-foreground">秒/秒</span>
 				</div>
@@ -172,11 +193,7 @@
 	<div>
 		<div class="mb-3 text-xl font-bold">事件系统</div>
 		<div class="space-y-3">
-			<SettingCard
-				let:id
-				title="突发事件配置"
-				description="配置战局中的随机突发事件及其触发概率。"
-			>
+			<SettingCard let:id title="突发事件配置" description="配置战局中的随机突发事件及其触发概率。">
 				<div class="flex items-center gap-3">
 					<span class="text-sm text-muted-foreground">
 						已启用 <span class="font-semibold text-amber-600">{enabledEventCount}</span>
@@ -202,7 +219,11 @@
 				</Button>
 			</SettingCard>
 
-			<SettingCard let:id title="清空行动日志" description="清除所有已记录的行动历史，不影响单位和阵营。">
+			<SettingCard
+				let:id
+				title="清空行动日志"
+				description="清除所有已记录的行动历史，不影响单位和阵营。"
+			>
 				<Button
 					variant="outline"
 					size="sm"

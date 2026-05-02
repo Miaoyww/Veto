@@ -2,8 +2,8 @@
 	import { MapPin, Navigation, X, Target, Ruler } from '@lucide/svelte';
 	import * as Kbd from '$lib/components/ui/kbd/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { interactionMode, pendingPlaceUnitId } from '$lib/stores/crisis/battle-store';
-	import { pendingRoute } from '$lib/stores/crisis/pending-route.store';
+	import { interactionMode, pendingPlaceUnitId } from '$lib/stores/battle/battle-store';
+	import { pendingRoute } from '$lib/stores/battle/pending-route.store';
 	import { fly } from 'svelte/transition';
 
 	let {

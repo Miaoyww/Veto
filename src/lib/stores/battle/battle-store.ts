@@ -203,7 +203,7 @@ export function renameBattle(id: string, name: string) {
 }
 
 export function loadBattle(id: string) {
-	const battle = get(battles).find((b) => b.id === id);
+	const battle = getBattleById(id); // 确保战局存在
 	if (battle) {
 		_undoStack.length = 0;
 		canUndo.set(false);
@@ -212,6 +212,9 @@ export function loadBattle(id: string) {
 	}
 }
 
+export function getBattleById(id: string): Battle | null {
+	return get(battles).find((b) => b.id === id) ?? null;
+}
 // ============ 阵营 CRUD ============
 
 export function addFaction(name: string, color: string, side: UnitSide = 'blue'): string {

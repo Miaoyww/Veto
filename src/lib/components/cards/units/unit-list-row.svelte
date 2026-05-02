@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { UnitTemplate, PlacedUnit } from '$lib/types';
-	import type { RuntimeUnitPosition } from '$lib/stores/crisis/battle-store';
+	import type { RuntimeUnitPosition } from '$lib/stores/battle/battle-store';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Trash2, MapPin, Crosshair, Pencil, Check, X } from '@lucide/svelte';

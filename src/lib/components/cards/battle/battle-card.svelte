@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Zap } from '@lucide/svelte';
 	import type { Battle } from '$lib/types';
-	import { currentBattleId, loadBattle, deleteBattle, renameBattle } from '$lib/stores/crisis/battle-store';
+	import { currentBattleId, loadBattle, deleteBattle, renameBattle } from '$lib/stores/battle/battle-store';
 	import { showConfirm } from '$lib/stores/global-ui-store';
 	import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -20,7 +20,7 @@
 	function handleLoad() {
 		if (editing) return;
 		loadBattle(battle.id);
-		goto(`/crisis/${battle.id}`);
+		goto(`/battle/${battle.id}`);
 	}
 
 	function handleDelete(e: MouseEvent) {

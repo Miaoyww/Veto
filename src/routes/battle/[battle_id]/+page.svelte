@@ -3,9 +3,13 @@
 	import { page } from '$app/state';
 	import { onDestroy, onMount } from 'svelte';
 	import Map from '$lib/components/map/map.svelte';
-	import { battles, currentBattleId } from '$lib/stores/crisis/battle-store';
-	import { mods, registry, pluginsReady } from '$lib/registry/mod-registry.svelte';
+	import { battles, currentBattleId } from '$lib/stores/battle/battle-store';
+	import { mods, pluginsReady } from '$lib/registry/mod-registry.svelte';
 	import { get } from 'svelte/store';
+	import LeftSidebar from '$lib/components/sidebar/left-sidebar.svelte';
+	import Header from '$lib/components/header.svelte';
+	import Bottom from '$lib/components/bottom.svelte';
+	import { isTauri } from '@tauri-apps/api/core';
 
 	const battleId = page.params.battle_id ?? null;
 	const battle = get(battles).find((b) => b.id === battleId);
@@ -32,6 +36,10 @@
 	});
 </script>
 
+<LeftSidebar />
+
+<Header class={isTauri() ? 'top-14' : ''} />
+<Bottom />
 {#if exists}
 	<div class="app-container">
 		<div class="relative flex-1 bg-[var(--bg-primary)]">

@@ -2,7 +2,7 @@
 	import { VETO_NAME } from '$lib/const';
 	import { Swords, Users, Plus, CircleHelp, Settings, Search } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { battles } from '$lib/stores/crisis/battle-store';
+	import { battles } from '$lib/stores/battle/battle-store';
 	import BattleCard from '$lib/components/cards/battle/battle-card.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';

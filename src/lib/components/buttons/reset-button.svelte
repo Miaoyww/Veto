@@ -2,7 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { RotateCcw } from '@lucide/svelte';
 
-	import { resetCurrentBattle } from '$lib/stores/crisis/battle-store';
+	import { resetCurrentBattle } from '$lib/stores/battle/battle-store';
 	import { showAlert, showConfirm } from '$lib/stores/alert-dialog-store';
 	import { tweened } from 'svelte/motion';
 	import { cubicInOut, linear } from 'svelte/easing';

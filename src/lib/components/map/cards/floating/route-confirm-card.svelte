@@ -2,8 +2,8 @@
 	import { fly } from 'svelte/transition';
 	import { AlertTriangle, Check, X } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { pendingRoute, applyPendingRoute, cancelPendingRoute } from '$lib/stores/crisis/pending-route.store';
-	import { addLog } from '$lib/stores/crisis/battle-store';
+	import { pendingRoute, applyPendingRoute, cancelPendingRoute } from '$lib/stores/battle/pending-route.store';
+	import { addLog } from '$lib/stores/battle/battle-store';
 
 	let {
 		open = $bindable(false)

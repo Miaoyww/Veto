@@ -2,7 +2,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { ArrowLeft } from '@lucide/svelte';
 	import MapTypeButton from '$lib/components/buttons/map-type-button.svelte';
-	import { currentBattle } from '$lib/stores/crisis/battle-store';
+	import { currentBattle } from '$lib/stores/battle/battle-store';
 	import { cn, type WithElementRef } from '$lib/utils';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import type { InputType } from 'jszip';
