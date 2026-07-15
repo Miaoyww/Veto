@@ -1,32 +1,32 @@
 <script lang="ts">
-  import { Search, Plus, Swords } from "@lucide/svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { ScrollArea } from "$lib/components/ui/scroll-area/index.js";
-  import * as InputGroup from "$lib/components/ui/input-group/index.js";
-  import * as Card from "$lib/components/ui/card/index.js";
-  import { battles } from "$lib/stores/battle/battle-store";
-  import BattleCard from "$lib/components/cards/battle/battle-card.svelte";
-  import CreateBattleDialog from "$lib/components/dialog/create-battle-dialog.svelte";
-  import { cn } from "$lib/utils.js";
+  import { Search, Plus, Swords } from '@lucide/svelte'
+  import { Button } from '$lib/components/ui/button/index.js'
+  import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
+  import * as InputGroup from '$lib/components/ui/input-group/index.js'
+  import * as Card from '$lib/components/ui/card/index.js'
+  import { battles } from '$lib/stores/battle/battle-store'
+  import BattleCard from '$lib/components/cards/battle/battle-card.svelte'
+  import CreateBattleDialog from '$lib/components/dialog/create-battle-dialog.svelte'
+  import { cn } from '$lib/utils.js'
 
   interface Props {
-    mode: string | null;
-    class?: string;
+    mode: string | null
+    class?: string
   }
 
-  let { mode, class: className }: Props = $props();
+  let { mode, class: className }: Props = $props()
 
-  let query = $state("");
-  let dialogOpen = $state(false);
+  let query = $state('')
+  let dialogOpen = $state(false)
 
   const filteredBattles = $derived(
     query.trim()
       ? $battles.filter((b) => b.name.toLowerCase().includes(query.trim().toLowerCase()))
       : $battles
-  );
+  )
 </script>
 
-<div class={cn("flex h-full min-w-0 flex-1 flex-col bg-background", className)}>
+<div class={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
   {#if mode === null}
     <!-- Empty state -->
     <div class="flex flex-1 items-center justify-center">
@@ -88,7 +88,6 @@
         {/if}
       </div>
     </ScrollArea>
-
   {/if}
 </div>
 

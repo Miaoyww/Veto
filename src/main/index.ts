@@ -37,13 +37,25 @@ function createWindow(): void {
     height: 720,
     minWidth: 1200,
     minHeight: 720,
+
     show: false,
-    frame: false,
+    frame: false, // 是否显示窗口边框
+    center: true, // 窗口居中
+
     autoHideMenuBar: true,
+
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+
+      // 禁用渲染器沙盒
+      sandbox: false,
+      // 禁用同源策略
+      webSecurity: false,
+      // 允许 HTTP
+      allowRunningInsecureContent: true,
+      // 禁用拼写检查
+      spellcheck: false
     }
   })
 
