@@ -26,7 +26,7 @@
 </script>
 
 <div
-  class="absolute right-5 bottom-5 left-5 z-1000 flex items-center justify-center"
+  class="absolute right-5 bottom-5 left-5 z-10 flex items-center justify-center"
   in:fly={{ y: 8, duration: 320, opacity: 0, delay: 60 }}
 >
   <div class="veto-card h-12 gap-2">

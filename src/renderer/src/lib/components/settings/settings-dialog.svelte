@@ -1,40 +1,38 @@
 <script lang="ts">
-  import { Settings, Info, X, Puzzle, Map } from "@lucide/svelte";
-  import { Button } from "$lib/components/ui/button";
-  import GeneralPage from "./pages/common/general.svelte";
-  import ModsPage from "./pages/common/mods.svelte";
-  import AboutPage from "../settings/pages/common/about.svelte";
-	import VenuePage from "./pages/common/venue.svelte";
+  import { Settings, Info, X, Puzzle, Map } from '@lucide/svelte'
+  import { Button } from '$lib/components/ui/button'
+  import GeneralPage from './pages/common/general.svelte'
+  import ModsPage from './pages/common/mods.svelte'
+  import AboutPage from '../settings/pages/common/about.svelte'
+  import VenuePage from './pages/common/venue.svelte'
 
-  import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
-  import * as Dialog from "$lib/components/ui/dialog";
-  import { settingsDialogOpen } from "$lib/stores/global-ui-store";
-  const version = __APP_VERSION__;
+  import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
+  import * as Dialog from '$lib/components/ui/dialog'
+  import { settingsDialogOpen } from '$lib/stores/global-ui-store'
+  const version = __APP_VERSION__
 
-  let activeSection = $state<Section>("general");
-  type Section = "general" | "mods" | "venue" | "about";
+  let activeSection = $state<Section>('general')
+  type Section = 'general' | 'mods' | 'venue' | 'about'
 
   interface NavItem {
-    key: Section;
-    label: string;
-    icon: typeof Settings;
+    key: Section
+    label: string
+    icon: typeof Settings
   }
 
   let NAV_TOP: NavItem[] = $state([
-    { key: "general", label: "常规设置", icon: Settings },
-    { key: "mods", label: "模组设置", icon: Puzzle },
-    { key: "venue", label: "会场设置", icon: Map },
-  ]);
+    { key: 'general', label: '常规设置', icon: Settings },
+    { key: 'mods', label: '模组设置', icon: Puzzle },
+    { key: 'venue', label: '会场设置', icon: Map }
+  ])
 
-  let NAV_BOTTOM: NavItem[] = $state([
-    { key: "about", label: "关于", icon: Info },
-  ]);
+  let NAV_BOTTOM: NavItem[] = $state([{ key: 'about', label: '关于', icon: Info }])
 
-  let open = $state(false);
-  const unsub = settingsDialogOpen.subscribe((v) => (open = v));
+  let open = $state(false)
+  const unsub = settingsDialogOpen.subscribe((v) => (open = v))
 
   function onOpenChange(o: boolean) {
-    settingsDialogOpen.set(o);
+    settingsDialogOpen.set(o)
   }
 </script>
 
@@ -42,7 +40,7 @@
   <Dialog.Portal>
     <Dialog.Overlay />
     <Dialog.Content
-      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0 "
+      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0 z-9999"
       showCloseButton={false}
     >
       <!-- 关闭按钮 -->
@@ -58,16 +56,14 @@
         <!-- 左侧导航 -->
         <div class="flex w-[240px] shrink-0 flex-col bg-muted/50">
           <div class="px-5 pt-5 pb-2">
-            <h1 class="text-[26px] font-bold leading-none tracking-tight">
-              设置
-            </h1>
+            <h1 class="text-[26px] font-bold leading-none tracking-tight">设置</h1>
             <p class="mt-1.5 text-sm text-muted-foreground">个性化与全局设置</p>
           </div>
           <div class="flex flex-1 flex-col gap-0.5 px-3 pt-3">
             {#each NAV_TOP as item}
               <Button
                 class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
-                variant={activeSection === item.key ? "secondary" : "ghost"}
+                variant={activeSection === item.key ? 'secondary' : 'ghost'}
                 onclick={() => (activeSection = item.key)}
               >
                 <item.icon size={18} />
@@ -79,7 +75,7 @@
             {#each NAV_BOTTOM as item}
               <Button
                 class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
-                variant={activeSection === item.key ? "secondary" : "ghost"}
+                variant={activeSection === item.key ? 'secondary' : 'ghost'}
                 onclick={() => (activeSection = item.key)}
               >
                 <item.icon size={18} />
@@ -100,10 +96,10 @@
         <div class="flex flex-1 flex-col bg-background">
           <ScrollArea class="h-full w-full">
             <div class="p-10">
-              {#if activeSection === "general"}<GeneralPage />{/if}
-              {#if activeSection === "mods"}<ModsPage />{/if}
-              {#if activeSection === "venue"}<VenuePage />{/if}
-              {#if activeSection === "about"}<AboutPage />{/if}
+              {#if activeSection === 'general'}<GeneralPage />{/if}
+              {#if activeSection === 'mods'}<ModsPage />{/if}
+              {#if activeSection === 'venue'}<VenuePage />{/if}
+              {#if activeSection === 'about'}<AboutPage />{/if}
             </div>
           </ScrollArea>
         </div>

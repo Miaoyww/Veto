@@ -10,7 +10,7 @@
 
 	import type { EventSetting } from '$lib/types';
 	import { Zap, X, Plus } from '@lucide/svelte';
-	import EventCard from '$lib/components/cards/settings/event-card.svelte';
+	import EventCard from '$lib/components/settings/cards/event-card.svelte';
 	import { cn } from '$lib/utils.js';
 
 	const PRESET_IDS = new Set([

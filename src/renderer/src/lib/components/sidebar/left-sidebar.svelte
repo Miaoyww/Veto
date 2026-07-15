@@ -72,7 +72,7 @@
 
 {#if leftBarVisible}
 	<div
-		class="absolute top-24 bottom-24 left-5 z-[1000] w-[22rem]"
+		class="absolute top-24 bottom-24 left-5 z-10 w-[22rem]"
 		in:fly={{ x: -8, duration: 220, opacity: 0 }}
 		out:fly={{ x: -8, duration: 320, opacity: 0 }}
 	>
@@ -199,7 +199,7 @@
 
 {#if $unitPanelVisible}
 	<div
-		class="absolute top-24 bottom-24 z-[999] w-[24rem] overflow-hidden rounded-xl border"
+		class="absolute top-24 bottom-24 z-10 w-[24rem] overflow-hidden rounded-xl border"
 		style="left: calc(20px + 22rem + 12px)"
 		in:fly={{ x: -20, duration: 240, easing: quintOut }}
 		out:fade={{ duration: 180 }}
