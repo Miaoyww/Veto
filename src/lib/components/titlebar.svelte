@@ -95,10 +95,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	.close-btn:hover {
-		background-color: rgb(239 68 68);
-		color: white;
-	}
-</style>
