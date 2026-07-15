@@ -2,8 +2,7 @@
  * plugin-storage.ts — 存储抽象接口
  *
  * 定义平台无关的插件存储操作，允许不同平台有不同实现：
- * - Web (Vercel): IndexedDB 实现
- * - Tauri (Desktop): 文件系统实现
+ * - Electron (Desktop): 文件系统实现（主进程 fs）
  */
 
 import type { InstalledPlugin, PluginManifest, ModAsset } from '../plugin-db';
@@ -87,7 +86,7 @@ export interface PluginStorage {
 	/**
 	 * 获取资源的可显示 URL
 	 * - Web: blob: URL
-	 * - Tauri: file:// URL 或自定义协议
+	 * - Electron: file:// URL 或自定义协议
 	 * @param key 资源键
 	 * @returns 可用 URL 或 null
 	 */

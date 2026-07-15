@@ -7,11 +7,11 @@
  *   deltaSimSec = (deltaRealMs / 1000) × timeScale
  *   distMoved   = (speed_km_h / 3600) × deltaSimSec   [km]
  *
- * 战斗结算（每 500ms 真实时间执行一次）
+ * 战斗结算（每 combatIntervalMs 真实时间执行一次）
  *   - 扫描射程内非友方单位
  *   - 软攻/硬攻选择：目标为 armor 用 hardAttack，否则用 softAttack
- *   - 组织度低于 20% 时攻击力和速度线性衰减
- *   - 伤害 70% 扣 HP，30% 扣 Org
+ *   - 组织度低于阈值时攻击力和速度线性衰减
+ *   - 伤害分配比例和防御系数从 ModCombatOverrides 读取
  */
 
 import { get } from 'svelte/store';
@@ -24,16 +24,18 @@ import {
 	runtimePositions
 } from './battle-store';
 import type { RuntimeUnitPosition } from './battle-store';
+import { mods } from '$lib/registry/mod-registry.svelte';
+import type { ModCombatOverrides } from '$lib/registry/types';
+import { getFormula, getEffectiveOverrides } from '$lib/registry/formula-registry';
+import type { CombatContext } from '$lib/registry/formula-registry';
 
 // ---- 引擎状态（模块级单例） ----
 let rafId: number | null = null;
 let lastTimestamp: number | null = null;
 
 // ---- 战斗结算状态 ----
-/** 真实时间累计器（ms），每 COMBAT_INTERVAL_MS 触发一次战斗结算 */
+/** 真实时间累计器（ms），每 combatIntervalMs 触发一次战斗结算 */
 let combatAccumMs = 0;
-/** 战斗结算间隔：每 500ms 真实时间结算一次（≈每推演 1 小时@3600x） */
-const COMBAT_INTERVAL_MS = 500;
 
 /** 定期写回 localStorage 的累计器（每 30s 真实时间写一次） */
 let periodicFlushAccumMs = 0;
@@ -41,6 +43,13 @@ const PERIODIC_FLUSH_INTERVAL_MS = 30_000;
 
 /** 上一帧是否处于暂停状态（用于检测暂停切换，触发即时 flush） */
 let wasPaused = true;
+
+/**
+ * 获取当前生效的战斗覆盖参数
+ */
+function getCombatOverrides(): Required<ModCombatOverrides> {
+	return mods.getCombatOverrides();
+}
 
 /**
  * 已放置单位（地图 PlacedUnit）战斗结算。
@@ -52,6 +61,11 @@ function handlePlacedCombat() {
 	if (!battle || battle.placedUnits.length < 2) return;
 
 	const placedMap = new Map(battle.placedUnits.map((p) => [p.id, p]));
+	const overrides = getCombatOverrides();
+
+	// 获取公式（Phase 1 使用默认公式，Phase 2 可被插件覆盖）
+	const calcNetDamage = getFormula('calcNetDamage');
+	const calcEfficiency = getFormula('calcEfficiency');
 
 	runtimePositions.update((positions) => {
 		const next = { ...positions };
@@ -80,32 +94,64 @@ function handlePlacedCombat() {
 				// 球面近似距离 (km)
 				const dLatKm = (targetPos.lat - attackerPos.lat) * 111;
 				const dLngKm =
-					(targetPos.lng - attackerPos.lng) * 111 * Math.cos((attackerPos.lat * Math.PI) / 180);
+					(targetPos.lng - attackerPos.lng) *
+					111 *
+					Math.cos((attackerPos.lat * Math.PI) / 180);
 				const distKm = Math.sqrt(dLatKm * dLatKm + dLngKm * dLngKm);
 				if (distKm > rangeKm) continue;
 
 				engaged = true;
 
-				// 组织度效率惩罚（Org < 20% 时线性衰减）
-				const orgRatio =
-					attackerPlaced.stats.maxOrg > 0 ? attackerPos.org / attackerPlaced.stats.maxOrg : 1;
-				const efficiency = orgRatio < 0.2 ? orgRatio / 0.2 : 1;
-				// 根据目标装甲度（hardness）选择软攻/硬攻权重；对空目标（branch=air_force）使用 airAttack
-				const th = targetPlaced.stats.hardness;
-				const targetMilUnit = battle.factions
-					.flatMap((f) => f.units)
-					.find((u) => u.id === targetPlaced.unitId);
-				const atkBase =
-					targetMilUnit?.branchId === 'air_force'
-						? attackerPlaced.stats.airAttack
-						: attackerPlaced.stats.softAttack * (1 - th) + attackerPlaced.stats.hardAttack * th;
-				const netDmg = Math.max(0, atkBase * efficiency - targetPlaced.stats.defense * 0.5);
+				// 构建战斗上下文（用于公式计算）
+				const combatCtx: CombatContext = {
+					attacker: {
+						stats: attackerPlaced.stats,
+						hp: attackerPos.hp,
+						org: attackerPos.org
+					},
+					target: {
+						stats: targetPlaced.stats,
+						hp: targetPos.hp,
+						org: targetPos.org
+					},
+					distanceKm: distKm,
+					overrides
+				};
 
-				// 70% HP + 30% Org
+				// 使用公式注册表计算净伤害
+				let netDmg = 0;
+				if (calcNetDamage) {
+					netDmg = calcNetDamage(combatCtx);
+				} else {
+					// 回退：内联计算（与默认公式逻辑一致）
+					const orgRatio =
+						attackerPlaced.stats.maxOrg > 0
+							? attackerPos.org / attackerPlaced.stats.maxOrg
+							: 1;
+					const efficiency =
+						orgRatio < overrides.orgPenaltyThreshold
+							? orgRatio / overrides.orgPenaltyThreshold
+							: 1;
+					const hardness = targetPlaced.stats.hardness ?? 0;
+					const targetMilUnit = battle.factions
+						.flatMap((f) => f.units)
+						.find((u) => u.id === targetPlaced.unitId);
+					const atkBase =
+						targetMilUnit?.branchId === 'air_force'
+							? attackerPlaced.stats.airAttack
+							: attackerPlaced.stats.softAttack * (1 - hardness) +
+								attackerPlaced.stats.hardAttack * hardness;
+					netDmg = Math.max(
+						0,
+						atkBase * efficiency - targetPlaced.stats.defense * overrides.defenseCoeff
+					);
+				}
+
+				// 使用 overrides 中的伤害分配比例（替代硬编码0.7/0.3）
 				next[targetId] = {
 					...next[targetId],
-					hp: Math.max(0, next[targetId].hp - netDmg * 0.7),
-					org: Math.max(0, next[targetId].org - netDmg * 0.3)
+					hp: Math.max(0, next[targetId].hp - netDmg * overrides.hpDamageRatio),
+					org: Math.max(0, next[targetId].org - netDmg * overrides.orgDamageRatio)
 				};
 			}
 
@@ -160,10 +206,12 @@ function tick(timestamp: number) {
 	// 2. 推进地图上的 PlacedUnit 沿路线行进
 	tickMapMovement(deltaSimSec);
 
-	// 3. 战斗结算（每 500ms 真实时间结算一次，不需要每帧 60fps 跑）
+	// 3. 战斗结算（使用 overrides.combatIntervalMs 替代硬编码 500ms）
+	const overrides = getCombatOverrides();
+	const combatInterval = overrides.combatIntervalMs;
 	combatAccumMs += deltaRealMs;
-	if (combatAccumMs >= COMBAT_INTERVAL_MS) {
-		combatAccumMs -= COMBAT_INTERVAL_MS;
+	if (combatAccumMs >= combatInterval) {
+		combatAccumMs -= combatInterval;
 		// 同步对地图 PlacedUnit 执行战斗结算
 		handlePlacedCombat();
 	}

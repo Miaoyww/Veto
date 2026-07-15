@@ -11,22 +11,9 @@ import JSZip from 'jszip';
 import type { InstalledPlugin, PluginManifest, ModAsset } from './plugin-db';
 import { dbSavePlugin, dbSaveAsset } from './plugin-db';
 import { injectToRegistry, buildStructuredModData } from './plugin-registry';
+import { guessMime } from '$lib/utils/mime';
 
 const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|gif|webp|svg)$/i;
-
-/** 根据文件名猜测 MIME 类型 */
-function guessMime(filename: string): string {
-	const ext = filename.split('.').pop()?.toLowerCase() ?? '';
-	const map: Record<string, string> = {
-		png: 'image/png',
-		jpg: 'image/jpeg',
-		jpeg: 'image/jpeg',
-		gif: 'image/gif',
-		webp: 'image/webp',
-		svg: 'image/svg+xml'
-	};
-	return map[ext] ?? 'application/octet-stream';
-}
 
 /**
  * 从本地 .csmod 文件解析并安装 Mod。

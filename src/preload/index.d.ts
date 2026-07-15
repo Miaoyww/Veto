@@ -4,5 +4,50 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: unknown
+    veto: VetoAPI
+  }
+}
+
+export interface VetoAPI {
+  plugins: {
+    list: () => Promise<
+      Array<{
+        id: string
+        name: string
+        version: string
+        author: string
+        type: string
+        description?: string
+        disabled: boolean
+        incompatible: boolean
+        dependencies?: string[]
+        injects?: {
+          formulas?: string
+          events?: string
+          ui?: string
+        }
+        hasDefinitions: boolean
+        hasI18n: boolean
+        hasAssets: boolean
+      }>
+    >
+    get: (pluginId: string) => Promise<unknown>
+    toggle: (pluginId: string, enabled: boolean) => Promise<{ success: boolean }>
+    uninstall: (pluginId: string) => Promise<{ success: boolean; error?: string }>
+  }
+  config: {
+    get: () => Promise<{ disabled: string[]; order?: string[] }>
+    set: (config: { disabled: string[]; order?: string[] }) => Promise<{ success: boolean }>
+  }
+  formulas: {
+    invoke: (formulaName: string, ctx: Record<string, unknown>) => Promise<number | null>
+    getOverrides: () => Promise<Record<string, number>>
+    list: () => Promise<string[]>
+  }
+  assets: {
+    get: (pluginId: string, assetPath: string) => Promise<{ data: string; mimeType: string } | null>
+  }
+  events: {
+    on: (event: string, callback: (data: unknown) => void) => () => void
   }
 }

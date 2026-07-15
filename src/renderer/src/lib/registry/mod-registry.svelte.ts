@@ -3,7 +3,8 @@ import type {
 	CategoryDefinition,
 	UnitTemplate,
 	ModData,
-	ModMetadata
+	ModMetadata,
+	ModCombatOverrides
 } from './types';
 import type { PluginManifest } from '$lib/services/plugin-db';
 
@@ -43,6 +44,15 @@ class ModRegistry {
 		console.log('[ModRegistry.load] loaded:', id, 'total entries:', this._entries.length);
 	}
 
+	/** 卸载指定 Mod（从注册表移除） */
+	unload(id: string): void {
+		const idx = this._entries.findIndex((e) => e.id === id);
+		if (idx !== -1) {
+			this._entries.splice(idx, 1);
+			console.log('[ModRegistry.unload] removed:', id);
+		}
+	}
+
 	// ── 查询 API ──────────────────────────────────────────────────────────────
 	/** 获取所有已注册 Mod 条目 */
 	getModList(): ModData[] {
@@ -73,12 +83,24 @@ class ModRegistry {
 	}
 }
 
+// ── 默认战斗覆盖参数 ──────────────────────────────────────────────────────────
+
+const DEFAULT_COMBAT_OVERRIDES: Required<ModCombatOverrides> = {
+	hpDamageRatio: 0.7,
+	orgDamageRatio: 0.3,
+	defenseCoeff: 0.5,
+	orgPenaltyThreshold: 0.2,
+	combatIntervalMs: 500
+};
+
 // ── Mods ── 战局内实际启用的Mod ────────────────────────
 class Mods {
 	private readonly branches = new Map<string, BranchDefinition>();
 	private readonly categories = new Map<string, CategoryDefinition>();
 	private readonly unitTemplates = new Map<string, UnitTemplate>();
 	private readonly _i18n = new Map<string, Map<string, string>>();
+	/** 合并后的战斗覆盖参数 */
+	private _combatOverrides: Required<ModCombatOverrides> = { ...DEFAULT_COMBAT_OVERRIDES };
 
 	private readonly _entries: ModData[] = [];
 	/** 当前语言，默认 zh-CN */
@@ -98,6 +120,20 @@ class Mods {
 
 		for (const template of mod.unitTemplates ?? []) {
 			this.unitTemplates.set(template.id, template);
+		}
+
+		// 合并战斗覆盖参数（后加载的 Mod 覆盖先加载的）
+		if (mod.combatOverrides) {
+			this._combatOverrides = {
+				...this._combatOverrides,
+				...Object.fromEntries(
+					Object.entries(mod.combatOverrides).filter(([, v]) => v !== undefined)
+				)
+			};
+			console.log(
+				`[Mods] Combat overrides updated:`,
+				JSON.stringify(this._combatOverrides)
+			);
 		}
 
 		const i18nData = mod.i18n;
@@ -139,11 +175,46 @@ class Mods {
 		}
 	}
 
+	/** 卸载指定 Mod 并清理对应数据 */
+	unload(id: string): void {
+		const mod = this._entries.find((e) => e.id === id);
+		if (!mod) return;
+
+		this._entries.splice(this._entries.indexOf(mod), 1);
+
+		// 清除该 Mod 注入的数据
+		for (const branch of mod.branches ?? []) {
+			this.branches.delete(branch.id);
+		}
+		for (const cat of mod.categories ?? []) {
+			this.categories.delete(cat.id);
+		}
+		for (const template of mod.unitTemplates ?? []) {
+			this.unitTemplates.delete(template.id);
+		}
+
+		// 重建 combatOverrides（排除被卸载的 Mod）
+		this._combatOverrides = { ...DEFAULT_COMBAT_OVERRIDES };
+		for (const entry of this._entries) {
+			if (entry.combatOverrides) {
+				this._combatOverrides = {
+					...this._combatOverrides,
+					...Object.fromEntries(
+						Object.entries(entry.combatOverrides).filter(([, v]) => v !== undefined)
+					)
+				};
+			}
+		}
+
+		console.log(`[Mods] Unloaded mod: ${id}`);
+	}
+
 	clear(): void {
 		this.branches.clear();
 		this.categories.clear();
 		this.unitTemplates.clear();
 		this._i18n.clear();
+		this._combatOverrides = { ...DEFAULT_COMBAT_OVERRIDES };
 		this._entries.length = 0;
 	}
 
@@ -158,6 +229,11 @@ class Mods {
 
 	get_unitTemplates(): Map<string, UnitTemplate> {
 		return this.unitTemplates;
+	}
+
+	/** 获取当前生效的战斗覆盖参数（合并所有已加载 Mod 的覆盖） */
+	getCombatOverrides(): Required<ModCombatOverrides> {
+		return { ...this._combatOverrides };
 	}
 
 	private get_activeI18n(): Map<string, Map<string, string>> {

@@ -6,22 +6,9 @@ import type { PluginManifest, InstalledPlugin, ModAsset } from './plugin-db';
 import { dbSavePlugin, dbSaveAsset } from './plugin-db';
 import { registry } from '$lib/registry/mod-registry.svelte';
 import type { ModData, ModMetadata } from '$lib/registry/types';
+import { guessMime } from '$lib/utils/mime';
 
 const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|gif|webp|svg)$/i;
-
-/** 根据文件名猜测 MIME 类型 */
-function guessMime(filename: string): string {
-	const ext = filename.split('.').pop()?.toLowerCase() ?? '';
-	const map: Record<string, string> = {
-		png: 'image/png',
-		jpg: 'image/jpeg',
-		jpeg: 'image/jpeg',
-		gif: 'image/gif',
-		webp: 'image/webp',
-		svg: 'image/svg+xml'
-	};
-	return map[ext] ?? 'application/octet-stream';
-}
 
 /** 计算 Blob 的 SHA-256 十六进制摘要 */
 async function sha256Hex(blob: Blob): Promise<string> {

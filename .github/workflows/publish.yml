@@ -27,20 +27,15 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-            args: --target x86_64-pc-windows-msvc
+            arch: x64
           - platform: windows-latest
-            target: aarch64-pc-windows-msvc
-            args: --target aarch64-pc-windows-msvc
+            arch: arm64
           - platform: macos-latest
-            target: x86_64-apple-darwin
-            args: --target x86_64-apple-darwin
+            arch: x64
           - platform: macos-latest
-            target: aarch64-apple-darwin
-            args: --target aarch64-apple-darwin
+            arch: arm64
           - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            args: ""
+            arch: x64
 
     runs-on: ${{ matrix.platform }}
     env:
@@ -61,36 +56,29 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ./src-tauri -> target
-
-      - name: Install Linux system dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: pnpm install
 
-      - name: Build and release Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Electron app
+        run: pnpm build
+
+      - name: Package with electron-builder
+        uses: electron-userland/electron-builder-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: v${{ needs.version.outputs.version }}
-          releaseDraft: true
+          args: --${{ matrix.platform == 'windows-latest' && 'win' || matrix.platform == 'macos-latest' && 'mac' || 'linux' }} --${{ matrix.arch }}
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: v${{ needs.version.outputs.version }}
+          draft: true
           prerelease: true
-          args: ${{ matrix.args }}
+          files: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb

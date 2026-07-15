@@ -17,10 +17,10 @@
 		>
 		·
 		<a
-			href="https://tauri.app"
+			href="https://www.electronjs.org"
 			target="_blank"
 			rel="noopener noreferrer"
-			class="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Tauri</a
+			class="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Electron</a
 		>
 	</p>
 </footer>

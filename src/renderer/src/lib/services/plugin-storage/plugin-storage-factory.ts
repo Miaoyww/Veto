@@ -1,11 +1,14 @@
 /**
  * plugin-storage-factory.ts — 存储后端工厂函数
  *
- * 使用 IndexedDB 作为存储后端（Electron 环境）。
+ * Electron 桌面环境：插件存储由主进程管理（文件系统），
+ * 渲染进程通过 IPC (window.veto) 访问。
+ *
+ * 此文件保留 PluginStorage 接口以实现向后兼容，
+ * 但推荐使用 window.veto.plugins / window.veto.assets API。
  */
 
 import type { PluginStorage } from './plugin-storage';
-import { IndexedDBPluginStorage } from './plugin-storage-idb';
 
 let storageInstance: PluginStorage | null = null;
 
@@ -20,8 +23,11 @@ export async function initPluginStorage(): Promise<PluginStorage> {
 	if (storageInstance) return storageInstance;
 
 	try {
+		// Electron 桌面环境：主进程管理文件系统存储
+		// 渲染进程通过 IPC 访问，此接口保留用于兼容
+		const { IndexedDBPluginStorage } = await import('./plugin-storage-idb');
 		storageInstance = new IndexedDBPluginStorage();
-		console.log('[PluginStorage] Initialized with IndexedDB backend');
+		console.log('[PluginStorage] Initialized with IndexedDB backend (legacy compatibility)');
 	} catch (err) {
 		console.error('[PluginStorage] Initialization failed:', err);
 		throw err;

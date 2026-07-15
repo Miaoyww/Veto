@@ -1,6 +1,6 @@
 {
   "name": "veto",
-  "version": "1.0.0",
+  "version": "0.11.0",
   "description": "An Electron application with Svelte and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
