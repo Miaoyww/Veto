@@ -16,7 +16,7 @@
   let { battle }: { battle: Battle } = $props()
 
   let editing = $state(false)
-  let editName = $state(battle.name)
+  let editName = $state('')
   let inputRef = $state<HTMLInputElement | null>(null)
 
   const isActive = $derived($currentBattleId === battle.id)

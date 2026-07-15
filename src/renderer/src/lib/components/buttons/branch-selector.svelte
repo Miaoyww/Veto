@@ -27,7 +27,9 @@
 		return [...allBranches.values()];
 	});
 
-	console.log('BranchSelector branches:', branches);
+	$effect(() => {
+		console.log('BranchSelector branches:', branches);
+	});
 </script>
 
 <Tabs.Root

@@ -29,9 +29,9 @@
   let NAV_BOTTOM: NavItem[] = $state([{ key: 'about', label: '关于', icon: Info }])
 
   let open = $state(false)
-  const unsub = settingsDialogOpen.subscribe((v) => (open = v))
+  settingsDialogOpen.subscribe((v) => (open = v))
 
-  function onOpenChange(o: boolean) {
+  function onOpenChange(o: boolean): void {
     settingsDialogOpen.set(o)
   }
 </script>
@@ -40,7 +40,7 @@
   <Dialog.Portal>
     <Dialog.Overlay />
     <Dialog.Content
-      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0 z-9999"
+      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0 z-9000"
       showCloseButton={false}
     >
       <!-- 关闭按钮 -->
@@ -60,7 +60,7 @@
             <p class="mt-1.5 text-sm text-muted-foreground">个性化与全局设置</p>
           </div>
           <div class="flex flex-1 flex-col gap-0.5 px-3 pt-3">
-            {#each NAV_TOP as item}
+            {#each NAV_TOP as item (item.key)}
               <Button
                 class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
                 variant={activeSection === item.key ? 'secondary' : 'ghost'}
@@ -72,7 +72,7 @@
             {/each}
           </div>
           <div class="mt-auto flex flex-col gap-0.5 px-3 pt-2 pb-5">
-            {#each NAV_BOTTOM as item}
+            {#each NAV_BOTTOM as item (item.key)}
               <Button
                 class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
                 variant={activeSection === item.key ? 'secondary' : 'ghost'}

@@ -17,7 +17,7 @@
   <!-- Title -->
   <div class="px-6 pt-8 pb-4 text-center">
     <h1 class="text-2xl font-bold tracking-wide text-foreground">{VETO_NAME}</h1>
-    <p class="mt-1 text-sm text-muted-foreground">选择推演模式</p>
+    <p class="mt-1 text-sm text-muted-foreground">选择模式</p>
   </div>
 
   <!-- Mode Cards -->

@@ -32,7 +32,7 @@
   import { getNatoIcon } from '$lib/utils/unit-icon'
   import { fly } from 'svelte/transition'
 
-  let map: L.Map
+  let map = $state<L.Map>(null!)
   let myOpen = $state(false)
   let contextPlacedUnitId: string | null = $state(null)
 
