@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
-	import HeaderLeft from '$lib/components/header/header-left.svelte';
-	import HeaderRight from '$lib/components/header/header-right.svelte';
+	import HeaderLeft from '$lib/components/map/header/header-left.svelte';
+	import HeaderRight from '$lib/components/map/header/header-right.svelte';
 	import { fly } from 'svelte/transition';
 
 	type InputType = Exclude<HTMLInputTypeAttribute, 'file'>;

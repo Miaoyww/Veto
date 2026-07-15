@@ -1,7 +1,3 @@
-<script lang="ts">
-	import { isTauri } from '@tauri-apps/api/core';
-</script>
-
 <footer class="w-full py-6 text-center text-xs text-stone-400 dark:text-stone-500">
 	<p>
 		Copyright © <a
@@ -20,21 +16,11 @@
 			class="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Svelte</a
 		>
 		·
-		{#if isTauri()}
-			<a
-				href="https://tauri.app"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Tauri</a
-			>
-		{:else}
-			<a
-				href="https://vercel.com"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Vercel</a
-			>
-		{/if}
+		<a
+			href="https://tauri.app"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="transition-colors hover:text-stone-600 dark:hover:text-stone-300">Tauri</a
+		>
 	</p>
 </footer>
-	

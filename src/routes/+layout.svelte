@@ -9,6 +9,10 @@
 	import logo from '$lib/assets/logo.svg';
 	import TitleBar from '$lib/components/titlebar.svelte';
 	import { browser } from '$app/environment';
+	import { dbGetAllPlugins } from '$lib/services/plugin-db';
+	import { injectToRegistry } from '$lib/services/plugin-registry';
+	import { markPluginsReady } from '$lib/registry/mod-registry.svelte';
+	import SettingsDialog from '$lib/components/settings/settings-dialog.svelte';
 
 	let { children } = $props();
 
@@ -21,21 +25,6 @@
 			// 标记插件加载完成
 			markPluginsReady();
 		});
-	}
-
-	// Vercel Analytics & Speed Insights（仅在非 Tauri 环境下注入）
-	import { dev } from '$app/environment';
-	import { injectAnalytics } from '@vercel/analytics/sveltekit';
-	import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
-	import { dbGetAllPlugins } from '$lib/services/plugin-db';
-	import { injectToRegistry } from '$lib/services/plugin-registry';
-	import { markPluginsReady } from '$lib/registry/mod-registry.svelte';
-	import SettingsDialog from '$lib/components/settings/settings-dialog.svelte';
-
-	const isTauri = browser && '__TAURI_INTERNALS__' in window;
-	if (!isTauri) {
-		injectAnalytics({ mode: dev ? 'development' : 'production' });
-		injectSpeedInsights();
 	}
 </script>
 
@@ -53,7 +42,7 @@
 
 <Toaster richColors position="bottom-right" />
 
-<div class={isTauri ? 'pt-9' : ''}>
+<div class="pt-9">
 	<div>
 		<main>
 			{@render children?.()}

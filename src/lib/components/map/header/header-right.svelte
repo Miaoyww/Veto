@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { zoom } from '$lib/stores/battle/map-store';
 	import { currentBattle, selectedPlacedUnit } from '$lib/stores/battle/battle-store';
-	import ControlBar from '$lib/components/header/control-bar.svelte';
+	import ControlBar from '$lib/components/map/header/control-bar.svelte';
 	import { cn, type WithElementRef } from '$lib/utils';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import type { InputType } from 'jszip';
