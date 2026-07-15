@@ -1,9 +1,6 @@
-# Package Managers
-package-lock.json
+out
+dist
 pnpm-lock.yaml
-yarn.lock
-bun.lock
-bun.lockb
-
-# Miscellaneous
-/static/
+LICENSE.md
+tsconfig.json
+tsconfig.*.json

@@ -1,29 +1,6 @@
 node_modules
-.gitignore
-
-# Output
-.output
-.vercel
-.netlify
-.wrangler
-/.svelte-kit
-/build
-/project.inlang
-# OS
+dist
+out
 .DS_Store
-Thumbs.db
-
-# Env
-.env
-.env.*
-!.env.example
-!.env.test
-
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-
-# Paraglide
-src/lib/paraglide
-src-tauri/target/
-src-tauri/gen/
+.eslintcache
+*.log*
