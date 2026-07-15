@@ -2,8 +2,7 @@
  * plugin-registry.ts — 拉取远程注册表、下载 .vmod 包、注入 ModRegistry。
  */
 import JSZip from 'jszip';
-import type { PluginManifest, InstalledPlugin, ModAsset } from './plugin-db';
-import { dbSavePlugin, dbSaveAsset } from './plugin-db';
+import type { PluginManifest, InstalledPlugin } from './plugin-db';
 import { registry } from '$lib/registry/mod-registry.svelte';
 import type { ModData, ModMetadata } from '$lib/registry/types';
 import { guessMime } from '$lib/utils/mime';
@@ -19,18 +18,23 @@ async function sha256Hex(blob: Blob): Promise<string> {
 		.join('');
 }
 
-/** 从已加载的 JSZip 实例中提取全部图片资源并存入 IndexedDB */
-async function extractAndSaveAssets(zip: JSZip, pluginId: string): Promise<string[]> {
+/** 从 JSZip 实例中提取所有图片资源的 base64 数据 */
+async function extractAssetsForIpc(
+	zip: JSZip
+): Promise<Array<{ path: string; data: string; mimeType: string }>> {
 	const imageFiles = zip.filter((_, f) => !f.dir && IMAGE_EXTENSIONS.test(f.name));
-	const assetKeys: string[] = [];
+	const assets: Array<{ path: string; data: string; mimeType: string }> = [];
 	for (const f of imageFiles) {
 		const blob = await f.async('blob');
-		const key = `${pluginId}/${f.name}`;
-		const asset: ModAsset = { key, blob, mimeType: guessMime(f.name) };
-		await dbSaveAsset(asset);
-		assetKeys.push(key);
+		const buffer = await blob.arrayBuffer();
+		const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+		assets.push({
+			path: f.name,
+			data: base64,
+			mimeType: guessMime(f.name)
+		});
 	}
-	return assetKeys;
+	return assets;
 }
 
 /**
@@ -137,10 +141,10 @@ export async function fetchPluginStars(): Promise<Record<string, number>> {
 }
 
 /**
- * 下载 .vmod 包并持久化到 IndexedDB，同时注入运行时 ModRegistry。
+ * 下载 .vmod 包并持久化到主进程文件系统，同时注入运行时 ModRegistry。
  *
  * 流程：单次 fetch → (可选) SHA-256 校验 → JSZip 内存解压
- *       → 提取 definitions / i18n / 图片资源 → IndexedDB → ModRegistry
+ *       → 提取 definitions / i18n / 图片资源 → 主进程 fs → ModRegistry
  */
 export async function installPlugin(manifest: PluginManifest): Promise<InstalledPlugin> {
 	console.log('Installing plugin ', manifest);
@@ -214,22 +218,30 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 		}
 	}
 
-	// 6. 提取图片资源并存入 IndexedDB
-	const assetKeys = await extractAndSaveAssets(zip, manifest.id);
+	// 6. 提取图片资源（base64）
+	const assets = await extractAssetsForIpc(zip);
 
-	// 7. 持久化插件记录
-	// 使用 JSON 序列化/反序列化剥离 Svelte 响应式代理，确保对象可被 IndexedDB 结构化克隆
+	// 7. 发送到主进程写入文件系统
+	const result = await window.veto.plugins.install({
+		manifest: JSON.parse(JSON.stringify(manifest)),
+		definitions,
+		i18n: i18nRecord,
+		assets
+	});
+
+	if (!result.success) {
+		throw new Error(result.error ?? '安装插件失败');
+	}
+
+	// 8. 构建记录并注入运行时 ModRegistry
 	const record: InstalledPlugin = {
 		id: manifest.id,
 		manifest: JSON.parse(JSON.stringify(manifest)),
 		definitions,
 		i18n: i18nRecord,
-		assetKeys,
+		assetKeys: assets.map((a) => `${manifest.id}/${a.path}`),
 		installedAt: Date.now()
 	};
-	await dbSavePlugin(record);
-
-	// 8. 注入运行时 ModRegistry
 	injectToRegistry(record);
 
 	return record;

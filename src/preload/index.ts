@@ -41,7 +41,16 @@ const veto = {
 
     /** 卸载插件 */
     uninstall: (pluginId: string): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('veto:plugins:uninstall', pluginId)
+      ipcRenderer.invoke('veto:plugins:uninstall', pluginId),
+
+    /** 安装插件 */
+    install: (payload: {
+      manifest: Record<string, unknown>
+      definitions: string | null
+      i18n: Record<string, string>
+      assets: Array<{ path: string; data: string; mimeType: string }>
+    }): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('veto:plugins:install', payload)
   },
 
   config: {

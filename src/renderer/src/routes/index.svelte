@@ -21,7 +21,7 @@
 
   const routeId = $derived(currentRoute?.routeId ?? '/')
 
-  // 从 IndexedDB 恢复用户已安装的插件到运行时 ModRegistry
+  // 从主进程文件系统恢复用户已安装的插件到运行时 ModRegistry
   if (typeof window !== 'undefined') {
     dbGetAllPlugins().then((plugins) => {
       for (const plugin of plugins) {

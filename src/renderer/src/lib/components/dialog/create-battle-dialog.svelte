@@ -41,7 +41,7 @@
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
-	/** 已安装的插件列表（异步从 IndexedDB 加载） */
+	/** 已安装的插件列表（异步从主进程文件系统加载） */
 	let installedPlugins = $state<InstalledPlugin[]>([]);
 	onMount(async () => {
 		installedPlugins = await dbGetAllPlugins();

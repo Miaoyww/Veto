@@ -3,7 +3,7 @@ import { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { ensurePluginsDir, scanPluginDirectory } from './plugin-discovery'
+import { ensurePluginsDir, scanPluginDirectory, getPluginsDir } from './plugin-discovery'
 import { loadPluginConfig, savePluginConfig, enablePlugin, disablePlugin } from './plugin-store'
 import { getFormula, getDefaultOverrides, getRegisteredFormulaNames } from './formula-registry'
 import type { PluginInstance } from './plugin-discovery'
@@ -120,8 +120,23 @@ function registerIpcHandlers(): void {
     let definitions: string | null = null
     if (plugin.path.definitions) {
       try {
-        // fs already imported at top level
         definitions = fs.readFileSync(plugin.path.definitions, 'utf-8')
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // 读取 i18n 文件
+    const i18n: Record<string, string> = {}
+    if (plugin.path.i18n && fs.existsSync(plugin.path.i18n)) {
+      try {
+        const i18nFiles = fs.readdirSync(plugin.path.i18n)
+        for (const file of i18nFiles) {
+          if (file.endsWith('.json')) {
+            const locale = file.replace(/\.json$/i, '')
+            i18n[locale] = fs.readFileSync(join(plugin.path.i18n!, file), 'utf-8')
+          }
+        }
       } catch {
         /* ignore */
       }
@@ -130,6 +145,7 @@ function registerIpcHandlers(): void {
     return {
       ...plugin,
       definitions,
+      i18n,
       manifest: plugin.manifest
     }
   })
@@ -171,6 +187,83 @@ function registerIpcHandlers(): void {
       return { success: false, error: String(err) }
     }
   })
+
+  // ── 插件安装 ──────────────────────────────────────────────────────
+  ipcMain.handle(
+    'veto:plugins:install',
+    async (
+      _event,
+      payload: {
+        manifest: Record<string, unknown>
+        definitions: string | null
+        i18n: Record<string, string>
+        assets: Array<{ path: string; data: string; mimeType: string }>
+      }
+    ) => {
+      const pluginId = payload.manifest.id as string
+      if (!pluginId) return { success: false, error: 'Missing plugin id' }
+
+      try {
+        const pluginsDir = getPluginsDir()
+        const pluginDir = join(pluginsDir, pluginId)
+
+        // 清理旧目录（如果存在）
+        if (fs.existsSync(pluginDir)) {
+          fs.rmSync(pluginDir, { recursive: true, force: true })
+        }
+        fs.mkdirSync(pluginDir, { recursive: true })
+
+        // 写入 manifest.json
+        fs.writeFileSync(
+          join(pluginDir, 'manifest.json'),
+          JSON.stringify(payload.manifest, null, 2),
+          'utf-8'
+        )
+
+        // 写入 definitions.json
+        if (payload.definitions) {
+          fs.writeFileSync(join(pluginDir, 'definitions.json'), payload.definitions, 'utf-8')
+        }
+
+        // 写入 i18n 文件
+        if (Object.keys(payload.i18n).length > 0) {
+          const i18nDir = join(pluginDir, 'i18n')
+          fs.mkdirSync(i18nDir, { recursive: true })
+          for (const [locale, content] of Object.entries(payload.i18n)) {
+            fs.writeFileSync(join(i18nDir, `${locale}.json`), content, 'utf-8')
+          }
+        }
+
+        // 写入资源文件
+        if (payload.assets.length > 0) {
+          const assetsDir = join(pluginDir, 'assets')
+          fs.mkdirSync(assetsDir, { recursive: true })
+          for (const asset of payload.assets) {
+            const assetFullPath = join(assetsDir, asset.path)
+            // 确保父目录存在
+            fs.mkdirSync(join(assetFullPath, '..'), { recursive: true })
+            fs.writeFileSync(assetFullPath, Buffer.from(asset.data, 'base64'))
+          }
+        }
+
+        refreshPlugins()
+
+        // 通知所有窗口
+        for (const win of BrowserWindow.getAllWindows()) {
+          win.webContents.send('veto:event', {
+            event: 'plugins:changed',
+            data: { pluginId }
+          })
+        }
+
+        console.log(`[Main] Plugin installed: ${pluginId}`)
+        return { success: true }
+      } catch (err) {
+        console.error(`[Main] Failed to install plugin ${pluginId}:`, err)
+        return { success: false, error: String(err) }
+      }
+    }
+  )
 
   // ── 插件配置读写 ──────────────────────────────────────────────────
   ipcMain.handle('veto:config:get', () => {

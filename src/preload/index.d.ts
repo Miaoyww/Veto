@@ -31,9 +31,20 @@ export interface VetoAPI {
         hasAssets: boolean
       }>
     >
-    get: (pluginId: string) => Promise<unknown>
+    get: (pluginId: string) => Promise<{
+      id: string
+      manifest: Record<string, unknown>
+      definitions: string | null
+      i18n: Record<string, string>
+    } | null>
     toggle: (pluginId: string, enabled: boolean) => Promise<{ success: boolean }>
     uninstall: (pluginId: string) => Promise<{ success: boolean; error?: string }>
+    install: (payload: {
+      manifest: Record<string, unknown>
+      definitions: string | null
+      i18n: Record<string, string>
+      assets: Array<{ path: string; data: string; mimeType: string }>
+    }) => Promise<{ success: boolean; error?: string }>
   }
   config: {
     get: () => Promise<{ disabled: string[]; order?: string[] }>
