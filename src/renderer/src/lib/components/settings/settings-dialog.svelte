@@ -40,7 +40,7 @@
   <Dialog.Portal>
     <Dialog.Overlay />
     <Dialog.Content
-      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0 z-9000"
+      class="w-[1024px] max-w-[calc(100vw-40px)] sm:max-w-[1024px] h-[85vh] p-0 gap-0"
       showCloseButton={false}
     >
       <!-- 关闭按钮 -->

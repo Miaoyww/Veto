@@ -8,6 +8,7 @@
   import BattleCard from '$lib/components/cards/battle/battle-card.svelte'
   import CreateBattleDialog from '$lib/components/dialog/create-battle-dialog.svelte'
   import { cn } from '$lib/utils.js'
+  import { fly } from 'svelte/transition'
 
   interface Props {
     mode: string | null
@@ -26,10 +27,16 @@
   )
 </script>
 
-<div class={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
+<div
+  class={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}
+  in:fly={{ y: 8, duration: 320, opacity: 0 }}
+>
   {#if mode === null}
     <!-- Empty state -->
-    <div class="flex flex-1 items-center justify-center">
+    <div
+      class="flex flex-1 items-center justify-center"
+      in:fly={{ y: 8, duration: 320, opacity: 0 }}
+    >
       <div class="flex flex-col items-center gap-3 text-muted-foreground">
         <Swords size={48} class="opacity-30" />
         <p class="text-lg font-medium">请从左侧选择一个模式</p>
