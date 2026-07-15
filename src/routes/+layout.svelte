@@ -30,6 +30,7 @@
 	import { dbGetAllPlugins } from '$lib/services/plugin-db';
 	import { injectToRegistry } from '$lib/services/plugin-registry';
 	import { markPluginsReady } from '$lib/registry/mod-registry.svelte';
+	import SettingsDialog from '$lib/components/settings/settings-dialog.svelte';
 
 	const isTauri = browser && '__TAURI_INTERNALS__' in window;
 	if (!isTauri) {
@@ -47,6 +48,9 @@
 <TitleBar />
 <ModeWatcher />
 <MyAlertDialog />
+
+<SettingsDialog />
+
 <Toaster richColors position="bottom-right" />
 
 <div class={isTauri ? 'pt-9' : ''}>

@@ -6,6 +6,7 @@
 	import { VETO_NAME } from '$lib/const';
 	import { Button } from '$lib/components/ui/button';
 	import { isTauri } from '@tauri-apps/api/core';
+	import { settingsDialogOpen } from '$lib/stores/global-ui-store';
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let appWindow = $state<any>(null);
@@ -53,7 +54,7 @@
 			<Button
 				class="flex items-center justify-center px-3 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 				variant="ghost"
-				onclick={() => goto('/settings')}
+				onclick={() => settingsDialogOpen.set(true)}
 				title="前往设置"
 			>
 				<Settings size={14} />
