@@ -162,10 +162,10 @@
         <Clock class="size-3" />
         {battle.startDate ?? '未设置模拟时间'}
       </span>
-      <span class="flex items-center gap-1">
+      <!-- <span class="flex items-center gap-1">
         <Zap class="size-3" />
         {enabledEvents} 个启用事件
-      </span>
+      </span> -->
     </div>
   </CardContent>
 </Card>
