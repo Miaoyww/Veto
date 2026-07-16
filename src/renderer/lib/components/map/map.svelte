@@ -27,7 +27,7 @@
     pendingRoute,
     addPendingPoint,
     cancelPendingRoute
-  } from '$lib/stores/battle/pending-route.store'
+  } from '$lib/stores/battle/route.store'
   import type { UnitTemplate, PlacedUnit, Faction } from '$lib/types'
   import { getNatoIcon } from '$lib/utils/unit-icon'
   import { fly } from 'svelte/transition'

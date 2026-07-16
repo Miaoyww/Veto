@@ -53,11 +53,6 @@ export interface VetoAPI {
     get: () => Promise<{ disabled: string[]; order?: string[] }>
     set: (config: { disabled: string[]; order?: string[] }) => Promise<{ success: boolean }>
   }
-  formulas: {
-    invoke: (formulaName: string, ctx: Record<string, unknown>) => Promise<number | null>
-    getOverrides: () => Promise<Record<string, number>>
-    list: () => Promise<string[]>
-  }
   assets: {
     get: (pluginId: string, assetPath: string) => Promise<{ data: string; mimeType: string } | null>
   }

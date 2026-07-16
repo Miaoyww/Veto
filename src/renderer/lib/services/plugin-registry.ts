@@ -39,11 +39,6 @@ async function extractAssetsForIpc(
 
 /**
  * 为 faction / campaign 类型插件从 zip 内按约定路径结构化提取 ModData。
- * 约定路径（根目录或 assets/ 子目录均可）：
- *   branches.json          → ModData.branches
- *   categories.json        → ModData.categories
- *   unitTemplates/*.json   → ModData.unitTemplates（自动合并所有文件）
- * 若 manifest.definitions 已存在，先以其为基础后再补充缺失字段。
  */
 export async function buildStructuredModData(
 	zip: JSZip,
@@ -51,7 +46,6 @@ export async function buildStructuredModData(
 ): Promise<string | null> {
 	let modData: ModData = {};
 
-	// 若 manifest.definitions 存在，先读取作为基础
 	if (manifest.definitions) {
 		const defPath =
 			typeof manifest.definitions === 'string'
@@ -67,7 +61,6 @@ export async function buildStructuredModData(
 		}
 	}
 
-	// branches.json
 	if (!modData.branches) {
 		const f = zip.file('branches.json') ?? zip.file('assets/branches.json');
 		if (f) {
@@ -79,7 +72,6 @@ export async function buildStructuredModData(
 		}
 	}
 
-	// categories.json
 	if (!modData.categories) {
 		const f = zip.file('categories.json') ?? zip.file('assets/categories.json');
 		if (f) {
@@ -91,7 +83,6 @@ export async function buildStructuredModData(
 		}
 	}
 
-	// unitTemplates/*.json — 合并目录下所有 JSON 文件
 	if (!modData.unitTemplates) {
 		const templateFiles = zip.filter(
 			(path, f) =>
@@ -129,7 +120,7 @@ export async function fetchPluginRegistry(): Promise<PluginManifest[]> {
 	return res.json() as Promise<PluginManifest[]>;
 }
 
-/** 拉取插件 Star 数（key 格式："owner/id"，如 "VetoExpress/veto-modern-war"） */
+/** 拉取插件 Star 数 */
 export async function fetchPluginStars(): Promise<Record<string, number>> {
 	try {
 		const res = await fetch(STARS_URL);
@@ -141,42 +132,18 @@ export async function fetchPluginStars(): Promise<Record<string, number>> {
 }
 
 /**
- * 下载 .vmod 包并持久化到主进程文件系统，同时注入运行时 ModRegistry。
+ * 从 JSZip 包中提取 definitions、i18n 和图片资源，发送到主进程写入文件系统，
+ * 构建 InstalledPlugin 记录并注入运行时 ModRegistry。
  *
- * 流程：单次 fetch → (可选) SHA-256 校验 → JSZip 内存解压
- *       → 提取 definitions / i18n / 图片资源 → 主进程 fs → ModRegistry
+ * installPlugin（远程下载）和 importModPackage（本地文件）共用此函数。
  */
-export async function installPlugin(manifest: PluginManifest): Promise<InstalledPlugin> {
-	console.log('Installing plugin ', manifest);
-	if (!manifest.download_url) {
-		throw new Error(`插件 "${manifest.name}" 缺少 download_url，无法下载`);
-	}
-
-	// 1. 单次下载 .vmod
-	const res = await fetch(manifest.download_url);
-	if (!res.ok) throw new Error(`下载插件失败：HTTP ${res.status}`);
-	const blob = await res.blob();
-
-	// 2. (可选) SHA-256 哈希校验
-	if (manifest.hash) {
-		const actual = await sha256Hex(blob);
-		if (actual !== manifest.hash) {
-			throw new Error(`插件 "${manifest.name}" 哈希校验失败，文件可能已损坏或被篡改`);
-		}
-	}
-
-	// 3. 内存解压
-	let zip: JSZip;
-	try {
-		zip = await JSZip.loadAsync(blob);
-	} catch {
-		throw new Error(`插件 "${manifest.name}" 解压失败：文件格式不正确`);
-	}
-
-	// 4. 读取 definitions / 结构化数据
+export async function processModPackage(
+	zip: JSZip,
+	manifest: PluginManifest
+): Promise<InstalledPlugin> {
+	// 1. 读取 definitions
 	let definitions: string | null = null;
 	if (manifest.type === 'faction' || manifest.type === 'campaign') {
-		// faction / campaign：从 zip 内按约定路径结构化加载 branches / categories / unitTemplates
 		definitions = await buildStructuredModData(zip, manifest);
 	} else if (manifest.definitions) {
 		const defPath =
@@ -187,9 +154,8 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 		if (defFile) definitions = await defFile.async('string');
 	}
 
-	// 5. 读取 i18n
+	// 2. 读取 i18n
 	const i18nRecord: Record<string, string> = {};
-	// 按 manifest.i18n 指定路径加载
 	if (manifest.i18n) {
 		const i18nMap: Record<string, string> =
 			typeof manifest.i18n === 'string' ? { default: manifest.i18n } : manifest.i18n;
@@ -198,7 +164,6 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 			if (f) i18nRecord[locale] = await f.async('string');
 		}
 	}
-	// faction / campaign：额外扫描 i18n/ 或 assets/i18n/ 目录（补充 manifest.i18n 未覆盖的 locale）
 	if (manifest.type === 'faction' || manifest.type === 'campaign') {
 		const i18nFiles = zip.filter(
 			(path, f) =>
@@ -207,21 +172,17 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 				path.endsWith('.json')
 		);
 		for (const f of i18nFiles) {
-			const locale =
-				f.name
-					.split('/')
-					.pop()
-					?.replace(/\.json$/i, '') ?? '';
+			const locale = f.name.split('/').pop()?.replace(/\.json$/i, '') ?? '';
 			if (locale && !i18nRecord[locale]) {
 				i18nRecord[locale] = await f.async('string');
 			}
 		}
 	}
 
-	// 6. 提取图片资源（base64）
+	// 3. 提取图片资源
 	const assets = await extractAssetsForIpc(zip);
 
-	// 7. 发送到主进程写入文件系统
+	// 4. 发送到主进程写入文件系统
 	const result = await window.veto.plugins.install({
 		manifest: JSON.parse(JSON.stringify(manifest)),
 		definitions,
@@ -233,7 +194,7 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 		throw new Error(result.error ?? '安装插件失败');
 	}
 
-	// 8. 构建记录并注入运行时 ModRegistry
+	// 5. 构建记录并注入运行时 ModRegistry
 	const record: InstalledPlugin = {
 		id: manifest.id,
 		manifest: JSON.parse(JSON.stringify(manifest)),
@@ -245,6 +206,36 @@ export async function installPlugin(manifest: PluginManifest): Promise<Installed
 	injectToRegistry(record);
 
 	return record;
+}
+
+/**
+ * 下载 .vmod 包并持久化到主进程文件系统，同时注入运行时 ModRegistry。
+ */
+export async function installPlugin(manifest: PluginManifest): Promise<InstalledPlugin> {
+	console.log('Installing plugin ', manifest);
+	if (!manifest.download_url) {
+		throw new Error(`插件 "${manifest.name}" 缺少 download_url，无法下载`);
+	}
+
+	const res = await fetch(manifest.download_url);
+	if (!res.ok) throw new Error(`下载插件失败：HTTP ${res.status}`);
+	const blob = await res.blob();
+
+	if (manifest.hash) {
+		const actual = await sha256Hex(blob);
+		if (actual !== manifest.hash) {
+			throw new Error(`插件 "${manifest.name}" 哈希校验失败，文件可能已损坏或被篡改`);
+		}
+	}
+
+	let zip: JSZip;
+	try {
+		zip = await JSZip.loadAsync(blob);
+	} catch {
+		throw new Error(`插件 "${manifest.name}" 解压失败：文件格式不正确`);
+	}
+
+	return processModPackage(zip, manifest);
 }
 
 /** 将 InstalledPlugin 数据注入运行时 Mods */
@@ -268,7 +259,6 @@ export function injectToRegistry(plugin: InstalledPlugin): void {
 	if (plugin.definitions) {
 		try {
 			const parsed = JSON.parse(plugin.definitions) as ModData;
-			// 保留 manifest 的关键元数据，避免被 definitions 中的旧值覆盖
 			modData = {
 				...parsed,
 				id: plugin.id,
@@ -280,7 +270,6 @@ export function injectToRegistry(plugin: InstalledPlugin): void {
 		}
 	}
 
-	// 将所有 i18n locale 以多语言分层格式注入（plugin.i18n: locale → JSON 字符串）
 	const i18nFromPlugin: Record<string, Record<string, string>> = {};
 	for (const [locale, jsonStr] of Object.entries(plugin.i18n)) {
 		try {
@@ -290,7 +279,6 @@ export function injectToRegistry(plugin: InstalledPlugin): void {
 		}
 	}
 	if (Object.keys(i18nFromPlugin).length > 0) {
-		// 将 definitions 中已有的 i18n 与 plugin.i18n 合并（plugin.i18n 优先）
 		const defI18n = modData.i18n;
 		if (defI18n) {
 			const isLayered = typeof Object.values(defI18n)[0] === 'object';
@@ -301,7 +289,6 @@ export function injectToRegistry(plugin: InstalledPlugin): void {
 					i18nFromPlugin[locale] = { ...keys, ...(i18nFromPlugin[locale] ?? {}) };
 				}
 			} else {
-				// 扁平格式视为 zh-CN（默认语言）
 				i18nFromPlugin['zh-CN'] = {
 					...(defI18n as Record<string, string>),
 					...(i18nFromPlugin['zh-CN'] ?? {})
@@ -311,35 +298,18 @@ export function injectToRegistry(plugin: InstalledPlugin): void {
 		modData = { ...modData, i18n: i18nFromPlugin };
 	}
 
-	// 解析战役资源文件（type='campaign' 时有效）
 	if (plugin.campaignFiles) {
 		if (plugin.campaignFiles.mapConfig) {
-			try {
-				modData.mapConfig = JSON.parse(plugin.campaignFiles.mapConfig);
-			} catch {
-				console.warn('[injectToRegistry] Failed to parse campaign mapConfig');
-			}
+			try { modData.mapConfig = JSON.parse(plugin.campaignFiles.mapConfig); } catch { /* ignore */ }
 		}
 		if (plugin.campaignFiles.deployments) {
-			try {
-				modData.deployments = JSON.parse(plugin.campaignFiles.deployments);
-			} catch {
-				console.warn('[injectToRegistry] Failed to parse campaign deployments');
-			}
+			try { modData.deployments = JSON.parse(plugin.campaignFiles.deployments); } catch { /* ignore */ }
 		}
 		if (plugin.campaignFiles.facilities) {
-			try {
-				modData.facilities = JSON.parse(plugin.campaignFiles.facilities);
-			} catch {
-				console.warn('[injectToRegistry] Failed to parse campaign facilities');
-			}
+			try { modData.facilities = JSON.parse(plugin.campaignFiles.facilities); } catch { /* ignore */ }
 		}
 		if (plugin.campaignFiles.events) {
-			try {
-				modData.events = JSON.parse(plugin.campaignFiles.events);
-			} catch {
-				console.warn('[injectToRegistry] Failed to parse campaign events');
-			}
+			try { modData.events = JSON.parse(plugin.campaignFiles.events); } catch { /* ignore */ }
 		}
 	}
 

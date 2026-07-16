@@ -6,7 +6,7 @@
   import { mods, pluginsReady } from '$lib/registry/mod-registry.svelte'
   import { get } from 'svelte/store'
   import { mapFlyTo, zoom } from '$lib/stores/battle/map-store'
-  import { initGameClock } from '$lib/stores/battle/game-clock.store'
+  import { initGameClock } from '$lib/engine/game-clock.store'
   import LeftSidebar from '$lib/components/sidebar/left-sidebar.svelte'
   import Header from '$lib/components/header.svelte'
   import Bottom from '$lib/components/bottom.svelte'

@@ -8,7 +8,7 @@
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
-  import { settingsDialogOpen } from '$lib/stores/global-ui-store'
+  import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
   const version = __APP_VERSION__
 
   let activeSection = $state<Section>('general')

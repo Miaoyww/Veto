@@ -36,6 +36,17 @@ function saveBattlesToStorage(battles: Battle[]) {
   }, 2000)
 }
 
+/**
+ * 手动保存：flush 运行时位置 + 写入 localStorage + toast 提示。
+ * 在 UI 按钮和快捷键中统一使用，避免重复代码。
+ */
+export async function saveBattleWithToast() {
+  const { toast } = await import('svelte-sonner')
+  flushRuntimePositions()
+  saveBattlesNow()
+  toast.success('已保存', { description: '当前推演状态已保存到浏览器。' })
+}
+
 /** 立即将当前 battles 状态写入 localStorage（绕过防抖），用于手动保存。 */
 export function saveBattlesNow() {
   if (typeof localStorage === 'undefined') return

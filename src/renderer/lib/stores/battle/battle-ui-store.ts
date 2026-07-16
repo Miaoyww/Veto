@@ -12,9 +12,9 @@
  *   5. 非选择交互模式   (interactionMode !== 'select')
  */
 import { get, writable } from 'svelte/store';
-import { alertDialogStore, hideAlert } from '$lib/stores/global-ui-store';
+import { alertDialogStore, hideAlert } from '$lib/stores/app/global-ui-store';
 import { interactionMode, pendingPlaceUnitId } from './battle-store';
-import { cancelPendingRoute } from './pending-route.store';
+import { cancelPendingRoute } from './route.store';
 
 export const currentTab = writable<string>('general');
 

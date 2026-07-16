@@ -5,10 +5,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory, getPluginsDir } from './plugin-discovery'
 import { loadPluginConfig, savePluginConfig, enablePlugin, disablePlugin } from './plugin-store'
-import { getFormula, getDefaultOverrides, getRegisteredFormulaNames } from './formula-registry'
 import type { PluginInstance } from './plugin-discovery'
 import type { PluginConfig } from './plugin-store'
-import type { CombatContext } from './formula-registry'
 
 // ── 插件系统状态 ──────────────────────────────────────────────────────
 
@@ -44,7 +42,7 @@ function createWindow(): void {
 
     autoHideMenuBar: true,
 
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
 
@@ -354,24 +352,6 @@ function registerIpcHandlers(): void {
     return { success: true }
   })
 
-  // ── 公式系统 ──────────────────────────────────────────────────────
-  ipcMain.handle('veto:formula:invoke', (_event, formulaName: string, ctx: CombatContext) => {
-    const fn = getFormula(formulaName)
-    if (!fn) {
-      console.warn(`[Main] Formula not found: ${formulaName}`)
-      return null
-    }
-    return fn(ctx)
-  })
-
-  ipcMain.handle('veto:formula:getOverrides', () => {
-    return getDefaultOverrides()
-  })
-
-  ipcMain.handle('veto:formula:list', () => {
-    return getRegisteredFormulaNames()
-  })
-
   // ── 资源文件 ──────────────────────────────────────────────────────
   ipcMain.handle('veto:assets:get', (_event, pluginId: string, assetPath: string) => {
     const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
@@ -409,8 +389,6 @@ function registerIpcHandlers(): void {
     }
   })
 
-  // ── 测试 ──────────────────────────────────────────────────────────
-  ipcMain.on('ping', () => console.log('pong'))
 }
 
 // This method will be called when Electron has finished

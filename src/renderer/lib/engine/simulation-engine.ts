@@ -22,8 +22,8 @@ import {
 	flushRuntimePositions,
 	currentBattle,
 	runtimePositions
-} from './battle-store';
-import type { RuntimeUnitPosition } from './battle-store';
+} from '../stores/battle/battle-store';
+import type { RuntimeUnitPosition } from '../stores/battle/battle-store';
 import { mods } from '$lib/registry/mod-registry.svelte';
 import type { ModCombatOverrides } from '$lib/registry/types';
 import { getFormula, getEffectiveOverrides } from '$lib/registry/formula-registry';

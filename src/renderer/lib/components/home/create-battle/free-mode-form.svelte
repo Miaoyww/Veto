@@ -9,7 +9,7 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import DatePicker from '$lib/components/ui/date-picker.svelte'
-  import { TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/battle/game-clock.store'
+  import { TIME_SCALES, TIME_SCALE_LABELS } from '$lib/engine/game-clock.store'
   import type { DateValue } from '@internationalized/date'
   import type { InstalledPlugin } from '$lib/services/plugin-db'
   import { cn } from '$lib/utils.js'

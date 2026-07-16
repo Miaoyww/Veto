@@ -45,9 +45,3 @@ export function getPluginStorage(): PluginStorage {
   return storageInstance
 }
 
-/**
- * 重置存储实例（仅用于测试或重新初始化）
- */
-export function resetPluginStorage(): void {
-  storageInstance = null
-}

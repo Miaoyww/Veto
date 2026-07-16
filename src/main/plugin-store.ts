@@ -70,12 +70,6 @@ export function savePluginConfig(config: PluginConfig): void {
   }
 }
 
-/** 检查插件是否被禁用 */
-export function isPluginDisabled(pluginId: string): boolean {
-  const config = loadPluginConfig()
-  return config.disabled.includes(pluginId)
-}
-
 /** 启用插件 */
 export function enablePlugin(pluginId: string): void {
   const config = loadPluginConfig()

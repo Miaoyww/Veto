@@ -27,8 +27,8 @@
 		addLog,
 		runtimePositions
 	} from '$lib/stores/battle/battle-store';
-	import { gameClock } from '$lib/stores/battle/game-clock.store';
-	import { startPendingRoute } from '$lib/stores/battle/pending-route.store';
+	import { gameClock } from '$lib/engine/game-clock.store';
+	import { startPendingRoute } from '$lib/stores/battle/route.store';
 
 	interface Props {
 		open: boolean;

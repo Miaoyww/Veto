@@ -4,24 +4,16 @@
   import { coords } from '$lib/stores/battle/map-store'
   import { leftBarPinned, unitsCardOpen } from '$lib/stores/battle/battle-ui-store'
   import {
-    flushRuntimePositions,
     interactionMode,
-    saveBattlesNow,
+    saveBattleWithToast,
     selectFaction
   } from '$lib/stores/battle/battle-store'
   import { Activity, Ruler, Save, Swords } from '@lucide/svelte'
-  import { toast } from 'svelte-sonner'
   import { fly } from 'svelte/transition'
 
   function toggleLeftSidebar(): void {
     selectFaction('')
     leftBarPinned.update((prev: boolean) => !prev)
-  }
-
-  function save(): void {
-    flushRuntimePositions()
-    saveBattlesNow()
-    toast.success('已保存', { description: '当前推演状态已保存到浏览器。' })
   }
 </script>
 
@@ -57,7 +49,7 @@
     >
       <Activity />
     </Button>
-    <Button variant="ghost" size="icon" title="保存 (Ctrl+S)" onclick={save}>
+    <Button variant="ghost" size="icon" title="保存 (Ctrl+S)" onclick={saveBattleWithToast}>
       <Save />
     </Button>
     <div class="settings-wrap">

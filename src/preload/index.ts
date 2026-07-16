@@ -73,19 +73,6 @@ const veto = {
     }): Promise<{ success: boolean }> => ipcRenderer.invoke('veto:config:set', config)
   },
 
-  formulas: {
-    /** 调用主进程公式计算 */
-    invoke: (formulaName: string, ctx: Record<string, unknown>): Promise<number | null> =>
-      ipcRenderer.invoke('veto:formula:invoke', formulaName, ctx),
-
-    /** 获取默认覆盖参数 */
-    getOverrides: (): Promise<Record<string, number>> =>
-      ipcRenderer.invoke('veto:formula:getOverrides'),
-
-    /** 获取所有已注册公式名称 */
-    list: (): Promise<string[]> => ipcRenderer.invoke('veto:formula:list')
-  },
-
   assets: {
     /** 获取插件资源的 base64 data URL */
     get: (

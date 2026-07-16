@@ -1,6 +1,6 @@
 ﻿<script lang="ts">
   import { navigate } from '$lib/router.svelte'
-  import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Zap, Swords } from '@lucide/svelte'
+  import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Swords } from '@lucide/svelte'
   import type { Battle } from '$lib/types'
   import {
     currentBattleId,
@@ -8,7 +8,7 @@
     deleteBattle,
     renameBattle
   } from '$lib/stores/battle/battle-store'
-  import { showConfirm } from '$lib/stores/global-ui-store'
+  import { showConfirm } from '$lib/stores/app/global-ui-store'
   import { registry } from '$lib/registry/mod-registry.svelte'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
@@ -21,7 +21,6 @@
   let inputRef = $state<HTMLInputElement | null>(null)
 
   const isActive = $derived($currentBattleId === battle.id)
-  const enabledEvents = $derived((battle.eventSettings ?? []).filter((e) => e.enabled).length)
 
   /** 战役包名称（仅当此战局关联了战役时） */
   const campaignName = $derived.by(() => {

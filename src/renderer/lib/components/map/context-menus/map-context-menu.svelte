@@ -9,9 +9,9 @@
 		clearRoute,
 		addLog
 	} from '$lib/stores/battle/battle-store';
-	import { gameClock } from '$lib/stores/battle/game-clock.store';
+	import { gameClock } from '$lib/engine/game-clock.store';
 	import { leftBarPinned } from '$lib/stores/battle/battle-ui-store';
-	import { startPendingRoute } from '$lib/stores/battle/pending-route.store';
+	import { startPendingRoute } from '$lib/stores/battle/route.store';
 
 	interface Props {
 		open: boolean;

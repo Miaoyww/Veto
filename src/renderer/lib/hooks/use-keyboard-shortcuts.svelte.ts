@@ -10,8 +10,7 @@ import {
 	undo,
 	interactionMode,
 	pendingPlaceUnitId,
-	saveBattlesNow,
-	flushRuntimePositions,
+	saveBattleWithToast,
 	currentBattle,
 	currentFactionId,
 	selectedPlacedUnit
@@ -23,8 +22,7 @@ import {
 	unitsCardOpen,
 	rightBarPinned
 } from '$lib/stores/battle/battle-ui-store';
-import { toast } from 'svelte-sonner';
-import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/stores/battle/game-clock.store';
+import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/engine/game-clock.store';
 import { get } from 'svelte/store';
 
 export interface ShortcutDef {
@@ -79,9 +77,7 @@ function handleKeydown(e: KeyboardEvent) {
 	// Ctrl+S：保存战局
 	if (e.ctrlKey && e.key === 's') {
 		e.preventDefault();
-		flushRuntimePositions();
-		saveBattlesNow();
-		toast.success('已保存', { description: '当前推演状态已保存到浏览器。' });
+		saveBattleWithToast();
 		return;
 	}
 

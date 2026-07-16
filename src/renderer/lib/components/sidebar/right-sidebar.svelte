@@ -2,22 +2,15 @@
 	import RightSidebarMenubutton from '$lib/components/buttons/right-sidebar-menubutton.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Ruler, Save, Activity } from '@lucide/svelte';
-	import SettingsButton from '$lib/components/buttons/right-bar/settings-button.svelte';
+	import SettingsButton from '$lib/components/buttons/settings-button.svelte';
 	import { rightBarPinned } from '$lib/stores/battle/battle-ui-store';
 	import PinButton from '../buttons/pin-button.svelte';
-	import { flushRuntimePositions, saveBattlesNow, interactionMode } from '$lib/stores/battle/battle-store';
-	import { toast } from 'svelte-sonner';
+	import { saveBattleWithToast, interactionMode } from '$lib/stores/battle/battle-store';
 	import UnitsCard from '$lib/components/map/cards/floating/unit-state-card.svelte';
 	import { unitsCardOpen } from '$lib/stores/battle/battle-ui-store';
 
 	// 是否鼠标悬停
 	let hover = $state(false);
-
-	function save() {
-		flushRuntimePositions();
-		saveBattlesNow();
-		toast.success('已保存', { description: '当前推演状态已保存到浏览器。' });
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -60,7 +53,7 @@
 	<div class="panel-section">
 		<div class="controls">
 			<RightSidebarMenubutton title="保存 (Ctrl+S)">
-				<Button variant="ghost" size="icon" onclick={save}>
+				<Button variant="ghost" size="icon" onclick={saveBattleWithToast}>
 					<Save />
 				</Button>
 			</RightSidebarMenubutton>

@@ -89,15 +89,3 @@ export function getMilSymbolAnchor(
 	return sym.getAnchor();
 }
 
-/**
- * 获取 milsymbol 符号的尺寸
- */
-export function getMilSymbolSize(
-	natoCode: string,
-	side: string,
-	size: number = 35
-): { width: number; height: number } {
-	const sidc = getSIDC(natoCode, side);
-	const sym = new ms.Symbol(sidc, { size, infoFields: false });
-	return sym.getSize();
-}

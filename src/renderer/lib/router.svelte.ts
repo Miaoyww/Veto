@@ -73,19 +73,6 @@ export function navigate(path: string): void {
   refreshRoute()
 }
 
-/**
- * 手动设置路由错误状态（替代 SvelteKit 的 error(403, msg)）。
- * 错误页面组件读取 currentRoute.status / currentRoute.error 来展示错误信息。
- */
-export function setRouteError(status: number, message: string): void {
-  route.raw = { ...route.raw, status, error: new Error(message) }
-}
-
-/** 清除错误状态，恢复为 200 */
-export function clearRouteError(): void {
-  route.raw = { ...route.raw, status: 200, error: null }
-}
-
 // ─── 内部 ────────────────────────────────────────────────────────────
 
 function refreshRoute(): void {

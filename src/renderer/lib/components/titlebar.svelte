@@ -3,7 +3,7 @@
 	import { currentBattle } from '$lib/stores/battle/battle-store';
 	import { VETO_NAME } from '$lib/const';
 	import { Button } from '$lib/components/ui/button';
-	import { settingsDialogOpen } from '$lib/stores/global-ui-store';
+	import { settingsDialogOpen } from '$lib/stores/app/global-ui-store';
 
 	function minimize() {
 		window.electron.ipcRenderer.send('window:minimize');
