@@ -4,6 +4,8 @@
   import { Map, TileLayer } from 'sveaflet'
   import * as L from 'leaflet'
   import { coords, zoom, mapFlyTo } from '$lib/stores/battle/map-store'
+  import { gameClock } from '$lib/engine/game-clock.store'
+  import { getContactDisplayRadius, isUnitConfirmed } from '$lib/registry/sensor-registry'
   import UnitContextMenu from './context-menus/unit-context-menu.svelte'
   import MapContextMenu from './context-menus/map-context-menu.svelte'
   import UnitPopup from './cards/floating/unit-popup.svelte'
@@ -77,6 +79,7 @@
   let routesLayer: L.LayerGroup
   let rangesLayer: L.LayerGroup
   let pendingLayer: L.LayerGroup
+  let contactsLayer: L.LayerGroup
   const markersMap: Record<string, L.Marker> = {}
   /** 各单位行动路线 polyline 引用（快速路径更新用） */
   const routePolylinesMap: Record<string, L.Polyline> = {}
@@ -145,6 +148,14 @@
       if (!info) continue
 
       const { unit, faction } = info
+
+      // Phase 3 FOW：战争迷雾开启时隐藏未确认的敌方单位
+      const selFactionId = $currentFactionId
+      if (battle.fogOfWar && selFactionId && faction.id !== selFactionId) {
+        if (!isUnitConfirmed(battle.factionContacts, selFactionId, placed.id)) {
+          continue
+        }
+      }
 
       // 标记
       const marker = L.marker([placed.lat, placed.lng], {
@@ -367,6 +378,7 @@
     routesLayer = L.layerGroup().addTo(readyMap)
     rangesLayer = L.layerGroup().addTo(readyMap)
     pendingLayer = L.layerGroup().addTo(readyMap)
+    contactsLayer = L.layerGroup().addTo(readyMap)
 
     readyMap.on('mousemove', (e) => {
       coords.set(e.latlng)
@@ -481,6 +493,56 @@
         fillOpacity: isLast ? 0.9 : 0.5,
         weight: 2
       }).addTo(pendingLayer)
+    }
+  })
+
+  // ── 侦察接触渲染（Phase 3）──
+  $effect(() => {
+    const battle = $currentBattle
+    const factionId = $currentFactionId
+    if (!contactsLayer) return
+
+    contactsLayer.clearLayers()
+
+    if (!battle || !factionId) return
+    const contacts = battle.factionContacts?.[factionId]
+    if (!contacts || contacts.length === 0) return
+
+    const clock = get(gameClock)
+    const simTimeMs = clock.currentDate.getTime()
+
+    for (const contact of contacts) {
+      // confirmed 级不渲染接触圆圈（真实单位已可见）
+      if (contact.identityLevel === 'confirmed') continue
+
+      const displayRadius = getContactDisplayRadius(contact, simTimeMs)
+      const radiusMeters = displayRadius * 1000 // km → meters
+
+      // 颜色按识别等级
+      const color = contact.identityLevel === 'estimated_size' ? '#eab308' : '#f97316'
+      const fillColor = contact.identityLevel === 'estimated_size' ? '#fef08a' : '#fed7aa'
+
+      // 不确定性圆圈
+      L.circle([contact.position.lat, contact.position.lng], {
+        radius: radiusMeters,
+        color,
+        weight: 1.5,
+        fillColor,
+        fillOpacity: 0.15,
+        dashArray: '8 4'
+      }).addTo(contactsLayer)
+
+      // 中心标记
+      const label = contact.identityLevel === 'activity' ? '?' : '!'
+      L.circleMarker([contact.position.lat, contact.position.lng], {
+        radius: 8,
+        color,
+        fillColor: color,
+        fillOpacity: 0.6,
+        weight: 1
+      })
+        .bindTooltip(label, { direction: 'center', className: 'contact-marker-tooltip' })
+        .addTo(contactsLayer)
     }
   })
 </script>

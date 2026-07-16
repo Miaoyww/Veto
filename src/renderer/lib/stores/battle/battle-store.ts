@@ -14,6 +14,11 @@ import {
 	removeStatusEffect,
 	hasStatusEffect
 } from '$lib/registry/status-registry'
+import {
+	getMaxDetectionRange,
+	isUnitConfirmed,
+	getContactsForFaction
+} from '$lib/registry/sensor-registry'
 import type { StatusInstance } from '$lib/types'
 import { gameClock } from '$lib/engine/game-clock.store'
 
@@ -288,6 +293,14 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
     )
   }
 
+  // 初始化阵营侦察接触（Phase 3）
+  battles.update((list) =>
+    list.map((b) => {
+      if (b.id !== battleId) return b
+      return { ...b, factionContacts: {} }
+    })
+  )
+
   // 创建阵营并放置单位
   if (campaignMod.deployments?.factions) {
     for (const factionDeployment of campaignMod.deployments.factions) {
@@ -353,7 +366,8 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
                 speed: 10,
                 attackRange: 15,
                 hardness: 0.1
-              }
+              },
+          sensorIds: placement.sensorIds ?? template?.sensorIds ? [...(placement.sensorIds ?? template!.sensorIds!)] : undefined
         }
 
         battles.update((list) =>
@@ -377,7 +391,8 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
             hp: placed.hp,
             org: placed.org,
             isEngaged: false,
-            statusEffects: []
+            statusEffects: [],
+            sensorIds: placed.sensorIds ? [...placed.sensorIds] : undefined
           }
         }))
       }
@@ -559,7 +574,8 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
           speed: 10,
           attackRange: 15,
           hardness: 0.1
-        }
+        },
+    sensorIds: unit?.sensorIds ? [...unit.sensorIds] : undefined
   }
   updateCurrentBattle((b) => ({
     ...b,
@@ -576,7 +592,8 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
       hp: placed.hp,
       org: placed.org,
       isEngaged: false,
-      statusEffects: []
+      statusEffects: [],
+      sensorIds: unit?.sensorIds ? [...unit.sensorIds] : undefined
     }
   }))
   addLog(`在 (${lat.toFixed(3)}, ${lng.toFixed(3)}) 放置单位`)
@@ -852,6 +869,29 @@ export function unitHasStatusEffect(placedUnitId: string, statusId: string): boo
   return hasStatusEffect(placed?.statusEffects, statusId)
 }
 
+// ============ 侦察接触 API（Phase 3） ============
+
+/**
+ * 获取当前选中阵营的所有侦察接触。
+ * 如果没有选中阵营则返回空数组。
+ */
+export function getCurrentFactionContacts(): import('$lib/types').Contact[] {
+  const battle = get(currentBattle)
+  const factionId = get(currentFactionId)
+  if (!battle || !factionId) return []
+  return getContactsForFaction(battle.factionContacts, factionId)
+}
+
+/**
+ * 查询某敌方单位是否已被当前阵营确认（即已完全识别）。
+ */
+export function isEnemyUnitConfirmed(placedUnitId: string): boolean {
+  const battle = get(currentBattle)
+  const factionId = get(currentFactionId)
+  if (!battle || !factionId) return false
+  return isUnitConfirmed(battle.factionContacts, factionId, placedUnitId)
+}
+
 // ============ 交互模式 ============
 
 export type InteractionMode = 'select' | 'place' | 'route' | 'strike' | 'measure'
@@ -875,6 +915,8 @@ export interface RuntimeUnitPosition {
   isEngaged: boolean
   /** 激活的状态效果列表（Phase 4） */
   statusEffects?: import('$lib/types').StatusInstance[]
+  /** 该单位装备的传感器 ID 列表（Phase 3） */
+  sensorIds?: string[]
 }
 
 /**
@@ -901,7 +943,8 @@ export function initRuntimePositions() {
       hp: u.hp,
       org: u.org,
       isEngaged: false,
-      statusEffects: u.statusEffects ? [...u.statusEffects] : undefined
+      statusEffects: u.statusEffects ? [...u.statusEffects] : undefined,
+      sensorIds: u.sensorIds ? [...u.sensorIds] : undefined
     }
   }
   runtimePositions.set(snapshot)
@@ -931,7 +974,8 @@ export function flushRuntimePositions() {
                 status: pos.status,
                 hp: pos.hp,
                 org: pos.org,
-                statusEffects: pos.statusEffects
+                statusEffects: pos.statusEffects,
+                sensorIds: pos.sensorIds
               }
             : u
         })

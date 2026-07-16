@@ -21,9 +21,12 @@ import {
 	initRuntimePositions,
 	flushRuntimePositions,
 	currentBattle,
+	currentBattleId,
+	battles,
 	runtimePositions
 } from '../stores/battle/battle-store';
 import type { RuntimeUnitPosition } from '../stores/battle/battle-store';
+import type { Contact } from '$lib/types';
 import { mods } from '$lib/registry/mod-registry.svelte';
 import type { ModCombatOverrides } from '$lib/registry/types';
 import { getFormula, getEffectiveOverrides } from '$lib/registry/formula-registry';
@@ -34,6 +37,14 @@ import {
 	applyStatusEffect,
 	hasStatusEffect
 } from '$lib/registry/status-registry';
+import {
+	runDetectionScan,
+	tickContactDecay,
+	mergeContacts,
+	getMaxDetectionRange,
+	type ObserverInfo,
+	type TargetInfo
+} from '$lib/registry/sensor-registry';
 
 // ---- 引擎状态（模块级单例） ----
 let rafId: number | null = null;
@@ -46,6 +57,10 @@ let combatAccumMs = 0;
 /** 定期写回 localStorage 的累计器（每 30s 真实时间写一次） */
 let periodicFlushAccumMs = 0;
 const PERIODIC_FLUSH_INTERVAL_MS = 30_000;
+
+/** 传感器扫描累计器（每 2s 真实时间扫描一次，Phase 3） */
+let sensorAccumMs = 0;
+const SENSOR_INTERVAL_MS = 2_000;
 
 /** 上一帧是否处于暂停状态（用于检测暂停切换，触发即时 flush） */
 let wasPaused = true;
@@ -217,6 +232,106 @@ function handlePlacedCombat() {
 		return next;
 	});
 }
+
+	// ---- 传感器扫描（Phase 3） ----
+
+	/**
+	 * 执行传感器探测 pass：对每个阵营的每个有传感器单位，
+	 * 扫描敌方单位，更新 factionContacts。
+	 */
+	function runSensorPass() {
+		const battle = get(currentBattle);
+		if (!battle || battle.factions.length < 2) return;
+
+		const clock = get(gameClock);
+		const simTimeMs = clock.currentDate.getTime();
+		const positions = get(runtimePositions);
+
+		// 确保每个阵营都有 factionContacts 条目
+		const contacts: Record<string, Contact[]> = { ...battle.factionContacts };
+		for (const faction of battle.factions) {
+			if (!contacts[faction.id]) {
+				contacts[faction.id] = [];
+			}
+		}
+
+		// 对每个阵营
+		for (const faction of battle.factions) {
+			const factionUnits = battle.placedUnits.filter(
+				(u) => u.factionId === faction.id && u.status !== 'destroyed'
+			);
+
+			// 对阵营内每个有传感器的存活单位
+			for (const unit of factionUnits) {
+				const pos = positions[unit.id];
+				if (!pos || pos.hp <= 0) continue;
+
+				// 收集该单位的 sensorIds（优先用 PlacedUnit，fallback 到 UnitTemplate）
+				let sensorIds: string[] | undefined = unit.sensorIds;
+				if (!sensorIds || sensorIds.length === 0) {
+					const template = faction.units.find((t) => t.id === unit.unitId);
+					sensorIds = template?.sensorIds;
+				}
+				if (!sensorIds || sensorIds.length === 0) continue;
+
+				const maxRange = getMaxDetectionRange(sensorIds);
+				if (maxRange <= 0) continue;
+
+				// 构建 observer
+				const observer: ObserverInfo = {
+					placedUnitId: unit.id,
+					lat: pos.lat,
+					lng: pos.lng,
+					sensorIds,
+					factionId: faction.id
+				};
+
+				// 收集所有敌方单位作为潜在目标
+				const enemyUnits: TargetInfo[] = [];
+				for (const otherFaction of battle.factions) {
+					if (otherFaction.id === faction.id) continue;
+					for (const enemyUnit of battle.placedUnits) {
+						if (enemyUnit.factionId !== otherFaction.id) continue;
+						if (enemyUnit.status === 'destroyed') continue;
+						const enemyPos = positions[enemyUnit.id];
+						if (!enemyPos || enemyPos.hp <= 0) continue;
+
+						enemyUnits.push({
+							placedUnitId: enemyUnit.id,
+							lat: enemyPos.lat,
+							lng: enemyPos.lng,
+							factionId: enemyUnit.factionId,
+							unitId: enemyUnit.unitId
+						});
+					}
+				}
+
+				// 扫描
+				const newContacts = runDetectionScan(observer, enemyUnits, simTimeMs);
+				if (newContacts.length > 0) {
+					contacts[faction.id] = mergeContacts(contacts[faction.id], newContacts);
+				}
+			}
+
+			// 衰减该阵营的现有接触
+			if (contacts[faction.id].length > 0) {
+				contacts[faction.id] = tickContactDecay(contacts[faction.id], simTimeMs);
+			}
+		}
+
+		// 写回 battle.factionContacts
+		const battleId = get(currentBattleId);
+		if (battleId) {
+			battles.update((list) =>
+				list.map((b) => {
+					if (b.id !== battleId) return b;
+					return { ...b, factionContacts: contacts };
+				})
+			);
+		}
+	}
+
+
 
 // ---- RAF 主循环 ----
 

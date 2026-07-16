@@ -92,6 +92,10 @@ export interface UnitTemplate {
 	 * 替代原先的 infantry[]、armor[]、missiles[] 固定字段。
 	 */
 	components?: Record<string, ComponentEntry[]>;
+	/** 该模板默认装备的传感器 ID 列表（Phase 3） */
+	sensorIds?: string[];
+	/** 单位方向信号特征（影响被探测概率，Phase 3） */
+	signatures?: import('$lib/types').UnitSignatures;
 }
 
 /** Mod 战斗公式覆盖（均为可选，未提供则使用引擎默认值） */

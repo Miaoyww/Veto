@@ -51,6 +51,8 @@ export interface CampaignUnitPlacement {
 	lng: number;
 	route?: [number, number][];
 	status?: string;
+	/** 该单位装备的传感器 ID 列表（Phase 3） */
+	sensorIds?: string[];
 }
 
 /** 设施类型 */
@@ -202,6 +204,8 @@ export interface PlacedUnit {
 	natoCode?: string;
 	/** 激活的状态效果列表（Phase 4） */
 	statusEffects?: import('./types').StatusInstance[];
+	/** 该单位装备的传感器 ID 列表（Phase 3，覆盖模板默认值） */
+	sensorIds?: string[];
 	/** 当前生命值（运行时状态，耗尽则单位被摧毁） */
 	hp: number;
 	/** 当前组织度（运行时状态，耗尽则单位溃退） */
@@ -273,6 +277,8 @@ export interface Battle {
 	facilities?: Facility[];
 	/** 各阵营的侦察接触列表（Phase 3 使用） */
 	factionContacts?: Record<string, Contact[]>;
+	/** 战争迷雾开关（Phase 3，默认 false = 上帝视角全可见） */
+	fogOfWar?: boolean;
 	/** 战役事件状态（Phase 6 使用） */
 	eventStates?: CampaignEventState[];
 }

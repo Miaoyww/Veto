@@ -8,6 +8,7 @@ import type {
 } from './types';
 import type { PluginManifest } from '$lib/services/plugin-db';
 import { registerStatusDefinitions } from './status-registry';
+import { registerSensorDefinitions } from './sensor-registry';
 
 /** Mod 元数据（轻量，仅从 manifest 读取，供大厅列表展示） */
 
@@ -158,6 +159,10 @@ class Mods {
 		// 注册状态定义（Phase 4）
 		if (mod.statusDefinitions && mod.statusDefinitions.length > 0) {
 			registerStatusDefinitions(mod.statusDefinitions);
+		}
+		// 注册传感器定义（Phase 3）
+		if (mod.sensors && mod.sensors.length > 0) {
+			registerSensorDefinitions(mod.sensors);
 		}
 
 		console.log(
