@@ -2,6 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
+import log from 'electron-log'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory, getPluginsDir } from './plugin-discovery'
 import { loadPluginConfig, savePluginConfig, enablePlugin, disablePlugin } from './plugin-store'
@@ -352,6 +354,36 @@ function registerIpcHandlers(): void {
     return { success: true }
   })
 
+  // ── 自动更新 ──────────────────────────────────────────────────────
+  ipcMain.handle('veto:updater:check', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates()
+      return { success: true, result }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('veto:updater:download', async () => {
+    try {
+      const result = await autoUpdater.downloadUpdate()
+      return { success: true, result }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('veto:updater:quit-and-install', () => {
+    setImmediate(() => {
+      autoUpdater.quitAndInstall()
+    })
+    return { success: true }
+  })
+
+  ipcMain.handle('veto:updater:get-version', () => {
+    return app.getVersion()
+  })
+
   // ── 资源文件 ──────────────────────────────────────────────────────
   ipcMain.handle('veto:assets:get', (_event, pluginId: string, assetPath: string) => {
     const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
@@ -391,6 +423,53 @@ function registerIpcHandlers(): void {
 
 }
 
+// ── 自动更新初始化 ────────────────────────────────────────────────────
+
+function setupAutoUpdater(): void {
+  // 配置日志
+  autoUpdater.logger = log
+  log.transports.file.level = 'debug'
+
+  // 禁止自动下载，由用户手动触发
+  autoUpdater.autoDownload = false
+
+  // 转发 autoUpdater 事件到渲染进程
+  const sendToAll = (event: string, data: unknown): void => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('veto:event', { event, data })
+    }
+  }
+
+  autoUpdater.on('checking-for-update', () => {
+    sendToAll('updater:checking-for-update', {})
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    sendToAll('updater:update-available', info)
+  })
+
+  autoUpdater.on('update-not-available', (info) => {
+    sendToAll('updater:update-not-available', info)
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    sendToAll('updater:download-progress', {
+      bytesPerSecond: progress.bytesPerSecond,
+      percent: Math.round(progress.percent),
+      total: progress.total,
+      transferred: progress.transferred
+    })
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    sendToAll('updater:update-downloaded', info)
+  })
+
+  autoUpdater.on('error', (error) => {
+    sendToAll('updater:error', { message: error.message })
+  })
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -408,6 +487,9 @@ app.whenReady().then(() => {
   // 初始化插件系统
   ensurePluginsDir()
   refreshPlugins()
+
+  // 初始化自动更新
+  setupAutoUpdater()
 
   // 注册 IPC 处理器
   registerIpcHandlers()

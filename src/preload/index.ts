@@ -98,6 +98,23 @@ const veto = {
         ipcRenderer.removeListener('veto:event', listener)
       }
     }
+  },
+
+  updater: {
+    /** 检查更新 */
+    check: (): Promise<{ success: boolean; result?: unknown; error?: string }> =>
+      ipcRenderer.invoke('veto:updater:check'),
+
+    /** 下载更新 */
+    download: (): Promise<{ success: boolean; result?: unknown; error?: string }> =>
+      ipcRenderer.invoke('veto:updater:download'),
+
+    /** 退出并安装更新 */
+    quitAndInstall: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:updater:quit-and-install'),
+
+    /** 获取当前应用版本 */
+    getVersion: (): Promise<string> => ipcRenderer.invoke('veto:updater:get-version')
   }
 }
 

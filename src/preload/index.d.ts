@@ -59,4 +59,10 @@ export interface VetoAPI {
   events: {
     on: (event: string, callback: (data: unknown) => void) => () => void
   }
+  updater: {
+    check: () => Promise<{ success: boolean; result?: unknown; error?: string }>
+    download: () => Promise<{ success: boolean; result?: unknown; error?: string }>
+    quitAndInstall: () => Promise<{ success: boolean }>
+    getVersion: () => Promise<string>
+  }
 }
