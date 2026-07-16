@@ -111,6 +111,8 @@ export interface PluginManifest {
   dependencies?: string[]
   tags?: string[]
   license?: string
+  /** 战役 / 剧本头图 URL 或资源路径 */
+  banner?: string
 }
 
 /** Blob 资源条目（图片、地图底图等） */
