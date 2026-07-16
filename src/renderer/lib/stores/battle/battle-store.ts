@@ -721,6 +721,40 @@ export function importBattles(data: unknown): [number, number] {
   return [imported, skipped]
 }
 
+// ============ 设施 CRUD ============
+
+export function addFacility(facility: import('$lib/types').Facility): void {
+  pushUndoSnapshot(`添加设施: ${facility.name}`)
+  updateCurrentBattle((b) => ({
+    ...b,
+    facilities: [...(b.facilities ?? []), facility]
+  }))
+  addLog(`添加设施: ${facility.name}`)
+}
+
+export function removeFacility(facilityId: string): void {
+  const battle = get(currentBattle)
+  const facility = battle?.facilities?.find((f) => f.id === facilityId)
+  pushUndoSnapshot(`删除设施: ${facility?.name ?? ''}`)
+  updateCurrentBattle((b) => ({
+    ...b,
+    facilities: (b.facilities ?? []).filter((f) => f.id !== facilityId)
+  }))
+  addLog(`删除设施: ${facility?.name ?? ''}`)
+}
+
+export function updateFacility(facilityId: string, updates: Partial<import('$lib/types').Facility>): void {
+  const battle = get(currentBattle)
+  const facility = battle?.facilities?.find((f) => f.id === facilityId)
+  pushUndoSnapshot(`更新设施: ${facility?.name ?? ''}`)
+  updateCurrentBattle((b) => ({
+    ...b,
+    facilities: (b.facilities ?? []).map((f) =>
+      f.id === facilityId ? { ...f, ...updates } : f
+    )
+  }))
+}
+
 // ============ 交互模式 ============
 
 export type InteractionMode = 'select' | 'place' | 'route' | 'strike' | 'measure'

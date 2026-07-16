@@ -7,6 +7,7 @@
   import UnitContextMenu from './context-menus/unit-context-menu.svelte'
   import MapContextMenu from './context-menus/map-context-menu.svelte'
   import UnitPopup from './cards/floating/unit-popup.svelte'
+  import FacilityPopup from './cards/facility-popup.svelte'
   import MeasureCard from './cards/floating/measure-card.svelte'
   import InteractionModeHint from './cards/floating/interaction-mode-hint.svelte'
   import RouteConfirmCard from './cards/floating/route-confirm-card.svelte'
@@ -28,9 +29,34 @@
     addPendingPoint,
     cancelPendingRoute
   } from '$lib/stores/battle/route.store'
-  import type { UnitTemplate, PlacedUnit, Faction } from '$lib/types'
+  import type { UnitTemplate, PlacedUnit, Faction, FacilityType } from '$lib/types'
   import { getNatoIcon } from '$lib/utils/unit-icon'
+  import { getMilSymbolSVG, getMilSymbolAnchor } from '$lib/utils/milsymbol-utils'
   import { fly } from 'svelte/transition'
+
+  /** 设施类型 → 北约 7 字符功能代码（兼容现有 milsymbol 管线） */
+  const FACILITY_NATO_CODES: Record<FacilityType, string> = {
+    fortress: 'GUCFS--',          // Ground Unit, Combat, Fortification
+    trench_network: 'GUCE---',    // Ground Unit, Combat, Earthworks
+    supply_depot: 'GUCS---',      // Ground Unit, Combat, Supply
+    railway_hub: 'GURRH---',      // Ground Unit, Rail, Railhead
+    airfield: 'AA------',         // Air, Airfield
+    artillery_position: 'GCFS---',// Ground, Combat, Field Artillery
+    command_post: 'GUGPHQ--',     // Ground Unit, Ground, Command Post HQ
+    hospital: 'GUH-----'          // Ground Unit, Hospital/Medical
+  }
+
+  function getFacilityIcon(facilityType: FacilityType): L.DivIcon {
+    const natoCode = FACILITY_NATO_CODES[facilityType] ?? 'GU------'
+    const svg = getMilSymbolSVG(natoCode, 'neutral', 28, undefined, { fillColor: 'rgba(100,100,100,0.2)', iconColor: '#555' })
+    const anchor = getMilSymbolAnchor(natoCode, 'neutral', 28)
+    return L.divIcon({
+      html: `<div style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))">${svg}</div>`,
+      className: 'facility-marker-icon',
+      iconSize: [anchor.x * 2, anchor.y * 2],
+      iconAnchor: [anchor.x, anchor.y]
+    })
+  }
 
   let map = $state<L.Map>(null!)
   let myOpen = $state(false)
@@ -46,6 +72,7 @@
   let strikePendingTarget: { lat: number; lng: number } | null = $state(null)
 
   // 地图上的图层引用
+  let facilitiesLayer: L.LayerGroup
   let markersLayer: L.LayerGroup
   let routesLayer: L.LayerGroup
   let rangesLayer: L.LayerGroup
@@ -87,12 +114,31 @@
     markersLayer.clearLayers()
     routesLayer.clearLayers()
     rangesLayer.clearLayers()
+    facilitiesLayer.clearLayers()
     for (const key in markersMap) delete markersMap[key]
     for (const key in routePolylinesMap) delete routePolylinesMap[key]
     for (const key in attackRangeCirclesMap) delete attackRangeCirclesMap[key]
 
     const battle = $currentBattle
     if (!battle) return
+
+    // ── 设施标记 ──
+    const facilities = battle.facilities ?? []
+    for (const facility of facilities) {
+      const marker = L.marker([facility.lat, facility.lng], {
+        icon: getFacilityIcon(facility.type),
+        interactive: true
+      })
+      marker.bindTooltip(facility.name, {
+        direction: 'top',
+        offset: [0, -16],
+        className: 'facility-tooltip'
+      })
+      const popupEl = document.createElement('div')
+      mount(FacilityPopup, { target: popupEl, props: { facility } })
+      marker.bindPopup(popupEl, { maxWidth: 240 })
+      facilitiesLayer.addLayer(marker)
+    }
 
     for (const placed of battle.placedUnits) {
       const info = findUnit(placed.unitId)
@@ -316,6 +362,7 @@
   onMount(async () => {
     const readyMap = await waitForMapReady()
 
+    facilitiesLayer = L.layerGroup().addTo(readyMap)
     markersLayer = L.layerGroup().addTo(readyMap)
     routesLayer = L.layerGroup().addTo(readyMap)
     rangesLayer = L.layerGroup().addTo(readyMap)
