@@ -76,6 +76,36 @@ export interface Facility {
 	maxCapacity?: number;
 }
 
+// ============ 状态系统（Phase 4） ============
+
+/** 状态效果定义（可在 Mod 中注册） */
+export interface StatusDefinition {
+	id: string;
+	name: string;
+	description?: string;
+	/** 属性乘数（1.0 = 不变，如 { defense: 2.0, speed: 0 } 表示防御翻倍、速度归零） */
+	modifiers?: Record<string, number>;
+	/** 默认持续时间（模拟秒，undefined = 永久直到被移除） */
+	defaultDuration?: number;
+	/** 互斥类别（同类别只保留最高优先级） */
+	category?: 'posture' | 'condition' | 'ability';
+	/** 优先级（同类别中数值越高越优先） */
+	priority?: number;
+	/** 行为标签 */
+	tags?: string[];
+}
+
+/** 单位身上激活的状态效果实例 */
+export interface StatusInstance {
+	statusId: string;
+	/** 生效时的模拟时间戳（ms epoch） */
+	appliedAt: number;
+	/** 持续时间（模拟秒，undefined = 永久） */
+	duration?: number;
+	/** 来源标识（eventId、"combat"、"command" 等） */
+	source?: string;
+}
+
 /** 传感器类型（Phase 3 使用） */
 export type SensorType = 'visual' | 'sigint' | 'passive_acoustic';
 
@@ -170,6 +200,8 @@ export interface PlacedUnit {
 	 * 示例："GUCI---" 表示地面步兵。
 	 */
 	natoCode?: string;
+	/** 激活的状态效果列表（Phase 4） */
+	statusEffects?: import('./types').StatusInstance[];
 	/** 当前生命值（运行时状态，耗尽则单位被摧毁） */
 	hp: number;
 	/** 当前组织度（运行时状态，耗尽则单位溃退） */

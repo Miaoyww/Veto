@@ -28,6 +28,12 @@ import { mods } from '$lib/registry/mod-registry.svelte';
 import type { ModCombatOverrides } from '$lib/registry/types';
 import { getFormula, getEffectiveOverrides } from '$lib/registry/formula-registry';
 import type { CombatContext } from '$lib/registry/formula-registry';
+import {
+	getEffectiveStats,
+	tickStatusEffects,
+	applyStatusEffect,
+	hasStatusEffect
+} from '$lib/registry/status-registry';
 
 // ---- 引擎状态（模块级单例） ----
 let rafId: number | null = null;
@@ -55,6 +61,9 @@ function getCombatOverrides(): Required<ModCombatOverrides> {
  * 已放置单位（地图 PlacedUnit）战斗结算。
  * 使用 runtimePositions 的 lat/lng/hp/org 数据；战斗属性从 battles 静态读取。
  * 结果仅写 runtimePositions，不触发 localStorage。
+ *
+ * Phase 4：战斗计算使用状态修正后的有效属性；
+ * 组织度归零时自动施加溃退（routed）状态。
  */
 function handlePlacedCombat() {
 	const battle = get(currentBattle);
@@ -62,6 +71,8 @@ function handlePlacedCombat() {
 
 	const placedMap = new Map(battle.placedUnits.map((p) => [p.id, p]));
 	const overrides = getCombatOverrides();
+	const clock = get(gameClock);
+	const simTimeMs = clock.currentDate.getTime();
 
 	// 获取公式（Phase 1 使用默认公式，Phase 2 可被插件覆盖）
 	const calcNetDamage = getFormula('calcNetDamage');
@@ -79,7 +90,9 @@ function handlePlacedCombat() {
 			const attackerPlaced = placedMap.get(attackerId);
 			if (!attackerPlaced) continue;
 
-			const rangeKm = attackerPlaced.stats.attackRange;
+			// Phase 4：使用状态修正后的有效攻击属性
+			const attackerEffStats = getEffectiveStats(attackerPlaced.stats, attackerPos.statusEffects);
+			const rangeKm = attackerEffStats.attackRange ?? attackerPlaced.stats.attackRange;
 			let engaged = false;
 
 			for (const [targetId, targetPos] of Object.entries(positions)) {
@@ -102,15 +115,18 @@ function handlePlacedCombat() {
 
 				engaged = true;
 
+				// Phase 4：目标使用状态修正后的有效防御属性
+				const targetEffStats = getEffectiveStats(targetPlaced.stats, targetPos.statusEffects);
+
 				// 构建战斗上下文（用于公式计算）
 				const combatCtx: CombatContext = {
 					attacker: {
-						stats: attackerPlaced.stats,
+						stats: attackerEffStats,
 						hp: attackerPos.hp,
 						org: attackerPos.org
 					},
 					target: {
-						stats: targetPlaced.stats,
+						stats: targetEffStats,
 						hp: targetPos.hp,
 						org: targetPos.org
 					},
@@ -132,18 +148,18 @@ function handlePlacedCombat() {
 						orgRatio < overrides.orgPenaltyThreshold
 							? orgRatio / overrides.orgPenaltyThreshold
 							: 1;
-					const hardness = targetPlaced.stats.hardness ?? 0;
+					const hardness = targetEffStats.hardness ?? 0;
 					const targetMilUnit = battle.factions
 						.flatMap((f) => f.units)
 						.find((u) => u.id === targetPlaced.unitId);
 					const atkBase =
 						targetMilUnit?.branchId === 'air_force'
-							? attackerPlaced.stats.airAttack
-							: attackerPlaced.stats.softAttack * (1 - hardness) +
-								attackerPlaced.stats.hardAttack * hardness;
+							? (attackerEffStats.airAttack ?? 0)
+							: (attackerEffStats.softAttack ?? 0) * (1 - hardness) +
+								(attackerEffStats.hardAttack ?? 0) * hardness;
 					netDmg = Math.max(
 						0,
-						atkBase * efficiency - targetPlaced.stats.defense * overrides.defenseCoeff
+						atkBase * efficiency - (targetEffStats.defense ?? 0) * overrides.defenseCoeff
 					);
 				}
 
@@ -155,14 +171,46 @@ function handlePlacedCombat() {
 				};
 			}
 
-			next[attackerId] = { ...next[attackerId], isEngaged: engaged };
+			// Phase 4：根据是否在交战自动更新姿态
+			const currentStatus = attackerPos.status;
+			if (engaged && currentStatus !== 'moving' && currentStatus !== 'destroyed') {
+				next[attackerId] = { ...next[attackerId], isEngaged: engaged, status: 'attacking' };
+			} else if (!engaged && currentStatus === 'attacking') {
+				next[attackerId] = { ...next[attackerId], isEngaged: false, status: 'idle' };
+			} else {
+				next[attackerId] = { ...next[attackerId], isEngaged: engaged };
+			}
 		}
 
-		// 战斗结算后：将 HP 归零的单位状态强制设为阵亡，清除路线
+		// 战斗结算后处理
 		for (const id of Object.keys(next)) {
 			const pos = next[id];
+
+			// HP 归零 → 阵亡
 			if (pos.hp <= 0 && pos.status !== 'destroyed') {
-				next[id] = { ...pos, status: 'destroyed', route: [], isEngaged: false };
+				next[id] = { ...pos, status: 'destroyed', route: [], isEngaged: false, statusEffects: [] };
+				continue;
+			}
+
+			// Phase 4：Organisation 归零 → 自动施加溃退状态
+			const placed = placedMap.get(id);
+			if (placed && pos.org <= 0 && !hasStatusEffect(pos.statusEffects, 'routed')) {
+				const maxOrg = placed.stats.maxOrg ?? 100;
+				const restoredOrg = maxOrg * 0.3; // 溃退时恢复部分组织度
+				next[id] = {
+					...pos,
+					org: restoredOrg,
+					status: 'retreating',
+					statusEffects: applyStatusEffect(pos.statusEffects, 'routed', simTimeMs, undefined, 'combat')
+				};
+			}
+
+			// Phase 4：推进状态效果计时（移除过期效果）
+			if (pos.statusEffects && pos.statusEffects.length > 0) {
+				const ticked = tickStatusEffects(pos.statusEffects, simTimeMs);
+				if (ticked.length !== pos.statusEffects.length) {
+					next[id] = { ...next[id], statusEffects: ticked };
+				}
 			}
 		}
 

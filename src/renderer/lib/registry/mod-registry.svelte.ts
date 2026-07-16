@@ -7,6 +7,7 @@ import type {
 	ModCombatOverrides
 } from './types';
 import type { PluginManifest } from '$lib/services/plugin-db';
+import { registerStatusDefinitions } from './status-registry';
 
 /** Mod 元数据（轻量，仅从 manifest 读取，供大厅列表展示） */
 
@@ -154,6 +155,11 @@ class Mods {
 					localeMap.set(key, val);
 			}
 		}
+		// 注册状态定义（Phase 4）
+		if (mod.statusDefinitions && mod.statusDefinitions.length > 0) {
+			registerStatusDefinitions(mod.statusDefinitions);
+		}
+
 		console.log(
 			`Mod ${mod.id} applied: branches=${mod.branches?.length ?? 0}, categories=${mod.categories?.length ?? 0}, unitTemplates=${mod.unitTemplates?.length ?? 0}`
 		);

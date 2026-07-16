@@ -173,5 +173,7 @@ export interface ModData {
 	events?: import('$lib/types').CampaignEvent[];
 	/** 传感器注册表（type='campaign' 时有效，Phase 3 使用） */
 	sensors?: import('$lib/types').SensorDefinition[];
+	/** 状态效果定义（Phase 4 使用） */
+	statusDefinitions?: import('$lib/types').StatusDefinition[];
 
 }

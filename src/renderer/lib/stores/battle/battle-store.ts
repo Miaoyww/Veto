@@ -9,6 +9,13 @@ import type {
   UnitSide
 } from '$lib/types'
 import { registry } from '$lib/registry/mod-registry.svelte'
+import {
+	applyStatusEffect,
+	removeStatusEffect,
+	hasStatusEffect
+} from '$lib/registry/status-registry'
+import type { StatusInstance } from '$lib/types'
+import { gameClock } from '$lib/engine/game-clock.store'
 
 const STORAGE_KEY = 'wars_battles'
 
@@ -369,7 +376,8 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
             status: placed.status,
             hp: placed.hp,
             org: placed.org,
-            isEngaged: false
+            isEngaged: false,
+            statusEffects: []
           }
         }))
       }
@@ -567,7 +575,8 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
       status: 'idle',
       hp: placed.hp,
       org: placed.org,
-      isEngaged: false
+      isEngaged: false,
+      statusEffects: []
     }
   }))
   addLog(`在 (${lat.toFixed(3)}, ${lng.toFixed(3)}) 放置单位`)
@@ -755,6 +764,94 @@ export function updateFacility(facilityId: string, updates: Partial<import('$lib
   }))
 }
 
+// ============ 状态效果 API（Phase 4） ============
+
+/** 获取当前模拟时间戳（ms） */
+function getSimTimeMs(): number {
+  return get(gameClock).currentDate.getTime()
+}
+
+/**
+ * 向指定单位施加状态效果。
+ * 同时写入 PlacedUnit 和 RuntimeUnitPosition。
+ */
+export function applyStatusEffectToUnit(
+  placedUnitId: string,
+  statusId: string,
+  customDuration?: number,
+  source?: string
+): void {
+  const simTimeMs = getSimTimeMs()
+  pushUndoSnapshot(`施加状态: ${statusId}`)
+
+  updateCurrentBattle((b) => ({
+    ...b,
+    placedUnits: b.placedUnits.map((u) => {
+      if (u.id !== placedUnitId) return u
+      return {
+        ...u,
+        statusEffects: applyStatusEffect(u.statusEffects, statusId, simTimeMs, customDuration, source)
+      }
+    })
+  }))
+
+  // 同步写入 runtimePositions
+  runtimePositions.update((pos) => {
+    const cur = pos[placedUnitId]
+    if (!cur) return pos
+    return {
+      ...pos,
+      [placedUnitId]: {
+        ...cur,
+        statusEffects: applyStatusEffect(cur.statusEffects, statusId, simTimeMs, customDuration, source)
+      }
+    }
+  })
+
+  addLog(`施加状态效果: ${statusId} → 单位 ${placedUnitId}`)
+}
+
+/**
+ * 从指定单位移除状态效果。
+ */
+export function removeStatusEffectFromUnit(placedUnitId: string, statusId: string): void {
+  pushUndoSnapshot(`移除状态: ${statusId}`)
+
+  updateCurrentBattle((b) => ({
+    ...b,
+    placedUnits: b.placedUnits.map((u) => {
+      if (u.id !== placedUnitId) return u
+      return {
+        ...u,
+        statusEffects: removeStatusEffect(u.statusEffects, statusId)
+      }
+    })
+  }))
+
+  runtimePositions.update((pos) => {
+    const cur = pos[placedUnitId]
+    if (!cur) return pos
+    return {
+      ...pos,
+      [placedUnitId]: {
+        ...cur,
+        statusEffects: removeStatusEffect(cur.statusEffects, statusId)
+      }
+    }
+  })
+
+  addLog(`移除状态效果: ${statusId} ← 单位 ${placedUnitId}`)
+}
+
+/**
+ * 查询单位是否具有指定状态效果。
+ */
+export function unitHasStatusEffect(placedUnitId: string, statusId: string): boolean {
+  const battle = get(currentBattle)
+  const placed = battle?.placedUnits.find((u) => u.id === placedUnitId)
+  return hasStatusEffect(placed?.statusEffects, statusId)
+}
+
 // ============ 交互模式 ============
 
 export type InteractionMode = 'select' | 'place' | 'route' | 'strike' | 'measure'
@@ -776,6 +873,8 @@ export interface RuntimeUnitPosition {
   org: number
   /** 是否正在交战（由引擎战斗结算更新） */
   isEngaged: boolean
+  /** 激活的状态效果列表（Phase 4） */
+  statusEffects?: import('$lib/types').StatusInstance[]
 }
 
 /**
@@ -801,7 +900,8 @@ export function initRuntimePositions() {
       status: u.status,
       hp: u.hp,
       org: u.org,
-      isEngaged: false
+      isEngaged: false,
+      statusEffects: u.statusEffects ? [...u.statusEffects] : undefined
     }
   }
   runtimePositions.set(snapshot)
@@ -830,7 +930,8 @@ export function flushRuntimePositions() {
                 route: pos.route,
                 status: pos.status,
                 hp: pos.hp,
-                org: pos.org
+                org: pos.org,
+                statusEffects: pos.statusEffects
               }
             : u
         })
