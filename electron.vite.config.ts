@@ -10,8 +10,8 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '$lib': path.resolve(__dirname, 'src/renderer/src/lib'),
-        '$units': path.resolve(__dirname, 'src/renderer/src/units'),
+        '$lib': path.resolve(__dirname, 'src/renderer/lib'),
+        '$units': path.resolve(__dirname, 'src/renderer/units'),
       }
     },
     define: {
