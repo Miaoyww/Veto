@@ -1,6 +1,6 @@
 ﻿<script lang="ts">
   import { navigate } from '$lib/router.svelte'
-  import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Zap } from '@lucide/svelte'
+  import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Zap, Swords } from '@lucide/svelte'
   import type { Battle } from '$lib/types'
   import {
     currentBattleId,
@@ -9,6 +9,7 @@
     renameBattle
   } from '$lib/stores/battle/battle-store'
   import { showConfirm } from '$lib/stores/global-ui-store'
+  import { registry } from '$lib/registry/mod-registry.svelte'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -21,6 +22,13 @@
 
   const isActive = $derived($currentBattleId === battle.id)
   const enabledEvents = $derived((battle.eventSettings ?? []).filter((e) => e.enabled).length)
+
+  /** 战役包名称（仅当此战局关联了战役时） */
+  const campaignName = $derived.by(() => {
+    if (!battle.campaignId) return null
+    const mod = registry.getMod(battle.campaignId)
+    return mod?.metadata?.name ?? mod?.id ?? null
+  })
 
   function handleLoad(): void {
     if (editing) return
@@ -137,6 +145,14 @@
   </CardHeader>
 
   <CardContent class="px-5">
+    {#if campaignName}
+      <div class="mb-1.5">
+        <span class="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+          <Swords class="size-3" />
+          战役：{campaignName}
+        </span>
+      </div>
+    {/if}
     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <span class="flex items-center gap-1">
         <CalendarDays class="size-3" />

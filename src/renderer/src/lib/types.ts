@@ -20,6 +20,129 @@ export { registry, mods } from '$lib/registry/mod-registry.svelte';
  */
 export type UnitSide = string;
 
+// ============ 战役相关类型 ============
+
+/** 战役地图配置 */
+export interface CampaignMapConfig {
+	center: [number, number];
+	zoom: number;
+	pixelsPerKm?: number;
+	/** 战役起始日期（ISO 格式 YYYY-MM-DD） */
+	startDate?: string;
+}
+
+/** 战役初始部署 */
+export interface CampaignDeployment {
+	factions: CampaignFactionDeployment[];
+}
+
+export interface CampaignFactionDeployment {
+	name: string;
+	color: string;
+	side: UnitSide;
+	flagUrl?: string;
+	initialUnits: CampaignUnitPlacement[];
+}
+
+export interface CampaignUnitPlacement {
+	unitTemplateId: string;
+	name?: string;
+	lat: number;
+	lng: number;
+	route?: [number, number][];
+	status?: string;
+}
+
+/** 设施类型 */
+export type FacilityType =
+	| 'fortress'
+	| 'trench_network'
+	| 'supply_depot'
+	| 'railway_hub'
+	| 'airfield'
+	| 'artillery_position'
+	| 'command_post'
+	| 'hospital';
+
+/** 设施 */
+export interface Facility {
+	id: string;
+	type: FacilityType;
+	name: string;
+	lat: number;
+	lng: number;
+	factionId?: string;
+	properties: Record<string, number>;
+	maxCapacity?: number;
+}
+
+/** 传感器类型（Phase 3 使用） */
+export type SensorType = 'visual' | 'sigint' | 'passive_acoustic';
+
+/** 传感器定义（Phase 3 使用） */
+export interface SensorDefinition {
+	id: string;
+	type: SensorType;
+	properties: Record<string, number | boolean | string>;
+}
+
+/** 单位方向信号特征（Phase 3 使用） */
+export interface UnitSignatures {
+	visual?: { front: number; side: number; rear: number; top: number };
+	acoustic?: { front: number; side: number; rear: number; top: number };
+}
+
+/** 接触/侦察标记（Phase 3 使用） */
+export interface Contact {
+	id: string;
+	position: { lat: number; lng: number };
+	uncertaintyRadius: number;
+	identityLevel: 'activity' | 'estimated_size' | 'confirmed';
+	estimatedType?: string;
+	confirmedUnitId?: string;
+	lastUpdated: number;
+}
+
+/** 战役事件（Phase 6 使用） */
+export type EventTriggerType =
+	| 'date'
+	| 'unit_destroyed'
+	| 'unit_enters_zone'
+	| 'facility_captured'
+	| 'variable';
+
+export type EventConditionType =
+	| 'faction_alive'
+	| 'unit_count'
+	| 'random'
+	| 'facility_held'
+	| 'variable_compare';
+
+export type EventActionType =
+	| 'spawn_unit'
+	| 'send_message'
+	| 'apply_status'
+	| 'modify_stats'
+	| 'change_faction_attitude'
+	| 'activate_event'
+	| 'set_variable';
+
+export interface CampaignEvent {
+	id: string;
+	name: string;
+	repeatable: boolean;
+	cooldown?: number;
+	trigger: { type: EventTriggerType; params: Record<string, unknown> };
+	conditions: Array<{ type: EventConditionType; params: Record<string, unknown> }>;
+	actions: Array<{ type: EventActionType; params: Record<string, unknown> }>;
+}
+
+export interface CampaignEventState {
+	eventId: string;
+	triggered: boolean;
+	lastTriggerTime?: number;
+}
+
 // ============ 地图上放置的单位 ============
 
 import type { FlexStats } from '$lib/registry/types';
@@ -112,6 +235,14 @@ export interface Battle {
 	eventSettings?: EventSetting[];
 	/** 此战局启用的 Mod ID 列表，按加载顺序排列（越靠后优先级越高） */
 	enabledMods?: string[];
+	/** 关联的战役 Mod ID */
+	campaignId?: string;
+	/** 设施列表（Phase 2 使用） */
+	facilities?: Facility[];
+	/** 各阵营的侦察接触列表（Phase 3 使用） */
+	factionContacts?: Record<string, Contact[]>;
+	/** 战役事件状态（Phase 6 使用） */
+	eventStates?: CampaignEventState[];
 }
 
 export interface ActionLogEntry {

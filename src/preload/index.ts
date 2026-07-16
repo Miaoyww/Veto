@@ -50,7 +50,15 @@ const veto = {
       i18n: Record<string, string>
       assets: Array<{ path: string; data: string; mimeType: string }>
     }): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('veto:plugins:install', payload)
+      ipcRenderer.invoke('veto:plugins:install', payload),
+
+    /** 列出插件子目录中的 JSON 文件 */
+    listFiles: (pluginId: string, subDir: string): Promise<string[]> =>
+      ipcRenderer.invoke('veto:plugins:list-files', pluginId, subDir),
+
+    /** 批量读取插件内的文件 */
+    readFiles: (pluginId: string, filePaths: string[]): Promise<Record<string, string>> =>
+      ipcRenderer.invoke('veto:plugins:read-files', pluginId, filePaths)
   },
 
   config: {

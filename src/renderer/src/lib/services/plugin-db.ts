@@ -86,6 +86,8 @@ export interface InstalledPlugin {
   /** 已存入资源文件的 key 列表（格式："{pluginId}/{assetPath}"） */
   assetKeys: string[]
   installedAt: number
+  /** 战役资源文件内容（type='campaign' 时有效） */
+  campaignFiles?: Record<string, string>
 }
 
 /** dist/registry.json 中每个条目的结构（manifest 字段 + 注册中心元数据） */

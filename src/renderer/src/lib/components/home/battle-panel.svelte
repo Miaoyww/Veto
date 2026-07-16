@@ -5,7 +5,7 @@
   import * as InputGroup from '$lib/components/ui/input-group/index.js'
   import * as Card from '$lib/components/ui/card/index.js'
   import { battles } from '$lib/stores/battle/battle-store'
-  import BattleCard from '$lib/components/cards/battle/battle-card.svelte'
+  import BattleCard from '$lib/components/home/battle-card.svelte'
   import CreateBattleDialog from '$lib/components/dialog/create-battle-dialog.svelte'
   import { cn } from '$lib/utils.js'
   import { fly } from 'svelte/transition'

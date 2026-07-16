@@ -36,6 +36,7 @@ export interface VetoAPI {
       manifest: Record<string, unknown>
       definitions: string | null
       i18n: Record<string, string>
+      campaignFiles?: Record<string, string>
     } | null>
     toggle: (pluginId: string, enabled: boolean) => Promise<{ success: boolean }>
     uninstall: (pluginId: string) => Promise<{ success: boolean; error?: string }>
@@ -45,6 +46,8 @@ export interface VetoAPI {
       i18n: Record<string, string>
       assets: Array<{ path: string; data: string; mimeType: string }>
     }) => Promise<{ success: boolean; error?: string }>
+    listFiles: (pluginId: string, subDir: string) => Promise<string[]>
+    readFiles: (pluginId: string, filePaths: string[]) => Promise<Record<string, string>>
   }
   config: {
     get: () => Promise<{ disabled: string[]; order?: string[] }>

@@ -163,5 +163,15 @@ export interface ModData {
 	i18n?: Record<string, string> | Record<string, Record<string, string>>;
 	/** 战斗公式覆盖 */
 	combatOverrides?: ModCombatOverrides;
+	/** 战役地图配置（type='campaign' 时有效） */
+	mapConfig?: import('$lib/types').CampaignMapConfig;
+	/** 战役初始部署（type='campaign' 时有效） */
+	deployments?: import('$lib/types').CampaignDeployment;
+	/** 战役设施列表（type='campaign' 时有效，Phase 2 使用） */
+	facilities?: import('$lib/types').Facility[];
+	/** 战役事件列表（type='campaign' 时有效，Phase 6 使用） */
+	events?: import('$lib/types').CampaignEvent[];
+	/** 传感器注册表（type='campaign' 时有效，Phase 3 使用） */
+	sensors?: import('$lib/types').SensorDefinition[];
 
 }

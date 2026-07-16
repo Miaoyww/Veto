@@ -311,5 +311,37 @@ export function injectToRegistry(plugin: InstalledPlugin): void {
 		modData = { ...modData, i18n: i18nFromPlugin };
 	}
 
+	// 解析战役资源文件（type='campaign' 时有效）
+	if (plugin.campaignFiles) {
+		if (plugin.campaignFiles.mapConfig) {
+			try {
+				modData.mapConfig = JSON.parse(plugin.campaignFiles.mapConfig);
+			} catch {
+				console.warn('[injectToRegistry] Failed to parse campaign mapConfig');
+			}
+		}
+		if (plugin.campaignFiles.deployments) {
+			try {
+				modData.deployments = JSON.parse(plugin.campaignFiles.deployments);
+			} catch {
+				console.warn('[injectToRegistry] Failed to parse campaign deployments');
+			}
+		}
+		if (plugin.campaignFiles.facilities) {
+			try {
+				modData.facilities = JSON.parse(plugin.campaignFiles.facilities);
+			} catch {
+				console.warn('[injectToRegistry] Failed to parse campaign facilities');
+			}
+		}
+		if (plugin.campaignFiles.events) {
+			try {
+				modData.events = JSON.parse(plugin.campaignFiles.events);
+			} catch {
+				console.warn('[injectToRegistry] Failed to parse campaign events');
+			}
+		}
+	}
+
 	registry.load(modData);
 }

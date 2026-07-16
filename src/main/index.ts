@@ -120,9 +120,31 @@ function registerIpcHandlers(): void {
     let definitions: string | null = null
     if (plugin.path.definitions) {
       try {
-        definitions = fs.readFileSync(plugin.path.definitions, 'utf-8')
-      } catch {
-        /* ignore */
+        if (plugin.path.definitionsIsDir) {
+          // 目录模式：扫描所有 JSON 文件并合并
+          const files = fs.readdirSync(plugin.path.definitions)
+            .filter((f) => f.endsWith('.json'))
+            .sort()
+          const merged: Record<string, unknown> = {}
+          for (const file of files) {
+            const content = fs.readFileSync(join(plugin.path.definitions!, file), 'utf-8')
+            const parsed = JSON.parse(content)
+            for (const [key, val] of Object.entries(parsed)) {
+              if (Array.isArray(val) && Array.isArray(merged[key])) {
+                ;(merged[key] as unknown[]).push(...(val as unknown[]))
+              } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                merged[key] = { ...(merged[key] as object ?? {}), ...(val as object) }
+              } else {
+                merged[key] = val
+              }
+            }
+          }
+          definitions = JSON.stringify(merged)
+        } else {
+          definitions = fs.readFileSync(plugin.path.definitions, 'utf-8')
+        }
+      } catch (err) {
+        console.error(`[Main] Failed to read definitions for ${pluginId}:`, err)
       }
     }
 
@@ -142,12 +164,68 @@ function registerIpcHandlers(): void {
       }
     }
 
+    // 读取战役资源文件
+    const campaignFiles: Record<string, string> = {}
+    const campaignKeys = ['mapConfig', 'deployments', 'facilities', 'events'] as const
+    for (const key of campaignKeys) {
+      const filePath = plugin.path[key]
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          campaignFiles[key] = fs.readFileSync(filePath, 'utf-8')
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
     return {
       ...plugin,
       definitions,
       i18n,
-      manifest: plugin.manifest
+      manifest: plugin.manifest,
+      campaignFiles
     }
+  })
+
+  // ── 插件目录文件列表 ──────────────────────────────────────────────
+  ipcMain.handle('veto:plugins:list-files', (_event, pluginId: string, subDir: string) => {
+    const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
+    if (!plugin) return []
+
+    try {
+      const dirPath = join(plugin.path.plugin, subDir)
+      if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) return []
+
+      return fs.readdirSync(dirPath)
+        .filter((f) => f.endsWith('.json'))
+        .sort()
+    } catch {
+      return []
+    }
+  })
+
+  // ── 批量读取插件文件 ──────────────────────────────────────────────
+  ipcMain.handle('veto:plugins:read-files', (_event, pluginId: string, filePaths: string[]) => {
+    const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
+    if (!plugin) return {}
+
+    const result: Record<string, string> = {}
+    for (const filePath of filePaths) {
+      try {
+        const fullPath = join(plugin.path.plugin, filePath)
+        // 安全检查：确保请求的文件在插件目录内
+        if (!fullPath.startsWith(plugin.path.plugin)) {
+          console.warn(`[Main] Path traversal attempt: ${filePath}`)
+          continue
+        }
+        if (fs.existsSync(fullPath)) {
+          result[filePath] = fs.readFileSync(fullPath, 'utf-8')
+        }
+      } catch {
+        /* skip */
+      }
+    }
+    return result
   })
 
   // ── 插件启用/禁用 ───────────────────────────────────────────────

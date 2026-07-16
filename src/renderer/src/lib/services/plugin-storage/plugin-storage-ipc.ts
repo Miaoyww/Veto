@@ -46,7 +46,8 @@ export class IpcPluginStorage implements PluginStorage {
       definitions: data.definitions,
       i18n: data.i18n ?? {},
       assetKeys: [],
-      installedAt: 0 // 主进程不追踪此字段
+      installedAt: 0, // 主进程不追踪此字段
+      campaignFiles: data.campaignFiles as Record<string, string> | undefined
     }
   }
 
@@ -64,7 +65,8 @@ export class IpcPluginStorage implements PluginStorage {
             definitions: detail.definitions,
             i18n: detail.i18n ?? {},
             assetKeys: [],
-            installedAt: 0
+            installedAt: 0,
+            campaignFiles: detail.campaignFiles as Record<string, string> | undefined
           })
         }
       }

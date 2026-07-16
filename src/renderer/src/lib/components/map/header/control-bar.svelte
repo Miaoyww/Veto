@@ -44,9 +44,8 @@
 		return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 	}
 
-	const SIM_START = new Date('2026-01-01T00:00:00').getTime();
 	function formatElapsed(d: Date): string {
-		const totalSec = Math.floor((d.getTime() - SIM_START) / 1000);
+		const totalSec = Math.floor((d.getTime() - $gameClock.simStart.getTime()) / 1000);
 		const hh = Math.floor(totalSec / 3600);
 		const mm = Math.floor((totalSec % 3600) / 60);
 		const ss = totalSec % 60;

@@ -5,6 +5,8 @@
   import { battles, currentBattleId } from '$lib/stores/battle/battle-store'
   import { mods, pluginsReady } from '$lib/registry/mod-registry.svelte'
   import { get } from 'svelte/store'
+  import { mapFlyTo, zoom } from '$lib/stores/battle/map-store'
+  import { initGameClock } from '$lib/stores/battle/game-clock.store'
   import LeftSidebar from '$lib/components/sidebar/left-sidebar.svelte'
   import Header from '$lib/components/header.svelte'
   import Bottom from '$lib/components/bottom.svelte'
@@ -26,6 +28,13 @@
 
   onMount(async () => {
     if (exists && battle) {
+      // 初始化游戏时钟（模拟起始日期 + 时间流速）
+      initGameClock(battle)
+
+      // 用战局存储的地图位置初始化地图
+      zoom.set(battle.mapZoom)
+      mapFlyTo.set({ lat: battle.mapCenter[0], lng: battle.mapCenter[1] })
+
       // 等待插件加载完成
       await pluginsReady
       // 然后加载战局对应的 Mod

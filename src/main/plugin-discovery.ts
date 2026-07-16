@@ -34,8 +34,16 @@ export interface PluginManifest {
   injects?: {
     formulas?: string // "./injects/formulas.js"
     events?: string // "./injects/events.js"
-    ui?: string // "./injects/ui.js"  
+    ui?: string // "./injects/ui.js"
   }
+  /** 战役：地图配置文件路径 */
+  mapConfig?: string
+  /** 战役：初始部署文件路径 */
+  deployments?: string
+  /** 战役：设施配置文件路径 */
+  facilities?: string
+  /** 战役：事件配置文件路径 */
+  events?: string
 }
 
 /** 插件实例（扫描发现后的内存表示） */
@@ -44,12 +52,22 @@ export interface PluginInstance {
   path: {
     /** 插件根目录（如 {userData}/Plugins/my-faction） */
     plugin: string
-    /** definitions.json 的绝对路径 */
+    /** definitions.json 的绝对路径，或 definitions/ 目录的绝对路径 */
     definitions?: string
+    /** definitions 是否为目录（true=目录扫描合并，false=单文件） */
+    definitionsIsDir?: boolean
     /** i18n 目录的绝对路径 */
     i18n?: string
     /** assets 目录的绝对路径 */
     assets?: string
+    /** 战役：map.json 绝对路径 */
+    mapConfig?: string
+    /** 战役：deployments.json 绝对路径 */
+    deployments?: string
+    /** 战役：facilities.json 绝对路径 */
+    facilities?: string
+    /** 战役：events.json 绝对路径 */
+    events?: string
   }
   /** 是否被用户禁用 */
   disabled: boolean
@@ -108,17 +126,54 @@ export function scanPluginDirectory(): PluginInstance[] {
       }
 
       const definitionsPath = path.join(pluginDir, 'definitions.json')
+      const definitionsDirPath = path.join(pluginDir, 'definitions')
       const i18nPath = path.join(pluginDir, 'i18n')
       const assetsPath = path.join(pluginDir, 'assets')
 
+      // 检测 definitions 是单文件还是目录
+      let definitionsFinal: string | undefined
+      let definitionsIsDir = false
+      if (fs.existsSync(definitionsDirPath) && fs.statSync(definitionsDirPath).isDirectory()) {
+        definitionsFinal = definitionsDirPath
+        definitionsIsDir = true
+      } else if (fs.existsSync(definitionsPath)) {
+        definitionsFinal = definitionsPath
+        definitionsIsDir = false
+      } else if (typeof manifest.definitions === 'string' && manifest.definitions.endsWith('/')) {
+        // manifest 声明为目录但目录不存在 → 记录路径但不保证存在
+        definitionsFinal = path.join(pluginDir, manifest.definitions)
+        definitionsIsDir = true
+      } else if (typeof manifest.definitions === 'string') {
+        // manifest 声明为单文件
+        definitionsFinal = path.join(pluginDir, manifest.definitions)
+        definitionsIsDir = false
+      }
+
+      // 战役资源文件检测
+      const getCampaignPath = (manifestPath: string | undefined, defaultName: string): string | undefined => {
+        if (manifestPath) {
+          const fullPath = path.join(pluginDir, manifestPath)
+          return fs.existsSync(fullPath) ? fullPath : undefined
+        }
+        const defaultPath = path.join(pluginDir, defaultName)
+        return fs.existsSync(defaultPath) ? defaultPath : undefined
+      }
+
+      const instancePath = {
+        plugin: pluginDir,
+        definitions: definitionsFinal,
+        definitionsIsDir,
+        i18n: fs.existsSync(i18nPath) ? i18nPath : undefined,
+        assets: fs.existsSync(assetsPath) ? assetsPath : undefined,
+        mapConfig: getCampaignPath(manifest.mapConfig, 'map.json'),
+        deployments: getCampaignPath(manifest.deployments, 'deployments.json'),
+        facilities: getCampaignPath(manifest.facilities, 'facilities.json'),
+        events: getCampaignPath(manifest.events, 'events.json')
+      }
+
       plugins.push({
         manifest,
-        path: {
-          plugin: pluginDir,
-          definitions: fs.existsSync(definitionsPath) ? definitionsPath : undefined,
-          i18n: fs.existsSync(i18nPath) ? i18nPath : undefined,
-          assets: fs.existsSync(assetsPath) ? assetsPath : undefined
-        },
+        path: instancePath,
         disabled: false,
         incompatible: false
       })
