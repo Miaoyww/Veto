@@ -22,6 +22,7 @@ import {
 } from '$lib/registry/sensor-registry'
 import type { StatusInstance, MessageCategory } from '$lib/types'
 import { gameClock } from '$lib/engine/game-clock.store'
+import { resolveStatus } from '$lib/engine/status-resolver'
 
 const STORAGE_KEY = 'wars_battles'
 
@@ -1096,12 +1097,12 @@ export function tickMapMovement(deltaSimSec: number) {
       }
 
       if (cur.route.length === 0) {
-        // 已到达；若正在交战则保持 attacking，否则置 idle
-        if (cur.isEngaged) {
-          next[id] = cur.status === 'attacking' ? cur : { ...cur, status: 'attacking' }
-        } else {
-          next[id] = cur.status === 'idle' ? cur : { ...cur, status: 'idle' }
-        }
+        const ns = resolveStatus({
+          hp: cur.hp, isEngaged: cur.isEngaged, routeLength: 0,
+          behavior: cur.behavior ?? 'aggressive',
+          hasRouted: hasStatusEffect(cur.statusEffects, 'routed')
+        }, cur.status)
+        next[id] = ns === cur.status ? cur : { ...cur, status: ns }
         continue
       }
 
@@ -1112,14 +1113,24 @@ export function tickMapMovement(deltaSimSec: number) {
 
       // Phase 5：defensive / hold 不移动
       if (behavior === 'defensive' || behavior === 'hold') {
-        next[id] = cur.route.length > 0 ? { ...cur, route: [], status: 'defending' } : cur
+        const cleared = cur.route.length > 0 ? [] : cur.route
+        const ns = resolveStatus({
+          hp: cur.hp, isEngaged: cur.isEngaged, routeLength: 0,
+          behavior,
+          hasRouted: hasStatusEffect(cur.statusEffects, 'routed')
+        }, cur.status)
+        next[id] = (cleared === cur.route && ns === cur.status) ? cur : { ...cur, route: cleared, status: ns }
         continue
       }
 
       // Phase 5：正在交战的 aggressive/cautious 单位停止移动
       if (cur.isEngaged && (behavior === 'aggressive' || behavior === 'cautious')) {
-        // 不消耗路线，保持当前位置等待战斗结束
-        next[id] = cur.status === 'attacking' ? cur : { ...cur, status: 'attacking' }
+        const ns = resolveStatus({
+          hp: cur.hp, isEngaged: true, routeLength: cur.route.length,
+          behavior,
+          hasRouted: hasStatusEffect(cur.statusEffects, 'routed')
+        }, cur.status)
+        next[id] = ns === cur.status ? cur : { ...cur, status: ns }
         continue
       }
 
@@ -1188,8 +1199,13 @@ export function tickMapMovement(deltaSimSec: number) {
         }
       }
 
-      const status: PlacedUnit['status'] = route.length === 0 ? 'idle' : 'moving'
-      next[id] = { ...cur, lat, lng, route, status }
+      const ns = resolveStatus({
+        hp: cur.hp, isEngaged: cur.isEngaged, routeLength: route.length,
+        behavior: behavior ?? cur.behavior ?? 'aggressive',
+        hasRouted: hasStatusEffect(cur.statusEffects, 'routed')
+      }, cur.status)
+      next[id] = (lat === cur.lat && lng === cur.lng && route === cur.route && ns === cur.status)
+        ? cur : { ...cur, lat, lng, route, status: ns }
     }
     return next
   })
