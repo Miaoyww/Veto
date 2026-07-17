@@ -262,6 +262,8 @@ export interface Battle {
 	mapZoom: number;
 	factions: Faction[];
 	placedUnits: PlacedUnit[];
+	/** 已阵亡单位 */
+	fallenUnits: PlacedUnit[];
 	/** 行动日志 */
 	actionLog: ActionLogEntry[];
 	/** 推演起始日期（ISO 日期字符串 YYYY-MM-DD） */

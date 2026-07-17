@@ -25,7 +25,8 @@ import {
 	battles,
 	runtimePositions,
 	addLog,
-	autoAttackEnabled
+	autoAttackEnabled,
+		moveToFallen
 } from '../stores/battle/battle-store';
 import type { RuntimeUnitPosition } from '../stores/battle/battle-store';
 import type { Contact } from '$lib/types';
@@ -314,7 +315,7 @@ function handlePlacedCombat() {
 		const u = battle.factions.flatMap(f => f.units).find(u2 => u2.id === up.unitId);
 		const un = u?.name ?? up.unitId;
 		if (pos.status === 'destroyed' && up.status !== 'destroyed') {
-			addLog(`${un} 被摧毁`, { category: 'combat', location: { lat: pos.lat, lng: pos.lng }, sourceUnitId: id });
+			moveToFallen(id)
 		} else if (pos.status === 'retreating' && up.status !== 'retreating') {
 			addLog(`${un} 溃退`, { category: 'combat', location: { lat: pos.lat, lng: pos.lng }, sourceUnitId: id });
 		}

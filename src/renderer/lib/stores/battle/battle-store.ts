@@ -224,6 +224,7 @@ export function createBattle(
     mapZoom,
     factions: [],
     placedUnits: [],
+    fallenUnits: [],
     actionLog: [],
     startDate,
     timeScale: options?.timeScale,
@@ -509,6 +510,28 @@ export function addUnit(factionId: string, unit: UnitTemplate) {
   )
 }
 
+/** 将已阵亡单位从 placedUnits 移到 fallenUnits */
+export function moveToFallen(placedId: string) {
+  const battle = get(currentBattle)
+  const placed = battle?.placedUnits.find((p) => p.id === placedId)
+  if (!battle || !placed) return
+  const unit = battle.factions.flatMap((f) => f.units).find((u) => u.id === placed.unitId)
+  const unitName = unit?.name ?? placed.unitId
+  updateCurrentBattle((b) => ({
+    ...b,
+    placedUnits: b.placedUnits.filter((p) => p.id !== placedId),
+    fallenUnits: [...b.fallenUnits, { ...placed, status: 'destroyed', route: [], attackTargetId: undefined }]
+  }))
+  // 清理运行时位置
+  runtimePositions.update((pos) => {
+    const next = { ...pos }
+    delete next[placedId]
+    return next
+  })
+  selectedPlacedUnitId.update((id) => (id === placedId ? null : id))
+  addLog(`${unitName} 已阵亡`, { category: 'combat', location: { lat: placed.lat, lng: placed.lng }, sourceUnitId: placedId })
+}
+
 export function removeUnit(factionId: string, unitId: string) {
   const battle = get(currentBattle)
   const unit = battle?.factions.find((f) => f.id === factionId)?.units.find((u) => u.id === unitId)
@@ -751,6 +774,7 @@ export function resetCurrentBattle() {
     ...b,
     factions: [],
     placedUnits: [],
+    fallenUnits: [],
     actionLog: [],
     updatedAt: Date.now()
   }))
