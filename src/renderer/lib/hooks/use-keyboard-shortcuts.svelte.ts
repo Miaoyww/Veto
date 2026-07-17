@@ -21,7 +21,7 @@ import {
 	leftBarPinned,
 	unitPanelVisible,
 	unitsCardOpen,
-	rightBarPinned
+	unitDragEnabled
 } from '$lib/stores/battle/battle-ui-store';
 import {
 	selectedWaypoint,
@@ -65,7 +65,8 @@ export const SHORTCUT_DEFS: ShortcutDef[] = [
 	{ key: 'Z', ctrl: true, description: '撤销操作', group: '危机推演' },
 
 	{ key: 'Escape', description: '退出当前交互模式', group: '危机推演' },
-	{ key: 'F3', description: '在选中路线节点后插入新节点', group: '危机推演' }
+	{ key: 'F3', description: '在选中路线节点后插入新节点', group: '危机推演' },
+	{ key: 'D', description: '切换单位拖拽', group: '危机推演' }
 ];
 
 function isInInput(e: KeyboardEvent): boolean {
@@ -130,9 +131,9 @@ function handleKeydown(e: KeyboardEvent) {
 		leftBarPinned.update((pinned) => !pinned);
 	}
 
-	// D: 切换右侧面板（输入框内不触发）
+	// D: 切换单位拖拽（输入框内不触发）
 	if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.altKey && !isInInput(e)) {
-		rightBarPinned.update((pinned) => !pinned);
+		unitDragEnabled.update((v) => !v);
 	}
 
 	// Q：切换单位面板（输入框内不触发）

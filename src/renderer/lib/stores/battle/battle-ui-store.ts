@@ -31,6 +31,9 @@ export const rightBarPinned = writable<boolean>(false);
 /** 单位面板开关（由 left-sidebar 及快捷键控制） */
 export const unitPanelVisible = writable<boolean>(false);
 
+/** 单位拖拽开关（快捷键 D 控制） */
+export const unitDragEnabled = writable<boolean>(false);
+
 // ── 逐层关闭 ───────────────────────────────────────────────
 
 /**

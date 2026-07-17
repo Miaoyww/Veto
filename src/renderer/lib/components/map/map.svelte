@@ -27,6 +27,7 @@
     runtimePositions
   } from '$lib/stores/battle/battle-store'
   import { pendingRoute, addPendingPoint, cancelPendingRoute, applyPendingRoute, selectedWaypoint, routeInsertMode } from '$lib/stores/battle/route.store'
+  import { unitDragEnabled } from '$lib/stores/battle/battle-ui-store'
   import type { UnitTemplate, PlacedUnit, Faction, FacilityType } from '$lib/types'
   import { getNatoIcon } from '$lib/utils/unit-icon'
   import { getMilSymbolSVG, getMilSymbolAnchor } from '$lib/utils/milsymbol-utils'
@@ -184,7 +185,7 @@
       // 标记
       const marker = L.marker([placed.lat, placed.lng], {
         icon: getNatoIcon(unit, faction, placed, placed.id === $selectedPlacedUnitId),
-        draggable: $interactionMode === 'select'
+        draggable: $interactionMode === 'select' && $unitDragEnabled
       })
 
       // 弹出窗口
@@ -275,7 +276,7 @@
 
           const wp = L.marker([lat, lng], {
             icon: getWaypointIcon(c, c, fo, r, w),
-            draggable: $interactionMode === 'select' && !get(routeInsertMode),
+            draggable: $interactionMode === 'select' && !get(routeInsertMode) && $unitDragEnabled,
             interactive: true
           })
           ;(wp as any)._routeIndex = i
@@ -464,7 +465,7 @@
 
               const wp = L.marker([lat, lng], {
                 icon: getWaypointIcon(c, c, fo, r, w),
-                draggable: $interactionMode === 'select' && !get(routeInsertMode),
+                draggable: $interactionMode === 'select' && !get(routeInsertMode) && $unitDragEnabled,
                 interactive: true
               })
               ;(wp as any)._routeIndex = i
