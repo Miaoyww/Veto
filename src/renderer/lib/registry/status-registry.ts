@@ -71,6 +71,15 @@ const BUILT_IN_STATUSES: StatusDefinition[] = [
 		priority: 3,
 		tags: ['negative', 'combat']
 	},
+	{
+		id: 'overcrowded',
+		name: '拥挤',
+		description: '单位过度集中，遭受指挥和补给惩罚（Phase 5 堆叠系统）',
+		modifiers: { defense: 0.85, maxOrg: 0.8 },
+		category: 'condition',
+		priority: 1,
+		tags: ['negative', 'stacking']
+	},
 	// ── 能力类 ──
 	{
 		id: 'forced_march',

@@ -108,6 +108,9 @@ export interface StatusInstance {
 	source?: string;
 }
 
+/** 单位行为姿态（Phase 5） */
+export type UnitBehavior = 'aggressive' | 'defensive' | 'cautious' | 'hold';
+
 /** 传感器类型（Phase 3 使用） */
 export type SensorType = 'visual' | 'sigint' | 'passive_acoustic';
 

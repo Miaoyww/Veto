@@ -107,8 +107,23 @@ function handlePlacedCombat() {
 
 			// Phase 4：使用状态修正后的有效攻击属性
 			const attackerEffStats = getEffectiveStats(attackerPlaced.stats, attackerPos.statusEffects);
-			const rangeKm = attackerEffStats.attackRange ?? attackerPlaced.stats.attackRange;
+
+			// Phase 5：行为姿态修正攻击属性
+			const behavior = attackerPos.behavior ?? attackerPlaced.behavior ?? 'aggressive';
+			if (behavior === 'defensive') {
+				attackerEffStats.softAttack = (attackerEffStats.softAttack ?? 0) * 0.7;
+				attackerEffStats.hardAttack = (attackerEffStats.hardAttack ?? 0) * 0.7;
+				attackerEffStats.airAttack = (attackerEffStats.airAttack ?? 0) * 0.7;
+				attackerEffStats.defense = (attackerEffStats.defense ?? 0) * 1.5;
+			}
+
+			const rangeKm = (behavior === 'defensive'
+				? (attackerEffStats.attackRange ?? attackerPlaced.stats.attackRange) * 0.5
+				: attackerEffStats.attackRange ?? attackerPlaced.stats.attackRange);
 			let engaged = false;
+
+			// Phase 5：cautious 单位不主动索敌，仅在被攻击时反击
+			const skipEngage = behavior === 'cautious';
 
 			for (const [targetId, targetPos] of Object.entries(positions)) {
 				if (targetId === attackerId) continue;
@@ -127,6 +142,9 @@ function handlePlacedCombat() {
 					Math.cos((attackerPos.lat * Math.PI) / 180);
 				const distKm = Math.sqrt(dLatKm * dLatKm + dLngKm * dLngKm);
 				if (distKm > rangeKm) continue;
+
+				// Phase 5：cautious 单位不主动攻击
+				if (skipEngage && !targetPos.isEngaged) continue;
 
 				engaged = true;
 
@@ -204,6 +222,15 @@ function handlePlacedCombat() {
 			// HP 归零 → 阵亡
 			if (pos.hp <= 0 && pos.status !== 'destroyed') {
 				next[id] = { ...pos, status: 'destroyed', route: [], isEngaged: false, statusEffects: [] };
+				continue;
+			}
+
+			// Phase 5：hold 单位不撤退
+			const bh = pos.behavior ?? placedMap.get(id)?.behavior ?? 'aggressive';
+			if (bh === 'hold') {
+				if (pos.hp <= 0 && pos.status !== 'destroyed') {
+					next[id] = { ...pos, status: 'destroyed', route: [], isEngaged: false, statusEffects: [] };
+				}
 				continue;
 			}
 
@@ -333,6 +360,195 @@ function handlePlacedCombat() {
 
 
 
+
+	// ---- 堆叠惩罚（Phase 5） ----
+
+	/**
+	 * 检测同阵营单位过密堆叠，施加 overcrowded 状态。
+	 */
+	function handleStackingPenalties() {
+		const battle = get(currentBattle);
+		if (!battle || battle.placedUnits.length < 3) return;
+
+		const positions = get(runtimePositions);
+		const clock = get(gameClock);
+		const simTimeMs = clock.currentDate.getTime();
+		const STACKING_THRESHOLD_KM = 0.5;
+
+		for (const faction of battle.factions) {
+			const factionUnits = battle.placedUnits.filter(
+				(u) => u.factionId === faction.id && u.status !== 'destroyed'
+			);
+			if (factionUnits.length < 2) continue;
+
+			const stackedGroups: string[][] = [];
+			const processed = new Set<string>();
+
+			for (const unitA of factionUnits) {
+				if (processed.has(unitA.id)) continue;
+				const posA = positions[unitA.id];
+				if (!posA || posA.hp <= 0) continue;
+
+				const group: string[] = [unitA.id];
+				for (const unitB of factionUnits) {
+					if (unitB.id === unitA.id || processed.has(unitB.id)) continue;
+					const posB = positions[unitB.id];
+					if (!posB || posB.hp <= 0) continue;
+					const dLatKm = (posB.lat - posA.lat) * 111;
+					const dLngKm = (posB.lng - posA.lng) * 111 * Math.cos((posA.lat * Math.PI) / 180);
+					const distKm = Math.sqrt(dLatKm * dLatKm + dLngKm * dLngKm);
+					if (distKm < STACKING_THRESHOLD_KM) {
+						group.push(unitB.id);
+					}
+				}
+				if (group.length >= 2) {
+					stackedGroups.push(group);
+					group.forEach((id) => processed.add(id));
+				}
+			}
+
+			for (const group of stackedGroups) {
+				for (const unitId of group) {
+					const pos = positions[unitId];
+					if (!pos) continue;
+					if (!hasStatusEffect(pos.statusEffects, 'overcrowded')) {
+						runtimePositions.update((p) => {
+							const cur = p[unitId];
+							if (!cur) return p;
+							return {
+								...p,
+								[unitId]: {
+									...cur,
+									statusEffects: applyStatusEffect(cur.statusEffects, 'overcrowded', simTimeMs)
+								}
+							};
+						});
+					}
+				}
+			}
+
+			const allStackedIds = new Set(stackedGroups.flat());
+			for (const unit of factionUnits) {
+				if (allStackedIds.has(unit.id)) continue;
+				const pos = positions[unit.id];
+				if (!pos || pos.hp <= 0) continue;
+				if (hasStatusEffect(pos.statusEffects, 'overcrowded')) {
+					runtimePositions.update((p) => {
+						const cur = p[unit.id];
+						if (!cur) return p;
+						return {
+							...p,
+							[unit.id]: {
+								...cur,
+								statusEffects: removeStatusEffect(cur.statusEffects, 'overcrowded')
+							}
+						};
+					});
+				}
+			}
+		}
+	}
+
+	// ---- 设施效果（Phase 5） ----
+
+	/**
+	 * 检查设施覆盖范围内的单位，自动施加/移除设施相关状态。
+	 */
+	function handleFacilityEffects() {
+		const battle = get(currentBattle);
+		if (!battle || !battle.facilities || battle.facilities.length === 0) return;
+
+		const positions = get(runtimePositions);
+		const clock = get(gameClock);
+		const simTimeMs = clock.currentDate.getTime();
+
+		for (const facility of battle.facilities) {
+			const facilityRange = typeof facility.properties?.range === 'number'
+				? facility.properties.range
+				: 1;
+
+			const unitsInRange: string[] = [];
+			for (const unit of battle.placedUnits) {
+				if (unit.status === 'destroyed') continue;
+				if (facility.factionId && unit.factionId !== facility.factionId) continue;
+				const pos = positions[unit.id];
+				if (!pos || pos.hp <= 0) continue;
+				const dLatKm = (pos.lat - facility.lat) * 111;
+				const dLngKm = (pos.lng - facility.lng) * 111 * Math.cos((facility.lat * Math.PI) / 180);
+				const distKm = Math.sqrt(dLatKm * dLatKm + dLngKm * dLngKm);
+				if (distKm <= facilityRange) {
+					unitsInRange.push(unit.id);
+				}
+			}
+
+			const maxCap = facility.maxCapacity ?? 999;
+			let statusId: string | null = null;
+			switch (facility.type) {
+				case 'fortress': statusId = 'fortified'; break;
+				case 'trench_network': statusId = 'entrenched'; break;
+				case 'supply_depot': statusId = 'resupplying'; break;
+			}
+
+			if (!statusId) continue;
+
+			for (let i = 0; i < unitsInRange.length; i++) {
+				const unitId = unitsInRange[i];
+				const pos = positions[unitId];
+				if (!pos) continue;
+
+				if (i < maxCap) {
+					if (!hasStatusEffect(pos.statusEffects, statusId)) {
+						runtimePositions.update((p) => {
+							const cur = p[unitId];
+							if (!cur) return p;
+							return {
+								...p,
+								[unitId]: {
+									...cur,
+									statusEffects: applyStatusEffect(cur.statusEffects, statusId!, simTimeMs)
+								}
+							};
+						});
+					}
+				} else {
+					if (hasStatusEffect(pos.statusEffects, statusId)) {
+						runtimePositions.update((p) => {
+							const cur = p[unitId];
+							if (!cur) return p;
+							return {
+								...p,
+								[unitId]: {
+									...cur,
+									statusEffects: removeStatusEffect(cur.statusEffects, statusId!)
+								}
+							};
+						});
+					}
+				}
+			}
+
+			for (const unit of battle.placedUnits) {
+				if (unitsInRange.includes(unit.id)) continue;
+				if (unit.status === 'destroyed') continue;
+				const pos = positions[unit.id];
+				if (!pos || pos.hp <= 0) continue;
+				if (facility.factionId && unit.factionId !== facility.factionId) continue;
+				if (hasStatusEffect(pos.statusEffects, statusId)) {
+					runtimePositions.update((p) => {
+						const cur = p[unit.id];
+						if (!cur) return p;
+						return {
+							...p,
+							[unit.id]: {
+								...cur,
+								statusEffects: removeStatusEffect(cur.statusEffects, statusId!)
+							}
+						};
+					});
+				}
+			}
+		}
+	}
 // ---- RAF 主循环 ----
 
 function tick(timestamp: number) {
@@ -379,7 +595,16 @@ function tick(timestamp: number) {
 		handlePlacedCombat();
 	}
 
-	// 4. 定期将运行时位置写回 battles（约每 30s），确保进度持久化
+	// 4. 传感器扫描（Phase 3）+ 设施效果 + 堆叠惩罚（Phase 5）
+	sensorAccumMs += deltaRealMs;
+	if (sensorAccumMs >= SENSOR_INTERVAL_MS) {
+		sensorAccumMs -= SENSOR_INTERVAL_MS;
+		runSensorPass();
+		handleFacilityEffects();
+		handleStackingPenalties();
+	}
+
+	// 5. 定期将运行时位置写回 battles（约每 30s），确保进度持久化
 	periodicFlushAccumMs += deltaRealMs;
 	if (periodicFlushAccumMs >= PERIODIC_FLUSH_INTERVAL_MS) {
 		periodicFlushAccumMs = 0;

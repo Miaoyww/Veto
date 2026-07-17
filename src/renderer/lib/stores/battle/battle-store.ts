@@ -12,7 +12,8 @@ import { registry } from '$lib/registry/mod-registry.svelte'
 import {
 	applyStatusEffect,
 	removeStatusEffect,
-	hasStatusEffect
+	hasStatusEffect,
+	getEffectiveStats
 } from '$lib/registry/status-registry'
 import {
 	getMaxDetectionRange,
@@ -367,7 +368,8 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
                 attackRange: 15,
                 hardness: 0.1
               },
-          sensorIds: placement.sensorIds ?? template?.sensorIds ? [...(placement.sensorIds ?? template!.sensorIds!)] : undefined
+          sensorIds: placement.sensorIds ?? template?.sensorIds ? [...(placement.sensorIds ?? template!.sensorIds!)] : undefined,
+          behavior: 'aggressive'
         }
 
         battles.update((list) =>
@@ -392,7 +394,8 @@ function initializeBattleFromCampaign(battleId: string, campaignId: string): voi
             org: placed.org,
             isEngaged: false,
             statusEffects: [],
-            sensorIds: placed.sensorIds ? [...placed.sensorIds] : undefined
+            sensorIds: placed.sensorIds ? [...placed.sensorIds] : undefined,
+            behavior: placed.behavior ?? 'aggressive'
           }
         }))
       }
@@ -575,7 +578,8 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
           attackRange: 15,
           hardness: 0.1
         },
-    sensorIds: unit?.sensorIds ? [...unit.sensorIds] : undefined
+    sensorIds: unit?.sensorIds ? [...unit.sensorIds] : undefined,
+    behavior: 'aggressive'
   }
   updateCurrentBattle((b) => ({
     ...b,
@@ -593,7 +597,8 @@ export function placeUnit(unitId: string, factionId: string, lat: number, lng: n
       org: placed.org,
       isEngaged: false,
       statusEffects: [],
-      sensorIds: unit?.sensorIds ? [...unit.sensorIds] : undefined
+      sensorIds: unit?.sensorIds ? [...unit.sensorIds] : undefined,
+      behavior: 'aggressive'
     }
   }))
   addLog(`在 (${lat.toFixed(3)}, ${lng.toFixed(3)}) 放置单位`)
@@ -917,6 +922,8 @@ export interface RuntimeUnitPosition {
   statusEffects?: import('$lib/types').StatusInstance[]
   /** 该单位装备的传感器 ID 列表（Phase 3） */
   sensorIds?: string[]
+  /** 行为姿态（Phase 5），默认 'aggressive' */
+  behavior?: import('$lib/types').UnitBehavior
 }
 
 /**
@@ -944,7 +951,8 @@ export function initRuntimePositions() {
       org: u.org,
       isEngaged: false,
       statusEffects: u.statusEffects ? [...u.statusEffects] : undefined,
-      sensorIds: u.sensorIds ? [...u.sensorIds] : undefined
+      sensorIds: u.sensorIds ? [...u.sensorIds] : undefined,
+      behavior: u.behavior ?? 'aggressive'
     }
   }
   runtimePositions.set(snapshot)
@@ -975,7 +983,8 @@ export function flushRuntimePositions() {
                 hp: pos.hp,
                 org: pos.org,
                 statusEffects: pos.statusEffects,
-                sensorIds: pos.sensorIds
+                sensorIds: pos.sensorIds,
+                behavior: pos.behavior
               }
             : u
         })
@@ -1011,15 +1020,63 @@ export function tickMapMovement(deltaSimSec: number) {
         continue
       }
 
-      // 找到对应 PlacedUnit 的速度（从 battles 中读一次；仅读不写）
+      // Phase 5：找到对应 PlacedUnit，读取行为姿态和有效速度
       const battle = get(currentBattle)
       const placed = battle?.placedUnits.find((p) => p.id === id)
-      const speed = placed?.stats.speed ?? 10 // km/h，无法找到则默认 10
+      const behavior = cur.behavior ?? placed?.behavior ?? 'aggressive'
+
+      // Phase 5：defensive / hold 不移动
+      if (behavior === 'defensive' || behavior === 'hold') {
+        next[id] = cur.route.length > 0 ? { ...cur, route: [], status: 'defending' } : cur
+        continue
+      }
+
+      // Phase 5：正在交战的 aggressive/cautious 单位停止移动
+      if (cur.isEngaged && (behavior === 'aggressive' || behavior === 'cautious')) {
+        // 不消耗路线，保持当前位置等待战斗结束
+        next[id] = cur.status === 'attacking' ? cur : { ...cur, status: 'attacking' }
+        continue
+      }
+
+      // Phase 5：溃退单位自动生成远离敌人的撤退路线
+      let route = cur.route as [number, number][]
+      if (cur.status === 'retreating' && route.length === 0) {
+        // 找到最近的敌方单位
+        let nearestEnemyDist = Infinity
+        let nearestEnemyLat = cur.lat
+        let nearestEnemyLng = cur.lng
+        for (const [otherId, otherPos] of Object.entries(positions)) {
+          if (otherId === id) continue
+          const otherPlaced = battle?.placedUnits.find((p) => p.id === otherId)
+          if (!otherPlaced || otherPlaced.factionId === placed?.factionId) continue
+          const dLat = (otherPos.lat - cur.lat) * 111
+          const dLng = (otherPos.lng - cur.lng) * 111 * Math.cos((cur.lat * Math.PI) / 180)
+          const dist = Math.sqrt(dLat * dLat + dLng * dLng)
+          if (dist < nearestEnemyDist) {
+            nearestEnemyDist = dist
+            nearestEnemyLat = otherPos.lat
+            nearestEnemyLng = otherPos.lng
+          }
+        }
+        // 撤退方向 = 远离最近敌人，距离 = 10 km
+        const retreatDistKm = 10
+        const dx = cur.lat - nearestEnemyLat
+        const dy = cur.lng - nearestEnemyLng
+        const norm = Math.sqrt(dx * dx + dy * dy)
+        if (norm > 1e-9) {
+          const retreatLat = cur.lat + (dx / norm) * (retreatDistKm / 111)
+          const retreatLng = cur.lng + (dy / norm) * (retreatDistKm / (111 * Math.cos((cur.lat * Math.PI) / 180)))
+          route = [[retreatLat, retreatLng]]
+        }
+      }
+
+      // Phase 5：使用状态修正后的有效速度
+      const effectiveStats = getEffectiveStats(placed?.stats ?? {}, cur.statusEffects)
+      const speed = effectiveStats.speed ?? placed?.stats.speed ?? 10
 
       let remainKm = (speed / 3600) * deltaSimSec
       let lat = cur.lat
       let lng = cur.lng
-      let route = cur.route as [number, number][]
 
       while (remainKm > 1e-9 && route.length > 0) {
         const [tLat, tLng] = route[0]
