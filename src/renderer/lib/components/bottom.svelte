@@ -6,14 +6,39 @@
   import {
     interactionMode,
     saveBattleWithToast,
-    selectFaction
+    selectFaction,
+    selectedPlacedUnitId,
+    selectedPlacedUnit,
+    autoAttackEnabled,
+    clearRoute,
+    updatePlacedUnit,
+    addLog
   } from '$lib/stores/battle/battle-store'
-  import { Activity, Ruler, Save, Swords } from '@lucide/svelte'
+  import { Activity, Ruler, Save, Swords, Crosshair, X, ShieldBan } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
 
   function toggleLeftSidebar(): void {
     selectFaction('')
     leftBarPinned.update((prev: boolean) => !prev)
+  }
+
+  function handleAttackMode(): void {
+    const mode = $interactionMode
+    interactionMode.set(mode === 'attack' ? 'select' : 'attack')
+  }
+
+  function handleCancelTask(): void {
+    const placedId = $selectedPlacedUnitId
+    const placed = $selectedPlacedUnit
+    if (!placedId || !placed) return
+    const unitName = $selectedPlacedUnit?.unitId ?? '单位'
+    clearRoute(placedId)
+    updatePlacedUnit(placedId, { attackTargetId: undefined })
+    addLog(`取消任务: ${unitName}`)
+  }
+
+  function toggleAutoAttack(): void {
+    autoAttackEnabled.update((v) => !v)
   }
 </script>
 
@@ -48,6 +73,37 @@
       onclick={() => ($unitsCardOpen = !$unitsCardOpen)}
     >
       <Activity />
+    </Button>
+    <!-- Phase 9: 手动攻击 -->
+    <Button
+      variant="ghost"
+      size="icon"
+      title="手动攻击 (A)"
+      class={$interactionMode === 'attack' ? 'text-rose-500' : ''}
+      disabled={!$selectedPlacedUnitId}
+      onclick={handleAttackMode}
+    >
+      <Crosshair />
+    </Button>
+    <!-- Phase 9: 取消任务 -->
+    <Button
+      variant="ghost"
+      size="icon"
+      title="取消任务 (X)"
+      disabled={!$selectedPlacedUnitId}
+      onclick={handleCancelTask}
+    >
+      <X />
+    </Button>
+    <!-- Phase 9: 自动索敌开关 -->
+    <Button
+      variant="ghost"
+      size="icon"
+      title={$autoAttackEnabled ? '自动索敌 (开启)' : '自动索敌 (关闭)'}
+      class={!$autoAttackEnabled ? 'text-amber-500' : ''}
+      onclick={toggleAutoAttack}
+    >
+      <ShieldBan />
     </Button>
     <Button variant="ghost" size="icon" title="保存 (Ctrl+S)" onclick={saveBattleWithToast}>
       <Save />

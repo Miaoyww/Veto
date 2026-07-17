@@ -61,7 +61,7 @@ export function closeTopLayer(): boolean {
 		return true;
 	}
 
-	// 5. 非选择交互模式（测量 / 放置 / 路线 / 打击）
+	// 5. 非选择交互模式（测量 / 放置 / 路线 / 打击 / 攻击）
 	const mode = get(interactionMode);
 	if (mode !== 'select') {
 		interactionMode.set('select');

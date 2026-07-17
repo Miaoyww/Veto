@@ -209,6 +209,8 @@ export interface PlacedUnit {
 	statusEffects?: import('./types').StatusInstance[];
 	/** 该单位装备的传感器 ID 列表（Phase 3，覆盖模板默认值） */
 	sensorIds?: string[];
+	/** 手动指定的攻击目标单位 ID（Phase 9） */
+	attackTargetId?: string;
 	/** 当前生命值（运行时状态，耗尽则单位被摧毁） */
 	hp: number;
 	/** 当前组织度（运行时状态，耗尽则单位溃退） */
@@ -286,8 +288,21 @@ export interface Battle {
 	eventStates?: CampaignEventState[];
 }
 
+/** 消息类别（Phase 9） */
+export type MessageCategory = 'combat' | 'movement' | 'system' | 'event';
+
 export interface ActionLogEntry {
 	id: string;
 	timestamp: number;
 	message: string;
+	/** 消息类别（Phase 9，默认 'system'） */
+	category?: MessageCategory;
+	/** 地图气泡位置（Phase 9） */
+	location?: { lat: number; lng: number };
+	/** 来源单位 ID（Phase 9） */
+	sourceUnitId?: string;
+	/** 目标单位 ID（Phase 9） */
+	targetUnitId?: string;
+	/** 是否已读（Phase 9，UI 标记用） */
+	read?: boolean;
 }

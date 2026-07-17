@@ -23,7 +23,9 @@ import {
 	currentBattle,
 	currentBattleId,
 	battles,
-	runtimePositions
+	runtimePositions,
+	addLog,
+	autoAttackEnabled
 } from '../stores/battle/battle-store';
 import type { RuntimeUnitPosition } from '../stores/battle/battle-store';
 import type { Contact } from '$lib/types';
@@ -125,6 +127,50 @@ function handlePlacedCombat() {
 			// Phase 5：cautious 单位不主动索敌，仅在被攻击时反击
 			const skipEngage = behavior === 'cautious';
 
+			// Phase 9：手动攻击目标优先处理
+			const manualTargetId = attackerPlaced.attackTargetId;
+			if (manualTargetId) {
+				const targetPos = positions[manualTargetId];
+				const targetPlaced = placedMap.get(manualTargetId);
+				if (targetPos && targetPlaced && targetPos.hp > 0 && targetPlaced.factionId !== attackerPlaced.factionId) {
+					const dLatKm = (targetPos.lat - attackerPos.lat) * 111;
+					const dLngKm = (targetPos.lng - attackerPos.lng) * 111 * Math.cos((attackerPos.lat * Math.PI) / 180);
+					const distKm = Math.sqrt(dLatKm * dLatKm + dLngKm * dLngKm);
+					// 手动攻击允许 2x 射程（模拟主动出击）
+					if (distKm <= rangeKm * 2) {
+						engaged = true;
+						const targetEffStats = getEffectiveStats(targetPlaced.stats, targetPos.statusEffects);
+						const combatCtx: CombatContext = {
+							attacker: { stats: attackerEffStats, hp: attackerPos.hp, org: attackerPos.org },
+							target: { stats: targetEffStats, hp: targetPos.hp, org: targetPos.org },
+							distanceKm: distKm,
+							overrides
+						};
+						let netDmg = 0;
+						if (calcNetDamage) {
+							netDmg = calcNetDamage(combatCtx);
+						} else {
+							const orgRatio = attackerPlaced.stats.maxOrg > 0 ? attackerPos.org / attackerPlaced.stats.maxOrg : 1;
+							const efficiency = orgRatio < overrides.orgPenaltyThreshold ? orgRatio / overrides.orgPenaltyThreshold : 1;
+							const hardness = targetEffStats.hardness ?? 0;
+							const atkBase = (attackerEffStats.softAttack ?? 0) * (1 - hardness) + (attackerEffStats.hardAttack ?? 0) * hardness;
+							netDmg = Math.max(0, atkBase * efficiency - (targetEffStats.defense ?? 0) * overrides.defenseCoeff);
+						}
+						next[manualTargetId] = {
+							...next[manualTargetId],
+							hp: Math.max(0, next[manualTargetId].hp - netDmg * overrides.hpDamageRatio),
+							org: Math.max(0, next[manualTargetId].org - netDmg * overrides.orgDamageRatio)
+						};
+					}
+				}
+			}
+
+			// Phase 9：自动索敌开关关闭时跳过范围索敌
+			if (!get(autoAttackEnabled) && !engaged) {
+				next[attackerId] = { ...next[attackerId], isEngaged: false };
+				continue;
+			}
+
 			for (const [targetId, targetPos] of Object.entries(positions)) {
 				if (targetId === attackerId) continue;
 				if (targetPos.hp <= 0) continue;
@@ -219,7 +265,7 @@ function handlePlacedCombat() {
 		for (const id of Object.keys(next)) {
 			const pos = next[id];
 
-			// HP 归零 → 阵亡
+			// HP 归零 → 阵亡（Phase 9：记录战斗日志）
 			if (pos.hp <= 0 && pos.status !== 'destroyed') {
 				next[id] = { ...pos, status: 'destroyed', route: [], isEngaged: false, statusEffects: [] };
 				continue;
@@ -258,9 +304,24 @@ function handlePlacedCombat() {
 
 		return next;
 	});
+
+	// Phase 9：检测并记录战斗事件
+	const updatedPositions = get(runtimePositions);
+	const staticUnitMap = new Map(battle.placedUnits.map(p => [p.id, p]));
+	for (const [id, pos] of Object.entries(updatedPositions)) {
+		const up = staticUnitMap.get(id);
+		if (!up) continue;
+		const u = battle.factions.flatMap(f => f.units).find(u2 => u2.id === up.unitId);
+		const un = u?.name ?? up.unitId;
+		if (pos.status === 'destroyed' && up.status !== 'destroyed') {
+			addLog(`${un} 被摧毁`, { category: 'combat', location: { lat: pos.lat, lng: pos.lng }, sourceUnitId: id });
+		} else if (pos.status === 'retreating' && up.status !== 'retreating') {
+			addLog(`${un} 溃退`, { category: 'combat', location: { lat: pos.lat, lng: pos.lng }, sourceUnitId: id });
+		}
+	}
 }
 
-	// ---- 传感器扫描（Phase 3） ----
+// ---- 传感器扫描（Phase 3） ----
 
 	/**
 	 * 执行传感器探测 pass：对每个阵营的每个有传感器单位，
@@ -357,6 +418,7 @@ function handlePlacedCombat() {
 			);
 		}
 	}
+
 
 
 

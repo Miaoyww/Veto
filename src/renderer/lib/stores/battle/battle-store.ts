@@ -20,7 +20,7 @@ import {
 	isUnitConfirmed,
 	getContactsForFaction
 } from '$lib/registry/sensor-registry'
-import type { StatusInstance } from '$lib/types'
+import type { StatusInstance, MessageCategory } from '$lib/types'
 import { gameClock } from '$lib/engine/game-clock.store'
 
 const STORAGE_KEY = 'wars_battles'
@@ -671,11 +671,20 @@ export function clearRoute(placedId: string) {
 
 // ============ 行动日志 ============
 
-export function addLog(message: string) {
+export function addLog(
+  message: string,
+  opts?: {
+    category?: MessageCategory;
+    location?: { lat: number; lng: number };
+    sourceUnitId?: string;
+    targetUnitId?: string;
+  }
+) {
   const entry: ActionLogEntry = {
     id: generateId(),
     timestamp: Date.now(),
-    message
+    message,
+    ...opts
   }
   updateCurrentBattle((b) => ({
     ...b,
@@ -899,8 +908,11 @@ export function isEnemyUnitConfirmed(placedUnitId: string): boolean {
 
 // ============ 交互模式 ============
 
-export type InteractionMode = 'select' | 'place' | 'route' | 'strike' | 'measure'
+export type InteractionMode = 'select' | 'place' | 'route' | 'strike' | 'measure' | 'attack'
 export const interactionMode = writable<InteractionMode>('select')
+
+/** 自动索敌开关（Phase 9，关闭后单位不自动攻击） */
+export const autoAttackEnabled = writable(true)
 
 /** 待放置的单位ID (place模式使用) */
 export const pendingPlaceUnitId = writable<string | null>(null)

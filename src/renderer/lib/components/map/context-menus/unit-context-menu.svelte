@@ -11,7 +11,9 @@
 		Target,
 		Activity,
 		Trash2,
-		Check
+		Check,
+		Crosshair,
+		Ban
 	} from '@lucide/svelte';
 	import { mods } from '$lib/registry/mod-registry.svelte';
 	import type { PlacedUnit } from '$lib/types';
@@ -191,6 +193,32 @@
 		open = false;
 	}
 
+	function handleManualAttack() {
+		const targetId = contextUnitId || $selectedPlacedUnitId;
+		if (targetId) {
+			selectedPlacedUnitId.set(targetId);
+			interactionMode.set('attack');
+			addLog('点击敌方单位以指定攻击目标');
+		}
+		contextUnitId = null;
+		open = false;
+	}
+
+	function handleCancelTask() {
+		const targetId = contextUnitId || $selectedPlacedUnitId;
+		if (targetId) {
+			const placed = $currentBattle?.placedUnits.find((p) => p.id === targetId);
+			const unitName =
+				$currentBattle?.factions.flatMap((f) => f.units).find((u) => u.id === placed?.unitId)
+					?.name ?? '单位';
+			clearRoute(targetId);
+			updatePlacedUnit(targetId, { attackTargetId: undefined });
+			addLog(`取消任务: ${unitName}`);
+		}
+		contextUnitId = null;
+		open = false;
+	}
+
 	function handleDeletePlaced() {
 		const targetId = contextUnitId || $selectedPlacedUnitId;
 		if (targetId) {
@@ -276,6 +304,24 @@
 						设置打击目标
 					</ContextMenu.Item>
 					{/if}
+
+					<!-- Phase 9：手动攻击 -->
+					<ContextMenu.Item
+						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 data-highlighted:bg-muted"
+						onSelect={handleManualAttack}
+					>
+						<Crosshair class="mr-2 size-4" />
+						手动攻击
+					</ContextMenu.Item>
+
+					<!-- Phase 9：取消任务 -->
+					<ContextMenu.Item
+						class="rounded-button flex h-9 items-center py-3 pr-1.5 pl-3 text-sm font-normal select-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 data-highlighted:bg-muted"
+						onSelect={handleCancelTask}
+					>
+						<Ban class="mr-2 size-4" />
+						取消任务
+					</ContextMenu.Item>
 
 					<!-- 设置状态子菜单 -->
 					<ContextMenu.Sub>

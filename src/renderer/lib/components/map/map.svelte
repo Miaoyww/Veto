@@ -166,9 +166,22 @@
       // 弹出窗口
       marker.bindPopup(createPopupElement(unit, faction, placed))
 
-      // 点击选中
+      // 点击选中（attack 模式下点击敌方单位 = 设置攻击目标）
       marker.on('click', () => {
-        selectedPlacedUnitId.set(placed.id)
+        const mode = $interactionMode
+        if (mode === 'attack') {
+          const attackerId = $selectedPlacedUnitId
+          if (attackerId && attackerId !== placed.id) {
+            updatePlacedUnit(attackerId, { attackTargetId: placed.id })
+            addLog(
+              `指定攻击目标: ${info.unit.name}`,
+              { category: 'combat', sourceUnitId: attackerId, targetUnitId: placed.id, location: { lat: placed.lat, lng: placed.lng } }
+            )
+            interactionMode.set('select')
+          }
+        } else {
+          selectedPlacedUnitId.set(placed.id)
+        }
       })
 
       // 拖拽结束更新位置
