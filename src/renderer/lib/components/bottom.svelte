@@ -13,7 +13,7 @@
     updatePlacedUnit,
     addLog
   } from '$lib/stores/battle/battle-store'
-  import { Activity, Ruler, Save, Swords, Crosshair, X, ShieldBan, Hand } from '@lucide/svelte'
+  import { Activity, Ruler, Save, Swords, Crosshair, X, Zap, Hand } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
 
   function toggleLeftSidebar(): void {
@@ -102,11 +102,11 @@
     <Button
       variant="ghost"
       size="icon"
-      title={$autoAttackEnabled ? '自动索敌 (开启)' : '自动索敌 (关闭)'}
-      class={!$autoAttackEnabled ? 'text-amber-500' : ''}
+      title={$autoAttackEnabled ? '自动攻击 (开启)' : '自动攻击 (关闭)'}
+      class={$autoAttackEnabled ? 'text-amber-500' : ''}
       onclick={toggleAutoAttack}
     >
-      <ShieldBan />
+      <Zap />
     </Button>
     <Button
       variant="ghost"
