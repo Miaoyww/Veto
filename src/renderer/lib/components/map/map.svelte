@@ -8,7 +8,6 @@
   import { getContactDisplayRadius, isUnitConfirmed } from '$lib/registry/sensor-registry'
   import UnitContextMenu from './context-menus/unit-context-menu.svelte'
   import MapContextMenu from './context-menus/map-context-menu.svelte'
-  import UnitPopup from './cards/floating/unit-popup.svelte'
   import FacilityPopup from './cards/facility-popup.svelte'
   import MeasureCard from './cards/floating/measure-card.svelte'
   import InteractionModeHint from './cards/floating/interaction-mode-hint.svelte'
@@ -89,17 +88,6 @@
   const waypointMarkersMap: Record<string, L.Marker[]> = {}
   /** 上一次渲染图标时的 hp/org/status 缓存（避免每帧重建 DivIcon） */
   const iconStateCache: Record<string, { hp: number; org: number; status: string }> = {}
-
-  // 构建单位 Popup 内容节点
-  function createPopupElement(
-    unit: UnitTemplate,
-    faction: Faction,
-    placed: PlacedUnit
-  ): HTMLElement {
-    const el = document.createElement('div')
-    mount(UnitPopup, { target: el, props: { unit, faction, placed } })
-    return el
-  }
 
   // 查找单位信息
   function findUnit(unitId: string): { unit: UnitTemplate; faction: Faction } | null {
@@ -187,9 +175,6 @@
         icon: getNatoIcon(unit, faction, placed, placed.id === $selectedPlacedUnitId),
         draggable: $interactionMode === 'select' && $unitDragEnabled
       })
-
-      // 弹出窗口
-      marker.bindPopup(createPopupElement(unit, faction, placed))
 
       // 点击选中（attack 模式下点击敌方单位 = 设置攻击目标）
       marker.on('click', () => {
