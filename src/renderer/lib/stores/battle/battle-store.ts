@@ -1096,8 +1096,12 @@ export function tickMapMovement(deltaSimSec: number) {
       }
 
       if (cur.route.length === 0) {
-        // 已到达，状态置 idle
-        next[id] = cur.status === 'idle' ? cur : { ...cur, status: 'idle' }
+        // 已到达；若正在交战则保持 attacking，否则置 idle
+        if (cur.isEngaged) {
+          next[id] = cur.status === 'attacking' ? cur : { ...cur, status: 'attacking' }
+        } else {
+          next[id] = cur.status === 'idle' ? cur : { ...cur, status: 'idle' }
+        }
         continue
       }
 

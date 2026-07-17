@@ -251,13 +251,8 @@ function handlePlacedCombat() {
 				};
 			}
 
-			// Phase 4：根据是否在交战自动更新姿态
-			const currentStatus = attackerPos.status;
-			if (engaged && currentStatus !== 'moving' && currentStatus !== 'destroyed') {
-				next[attackerId] = { ...next[attackerId], isEngaged: engaged, status: 'attacking' };
-			} else if (!engaged && currentStatus === 'attacking') {
-				next[attackerId] = { ...next[attackerId], isEngaged: false, status: 'idle' };
-			} else {
+			// Phase 4：仅更新交战标记，姿态由 tickMapMovement 统一管理
+			if (engaged !== attackerPos.isEngaged) {
 				next[attackerId] = { ...next[attackerId], isEngaged: engaged };
 			}
 		}
