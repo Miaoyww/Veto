@@ -1,91 +1,42 @@
 <script lang="ts">
-	import RightSidebarMenubutton from '$lib/components/buttons/right-sidebar-menubutton.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Ruler, Save, Activity } from '@lucide/svelte';
-	import SettingsButton from '$lib/components/buttons/settings-button.svelte';
-	import { rightBarPinned } from '$lib/stores/battle/battle-ui-store';
-	import PinButton from '../buttons/pin-button.svelte';
-	import { saveBattleWithToast, interactionMode } from '$lib/stores/battle/battle-store';
-	import UnitsCard from '$lib/components/map/cards/floating/unit-state-card.svelte';
-	import { unitsCardOpen } from '$lib/stores/battle/battle-ui-store';
+  import { Card, CardContent } from '$lib/components/ui/card'
+  import { coords } from '$lib/stores/battle/map-store'
+  import UnitInfoPanel from '$lib/components/panels/unit-info-panel.svelte'
+  import * as Accordion from '$lib/components/ui/accordion'
 
-	// 是否鼠标悬停
-	let hover = $state(false);
+  let lat = $derived($coords.lat.toFixed(5))
+  let lng = $derived($coords.lng.toFixed(5))
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore event_directive_deprecated -->
-<div
-	class="sidebar absolute top-30 bottom-30 z-1000 flex w-15 flex-1 flex-col justify-between overflow-hidden rounded-lg bg-background/75 backdrop-blur-md"
-	style:right={$rightBarPinned ? '20px' : hover ? '0px' : '-50px'}
-	on:mouseenter={() => (hover = true)}
-	on:mouseleave={() => (hover = false)}
->
-	<div class="toggle-btn">
-		<PinButton />
-	</div>
-
-	<div class="panel-section">
-		<div class="controls">
-			<RightSidebarMenubutton title="测量距离 (M)">
-				<Button
-					variant="ghost"
-					size="icon"
-					class={$interactionMode === 'measure' ? 'text-amber-500' : ''}
-					onclick={() => interactionMode.set($interactionMode === 'measure' ? 'select' : 'measure')}
-				>
-					<Ruler />
-				</Button>
-			</RightSidebarMenubutton>
-			<RightSidebarMenubutton title="推演单位态势">
-				<Button
-					variant="ghost"
-					size="icon"
-				class={$unitsCardOpen ? 'text-foreground' : ''}
-				onclick={() => ($unitsCardOpen = !$unitsCardOpen)}
-				>
-					<Activity />
-				</Button>
-			</RightSidebarMenubutton>
-		</div>
-	</div>
-
-	<div class="panel-section">
-		<div class="controls">
-			<RightSidebarMenubutton title="保存 (Ctrl+S)">
-				<Button variant="ghost" size="icon" onclick={saveBattleWithToast}>
-					<Save />
-				</Button>
-			</RightSidebarMenubutton>
-			<RightSidebarMenubutton title="设置">
-				<SettingsButton />
-			</RightSidebarMenubutton>
-		</div>
-	</div>
+<div class="right-sidebar">
+  <Card class="flex h-full flex-col overflow-hidden">
+    <CardContent class="flex-1 overflow-y-auto p-3">
+      <Accordion.Root type="single" value="unit-status">
+        <Accordion.Item value="unit-status">
+          <Accordion.Trigger class="border border-border px-3 py-2 text-sm font-medium">
+            单位状态
+          </Accordion.Trigger>
+          <Accordion.Content class="border border-border rounded-lg p-0 pt-4">
+            <UnitInfoPanel />
+          </Accordion.Content>
+        </Accordion.Item>
+      </Accordion.Root>
+    </CardContent>
+    <div class="border-t border-border px-3 py-2 text-center">
+      <span class="font-mono text-xs text-muted-foreground">
+        {lat}, {lng}
+      </span>
+    </div>
+  </Card>
 </div>
 
-<UnitsCard bind:open={$unitsCardOpen} />
-
 <style>
-	.sidebar {
-		transition: right 0.3s;
-	}
-
-	.toggle-btn {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		cursor: pointer;
-		height: 50px;
-	}
-
-	.panel-section {
-		padding: 10px;
-	}
-
-	.controls {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
+  .right-sidebar {
+    position: fixed;
+    top: 3.75rem;
+    right: 0.5rem;
+    bottom: 4rem;
+    width: 360px;
+    z-index: 30;
+  }
 </style>

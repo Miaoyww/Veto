@@ -1,8 +1,7 @@
 <script lang="ts">
   import SettingsButton from '$lib/components/buttons/settings-button.svelte'
   import { Button } from '$lib/components/ui/button'
-  import { coords } from '$lib/stores/battle/map-store'
-  import { leftBarPinned, unitsCardOpen } from '$lib/stores/battle/battle-ui-store'
+    import { leftBarPinned, unitsCardOpen } from '$lib/stores/battle/battle-ui-store'
   import {
     interactionMode,
     saveBattleWithToast,
@@ -113,7 +112,4 @@
     </div>
   </div>
 
-  <div class="veto-card absolute right-0 h-12">
-    坐标: {$coords.lat.toFixed(5)}, {$coords.lng.toFixed(5)}
-  </div>
 </div>
