@@ -14,7 +14,11 @@
     addLog
   } from '$lib/stores/battle/battle-store'
   import { Activity, Ruler, Save, Swords, Crosshair, X, Zap, Hand } from '@lucide/svelte'
+  import { coords } from '$lib/stores/battle/map-store'
   import { fly } from 'svelte/transition'
+
+  let lat = $derived($coords.lat.toFixed(5))
+  let lng = $derived($coords.lng.toFixed(5))
 
   function toggleLeftSidebar(): void {
     selectFaction('')
@@ -125,4 +129,7 @@
     </div>
   </div>
 
+  <div class="veto-card absolute right-0 h-12">
+    <span class="font-mono text-xs text-muted-foreground">{lat}, {lng}</span>
+  </div>
 </div>

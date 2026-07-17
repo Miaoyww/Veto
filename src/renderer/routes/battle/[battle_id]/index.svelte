@@ -11,7 +11,7 @@
   import Header from '$lib/components/map/header.svelte'
   import Bottom from '$lib/components/bottom.svelte'
   import MessageLog from '$lib/components/panels/message-log.svelte'
-  import RightSidebar from '$lib/components/sidebar/right-sidebar.svelte'
+  import UnitInfoPanel from '$lib/components/panels/unit-info-panel.svelte'
   import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte'
   import { VETO_NAME } from '$lib/const'
   import logo from '$lib/assets/logo.svg'
@@ -61,7 +61,7 @@
 <Header class="top-14" />
 <Bottom />
 <MessageLog />
-<RightSidebar />
+<UnitInfoPanel />
 {#if exists}
   <div class="app-container">
     <div class="relative flex-1 bg-[var(--bg-primary)]">
