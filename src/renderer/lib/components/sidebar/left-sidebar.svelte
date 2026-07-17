@@ -32,10 +32,6 @@
   let leftBarVisible = $state($leftBarPinned)
 
   $effect(() => {
-    unitPanelVisible.set($currentFaction != null)
-  })
-
-  $effect(() => {
     if ($leftBarPinned) {
       leftBarVisible = true
     } else {
