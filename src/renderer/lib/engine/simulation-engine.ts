@@ -7,7 +7,7 @@
  *   deltaSimSec = (deltaRealMs / 1000) × timeScale
  *   distMoved   = (speed_km_h / 3600) × deltaSimSec   [km]
  *
- * 战斗结算（每 combatIntervalMs 真实时间执行一次）
+ * 战斗结算（每 combatIntervalMs 模拟时间执行一次）
  *   - 扫描射程内非友方单位
  *   - 软攻/硬攻选择：目标为 armor 用 hardAttack，否则用 softAttack
  *   - 组织度低于阈值时攻击力和速度线性衰减
@@ -26,7 +26,7 @@ import {
 	runtimePositions,
 	addLog,
 	autoAttackEnabled,
-		moveToFallen
+	moveToFallen
 } from '../stores/battle/battle-store';
 import type { RuntimeUnitPosition } from '../stores/battle/battle-store';
 import type { Contact } from '$lib/types';
@@ -54,7 +54,7 @@ let rafId: number | null = null;
 let lastTimestamp: number | null = null;
 
 // ---- 战斗结算状态 ----
-/** 真实时间累计器（ms），每 combatIntervalMs 触发一次战斗结算 */
+/** 模拟时间累计器（ms），随加速倍率缩放，每 combatIntervalMs 触发一次战斗结算 */
 let combatAccumMs = 0;
 
 /** 定期写回 localStorage 的累计器（每 30s 真实时间写一次） */
@@ -251,7 +251,7 @@ function handlePlacedCombat() {
 				};
 			}
 
-			// Phase 4：仅更新交战标记，姿态由 tickMapMovement 统一管理
+			// Phase 4：仅更新交战标记，姿态由 resolveStatus 统一管理
 			if (engaged !== attackerPos.isEngaged) {
 				next[attackerId] = { ...next[attackerId], isEngaged: engaged };
 			}
@@ -261,7 +261,7 @@ function handlePlacedCombat() {
 		for (const id of Object.keys(next)) {
 			const pos = next[id];
 
-			// HP 归零 → 阵亡（Phase 9：记录战斗日志）
+			// HP 归零 → 阵亡
 			if (pos.hp <= 0 && pos.status !== 'destroyed') {
 				next[id] = { ...pos, status: 'destroyed', route: [], isEngaged: false, statusEffects: [] };
 				continue;
@@ -643,14 +643,14 @@ function tick(timestamp: number) {
 	// 2. 推进地图上的 PlacedUnit 沿路线行进
 	tickMapMovement(deltaSimSec);
 
-	// 3. 战斗结算（使用 overrides.combatIntervalMs 替代硬编码 500ms）
+	// 3. 战斗结算（累计模拟时间，随加速倍率缩放）
 	const overrides = getCombatOverrides();
 	const combatInterval = overrides.combatIntervalMs;
-	combatAccumMs += deltaRealMs;
-	if (combatAccumMs >= combatInterval) {
-		combatAccumMs -= combatInterval;
-		// 同步对地图 PlacedUnit 执行战斗结算
-		handlePlacedCombat();
+	const deltaSimMs = deltaSimSec * 1000
+	combatAccumMs += deltaSimMs
+	while (combatAccumMs >= combatInterval) {
+		combatAccumMs -= combatInterval
+		handlePlacedCombat()
 	}
 
 	// 4. 传感器扫描（Phase 3）+ 设施效果 + 堆叠惩罚（Phase 5）
