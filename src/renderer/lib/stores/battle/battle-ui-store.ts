@@ -6,15 +6,14 @@
  *
  * 优先级（高 → 低，Escape 按此顺序关闭）：
  *   1. 警告/确认对话框  (alert-dialog-store)
- *   2. 路线待确认卡片   (routeConfirmOpen)
- *   3. 设置对话框       (setting-dialog-store / settingOpen)
- *   4. 推演单位态势卡片 (unitsCardOpen)
- *   5. 非选择交互模式   (interactionMode !== 'select')
+ *   2. 设置对话框       (setting-dialog-store / settingOpen)
+ *   3. 推演单位态势卡片 (unitsCardOpen)
+ *   4. 非选择交互模式   (interactionMode !== 'select')
  */
 import { get, writable } from 'svelte/store';
 import { alertDialogStore, hideAlert } from '$lib/stores/app/global-ui-store';
 import { interactionMode, pendingPlaceUnitId } from './battle-store';
-import { cancelPendingRoute } from './route.store';
+import { clearRouteEditState } from './route.store';
 
 export const currentTab = writable<string>('general');
 
@@ -22,9 +21,6 @@ export const currentTab = writable<string>('general');
 
 /** 推演单位态势浮动卡片 */
 export const unitsCardOpen = writable(false);
-
-/** 路线待确认浮动卡片（由 map.svelte 的 $effect 置为 true，Escape 可关闭） */
-export const routeConfirmOpen = writable(false);
 
 /** 左侧面板开关（Escape 可关闭） */
 export const leftBarPinned = writable<boolean>(false);
@@ -48,24 +44,18 @@ export function closeTopLayer(): boolean {
 		return true;
 	}
 
-	// 2. 路线待确认卡片
-	if (get(routeConfirmOpen)) {
-		routeConfirmOpen.set(false);
-		cancelPendingRoute();
-		return true;
-	}
-
-	// 4. 推演单位态势卡片
+	// 2. 推演单位态势卡片
 	if (get(unitsCardOpen)) {
 		unitsCardOpen.set(false);
 		return true;
 	}
 
-	// 5. 非选择交互模式（测量 / 放置 / 路线 / 打击 / 攻击）
+	// 3. 非选择交互模式（测量 / 放置 / 路线 / 打击 / 攻击）
 	const mode = get(interactionMode);
 	if (mode !== 'select') {
 		interactionMode.set('select');
 		pendingPlaceUnitId.set(null);
+		clearRouteEditState();
 		return true;
 	}
 

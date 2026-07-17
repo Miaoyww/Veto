@@ -5,7 +5,7 @@
  * 合并自 pending-route.store.ts 和 unit-command.store.ts。
  */
 import { writable, get } from 'svelte/store';
-import { addRoutePoint, clearRoute, addLog, runtimePositions } from './battle-store';
+import { addRoutePoint, clearRoute, insertRoutePoint, addLog, runtimePositions } from './battle-store';
 
 // ── 待确认路线（绘制模式） ──────────────────────────────────────────
 
@@ -33,17 +33,55 @@ export function addPendingPoint(lat: number, lng: number) {
 export function applyPendingRoute() {
 	const pr = get(pendingRoute);
 	if (!pr || pr.points.length === 0) return;
-	if (pr.type === 'reset') {
+
+	const insertMode = get(routeInsertMode);
+
+	if (insertMode) {
+		// F3 插入模式：在选中节点之后依次插入所有 pending 节点
+		let idx = insertMode.afterIndex + 1;
+		for (const [lat, lng] of pr.points) {
+			insertRoutePoint(insertMode.placedId, idx, lat, lng);
+			idx++;
+		}
+		routeInsertMode.set(null);
+	} else if (pr.type === 'reset') {
 		clearRoute(pr.placedId);
-	}
-	for (const [lat, lng] of pr.points) {
-		addRoutePoint(pr.placedId, lat, lng);
+		for (const [lat, lng] of pr.points) {
+			addRoutePoint(pr.placedId, lat, lng);
+		}
+	} else {
+		// append 模式
+		for (const [lat, lng] of pr.points) {
+			addRoutePoint(pr.placedId, lat, lng);
+		}
 	}
 	pendingRoute.set(null);
 }
 
 export function cancelPendingRoute() {
 	pendingRoute.set(null);
+	routeInsertMode.set(null);
+}
+
+// ── 路径点编辑状态 ──────────────────────────────────────────
+
+export interface SelectedWaypoint {
+	placedId: string;
+	index: number;
+}
+export const selectedWaypoint = writable<SelectedWaypoint | null>(null);
+
+export interface RouteInsertState {
+	placedId: string;
+	afterIndex: number;
+}
+export const routeInsertMode = writable<RouteInsertState | null>(null);
+
+/** 一键清除所有路线编辑临时状态 */
+export function clearRouteEditState() {
+	selectedWaypoint.set(null);
+	routeInsertMode.set(null);
+	cancelPendingRoute();
 }
 
 // ── 危机指令系统（推演运行期间的单次指令） ──────────────────────────

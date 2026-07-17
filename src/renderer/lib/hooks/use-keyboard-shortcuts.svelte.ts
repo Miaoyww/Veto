@@ -13,7 +13,8 @@ import {
 	saveBattleWithToast,
 	currentBattle,
 	currentFactionId,
-	selectedPlacedUnit
+	selectedPlacedUnit,
+	addLog
 } from '$lib/stores/battle/battle-store';
 import {
 	closeTopLayer,
@@ -22,6 +23,11 @@ import {
 	unitsCardOpen,
 	rightBarPinned
 } from '$lib/stores/battle/battle-ui-store';
+import {
+	selectedWaypoint,
+	routeInsertMode,
+	startPendingRoute
+} from '$lib/stores/battle/route.store';
 import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/engine/game-clock.store';
 import { get } from 'svelte/store';
 
@@ -58,7 +64,8 @@ export const SHORTCUT_DEFS: ShortcutDef[] = [
 	{ key: 'S', ctrl: true, description: '保存战局', group: '危机推演' },
 	{ key: 'Z', ctrl: true, description: '撤销操作', group: '危机推演' },
 
-	{ key: 'Escape', description: '退出当前交互模式', group: '危机推演' }
+	{ key: 'Escape', description: '退出当前交互模式', group: '危机推演' },
+	{ key: 'F3', description: '在选中路线节点后插入新节点', group: '危机推演' }
 ];
 
 function isInInput(e: KeyboardEvent): boolean {
@@ -91,6 +98,31 @@ function handleKeydown(e: KeyboardEvent) {
 	// Escape：按优先级逐层关闭最上层 UI
 	if (e.key.toLowerCase() === 'escape') {
 		closeTopLayer();
+	}
+
+	// F3：在选中路线节点后插入新节点
+	if (e.key === 'F3' && !e.ctrlKey && !e.altKey && !e.shiftKey && !isInInput(e)) {
+		e.preventDefault()
+		const selWp = get(selectedWaypoint)
+		const mode = get(interactionMode)
+		if (selWp && mode === 'select') {
+			const battle = get(currentBattle)
+			const placed = battle?.placedUnits.find(p => p.id === selWp.placedId)
+			if (placed) {
+				const unitName = battle?.factions.flatMap(f => f.units)
+					.find(u => u.id === placed.unitId)?.name ?? '单位'
+				routeInsertMode.set({ placedId: selWp.placedId, afterIndex: selWp.index })
+
+				if (!get(gameClock).isPaused) {
+					startPendingRoute(selWp.placedId, unitName, 'append')
+					addLog(`路线插入指令已录入，将在节点 ${selWp.index + 1} 后插入，Esc 完成`)
+				} else {
+					addLog(`在路线节点 ${selWp.index + 1} 后插入新节点，Esc 完成`)
+				}
+				interactionMode.set('route')
+			}
+		}
+		return
 	}
 
 	// A：切换左侧面板（输入框内不触发）

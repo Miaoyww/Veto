@@ -12,8 +12,6 @@
   import FacilityPopup from './cards/facility-popup.svelte'
   import MeasureCard from './cards/floating/measure-card.svelte'
   import InteractionModeHint from './cards/floating/interaction-mode-hint.svelte'
-  import RouteConfirmCard from './cards/floating/route-confirm-card.svelte'
-  import { routeConfirmOpen } from '$lib/stores/battle/battle-ui-store'
   import {
     currentBattle,
     currentFactionId,
@@ -22,15 +20,13 @@
     placeUnit,
     selectedPlacedUnitId,
     addRoutePoint,
+    updateRoutePoint,
+    insertRoutePoint,
     updatePlacedUnit,
     addLog,
     runtimePositions
   } from '$lib/stores/battle/battle-store'
-  import {
-    pendingRoute,
-    addPendingPoint,
-    cancelPendingRoute
-  } from '$lib/stores/battle/route.store'
+  import { pendingRoute, addPendingPoint, cancelPendingRoute, applyPendingRoute, selectedWaypoint, routeInsertMode } from '$lib/stores/battle/route.store'
   import type { UnitTemplate, PlacedUnit, Faction, FacilityType } from '$lib/types'
   import { getNatoIcon } from '$lib/utils/unit-icon'
   import { getMilSymbolSVG, getMilSymbolAnchor } from '$lib/utils/milsymbol-utils'
@@ -38,19 +34,22 @@
 
   /** 设施类型 → 北约 7 字符功能代码（兼容现有 milsymbol 管线） */
   const FACILITY_NATO_CODES: Record<FacilityType, string> = {
-    fortress: 'GUCFS--',          // Ground Unit, Combat, Fortification
-    trench_network: 'GUCE---',    // Ground Unit, Combat, Earthworks
-    supply_depot: 'GUCS---',      // Ground Unit, Combat, Supply
-    railway_hub: 'GURRH---',      // Ground Unit, Rail, Railhead
-    airfield: 'AA------',         // Air, Airfield
-    artillery_position: 'GCFS---',// Ground, Combat, Field Artillery
-    command_post: 'GUGPHQ--',     // Ground Unit, Ground, Command Post HQ
-    hospital: 'GUH-----'          // Ground Unit, Hospital/Medical
+    fortress: 'GUCFS--', // Ground Unit, Combat, Fortification
+    trench_network: 'GUCE---', // Ground Unit, Combat, Earthworks
+    supply_depot: 'GUCS---', // Ground Unit, Combat, Supply
+    railway_hub: 'GURRH---', // Ground Unit, Rail, Railhead
+    airfield: 'AA------', // Air, Airfield
+    artillery_position: 'GCFS---', // Ground, Combat, Field Artillery
+    command_post: 'GUGPHQ--', // Ground Unit, Ground, Command Post HQ
+    hospital: 'GUH-----' // Ground Unit, Hospital/Medical
   }
 
   function getFacilityIcon(facilityType: FacilityType): L.DivIcon {
     const natoCode = FACILITY_NATO_CODES[facilityType] ?? 'GU------'
-    const svg = getMilSymbolSVG(natoCode, 'neutral', 28, undefined, { fillColor: 'rgba(100,100,100,0.2)', iconColor: '#555' })
+    const svg = getMilSymbolSVG(natoCode, 'neutral', 28, undefined, {
+      fillColor: 'rgba(100,100,100,0.2)',
+      iconColor: '#555'
+    })
     const anchor = getMilSymbolAnchor(natoCode, 'neutral', 28)
     return L.divIcon({
       html: `<div style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))">${svg}</div>`,
@@ -85,6 +84,8 @@
   const routePolylinesMap: Record<string, L.Polyline> = {}
   /** 各单位攻击射程圆圈引用（快速路径方址更新用） */
   const attackRangeCirclesMap: Record<string, L.Circle> = {}
+  /** 各单位路径点标记引用 */
+  const waypointMarkersMap: Record<string, L.Marker[]> = {}
   /** 上一次渲染图标时的 hp/org/status 缓存（避免每帧重建 DivIcon） */
   const iconStateCache: Record<string, { hp: number; org: number; status: string }> = {}
 
@@ -110,6 +111,28 @@
     return null
   }
 
+  // 路径点圆形 DivIcon 工厂（用 L.marker 代替 L.circleMarker 以支持原生拖拽）
+  function getWaypointIcon(color: string, fillColor: string, fillOpacity: number, radius: number, weight: number) {
+    const size = (radius + weight) * 2
+    return L.divIcon({
+      html: `<div style="width:${radius * 2}px;height:${radius * 2}px;border-radius:50%;background:${fillColor};opacity:${fillOpacity};border:${weight}px solid ${color};box-sizing:content-box"></div>`,
+      className: 'waypoint-marker-icon',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    })
+  }
+
+  // 路径点点击处理：选中/取消选中
+  function handleWaypointClick(placedId: string, index: number) {
+    const current = get(selectedWaypoint)
+    if (current?.placedId === placedId && current?.index === index) {
+      selectedWaypoint.set(null)
+    } else {
+      selectedWaypoint.set({ placedId, index })
+    }
+    renderMapElements()
+  }
+
   // 渲染所有地图元素
   function renderMapElements() {
     if (!map || !markersLayer) return
@@ -121,6 +144,7 @@
     for (const key in markersMap) delete markersMap[key]
     for (const key in routePolylinesMap) delete routePolylinesMap[key]
     for (const key in attackRangeCirclesMap) delete attackRangeCirclesMap[key]
+    for (const key in waypointMarkersMap) delete waypointMarkersMap[key]
 
     const battle = $currentBattle
     if (!battle) return
@@ -173,10 +197,12 @@
           const attackerId = $selectedPlacedUnitId
           if (attackerId && attackerId !== placed.id) {
             updatePlacedUnit(attackerId, { attackTargetId: placed.id })
-            addLog(
-              `指定攻击目标: ${info.unit.name}`,
-              { category: 'combat', sourceUnitId: attackerId, targetUnitId: placed.id, location: { lat: placed.lat, lng: placed.lng } }
-            )
+            addLog(`指定攻击目标: ${info.unit.name}`, {
+              category: 'combat',
+              sourceUnitId: attackerId,
+              targetUnitId: placed.id,
+              location: { lat: placed.lat, lng: placed.lng }
+            })
             interactionMode.set('select')
           }
         } else {
@@ -234,15 +260,47 @@
         // 存储引用，供快速路径更新
         routePolylinesMap[placed.id] = polyline
 
-        // 路线终点箭头标记
-        const lastPoint = placed.route[placed.route.length - 1]
-        const endMarker = L.circleMarker([lastPoint[0], lastPoint[1]], {
-          radius: 5,
-          color: faction.color,
-          fillColor: faction.color,
-          fillOpacity: 0.8
-        })
-        routesLayer.addLayer(endMarker)
+        // 每个路径点渲染为可交互的 CircleMarker
+        const selWp = get(selectedWaypoint)
+        const wpMarkers: L.CircleMarker[] = []
+
+        for (let i = 0; i < placed.route.length; i++) {
+          const [lat, lng] = placed.route[i]
+          const isSelected = selWp?.placedId === placed.id && selWp?.index === i
+          const isLast = i === placed.route.length - 1
+          const r = isSelected ? 7 : isLast ? 5 : 4
+          const w = isSelected ? 3 : 2
+          const c = isSelected ? '#3b82f6' : faction.color
+          const fo = isSelected ? 1 : isLast ? 0.8 : 0.5
+
+          const wp = L.marker([lat, lng], {
+            icon: getWaypointIcon(c, c, fo, r, w),
+            draggable: $interactionMode === 'select' && !get(routeInsertMode),
+            interactive: true
+          })
+          ;(wp as any)._routeIndex = i
+          ;(wp as any)._placedId = placed.id
+
+          wp.on('click', (ev: L.LeafletEvent) => {
+            L.DomEvent.stopPropagation(ev)
+            handleWaypointClick(placed.id, i)
+          })
+
+          wp.on('dragstart', () => {
+            selectedWaypoint.set(null)
+            map.dragging.disable()
+          })
+
+          wp.on('dragend', (ev: L.LeafletEvent) => {
+            map.dragging.enable()
+            const ll = (ev.target as L.Marker).getLatLng()
+            updateRoutePoint(placed.id, i, ll.lat, ll.lng)
+          })
+
+          wpMarkers.push(wp)
+          routesLayer.addLayer(wp)
+        }
+        waypointMarkersMap[placed.id] = wpMarkers
       }
 
       // 攻击射程圆圈（仅选中时可见）
@@ -303,6 +361,7 @@
     $currentBattle
     $selectedPlacedUnitId
     $interactionMode
+    $selectedWaypoint
     renderMapElements()
   })
 
@@ -352,6 +411,12 @@
           routesLayer.removeLayer(poly)
           delete routePolylinesMap[id]
         }
+        // 同时移除路径点标记
+        const wps = waypointMarkersMap[id]
+        if (wps) {
+          wps.forEach(m => routesLayer.removeLayer(m))
+          delete waypointMarkersMap[id]
+        }
       } else {
         const routePoints: L.LatLngExpression[] = [[pos.lat, pos.lng], ...pos.route]
         const poly = routePolylinesMap[id]
@@ -369,6 +434,67 @@
             const newPoly = L.polyline(routePoints, { color, weight: 3, opacity: 0.7 })
             routesLayer.addLayer(newPoly)
             routePolylinesMap[id] = newPoly
+          }
+        }
+
+        // 同步路径点标记：当引擎消耗路径点时重建
+        const prevWpMarkers = waypointMarkersMap[id] ?? []
+        if (pos.route.length !== prevWpMarkers.length) {
+          prevWpMarkers.forEach(m => routesLayer.removeLayer(m))
+          const selWp = get(selectedWaypoint)
+
+          if (pos.route.length > 0) {
+            const battle = get(currentBattle)
+            const placed = battle?.placedUnits.find(p => p.id === id)
+            const faction = battle?.factions.find(f =>
+              f.units.some(u => u.id === placed?.unitId)
+            )
+            const color = faction?.color ?? '#888'
+            const selWp = get(selectedWaypoint)
+
+            const newMarkers: L.Marker[] = []
+            for (let i = 0; i < pos.route.length; i++) {
+              const [lat, lng] = pos.route[i]
+              const isSelected = selWp?.placedId === id && selWp?.index === i
+              const isLast = i === pos.route.length - 1
+              const r = isSelected ? 7 : isLast ? 5 : 4
+              const w = isSelected ? 3 : 2
+              const c = isSelected ? '#3b82f6' : color
+              const fo = isSelected ? 1 : isLast ? 0.8 : 0.5
+
+              const wp = L.marker([lat, lng], {
+                icon: getWaypointIcon(c, c, fo, r, w),
+                draggable: $interactionMode === 'select' && !get(routeInsertMode),
+                interactive: true
+              })
+              ;(wp as any)._routeIndex = i
+              ;(wp as any)._placedId = id
+
+              wp.on('click', (ev: L.LeafletEvent) => {
+                L.DomEvent.stopPropagation(ev)
+                handleWaypointClick(id, i)
+              })
+              wp.on('dragstart', () => {
+                selectedWaypoint.set(null)
+                map.dragging.disable()
+              })
+              wp.on('dragend', (ev: L.LeafletEvent) => {
+                map.dragging.enable()
+                const ll = (ev.target as L.Marker).getLatLng()
+                updateRoutePoint(id, i, ll.lat, ll.lng)
+              })
+
+              newMarkers.push(wp)
+              routesLayer.addLayer(wp)
+            }
+            waypointMarkersMap[id] = newMarkers
+          } else {
+            delete waypointMarkersMap[id]
+          }
+
+          // 如果选中路径点因消耗而越界，清除选中
+          if (selWp && selWp.placedId === id && selWp.index >= pos.route.length) {
+            selectedWaypoint.set(null)
           }
         }
       }
@@ -415,11 +541,21 @@
           interactionMode.set('select')
         }
       } else if (mode === 'route') {
+        const insMode = $routeInsertMode
         if ($pendingRoute) {
           // 推演运行中：写入 pending，不立刻提交
           addPendingPoint(latlng.lat, latlng.lng)
+          // F3 插入模式：推进 afterIndex
+          if (insMode) {
+            routeInsertMode.update(v => v ? { ...v, afterIndex: v.afterIndex + 1 } : null)
+          }
+        } else if (insMode) {
+          // 暂停 + F3 插入模式：直接插入
+          const idx = insMode.afterIndex + 1
+          insertRoutePoint(insMode.placedId, idx, latlng.lat, latlng.lng)
+          routeInsertMode.update(v => v ? { ...v, afterIndex: v.afterIndex + 1 } : null)
         } else {
-          // 推演暂停：直接写入路线
+          // 推演暂停：直接写入路线（追加到末尾）
           const placedId = $selectedPlacedUnitId
           if (placedId) addRoutePoint(placedId, latlng.lat, latlng.lng)
         }
@@ -458,16 +594,17 @@
     return map
   }
 
-  // 监听路线模式退出：当 pending 有节点时弹出确认卡片
+  // 监听路线模式退出：直接应用 pending 路线（无确认弹窗）
   let _prevInteractionMode: string = 'select'
   $effect(() => {
     const mode = $interactionMode
     if (_prevInteractionMode === 'route' && mode !== 'route') {
       if ($pendingRoute && $pendingRoute.points.length > 0) {
-        routeConfirmOpen.set(true)
+        applyPendingRoute()
       } else {
         cancelPendingRoute()
       }
+      routeInsertMode.set(null)
     }
     _prevInteractionMode = mode
   })
@@ -587,9 +724,6 @@
   <!-- 交互模式提示 -->
   <InteractionModeHint {strikePendingTarget} />
 </div>
-
-<!-- 路线指令待确认卡片（Esc 退出绘制后弹出） -->
-<RouteConfirmCard bind:open={$routeConfirmOpen} />
 
 <!-- 测量距离浮动卡片 -->
 <MeasureCard {map} />

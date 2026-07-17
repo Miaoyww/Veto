@@ -653,6 +653,51 @@ export function addRoutePoint(placedId: string, lat: number, lng: number) {
   })
 }
 
+export function updateRoutePoint(placedId: string, index: number, lat: number, lng: number) {
+	pushUndoSnapshot('移动路线节点')
+	const battle = get(currentBattle)
+	const unit = battle?.placedUnits.find((u) => u.id === placedId)
+	if (!unit || index < 0 || index >= unit.route.length) return
+	const newRoute: [number, number][] = unit.route.map((p, i) =>
+		i === index ? [lat, lng] : p
+	)
+	updatePlacedUnit(placedId, { route: newRoute })
+	runtimePositions.update((pos) => {
+		if (!pos[placedId]) return pos
+		return { ...pos, [placedId]: { ...pos[placedId], route: newRoute } }
+	})
+}
+
+export function insertRoutePoint(placedId: string, index: number, lat: number, lng: number) {
+	pushUndoSnapshot('插入路线节点')
+	const battle = get(currentBattle)
+	const unit = battle?.placedUnits.find((u) => u.id === placedId)
+	if (!unit || index < 0 || index > unit.route.length) return
+	const newRoute: [number, number][] = [
+		...unit.route.slice(0, index),
+		[lat, lng],
+		...unit.route.slice(index)
+	]
+	updatePlacedUnit(placedId, { route: newRoute })
+	runtimePositions.update((pos) => {
+		if (!pos[placedId]) return pos
+		return { ...pos, [placedId]: { ...pos[placedId], route: newRoute } }
+	})
+}
+
+export function removeRoutePoint(placedId: string, index: number) {
+	pushUndoSnapshot('删除路线节点')
+	const battle = get(currentBattle)
+	const unit = battle?.placedUnits.find((u) => u.id === placedId)
+	if (!unit || index < 0 || index >= unit.route.length) return
+	const newRoute: [number, number][] = unit.route.filter((_, i) => i !== index)
+	updatePlacedUnit(placedId, { route: newRoute })
+	runtimePositions.update((pos) => {
+		if (!pos[placedId]) return pos
+		return { ...pos, [placedId]: { ...pos[placedId], route: newRoute } }
+	})
+}
+
 export function clearRoute(placedId: string) {
   const battle = get(currentBattle)
   const placed = battle?.placedUnits.find((u) => u.id === placedId)
