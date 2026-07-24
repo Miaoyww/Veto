@@ -26,9 +26,11 @@
     "@electron-toolkit/utils": "^4.0.0",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.3.9",
+    "fuse.js": "^7.5.0",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "milsymbol": "^3.0.4",
+    "pinyin-match": "^1.2.10",
     "postcss": "^8.5.13",
     "sveaflet": "^0.1.4"
   },

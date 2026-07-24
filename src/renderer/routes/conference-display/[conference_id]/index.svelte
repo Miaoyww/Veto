@@ -29,8 +29,28 @@
     })
 
     timerInterval = setInterval(() => {
-      // 触发响应式更新（倒计时刷新用）
-      displayData = displayData
+      if (!displayData) return
+
+      // Tick current speaker (除非暂停)
+      const speaker = displayData.currentSpeaker
+      if (speaker && !speaker.isPaused && speaker.remainingSec > 0) {
+        const newRemaining = Math.max(0, speaker.remainingSec - 0.5)
+        displayData = {
+          ...displayData,
+          currentSpeaker: { ...speaker, remainingSec: newRemaining }
+        }
+        return
+      }
+
+      // Tick caucus timer
+      const caucus = displayData.caucusTimer
+      if (caucus && caucus.remainingSec > 0) {
+        const newRemaining = Math.max(0, caucus.remainingSec - 0.5)
+        displayData = {
+          ...displayData,
+          caucusTimer: { ...caucus, remainingSec: newRemaining }
+        }
+      }
     }, 500)
 
     return () => {
@@ -91,8 +111,10 @@
             <div class="flex flex-col items-center gap-10">
               <div class="flex items-center gap-3 text-white/40">
                 <div class="h-px w-12 bg-white/10"></div>
-                <Mic size={20} class="text-[#5B92E5]" />
-                <span class="text-lg tracking-[0.08em] uppercase">正在发言</span>
+                <Mic size={20} class={displayData.currentSpeaker.isPaused ? 'text-[#C9A84C]' : 'text-[#5B92E5]'} />
+                <span class="text-lg tracking-[0.08em] uppercase">
+                  {displayData.currentSpeaker.isPaused ? '计时已暂停' : '正在发言'}
+                </span>
                 <div class="h-px w-12 bg-white/10"></div>
               </div>
 
@@ -108,10 +130,35 @@
               </div>
 
               <!-- 倒计时 -->
-              <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#5B92E5]">
-                {formatTime(Math.max(0, (displayData.currentSpeaker.remainingSec ?? 0) - 0.5))}
+              <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {displayData.currentSpeaker.isPaused ? 'text-[#C9A84C]' : 'text-[#5B92E5]'}">
+                {formatTime(Math.max(0, displayData.currentSpeaker.remainingSec ?? 0))}
               </div>
             </div>
+
+          {:else if displayData.readySpeaker}
+            <!-- 预发言（即将发言） -->
+            <div class="flex flex-col items-center gap-10">
+              <div class="flex items-center gap-3 text-white/40">
+                <div class="h-px w-12 bg-white/10"></div>
+                <Mic size={20} class="text-[#C9A84C]" />
+                <span class="text-lg tracking-[0.08em] uppercase">即将发言</span>
+                <div class="h-px w-12 bg-white/10"></div>
+              </div>
+
+              <div class="text-center">
+                <div class="text-9xl font-semibold tracking-wide text-white">
+                  {displayData.readySpeaker.delegationName}
+                </div>
+                {#if displayData.readySpeaker.shortName}
+                  <div class="mt-1 text-9xl font-light tracking-[0.06em] text-white/30">
+                    {displayData.readySpeaker.shortName}
+                  </div>
+                {/if}
+              </div>
+
+              <div class="text-lg tracking-wider text-white/15">等待主席开始计时</div>
+            </div>
+
           {:else}
             <!-- 主发言名单（无当前发言人） -->
             <div class="flex w-full max-w-2xl flex-col items-center gap-8">

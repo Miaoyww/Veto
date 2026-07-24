@@ -278,6 +278,20 @@ export function removeFromSpeakersList(entryId: string): void {
   }))
 }
 
+export function readySpeaker(entryId: string): void {
+  updateCurrentConference((c) => ({
+    ...c,
+    speakersList: c.speakersList.map((s) =>
+      s.id === entryId ? { ...s, status: 'ready' } : s
+    )
+  }))
+
+  const conf = get(currentConference)
+  const entry = conf?.speakersList.find((s) => s.id === entryId)
+  const del = conf?.delegations.find((d) => d.id === entry?.delegationId)
+  addMinutesEntry('phase_changed', `${del?.name ?? entry?.delegationId} 准备发言`)
+}
+
 export function startSpeaker(entryId: string): void {
   const now = Date.now()
   updateCurrentConference((c) => ({
@@ -300,6 +314,32 @@ export function startSpeaker(entryId: string): void {
   addMinutesEntry('speaker_started', `${del?.name ?? entry?.delegationId} 开始发言 (${entry?.allocatedTimeSec ?? 120}秒)`)
 }
 
+export function pauseSpeaker(): void {
+  updateCurrentConference((c) => {
+    if (!c.activeSpeaker) return c
+    return {
+      ...c,
+      activeSpeaker: { ...c.activeSpeaker, pausedAt: Date.now() }
+    }
+  })
+}
+
+export function resumeSpeaker(remainingSec: number): void {
+  const now = Date.now()
+  updateCurrentConference((c) => {
+    if (!c.activeSpeaker) return c
+    return {
+      ...c,
+      activeSpeaker: {
+        ...c.activeSpeaker,
+        startedAt: now,
+        endAt: now + remainingSec * 1000,
+        pausedAt: undefined
+      }
+    }
+  })
+}
+
 export function endSpeaker(yieldChoice?: YieldChoice): void {
   const conf = get(currentConference)
   const currentSpeaker = conf?.activeSpeaker
@@ -311,16 +351,7 @@ export function endSpeaker(yieldChoice?: YieldChoice): void {
 
   updateCurrentConference((c) => ({
     ...c,
-    speakersList: c.speakersList.map((s) =>
-      s.id === currentSpeaker.entryId
-        ? {
-            ...s,
-            status: 'finished',
-            remainingTimeSec: remaining,
-            yield: yieldChoice
-          }
-        : s
-    ),
+    speakersList: c.speakersList.filter((s) => s.id !== currentSpeaker.entryId),
     activeSpeaker: null
   }))
 

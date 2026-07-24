@@ -62,7 +62,7 @@ export interface SpeakerEntry {
   allocatedTimeSec: number
   /** 暂停/中断时剩余时间 */
   remainingTimeSec?: number
-  status: 'waiting' | 'speaking' | 'finished' | 'interrupted'
+  status: 'waiting' | 'ready' | 'speaking' | 'finished' | 'interrupted'
   /** 发言人做出的让渡选择 */
   yield?: YieldChoice
 }
@@ -314,6 +314,8 @@ export interface Conference {
     startedAt: number
     /** 真实世界结束时间戳 */
     endAt: number
+    /** 暂停时间戳（非空 = 已暂停） */
+    pausedAt?: number
   } | null
 }
 
@@ -329,6 +331,13 @@ export interface ConferenceDisplayData {
     shortName?: string
     remainingSec: number
     allocatedSec: number
+    /** 计时是否已暂停 */
+    isPaused?: boolean
+  }
+  /** 预发言状态（ready 阶段，即将发言的代表团） */
+  readySpeaker?: {
+    delegationName: string
+    shortName?: string
   }
   speakersList: Array<{
     delegationName: string

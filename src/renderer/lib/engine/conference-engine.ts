@@ -161,6 +161,7 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
 
 let _speakerTimerId: ReturnType<typeof setInterval> | null = null
 let _caucusTimerId: ReturnType<typeof setInterval> | null = null
+let _speakerRemainingSec = 0
 
 export interface TimerTickData {
   remainingSec: number
@@ -170,36 +171,52 @@ export interface TimerTickData {
 
 /**
  * 启动发言计时器。每 100ms tick 一次。
- * @param allocatedTimeSec 分配的总时间（秒）
- * @param onTick 每秒回调（传入剩余秒数）
+ * @param remainingSec 剩余时间（秒）
+ * @param onTick 每次回调（传入剩余秒数等）
  * @param onExpire 时间耗尽回调
  */
 export function startSpeakerTimer(
-  allocatedTimeSec: number,
+  remainingSec: number,
   onTick: (data: TimerTickData) => void,
   onExpire: () => void
 ): void {
   stopSpeakerTimer()
 
   const startedAt = Date.now()
-  const totalMs = allocatedTimeSec * 1000
+  const initialRemaining = remainingSec
+  _speakerRemainingSec = remainingSec
 
   _speakerTimerId = setInterval(() => {
-    const elapsedMs = Date.now() - startedAt
-    const remainingSec = Math.max(0, (totalMs - elapsedMs) / 1000)
-    const elapsedSec = Math.min(allocatedTimeSec, elapsedMs / 1000)
+    const elapsedSec = (Date.now() - startedAt) / 1000
+    _speakerRemainingSec = Math.max(0, initialRemaining - elapsedSec)
 
     onTick({
-      remainingSec,
-      elapsedSec,
-      totalSec: allocatedTimeSec
+      remainingSec: _speakerRemainingSec,
+      elapsedSec: Math.min(initialRemaining, elapsedSec),
+      totalSec: initialRemaining
     })
 
-    if (remainingSec <= 0) {
+    if (_speakerRemainingSec <= 0) {
       stopSpeakerTimer()
       onExpire()
     }
   }, 100)
+}
+
+export function pauseSpeakerTimer(): number {
+  if (_speakerTimerId !== null) {
+    clearInterval(_speakerTimerId)
+    _speakerTimerId = null
+  }
+  return _speakerRemainingSec
+}
+
+export function resumeSpeakerTimer(
+  onTick: (data: TimerTickData) => void,
+  onExpire: () => void
+): void {
+  if (_speakerRemainingSec <= 0) return
+  startSpeakerTimer(_speakerRemainingSec, onTick, onExpire)
 }
 
 export function stopSpeakerTimer(): void {
@@ -207,6 +224,7 @@ export function stopSpeakerTimer(): void {
     clearInterval(_speakerTimerId)
     _speakerTimerId = null
   }
+  _speakerRemainingSec = 0
 }
 
 /**

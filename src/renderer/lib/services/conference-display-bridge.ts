@@ -208,9 +208,16 @@ export function buildDisplayData(
           remainingSec: conf.activeSpeaker
             ? Math.max(0, (conf.activeSpeaker.endAt - Date.now()) / 1000)
             : 0,
-          allocatedSec: currentSpeakerEntry.allocatedTimeSec
+          allocatedSec: currentSpeakerEntry.allocatedTimeSec,
+          isPaused: conf.activeSpeaker?.pausedAt != null
         }
       : undefined,
+    readySpeaker: (() => {
+      const ready = conf.speakersList.find((s) => s.status === 'ready')
+      if (!ready) return undefined
+      const d = conf.delegations.find((del) => del.id === ready.delegationId)
+      return d ? { delegationName: d.name, shortName: d.shortName } : undefined
+    })(),
     speakersList: conf.speakersList.map((s) => {
       const d = conf.delegations.find((del) => del.id === s.delegationId)
       return {
