@@ -85,32 +85,73 @@
         {#if phase === 'roll_call'}
           <RollCallDisplay data={displayData} />
 
-        {:else if displayData.currentSpeaker && phase === 'general_debate'}
-          <!-- 正在发言 -->
-          <div class="flex flex-col items-center gap-10">
-            <div class="flex items-center gap-3 text-white/40">
-              <div class="h-px w-12 bg-white/10"></div>
-              <Mic size={20} class="text-[#5B92E5]" />
-              <span class="text-lg tracking-[0.08em] uppercase">正在发言</span>
-              <div class="h-px w-12 bg-white/10"></div>
-            </div>
-
-            <div class="text-center">
-              <div class="text-9xl font-semibold tracking-wide text-white">
-                {displayData.currentSpeaker.delegationName}
+        {:else if phase === 'general_debate'}
+          {#if displayData.currentSpeaker}
+            <!-- 正在发言 -->
+            <div class="flex flex-col items-center gap-10">
+              <div class="flex items-center gap-3 text-white/40">
+                <div class="h-px w-12 bg-white/10"></div>
+                <Mic size={20} class="text-[#5B92E5]" />
+                <span class="text-lg tracking-[0.08em] uppercase">正在发言</span>
+                <div class="h-px w-12 bg-white/10"></div>
               </div>
-              {#if displayData.currentSpeaker.shortName}
-                <div class="mt-1 text-9xl font-light tracking-[0.06em] text-white/30">
-                  {displayData.currentSpeaker.shortName}
+
+              <div class="text-center">
+                <div class="text-9xl font-semibold tracking-wide text-white">
+                  {displayData.currentSpeaker.delegationName}
                 </div>
+                {#if displayData.currentSpeaker.shortName}
+                  <div class="mt-1 text-9xl font-light tracking-[0.06em] text-white/30">
+                    {displayData.currentSpeaker.shortName}
+                  </div>
+                {/if}
+              </div>
+
+              <!-- 倒计时 -->
+              <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#5B92E5]">
+                {formatTime(Math.max(0, (displayData.currentSpeaker.remainingSec ?? 0) - 0.5))}
+              </div>
+            </div>
+          {:else}
+            <!-- 主发言名单（无当前发言人） -->
+            <div class="flex w-full max-w-2xl flex-col items-center gap-8">
+              <div class="flex items-center gap-3 text-white/40">
+                <div class="h-px w-12 bg-white/10"></div>
+                <Mic size={20} class="text-[#5B92E5]" />
+                <span class="text-lg tracking-[0.08em] uppercase">主发言名单</span>
+                <div class="h-px w-12 bg-white/10"></div>
+              </div>
+
+              {#if displayData.speakersList.length > 0}
+                <div class="w-full space-y-1">
+                  {#each displayData.speakersList as speaker, i (i)}
+                    <div
+                      class="flex items-center gap-4 rounded-sm px-6 py-3 {speaker.status ===
+                      'speaking'
+                        ? 'border border-[#5B92E5]/20 bg-[#5B92E5]/5'
+                        : 'border border-transparent bg-white/[0.02]'}"
+                    >
+                      <span class="w-8 text-right text-sm tabular-nums text-white/15">{i + 1}</span>
+                      <span
+                        class="flex-1 text-xl font-medium {speaker.status === 'waiting'
+                          ? 'text-white/60'
+                          : speaker.status === 'speaking'
+                            ? 'text-[#5B92E5]'
+                            : 'text-white/20 line-through'}"
+                      >
+                        {speaker.delegationName}
+                      </span>
+                      {#if speaker.shortName}
+                        <span class="text-sm tracking-wider text-white/15">{speaker.shortName}</span>
+                      {/if}
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <div class="text-lg tracking-wider text-white/10">等待主席添加发言人</div>
               {/if}
             </div>
-
-            <!-- 倒计时 -->
-            <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#5B92E5]">
-              {formatTime(Math.max(0, (displayData.currentSpeaker.remainingSec ?? 0) - 0.5))}
-            </div>
-          </div>
+          {/if}
 
         {:else if displayData.caucusTimer && phase === 'caucus'}
           <!-- 磋商倒计时 -->
