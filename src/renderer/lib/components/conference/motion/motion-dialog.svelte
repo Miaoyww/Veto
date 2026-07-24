@@ -21,7 +21,7 @@
   import { navigate } from '$lib/router.svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
-  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
+  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 

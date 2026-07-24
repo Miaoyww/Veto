@@ -5,9 +5,9 @@
   import { currentConference, loadConference, currentConferenceId, motionDraft } from '$lib/stores/conference/conference-store'
   import { destroyAllTimers } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import ConferenceSidebar from '$lib/components/conference/conference-sidebar.svelte'
-  import ConferenceWorkspace from '$lib/components/conference/conference-workspace.svelte'
-  import MinutesPanel from '$lib/components/conference/minutes-panel.svelte'
+  import ConferenceSidebar from '$lib/components/conference/layout/conference-sidebar.svelte'
+  import ConferenceWorkspace from '$lib/components/conference/layout/conference-workspace.svelte'
+  import MinutesPanel from '$lib/components/conference/layout/minutes-panel.svelte'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
 

@@ -6,7 +6,7 @@
    */
   import { Play, Trash2 } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import { formatTime } from '$lib/engine/conference-engine'
+  import { formatTime } from '$lib/utils'
 
   interface Props {
     delegationName: string

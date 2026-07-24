@@ -289,11 +289,3 @@ export function calcMaxSpeakers(totalTimeSec: number, speakingTimePerPersonSec: 
   if (speakingTimePerPersonSec <= 0) return 0
   return Math.floor(totalTimeSec / speakingTimePerPersonSec)
 }
-
-// ---- 格式化工秒为 mm:ss ----------------------------------------------------
-
-export function formatTime(seconds: number): string {
-  const mins = Math.floor(Math.max(0, seconds) / 60)
-  const secs = Math.floor(Math.max(0, seconds) % 60)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}

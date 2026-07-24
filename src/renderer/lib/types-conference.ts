@@ -312,6 +312,8 @@ export interface Conference {
     proposerPosition: 'first' | 'last'
     /** 已加入的代表团 ID 列表（有序） */
     speakerDelegationIds: string[]
+    /** 名单耗尽后重回 setup 时的剩余秒数 */
+    remainingSec?: number
   } | null
 
   /** 当前磋商计时器状态 */

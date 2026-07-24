@@ -10,7 +10,7 @@
    * - 主发言名单：下一个发言 + 后续队列
    */
   import { Mic } from '@lucide/svelte'
-  import { formatTime } from '$lib/engine/conference-engine'
+  import { formatTime } from '$lib/utils'
   import type { ConferenceDisplayData } from '$lib/types-conference'
 
   let { data }: { data: ConferenceDisplayData } = $props()

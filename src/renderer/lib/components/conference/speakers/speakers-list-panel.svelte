@@ -2,8 +2,8 @@
   import {
     Mic, Trash2, Users
   } from '@lucide/svelte'
-  import ActiveSpeakerCard from '$lib/components/conference/active-speaker-card.svelte'
-  import ReadySpeakerCard from '$lib/components/conference/ready-speaker-card.svelte'
+  import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
+  import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -23,12 +23,12 @@
   import {
     createTimer,
     getTimer,
-    destroyTimer,
-    formatTime
+    destroyTimer
   } from '$lib/engine/conference-engine'
+  import { formatTime } from '$lib/utils'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import type { YieldChoice } from '$lib/types-conference'
-  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
+  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   const conf = $derived($currentConference)
 

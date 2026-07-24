@@ -9,6 +9,10 @@
   let { data }: { data: ConferenceDisplayData } = $props()
 
   const setup = $derived(data.caucusSetup ?? null)
+
+  $effect(() => {
+    console.log(data)
+  })
 </script>
 
 {#if setup}

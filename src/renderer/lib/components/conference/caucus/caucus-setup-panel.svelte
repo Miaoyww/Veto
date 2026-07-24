@@ -16,7 +16,7 @@
     removeFromCaucusSpeakers,
     startCaucusWithSetup
   } from '$lib/stores/conference/conference-store'
-  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
+  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   const conf = $derived($currentConference)
   const setup = $derived(conf?.caucusSetup ?? null)
@@ -52,14 +52,24 @@
   {#if conf && setup && motion}
     <!-- 动议信息摘要 -->
     <div class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-5 text-center dark:border-indigo-700 dark:bg-indigo-950/30">
-      <div class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
-        动议通过 · 设置磋商发言名单
-      </div>
+      {#if setup.remainingSec != null}
+        <div class="text-sm font-medium text-amber-700 dark:text-amber-400">
+          名单已走完 · 继续添加发言人
+        </div>
+      {:else}
+        <div class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
+          动议通过 · 设置磋商发言名单
+        </div>
+      {/if}
       <div class="mt-2 text-xl font-bold text-foreground">
         {(motion as any).topic ?? '有主持核心磋商'}
       </div>
       <div class="mt-1 text-sm text-muted-foreground">
-        总时长 {(motion as any).totalTimeSec} 秒 · 每人 {(motion as any).speakingTimePerPersonSec} 秒
+        {#if setup.remainingSec != null}
+          剩余时间 {setup.remainingSec} 秒 · 每人 {(motion as any).speakingTimePerPersonSec} 秒
+        {:else}
+          总时长 {(motion as any).totalTimeSec} 秒 · 每人 {(motion as any).speakingTimePerPersonSec} 秒
+        {/if}
       </div>
     </div>
 

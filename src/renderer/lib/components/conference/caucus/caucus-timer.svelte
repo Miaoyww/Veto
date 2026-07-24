@@ -3,22 +3,22 @@
   import { Timer, Coffee, MessageSquare, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
-  import ActiveSpeakerCard from '$lib/components/conference/active-speaker-card.svelte'
+  import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
+  import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import {
     currentConference,
     endCaucus,
     advanceCaucusSpeaker,
-    appendCaucusSpeaker,
+    startCaucusSpeaker,
     pauseSpeaker,
     resumeSpeaker as resumeSpeakerStore
   } from '$lib/stores/conference/conference-store'
   import {
     createTimer,
     getTimer,
-    destroyTimer,
-    formatTime
+    destroyTimer
   } from '$lib/engine/conference-engine'
-  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
+  import { formatTime } from '$lib/utils'
 
   const conf = $derived($currentConference)
   const activeCaucus = $derived(conf?.activeCaucus ?? null)
@@ -40,11 +40,8 @@
   const speakers = $derived(activeCaucus?.caucusSpeakers ?? [])
   const currentIdx = $derived(activeCaucus?.currentSpeakerIndex ?? -1)
   const currentSpeaker = $derived(currentIdx >= 0 ? speakers[currentIdx] : null)
-  const hasActiveSpeaker = $derived(currentSpeaker != null)
-  const totalRemaining = $derived(activeCaucus ? Math.max(0, (activeCaucus.endAt - Date.now()) / 1000) : 0)
 
   let isPaused = $state(false)
-  const listedIds = $derived(speakers.map((s) => s.delegationId))
 
   function handlePause(): void {
     const remaining = speakerRemainingSec
@@ -70,9 +67,17 @@
     advanceCaucusSpeaker()
   }
 
-  function handleAddSpeaker(delId: string): void {
-    appendCaucusSpeaker(delId)
+  function handleStartSpeaker(): void {
+    startCaucusSpeaker()
   }
+
+  function handleCancelReadySpeaker(): void {
+    // 跳过当前 ready 的发言人，推进到下一位
+    getTimer('caucus')?.stop()
+    isPaused = false
+    advanceCaucusSpeaker()
+  }
+
   const nextSpeaker = $derived(currentIdx >= 0 && currentIdx + 1 < speakers.length ? speakers[currentIdx + 1] : null)
   const remainingSpeakers = $derived(speakers.filter((s) => s.status === 'waiting'))
 
@@ -166,8 +171,41 @@
       {/if}
     </div>
 
-    {#if isModerated && hasActiveSpeaker && currentSpeaker}
-      <!-- 有主持磋商：当前发言人 -->
+    {#if isModerated && currentSpeaker && currentSpeaker.status === 'ready'}
+      <!-- 有主持磋商：当前发言人就绪（等待主席手动开始） -->
+      <div class="w-full">
+        <ReadySpeakerCard
+          delegationName={currentSpeaker.delegationName}
+          allocatedTimeSec={currentSpeaker.allocatedTimeSec}
+          onstart={handleStartSpeaker}
+          oncancel={handleCancelReadySpeaker}
+        />
+      </div>
+
+      <!-- 剩余发言队列 -->
+      {#if remainingSpeakers.length > 0}
+        <div class="w-full rounded-lg border bg-card">
+          <div class="flex items-center gap-2 px-4 py-2">
+            <Users size={14} class="text-muted-foreground" />
+            <span class="text-sm font-medium text-foreground">
+              剩余发言 ({remainingSpeakers.length})
+            </span>
+          </div>
+          <div class="divide-y">
+            {#each remainingSpeakers as s}
+              <div class="flex items-center gap-3 px-4 py-2">
+                <span class="text-sm text-foreground">{s.delegationName}</span>
+                <Badge variant="secondary" class="ml-auto text-[10px]">
+                  {formatTime(s.allocatedTimeSec)}
+                </Badge>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+    {:else if isModerated && currentSpeaker && currentSpeaker.status === 'speaking'}
+      <!-- 有主持磋商：当前发言人正在发言 -->
       <div class="w-full">
         <ActiveSpeakerCard
           delegationName={currentSpeaker.delegationName}
@@ -216,39 +254,6 @@
       {:else if currentIdx + 1 >= speakers.length}
         <div class="text-sm text-muted-foreground">最后一位发言人</div>
       {/if}
-
-    {:else if isModerated && !hasActiveSpeaker && totalRemaining > 5}
-      <!-- 名单走完，时间剩余 → 可追加发言人 -->
-      <div class="w-full rounded-lg border bg-card p-4 text-center">
-        <div class="text-sm font-medium text-foreground">
-          所有发言人已完成
-        </div>
-        <div class="mt-1 font-mono text-2xl tabular-nums text-muted-foreground">
-          剩余 {formatTime(totalRemaining)}
-        </div>
-        <div class="mt-3">
-          {#if conf}
-            <DelegationSelector
-              delegations={conf.delegations}
-              placeholder="搜索并添加发言人..."
-              resetOnSelect={true}
-              excludeIds={listedIds}
-              onselect={handleAddSpeaker}
-            />
-          {/if}
-        </div>
-      </div>
-
-      <div class="flex gap-4">
-        <Button
-          variant="destructive"
-          onclick={endCaucus}
-          class="min-w-[140px] gap-2"
-        >
-          <Timer size={14} />
-          提前结束磋商
-        </Button>
-      </div>
 
     {:else if !isModerated}
       <!-- 自由磋商：总倒计时 -->
