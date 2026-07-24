@@ -13,8 +13,9 @@
     resumeSpeaker as resumeSpeakerStore
   } from '$lib/stores/conference/conference-store'
   import {
-    startCaucusTimer,
-    stopCaucusTimer,
+    createTimer,
+    getTimer,
+    destroyTimer,
     formatTime
   } from '$lib/engine/conference-engine'
   import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
@@ -47,7 +48,7 @@
 
   function handlePause(): void {
     const remaining = speakerRemainingSec
-    stopCaucusTimer()
+    getTimer('caucus')?.stop()
     isPaused = true
     pauseSpeaker()
   }
@@ -58,13 +59,13 @@
   }
 
   function handleEndSpeaker(): void {
-    stopCaucusTimer()
+    getTimer('caucus')?.stop()
     isPaused = false
     advanceCaucusSpeaker()
   }
 
   function handleYield(type: 'chair' | 'delegate' | 'question' | 'comment'): void {
-    stopCaucusTimer()
+    getTimer('caucus')?.stop()
     isPaused = false
     advanceCaucusSpeaker()
   }
@@ -88,7 +89,7 @@
     const remaining = Math.max(0, (speaker.endAt - now) / 1000)
 
     if (remaining > 0) {
-      startCaucusTimer(
+      createTimer('caucus', 1000).start(
         remaining,
         (data) => {
           speakerRemainingSec = data.remainingSec
@@ -102,7 +103,7 @@
     }
 
     return () => {
-      stopCaucusTimer()
+      getTimer('caucus')?.stop()
     }
   })
 
@@ -115,7 +116,7 @@
     const total = (activeCaucus.endAt - activeCaucus.startedAt) / 1000
 
     if (remaining > 0) {
-      startCaucusTimer(
+      createTimer('caucus', 1000).start(
         remaining,
         (data) => {
           totalRemainingSec = data.remainingSec
@@ -127,13 +128,12 @@
     }
 
     return () => {
-      stopCaucusTimer()
+      getTimer('caucus')?.stop()
     }
   })
 
-  onDestroy(() => {
-    if (speakerTimerCleanup) speakerTimerCleanup()
-  })
+  // 组件卸载时销毁计时器
+  onDestroy(() => destroyTimer('caucus'))
 
   const progressPercent = $derived(
     totalSec > 0 ? ((totalSec - totalRemainingSec) / totalSec) * 100 : 0

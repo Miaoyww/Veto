@@ -3,7 +3,7 @@
   import { currentRoute } from '$lib/router.svelte'
   import { VETO_NAME } from '$lib/const'
   import { currentConference, loadConference, currentConferenceId, motionDraft } from '$lib/stores/conference/conference-store'
-  import { stopAllTimers } from '$lib/engine/conference-engine'
+  import { destroyAllTimers } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import ConferenceSidebar from '$lib/components/conference/conference-sidebar.svelte'
   import ConferenceWorkspace from '$lib/components/conference/conference-workspace.svelte'
@@ -31,7 +31,7 @@
   })
 
   onDestroy(() => {
-    stopAllTimers()
+    destroyAllTimers()
   })
 </script>
 

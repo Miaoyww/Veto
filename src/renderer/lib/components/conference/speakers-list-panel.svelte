@@ -19,11 +19,11 @@
     endSpeaker,
     handleYield
   } from '$lib/stores/conference/conference-store'
+  import { onDestroy } from 'svelte'
   import {
-    startSpeakerTimer,
-    pauseSpeakerTimer,
-    resumeSpeakerTimer,
-    stopSpeakerTimer,
+    createTimer,
+    getTimer,
+    destroyTimer,
     formatTime
   } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -53,7 +53,6 @@
 
   function onExpire(): void {
     endSpeaker()
-    stopSpeakerTimer()
     isPaused = false
   }
 
@@ -69,7 +68,7 @@
 
     startSpeaker(entryId)
     isPaused = false
-    startSpeakerTimer(entry.allocatedTimeSec, onTick, onExpire)
+    createTimer('speakers-list', 100).start(entry.allocatedTimeSec, onTick, onExpire)
     // 立即同步到 Display（确保 ready→speaking 切换及时）
     const c = get(currentConference)
     if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
@@ -77,7 +76,7 @@
 
   /** 暂停计时 */
   function pauseSpeaking(): void {
-    const remaining = pauseSpeakerTimer()
+    const remaining = getTimer('speakers-list')?.pause() ?? 0
     displayRemaining = remaining
     isPaused = true
     pauseSpeaker()
@@ -90,14 +89,14 @@
   function resumeSpeaking(): void {
     isPaused = false
     resumeSpeaker(displayRemaining)
-    resumeSpeakerTimer(onTick, onExpire)
+    getTimer('speakers-list')?.resume(onTick, onExpire)
     // 立即同步到 Display
     const c = get(currentConference)
     if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function finishSpeaker(yieldType?: YieldChoice['type']): void {
-    stopSpeakerTimer()
+    getTimer('speakers-list')?.stop()
     isPaused = false
     if (yieldType) {
       handleYield({ type: yieldType })
@@ -110,6 +109,9 @@
   const readyEntry = $derived(conf?.speakersList.find((s) => s.status === 'ready') ?? null)
   const waitingSpeakers = $derived(conf?.speakersList.filter((s) => s.status === 'waiting') ?? [])
   const isSpeakerActive = $derived(activeSpeaker !== null)
+
+  // 组件卸载时销毁计时器
+  onDestroy(() => destroyTimer('speakers-list'))
 </script>
 
 <div class="flex w-full max-w-3xl flex-col gap-4">

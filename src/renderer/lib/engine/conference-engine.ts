@@ -162,10 +162,6 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
 
 // ---- 计时器 --------------------------------------------------------------
 
-let _speakerTimerId: ReturnType<typeof setInterval> | null = null
-let _caucusTimerId: ReturnType<typeof setInterval> | null = null
-let _speakerRemainingSec = 0
-
 export interface TimerTickData {
   remainingSec: number
   elapsedSec: number
@@ -173,104 +169,118 @@ export interface TimerTickData {
 }
 
 /**
- * 启动发言计时器。每 100ms tick 一次。
- * @param remainingSec 剩余时间（秒）
- * @param onTick 每次回调（传入剩余秒数等）
- * @param onExpire 时间耗尽回调
+ * 可复用的倒计时器实例。
+ * 替代旧的模块级单例函数（startSpeakerTimer / startCaucusTimer），
+ * 每个上下文（主发言名单、磋商）持有自己的 Timer 实例，通过全局注册表按 ID 查找。
  */
-export function startSpeakerTimer(
-  remainingSec: number,
-  onTick: (data: TimerTickData) => void,
-  onExpire: () => void
-): void {
-  stopSpeakerTimer()
+export class Timer {
+  readonly id: string
+  readonly tickMs: number
 
-  const startedAt = Date.now()
-  const initialRemaining = remainingSec
-  _speakerRemainingSec = remainingSec
+  private _intervalId: ReturnType<typeof setInterval> | null = null
+  private _remainingSec = 0
 
-  _speakerTimerId = setInterval(() => {
-    const elapsedSec = (Date.now() - startedAt) / 1000
-    _speakerRemainingSec = Math.max(0, initialRemaining - elapsedSec)
+  get isRunning(): boolean {
+    return this._intervalId !== null
+  }
 
-    onTick({
-      remainingSec: _speakerRemainingSec,
-      elapsedSec: Math.min(initialRemaining, elapsedSec),
-      totalSec: initialRemaining
-    })
+  get remainingSec(): number {
+    return this._remainingSec
+  }
 
-    if (_speakerRemainingSec <= 0) {
-      stopSpeakerTimer()
-      onExpire()
+  constructor(id: string, tickMs = 100) {
+    this.id = id
+    this.tickMs = tickMs
+  }
+
+  /**
+   * 启动倒计时。先停止已有计时，再启动新的。
+   * @param totalSec 倒计时总时长（秒）
+   * @param onTick 每次 tick 回调
+   * @param onExpire 时间耗尽回调
+   */
+  start(totalSec: number, onTick: (data: TimerTickData) => void, onExpire: () => void): void {
+    this.stop()
+
+    const startedAt = Date.now()
+    const initialTotal = totalSec
+    this._remainingSec = totalSec
+
+    this._intervalId = setInterval(() => {
+      const elapsedSec = (Date.now() - startedAt) / 1000
+      this._remainingSec = Math.max(0, initialTotal - elapsedSec)
+
+      onTick({
+        remainingSec: this._remainingSec,
+        elapsedSec: Math.min(initialTotal, elapsedSec),
+        totalSec: initialTotal
+      })
+
+      if (this._remainingSec <= 0) {
+        this.stop()
+        onExpire()
+      }
+    }, this.tickMs)
+  }
+
+  /** 暂停计时，返回剩余秒数（不清零，供 resume 使用） */
+  pause(): number {
+    if (this._intervalId !== null) {
+      clearInterval(this._intervalId)
+      this._intervalId = null
     }
-  }, 100)
-}
-
-export function pauseSpeakerTimer(): number {
-  if (_speakerTimerId !== null) {
-    clearInterval(_speakerTimerId)
-    _speakerTimerId = null
+    return this._remainingSec
   }
-  return _speakerRemainingSec
-}
 
-export function resumeSpeakerTimer(
-  onTick: (data: TimerTickData) => void,
-  onExpire: () => void
-): void {
-  if (_speakerRemainingSec <= 0) return
-  startSpeakerTimer(_speakerRemainingSec, onTick, onExpire)
-}
-
-export function stopSpeakerTimer(): void {
-  if (_speakerTimerId !== null) {
-    clearInterval(_speakerTimerId)
-    _speakerTimerId = null
+  /** 从暂停处恢复计时 */
+  resume(onTick: (data: TimerTickData) => void, onExpire: () => void): void {
+    if (this._remainingSec <= 0) return
+    this.start(this._remainingSec, onTick, onExpire)
   }
-  _speakerRemainingSec = 0
-}
 
-/**
- * 启动磋商计时器。每 1s tick 一次。
- */
-export function startCaucusTimer(
-  totalSec: number,
-  onTick: (data: TimerTickData) => void,
-  onExpire: () => void
-): void {
-  stopCaucusTimer()
-
-  const startedAt = Date.now()
-  const totalMs = totalSec * 1000
-
-  _caucusTimerId = setInterval(() => {
-    const elapsedMs = Date.now() - startedAt
-    const remainingSec = Math.max(0, (totalMs - elapsedMs) / 1000)
-    const elapsedSec = Math.min(totalSec, elapsedMs / 1000)
-
-    onTick({
-      remainingSec,
-      elapsedSec,
-      totalSec
-    })
-
-    if (remainingSec <= 0) {
-      stopCaucusTimer()
-      onExpire()
+  /** 停止计时并清零剩余时间 */
+  stop(): void {
+    if (this._intervalId !== null) {
+      clearInterval(this._intervalId)
+      this._intervalId = null
     }
-  }, 1000)
-}
-
-export function stopCaucusTimer(): void {
-  if (_caucusTimerId !== null) {
-    clearInterval(_caucusTimerId)
-    _caucusTimerId = null
+    this._remainingSec = 0
   }
 }
 
-export function stopAllTimers(): void {
-  stopSpeakerTimer()
-  stopCaucusTimer()
+// ---- 全局计时器注册表 -------------------------------------------------------
+
+const _timers = new Map<string, Timer>()
+
+/** 创建或获取计时器实例（幂等：同一 ID 不会重复创建） */
+export function createTimer(id: string, tickMs?: number): Timer {
+  const existing = _timers.get(id)
+  if (existing) return existing
+  const timer = new Timer(id, tickMs)
+  _timers.set(id, timer)
+  return timer
+}
+
+/** 按 ID 查找计时器 */
+export function getTimer(id: string): Timer | undefined {
+  return _timers.get(id)
+}
+
+/** 销毁计时器：停止并从注册表移除 */
+export function destroyTimer(id: string): void {
+  const timer = _timers.get(id)
+  if (timer) {
+    timer.stop()
+    _timers.delete(id)
+  }
+}
+
+/** 销毁所有计时器（路由离开时调用） */
+export function destroyAllTimers(): void {
+  for (const timer of _timers.values()) {
+    timer.stop()
+  }
+  _timers.clear()
 }
 
 // ---- 有主持磋商：计算最大发言人数 ------------------------------------------
