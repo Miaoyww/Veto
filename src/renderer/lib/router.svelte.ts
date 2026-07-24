@@ -16,8 +16,21 @@ interface ParsedRoute {
 
 function parseRoute(url: URL): ParsedRoute {
   const pathname = url.pathname
+  const hash = url.hash.replace(/^#/, '') // 去除开头的 #
   const params: Record<string, string> = {}
   let routeId = '/'
+
+  // ── Hash 路由（用于 Display 窗口等场景）──
+
+  // #/conference-display/<id>
+  const hashConferenceDisplayMatch = hash.match(/^\/conference-display\/([\w-]+)$/)
+  if (hashConferenceDisplayMatch) {
+    params.conference_id = hashConferenceDisplayMatch[1]!
+    routeId = '/conference-display/[conference_id]'
+    return { url, pathname, params, routeId }
+  }
+
+  // ── Pathname 路由 ──
 
   // /battle/<id>/settings
   const battleSettingsMatch = pathname.match(/^\/battle\/([\w-]+)\/settings/)
@@ -31,6 +44,19 @@ function parseRoute(url: URL): ParsedRoute {
     params.battle_id = battleMatch[1]!
     routeId = '/battle/[battle_id]'
   }
+  // /conference/<id>/roll-call
+  const conferenceRollCallMatch = pathname.match(/^\/conference\/([\w-]+)\/roll-call$/)
+  if (conferenceRollCallMatch) {
+    params.conference_id = conferenceRollCallMatch[1]!
+    routeId = '/conference/[conference_id]/roll-call'
+  }
+  // /conference/<id>
+  const conferenceMatch = pathname.match(/^\/conference\/([\w-]+)$/)
+  if (conferenceMatch) {
+    params.conference_id = conferenceMatch[1]!
+    routeId = '/conference/[conference_id]'
+  }
+
   // /settings
   if (pathname === '/settings') {
     routeId = '/settings'

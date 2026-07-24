@@ -5,6 +5,7 @@
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
   import { Toaster } from '$lib/components/ui/sonner'
   import { ModeWatcher } from 'mode-watcher'
+  import { Swords } from '@lucide/svelte'
   import { VETO_NAME } from '$lib/const'
   import logo from '$lib/assets/logo.svg'
   import TitleBar from '$lib/components/titlebar.svelte'
@@ -14,8 +15,12 @@
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
   import ModeSidebar from '$lib/components/home/mode-sidebar.svelte'
   import BattlePanel from '$lib/components/home/battle-panel.svelte'
+  import ConferencePanel from '$lib/components/home/conference-panel.svelte'
   import { currentRoute } from '$lib/router.svelte'
   import BattlePage from './battle/[battle_id]/index.svelte'
+  import ConferencePage from './conference/[conference_id]/index.svelte'
+  import ConferenceRollCallPage from './conference/[conference_id]/roll-call.svelte'
+  import ConferenceDisplayPage from './conference-display/[conference_id]/index.svelte'
 
   let selectedMode = $state<string | null>(null)
 
@@ -47,10 +52,28 @@
 <div class="pt-9">
   {#if routeId === '/battle/[battle_id]'}
     <BattlePage />
+  {:else if routeId === '/conference/[conference_id]/roll-call'}
+    <ConferenceRollCallPage />
+  {:else if routeId === '/conference/[conference_id]'}
+    <ConferencePage />
+  {:else if routeId === '/conference-display/[conference_id]'}
+    <ConferenceDisplayPage />
   {:else}
     <div class="flex h-[calc(100vh-2.25rem)] w-screen overflow-hidden">
       <ModeSidebar {selectedMode} onSelectMode={(mode) => (selectedMode = mode)} />
-      <BattlePanel mode={selectedMode} class="m-2" />
+      {#if selectedMode === 'crisis'}
+        <BattlePanel mode={selectedMode} class="m-2" />
+      {:else if selectedMode === 'conference'}
+        <ConferencePanel mode={selectedMode} class="m-2" />
+      {:else}
+        <div class="flex flex-1 items-center justify-center">
+          <div class="flex flex-col items-center gap-3 text-muted-foreground">
+            <Swords size={48} class="opacity-30" />
+            <p class="text-lg font-medium">请从左侧选择一个模式</p>
+            <p class="text-sm opacity-70">选择推演模式以查看和管理战局</p>
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

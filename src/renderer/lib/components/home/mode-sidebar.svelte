@@ -35,10 +35,9 @@
       <ModeCard
         icon={Users}
         label="模拟大会"
-        description="敬请期待"
-        selected={false}
-        disabled
-        onclick={() => {}}
+        description="会议模拟 · 规则斗争与妥协谈判"
+        selected={selectedMode === 'conference'}
+        onclick={() => onSelectMode('conference')}
       />
     </div>
 

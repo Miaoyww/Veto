@@ -115,6 +115,31 @@ const veto = {
 
     /** 获取当前应用版本 */
     getVersion: (): Promise<string> => ipcRenderer.invoke('veto:updater:get-version')
+  },
+
+  conference: {
+    /** 打开显示窗口 */
+    openDisplay: (conferenceId: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:conference:open-display', conferenceId),
+
+    /** 关闭显示窗口 */
+    closeDisplay: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:conference:close-display'),
+
+    /** 向显示窗口发送数据 */
+    sendToDisplay: (data: unknown): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:conference:send-to-display', data),
+
+    /** 监听来自主机的数据更新（显示窗口侧使用） */
+    onDisplayUpdate: (callback: (data: unknown) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: unknown) => {
+        callback(data)
+      }
+      ipcRenderer.on('veto:conference:display-update', listener)
+      return () => {
+        ipcRenderer.removeListener('veto:conference:display-update', listener)
+      }
+    }
   }
 }
 

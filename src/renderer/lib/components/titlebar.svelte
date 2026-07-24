@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Minus, X, Square, Settings } from '@lucide/svelte';
 	import { currentBattle } from '$lib/stores/battle/battle-store';
+	import { currentConference } from '$lib/stores/conference/conference-store';
 	import { VETO_NAME } from '$lib/const';
 	import { Button } from '$lib/components/ui/button';
 	import { settingsDialogOpen } from '$lib/stores/app/global-ui-store';
@@ -26,10 +27,12 @@
 		</span>
 	</div>
 
-	<!-- 中：当前战役名（可拖动区域） -->
+	<!-- 中：当前战役名 / 大会名（可拖动区域） -->
 	<div class="drag-region flex flex-1 items-center justify-center h-full">
 		{#if $currentBattle}
 			<span class="max-w-xs truncate text-sm text-foreground/70">{$currentBattle.name}</span>
+		{:else if $currentConference}
+			<span class="max-w-xs truncate text-sm text-foreground/70">{$currentConference.name}</span>
 		{/if}
 	</div>
 

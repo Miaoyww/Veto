@@ -65,4 +65,10 @@ export interface VetoAPI {
     quitAndInstall: () => Promise<{ success: boolean }>
     getVersion: () => Promise<string>
   }
+  conference: {
+    openDisplay: (conferenceId: string) => Promise<{ success: boolean }>
+    closeDisplay: () => Promise<{ success: boolean }>
+    sendToDisplay: (data: unknown) => Promise<{ success: boolean }>
+    onDisplayUpdate: (callback: (data: unknown) => void) => () => void
+  }
 }
