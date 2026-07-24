@@ -330,7 +330,7 @@ export interface Conference {
     caucusSpeakers?: Array<{
       delegationId: string
       delegationName: string
-      status: 'waiting' | 'ready' | 'speaking' | 'finished'
+      status: 'waiting' | 'ready' | 'speaking'
       allocatedTimeSec: number
     }>
     /** 当前发言人在 caucusSpeakers 中的索引 */
@@ -422,7 +422,7 @@ export interface ConferenceDisplayData {
     /** 有主持磋商发言顺序 */
     caucusSpeakers?: Array<{
       delegationName: string
-      status: 'waiting' | 'ready' | 'speaking' | 'finished'
+      status: 'waiting' | 'ready' | 'speaking'
       allocatedTimeSec: number
     }>
     currentSpeakerIndex?: number

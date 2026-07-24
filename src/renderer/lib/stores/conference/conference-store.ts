@@ -692,14 +692,13 @@ export function advanceCaucusSpeaker(): void {
   const speakers = conf.activeCaucus.caucusSpeakers
   const currentIdx = conf.activeCaucus.currentSpeakerIndex ?? -1
 
-  // 标记当前为 finished
-  const updatedSpeakers = speakers.map((s, i) =>
-    i === currentIdx ? { ...s, status: 'finished' as const } : s
-  )
+  // 移除已完成的发言人
+  const updatedSpeakers = speakers.filter((_, i) => i !== currentIdx)
 
   // 检查总剩余时间
   const totalRemaining = (conf.activeCaucus.endAt - Date.now()) / 1000
-  const nextIdx = currentIdx + 1
+  // 下一位发言人自动移到 currentIdx 位置
+  const nextIdx = currentIdx
 
   if (nextIdx < updatedSpeakers.length) {
     // 还有发言人 → 进入 ready 状态，等待主席手动开始

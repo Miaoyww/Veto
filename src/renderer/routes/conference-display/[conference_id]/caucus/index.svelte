@@ -10,6 +10,8 @@
   {@const speakers = data.caucusTimer.caucusSpeakers}
   {@const currentIdx = data.caucusTimer.currentSpeakerIndex ?? -1}
   {@const currentSpeaker = currentIdx >= 0 ? speakers[currentIdx] : null}
+  {@const restQueue = data.caucusTimer.caucusSpeakers.slice(currentIdx + 2)}
+
   {@const nextSpeaker =
     currentIdx >= 0 && currentIdx + 1 < speakers.length ? speakers[currentIdx + 1] : null}
   <!-- 有主持磋商：逐人发言 -->
@@ -17,7 +19,6 @@
     <div class="flex items-center gap-3 text-white/40">
       <div class="h-px w-12 bg-white/10"></div>
       <span class="text-lg tracking-[0.08em] uppercase">有主持核心磋商</span>
-      <span class="text-sm tracking-wider text-white/20">{speakers.length} 位发言人</span>
       <div class="h-px w-12 bg-white/10"></div>
     </div>
 
@@ -33,9 +34,6 @@
         <div class="text-sm tracking-[0.08em] text-white/30 uppercase">正在发言</div>
         <div class="mt-2 text-6xl font-semibold text-white">
           {currentSpeaker.delegationName}
-        </div>
-        <div class="mt-1 text-sm tracking-wider text-white/20">
-          {speakers.length} 人中第 {currentIdx + 1} 位
         </div>
         <div
           class="mt-4 font-mono text-[90px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]"
@@ -57,11 +55,21 @@
       <div class="text-lg tracking-wider text-white/15">最后一位发言人</div>
     {/if}
 
-    <!-- 已完成发言 -->
-    {#if currentIdx > 0}
-      <div class="flex flex-wrap items-center justify-center gap-3">
-        {#each speakers.slice(0, currentIdx) as s}
-          <span class="text-lg tracking-wider text-white/8 line-through">{s.delegationName}</span>
+    {#if restQueue.length > 0}
+      <!-- 后续队列 -->
+      <div class="w-full space-y-px">
+        {#each restQueue as speaker, i (i)}
+          <div class="flex items-center justify-center gap-4 px-6 py-2.5">
+            <span class="text-sm tabular-nums text-white/25">
+              {i + 2}
+            </span>
+            <span class="text-xl font-medium text-white/50">
+              {speaker.delegationName}
+            </span>
+            {#if speaker.shortName}
+              <span class="text-sm tracking-wider text-white/25">{speaker.shortName}</span>
+            {/if}
+          </div>
         {/each}
       </div>
     {/if}
@@ -76,16 +84,16 @@
       <div class="h-px w-12 bg-white/10"></div>
     </div>
 
-    {#if displayData.caucusTimer.topic}
+    {#if data.caucusTimer.topic}
       <div class="text-9xl font-medium tracking-wide text-[#5B92E5]/80">
-        {displayData.caucusTimer.topic}
+        {data.caucusTimer.topic}
       </div>
     {/if}
 
     <div
       class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]"
     >
-      {formatTime(Math.max(0, displayData.caucusTimer.remainingSec))}
+      {formatTime(Math.max(0, data.caucusTimer.remainingSec))}
     </div>
   </div>
 {/if}
