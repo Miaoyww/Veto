@@ -362,9 +362,9 @@ export interface ConferenceDisplayData {
   rollCall?: {
     currentIndex: number
     totalCount: number
-    currentDelegationName: string
+    currentDelegationName?: string
     currentDelegationShortName?: string
-    currentDelegationColor: string
+    currentDelegationColor?: string
     presentCount: number
     simpleMajorityThreshold: number
     twoThirdsThreshold: number

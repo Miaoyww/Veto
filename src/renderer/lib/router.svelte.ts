@@ -22,6 +22,23 @@ function parseRoute(url: URL): ParsedRoute {
 
   // ── Hash 路由（用于 Display 窗口等场景）──
 
+  // #/conference-display/<id>/roll-call/done
+  const hashConferenceDisplayRcDoneMatch = hash.match(/^\/conference-display\/([\w-]+)\/roll-call\/done$/)
+  if (hashConferenceDisplayRcDoneMatch) {
+    params.conference_id = hashConferenceDisplayRcDoneMatch[1]!
+    routeId = '/conference-display/[conference_id]/roll-call/done'
+    return { url, pathname, params, routeId }
+  }
+
+  // #/conference-display/<id>/<subpage>
+  const hashConferenceDisplaySubMatch = hash.match(/^\/conference-display\/([\w-]+)\/([\w-]+)$/)
+  if (hashConferenceDisplaySubMatch) {
+    params.conference_id = hashConferenceDisplaySubMatch[1]!
+    params.display_subpage = hashConferenceDisplaySubMatch[2]!
+    routeId = `/conference-display/[conference_id]/${hashConferenceDisplaySubMatch[2]}`
+    return { url, pathname, params, routeId }
+  }
+
   // #/conference-display/<id>
   const hashConferenceDisplayMatch = hash.match(/^\/conference-display\/([\w-]+)$/)
   if (hashConferenceDisplayMatch) {

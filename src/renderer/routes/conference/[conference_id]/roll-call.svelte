@@ -45,23 +45,26 @@
   $effect(() => {
     const c = $currentConference
     if (c) {
-      const rollCallInfo = !isComplete && currentDelegation && thresholds
+      // 点名进行中发送完整数据，完成后发送汇总
+      const rollCallInfo = thresholds
         ? {
             currentIndex,
             totalCount,
-            currentDelegationName: currentDelegation.name,
-            currentDelegationShortName: currentDelegation.shortName,
-            currentDelegationColor: currentDelegation.color,
             presentCount: thresholds.presentCount,
             simpleMajorityThreshold: thresholds.simpleMajorityThreshold,
             twoThirdsThreshold: thresholds.twoThirdsThreshold,
+            ...(currentDelegation
+              ? {
+                  currentDelegationName: currentDelegation.name,
+                  currentDelegationShortName: currentDelegation.shortName,
+                  currentDelegationColor: currentDelegation.color,
+                }
+              : {}),
             lastMarked: lastRollCallMarked ?? undefined,
           }
         : undefined
 
       getDisplayBridge().sendUpdate(buildDisplayData(c, { rollCall: rollCallInfo }))
-      // 发送后清除 lastMarked，避免重复发送
-      if (lastRollCallMarked) lastRollCallMarked = null
     }
   })
 
@@ -109,6 +112,7 @@
     isTransitioning = true
     transitionTimeout = setTimeout(() => {
       isTransitioning = false
+      lastRollCallMarked = null
       currentIndex++
     }, 1800)
   }
@@ -126,6 +130,7 @@
     isTransitioning = true
     transitionTimeout = setTimeout(() => {
       isTransitioning = false
+      lastRollCallMarked = null
       currentIndex++
     }, 1800)
   }
