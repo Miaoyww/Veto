@@ -21,6 +21,7 @@
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
   import MotionDisplay from './motion/index.svelte'
+  import CaucusSetupDisplay from './caucus-setup/index.svelte'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
@@ -120,62 +121,85 @@
           <GeneralDebateDisplay data={displayData} />
 
         {:else if phase === 'caucus_setup'}
-          <!-- 磋商发言名单设置中 -->
-          <div class="flex flex-col items-center gap-10">
-            <div class="flex items-center gap-3 text-white/40">
-              <div class="h-px w-12 bg-white/10"></div>
-              <span class="text-lg tracking-[0.08em] uppercase">磋商准备</span>
-              <div class="h-px w-12 bg-white/10"></div>
-            </div>
-
-            {#if displayData.activeMotion?.topic}
-              <div class="text-7xl font-semibold tracking-wide text-[#5B92E5]/80">
-                {displayData.activeMotion.topic}
-              </div>
-            {/if}
-
-            {#if displayData.caucusSetup && displayData.caucusSetup.speakerNames.length > 0}
-              <div class="flex flex-col gap-3">
-                {#each displayData.caucusSetup.speakerNames as name, i}
-                  <div class="flex items-center gap-4">
-                    <span class="w-10 text-right font-mono text-2xl tabular-nums text-white/20">
-                      {i + 1}
-                    </span>
-                    <span class="text-3xl tracking-wide text-white/50">
-                      {name}
-                    </span>
-                  </div>
-                {/each}
-              </div>
-            {:else}
-              <div class="text-2xl tracking-wider text-white/15">
-                等待主席团添加发言代表团
-              </div>
-            {/if}
-          </div>
+          <CaucusSetupDisplay data={displayData} />
 
         {:else if displayData.caucusTimer && phase === 'caucus'}
-          <!-- 磋商倒计时 -->
-          <div class="flex flex-col items-center gap-10">
-            <div class="flex items-center gap-3 text-white/40">
-              <div class="h-px w-12 bg-white/10"></div>
-              <Coffee size={20} class="text-[#C9A84C]" />
-              <span class="text-lg tracking-[0.08em] uppercase">
-                {displayData.caucusTimer.type === 'moderated' ? '有主持核心磋商' : '自由磋商'}
-              </span>
-              <div class="h-px w-12 bg-white/10"></div>
-            </div>
-
-            {#if displayData.caucusTimer.topic}
-              <div class="text-9xl font-medium tracking-wide text-[#5B92E5]/80">
-                {displayData.caucusTimer.topic}
+          {#if displayData.caucusTimer.type === 'moderated' && displayData.caucusTimer.caucusSpeakers}
+            {@const speakers = displayData.caucusTimer.caucusSpeakers}
+            {@const currentIdx = displayData.caucusTimer.currentSpeakerIndex ?? -1}
+            {@const currentSpeaker = currentIdx >= 0 ? speakers[currentIdx] : null}
+            {@const nextSpeaker = currentIdx >= 0 && currentIdx + 1 < speakers.length ? speakers[currentIdx + 1] : null}
+            <!-- 有主持磋商：逐人发言 -->
+            <div class="flex flex-col items-center gap-10">
+              <div class="flex items-center gap-3 text-white/40">
+                <div class="h-px w-12 bg-white/10"></div>
+                <span class="text-lg tracking-[0.08em] uppercase">有主持核心磋商</span>
+                <span class="text-sm tracking-wider text-white/20">{speakers.length} 位发言人</span>
+                <div class="h-px w-12 bg-white/10"></div>
               </div>
-            {/if}
 
-            <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]">
-              {formatTime(Math.max(0, displayData.caucusTimer.remainingSec))}
+              {#if displayData.caucusTimer.topic}
+                <div class="text-9xl font-medium tracking-wide text-[#5B92E5]/80">
+                  {displayData.caucusTimer.topic}
+                </div>
+              {/if}
+
+              {#if currentSpeaker}
+                <!-- 当前发言人 -->
+                <div class="text-center">
+                  <div class="text-sm tracking-[0.08em] text-white/30 uppercase">正在发言</div>
+                  <div class="mt-2 text-6xl font-semibold text-white">
+                    {currentSpeaker.delegationName}
+                  </div>
+                  <div class="mt-1 text-sm tracking-wider text-white/20">
+                    {speakers.length} 人中第 {currentIdx + 1} 位
+                  </div>
+                  <div class="mt-4 font-mono text-[90px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]">
+                    {formatTime(Math.max(0, displayData.currentSpeaker?.remainingSec ?? displayData.caucusTimer.remainingSec))}
+                  </div>
+                </div>
+              {/if}
+
+              <!-- 下一位 -->
+              {#if nextSpeaker}
+                <div class="flex items-center gap-4 text-white/15">
+                  <span class="text-sm tracking-wider uppercase">下一位</span>
+                  <span class="text-2xl text-white/30">{nextSpeaker.delegationName}</span>
+                </div>
+              {:else if currentIdx + 1 >= speakers.length}
+                <div class="text-lg tracking-wider text-white/15">最后一位发言人</div>
+              {/if}
+
+              <!-- 已完成发言 -->
+              {#if currentIdx > 0}
+                <div class="flex flex-wrap items-center justify-center gap-3">
+                  {#each speakers.slice(0, currentIdx) as s}
+                    <span class="text-lg tracking-wider text-white/8 line-through">{s.delegationName}</span>
+                  {/each}
+                </div>
+              {/if}
             </div>
-          </div>
+          {:else}
+            <!-- 自由磋商：总倒计时 -->
+            <div class="flex flex-col items-center gap-10">
+              <div class="flex items-center gap-3 text-white/40">
+                <div class="h-px w-12 bg-white/10"></div>
+                <Coffee size={20} class="text-[#C9A84C]" />
+                <span class="text-lg tracking-[0.08em] uppercase">自由磋商</span>
+                <div class="h-px w-12 bg-white/10"></div>
+              </div>
+
+              {#if displayData.caucusTimer.topic}
+                <div class="text-9xl font-medium tracking-wide text-[#5B92E5]/80">
+                  {displayData.caucusTimer.topic}
+                </div>
+              {/if}
+
+              <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]">
+                {formatTime(Math.max(0, displayData.caucusTimer.remainingSec))}
+              </div>
+            </div>
+          {/if}
 
         {:else if displayData.votingSession && phase === 'voting'}
           <!-- 投票 -->

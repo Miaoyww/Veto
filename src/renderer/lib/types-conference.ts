@@ -318,12 +318,21 @@ export interface Conference {
   activeCaucus?: {
     motionId: string
     type: 'moderated' | 'unmoderated'
-    /** 真实世界开始时间戳 */
+    /** 真实世界开始时间戳（总计时） */
     startedAt: number
-    /** 真实世界结束时间戳 */
+    /** 真实世界结束时间戳（总计时） */
     endAt: number
-    /** 已过秒数 */
+    /** 已过总秒数 */
     elapsedSec: number
+    /** 有主持磋商发言顺序（按发言列表顺序） */
+    caucusSpeakers?: Array<{
+      delegationId: string
+      delegationName: string
+      status: 'waiting' | 'ready' | 'speaking' | 'finished'
+      allocatedTimeSec: number
+    }>
+    /** 当前发言人在 caucusSpeakers 中的索引 */
+    currentSpeakerIndex?: number
   } | null
 
   /** 当前发言计时器状态 */
@@ -397,6 +406,8 @@ export interface ConferenceDisplayData {
     speakingTimePerPersonSec?: number
   }
   caucusSetup?: {
+    topic?: string
+    proposerName?: string
     proposerPosition: 'first' | 'last'
     speakerDelegationIds: string[]
     speakerNames: string[]
@@ -406,6 +417,13 @@ export interface ConferenceDisplayData {
     totalSec: number
     type: 'moderated' | 'unmoderated'
     topic?: string
+    /** 有主持磋商发言顺序 */
+    caucusSpeakers?: Array<{
+      delegationName: string
+      status: 'waiting' | 'ready' | 'speaking' | 'finished'
+      allocatedTimeSec: number
+    }>
+    currentSpeakerIndex?: number
   }
   recentMinutes: Array<{
     timestamp: number

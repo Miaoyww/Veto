@@ -205,12 +205,27 @@ export function buildDisplayData(
   }
 ): ConferenceDisplayData {
   // 当前发言人
-  const currentSpeakerEntry = conf.activeSpeaker
-    ? conf.speakersList.find((s) => s.id === conf.activeSpeaker?.entryId)
-    : null
-  const currentSpeakerDel = currentSpeakerEntry
-    ? conf.delegations.find((d) => d.id === currentSpeakerEntry.delegationId)
-    : null
+  let currentSpeakerName: string | undefined
+  let currentSpeakerAllocatedSec = 120
+
+  if (conf.activeSpeaker) {
+    // 先检查主发言名单
+    const entry = conf.speakersList.find((s) => s.id === conf.activeSpeaker!.entryId)
+    if (entry) {
+      const del = conf.delegations.find((d) => d.id === entry.delegationId)
+      currentSpeakerName = del?.name ?? entry.delegationId
+      currentSpeakerAllocatedSec = entry.allocatedTimeSec
+    } else if (conf.activeCaucus?.caucusSpeakers) {
+      // 在磋商发言名单中查找
+      const cs = conf.activeCaucus.caucusSpeakers.find(
+        (s) => s.delegationId === conf.activeSpeaker!.entryId && s.status === 'speaking'
+      )
+      if (cs) {
+        currentSpeakerName = cs.delegationName
+        currentSpeakerAllocatedSec = cs.allocatedTimeSec
+      }
+    }
+  }
 
   // 当前投票
   const activeVoting = conf.votingSessions.find((s) => !s.endedAt)
@@ -242,7 +257,13 @@ export function buildDisplayData(
       type: conf.activeCaucus.type,
       topic: conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
         ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
-        : undefined
+        : undefined,
+      caucusSpeakers: conf.activeCaucus.caucusSpeakers?.map((s) => ({
+        delegationName: s.delegationName,
+        status: s.status,
+        allocatedTimeSec: s.allocatedTimeSec
+      })),
+      currentSpeakerIndex: conf.activeCaucus.currentSpeakerIndex
     }
   }
 
@@ -257,14 +278,13 @@ export function buildDisplayData(
     phase: effectivePhase,
     venue: conf.venue,
     name: conf.name,
-    currentSpeaker: currentSpeakerEntry && currentSpeakerDel
+    currentSpeaker: currentSpeakerName
       ? {
-          delegationName: currentSpeakerDel.name,
-          shortName: currentSpeakerDel.shortName,
+          delegationName: currentSpeakerName,
           remainingSec: conf.activeSpeaker
             ? Math.max(0, (conf.activeSpeaker.endAt - Date.now()) / 1000)
             : 0,
-          allocatedSec: currentSpeakerEntry.allocatedTimeSec,
+          allocatedSec: currentSpeakerAllocatedSec,
           isPaused: conf.activeSpeaker?.pausedAt != null
         }
       : undefined,
@@ -304,13 +324,20 @@ export function buildDisplayData(
       : undefined,
     caucusTimer: caucusData,
     caucusSetup: conf.caucusSetup
-      ? {
-          proposerPosition: conf.caucusSetup.proposerPosition,
-          speakerDelegationIds: conf.caucusSetup.speakerDelegationIds,
-          speakerNames: conf.caucusSetup.speakerDelegationIds.map(
+      ? (() => {
+          const csMotion = conf.motions.find((m) => m.id === conf.caucusSetup!.motionId) as any
+          const proposerId = csMotion?.proposedByDelegationId
+          const proposerDel = proposerId ? conf.delegations.find((d) => d.id === proposerId) : null
+          return {
+          topic: csMotion?.topic,
+          proposerName: proposerDel?.name,
+          proposerPosition: conf.caucusSetup!.proposerPosition,
+          speakerDelegationIds: conf.caucusSetup!.speakerDelegationIds,
+          speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
             (id) => conf.delegations.find((d) => d.id === id)?.name ?? id
           )
         }
+      })()
       : undefined,
     recentMinutes: conf.minutes.slice(-10).map((m) => ({
       timestamp: m.timestamp,

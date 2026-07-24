@@ -1,8 +1,9 @@
 <script lang="ts">
   import {
-    Mic, MicOff, Clock, Trash2, Users, ArrowRight, MessageCircle,
-    HelpCircle, Pause, Play
+    Mic, Trash2, Users
   } from '@lucide/svelte'
+  import ActiveSpeakerCard from '$lib/components/conference/active-speaker-card.svelte'
+  import ReadySpeakerCard from '$lib/components/conference/ready-speaker-card.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -32,9 +33,7 @@
   const conf = $derived($currentConference)
 
   // 已存在于发言名单中的代表团 ID
-  const listedDelegationIds = $derived(
-    conf?.speakersList.map((s) => s.delegationId) ?? []
-  )
+  const listedDelegationIds = $derived(conf?.speakersList.map((s) => s.delegationId) ?? [])
 
   function addSpeaker(delegationId: string): void {
     addToSpeakersList(delegationId)
@@ -117,78 +116,25 @@
   <!-- 当前发言人 -->
   {#if isSpeakerActive && activeSpeaker && conf}
     {@const del = conf.delegations.find((d) => d.id === activeSpeaker.delegationId)}
-    <div class="rounded-lg border-2 border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-700 dark:bg-emerald-950/30">
-      <div class="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-        {isPaused ? '计时已暂停' : '正在发言'}
-      </div>
-      <div class="mt-1 text-2xl font-bold text-foreground">
-        {del?.name ?? activeSpeaker.delegationId}
-      </div>
-      <div class="mt-3 font-mono text-5xl font-bold tabular-nums {isPaused ? 'text-muted-foreground' : 'text-foreground'}">
-        {formatTime(displayRemaining)}
-      </div>
-      <div class="mt-1 text-xs text-muted-foreground">
-        已用 {Math.floor(displayElapsed)}秒 / 共 {displayTotal}秒
-      </div>
-
-      <!-- 控制按钮组 -->
-      <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-        {#if isPaused}
-          <Button size="sm" class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700" onclick={resumeSpeaking}>
-            <Play size={12} />
-            继续计时
-          </Button>
-        {:else}
-          <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={pauseSpeaking}>
-            <Pause size={12} />
-            暂停
-          </Button>
-        {/if}
-        <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => finishSpeaker()}>
-          <MicOff size={12} class="mr-1" />
-          结束发言
-        </Button>
-        <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => finishSpeaker('chair')}>
-          <Users size={12} class="mr-1" />
-          Yield to Chair
-        </Button>
-        <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => finishSpeaker('delegate')}>
-          <ArrowRight size={12} class="mr-1" />
-          Yield to Delegate
-        </Button>
-        <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => finishSpeaker('question')}>
-          <HelpCircle size={12} class="mr-1" />
-          Yield to Question
-        </Button>
-        <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => finishSpeaker('comment')}>
-          <MessageCircle size={12} class="mr-1" />
-          Yield to Comment
-        </Button>
-      </div>
-    </div>
-
+    <ActiveSpeakerCard
+      delegationName={del?.name ?? activeSpeaker.delegationId}
+      remainingSec={displayRemaining}
+      elapsedSec={displayElapsed}
+      totalSec={displayTotal}
+      {isPaused}
+      onpause={pauseSpeaking}
+      onresume={resumeSpeaking}
+      onend={() => finishSpeaker()}
+      onyield={(type) => finishSpeaker(type)}
+    />
   {:else if readyEntry && conf}
-    <!-- 预发言（即将发言） -->
     {@const del = conf.delegations.find((d) => d.id === readyEntry.delegationId)}
-    <div class="rounded-lg border-2 border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-700 dark:bg-amber-950/30">
-      <div class="text-sm font-medium text-amber-700 dark:text-amber-400">即将发言</div>
-      <div class="mt-1 text-2xl font-bold text-foreground">
-        {del?.name ?? readyEntry.delegationId}
-      </div>
-      <div class="mt-1 font-mono text-lg text-muted-foreground">
-        {formatTime(readyEntry.allocatedTimeSec)}
-      </div>
-      <div class="mt-4 flex items-center justify-center gap-2">
-        <Button size="sm" class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700" onclick={() => beginSpeaking(readyEntry.id)}>
-          <Play size={12} />
-          开始计时
-        </Button>
-        <Button size="sm" variant="ghost" class="h-8 text-xs text-muted-foreground" onclick={() => removeFromSpeakersList(readyEntry.id)}>
-          <Trash2 size={12} class="mr-1" />
-          取消
-        </Button>
-      </div>
-    </div>
+    <ReadySpeakerCard
+      delegationName={del?.name ?? readyEntry.delegationId}
+      allocatedTimeSec={readyEntry.allocatedTimeSec}
+      onstart={() => beginSpeaking(readyEntry.id)}
+      oncancel={() => removeFromSpeakersList(readyEntry.id)}
+    />
   {:else}
     <!-- 添加发言人 -->
     <div class="rounded-lg border bg-card p-4">
@@ -208,7 +154,9 @@
   {#if !isSpeakerActive && readyEntry === null && waitingSpeakers.length > 0}
     {@const next = waitingSpeakers[0]}
     {@const nextDel = conf?.delegations.find((d) => d.id === next.delegationId)}
-    <div class="rounded-lg border-2 border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+    <div
+      class="rounded-lg border-2 border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20"
+    >
       <div class="flex items-center gap-3">
         <div
           class="h-3 w-3 shrink-0 rounded-full"

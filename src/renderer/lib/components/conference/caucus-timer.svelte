@@ -1,17 +1,23 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { Timer, Coffee, MessageSquare } from '@lucide/svelte'
+  import { Timer, Coffee, MessageSquare, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import { Separator } from '$lib/components/ui/separator/index.js'
+  import { Badge } from '$lib/components/ui/badge/index.js'
+  import ActiveSpeakerCard from '$lib/components/conference/active-speaker-card.svelte'
   import {
     currentConference,
-    endCaucus
+    endCaucus,
+    advanceCaucusSpeaker,
+    appendCaucusSpeaker,
+    pauseSpeaker,
+    resumeSpeaker as resumeSpeakerStore
   } from '$lib/stores/conference/conference-store'
   import {
     startCaucusTimer,
     stopCaucusTimer,
     formatTime
   } from '$lib/engine/conference-engine'
+  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
 
   const conf = $derived($currentConference)
   const activeCaucus = $derived(conf?.activeCaucus ?? null)
@@ -19,32 +25,80 @@
     conf?.motions.find((m) => m.id === activeCaucus?.motionId) ?? null
   )
 
-  let remainingSec = $state(0)
-  let elapsedSec = $state(0)
+  // For unmoderated caucus — simple countdown
+  let totalRemainingSec = $state(0)
+  let totalElapsedSec = $state(0)
   let totalSec = $state(0)
 
-  $effect(() => {
-    if (activeCaucus) {
-      const now = Date.now()
-      const remaining = Math.max(0, (activeCaucus.endAt - now) / 1000)
-      const total = (activeCaucus.endAt - activeCaucus.startedAt) / 1000
+  // For moderated caucus — per-speaker countdown from activeSpeaker
+  let speakerRemainingSec = $state(0)
+  let speakerElapsedSec = $state(0)
+  let speakerTotalSec = $state(0)
 
-      if (remaining > 0) {
-        startCaucusTimer(
-          remaining,
-          (data) => {
-            remainingSec = data.remainingSec
-            elapsedSec = data.elapsedSec
-            totalSec = total
-          },
-          () => {
-            // 自动结束磋商
-            endCaucus()
-          }
-        )
-      } else {
-        endCaucus()
-      }
+  const isModerated = $derived(activeCaucus?.type === 'moderated')
+  const speakers = $derived(activeCaucus?.caucusSpeakers ?? [])
+  const currentIdx = $derived(activeCaucus?.currentSpeakerIndex ?? -1)
+  const currentSpeaker = $derived(currentIdx >= 0 ? speakers[currentIdx] : null)
+  const hasActiveSpeaker = $derived(currentSpeaker != null)
+  const totalRemaining = $derived(activeCaucus ? Math.max(0, (activeCaucus.endAt - Date.now()) / 1000) : 0)
+
+  let isPaused = $state(false)
+  const listedIds = $derived(speakers.map((s) => s.delegationId))
+
+  function handlePause(): void {
+    const remaining = speakerRemainingSec
+    stopCaucusTimer()
+    isPaused = true
+    pauseSpeaker()
+  }
+
+  function handleResume(): void {
+    isPaused = false
+    resumeSpeakerStore(speakerRemainingSec)
+  }
+
+  function handleEndSpeaker(): void {
+    stopCaucusTimer()
+    isPaused = false
+    advanceCaucusSpeaker()
+  }
+
+  function handleYield(type: 'chair' | 'delegate' | 'question' | 'comment'): void {
+    stopCaucusTimer()
+    isPaused = false
+    advanceCaucusSpeaker()
+  }
+
+  function handleAddSpeaker(delId: string): void {
+    appendCaucusSpeaker(delId)
+  }
+  const nextSpeaker = $derived(currentIdx >= 0 && currentIdx + 1 < speakers.length ? speakers[currentIdx + 1] : null)
+  const remainingSpeakers = $derived(speakers.filter((s) => s.status === 'waiting'))
+
+  // Per-speaker timer tick via activeSpeaker
+  $effect(() => {
+    const speaker = conf?.activeSpeaker
+    if (!isModerated || !speaker) return
+    // 暂停状态下不启动计时器（由 handleResume 恢复）
+    if (speaker.pausedAt != null) return
+
+    const totalAllocated = currentSpeaker?.allocatedTimeSec ?? 60
+    speakerTotalSec = totalAllocated
+    const now = Date.now()
+    const remaining = Math.max(0, (speaker.endAt - now) / 1000)
+
+    if (remaining > 0) {
+      startCaucusTimer(
+        remaining,
+        (data) => {
+          speakerRemainingSec = data.remainingSec
+          speakerElapsedSec = data.elapsedSec
+        },
+        () => {
+          // Speaker time expired → advance to next
+          advanceCaucusSpeaker()
+        }
+      )
     }
 
     return () => {
@@ -52,8 +106,42 @@
     }
   })
 
-  const isModerated = $derived(activeCaucus?.type === 'moderated')
-  const progressPercent = $derived(totalSec > 0 ? ((totalSec - remainingSec) / totalSec) * 100 : 0)
+  // Total countdown for unmoderated
+  $effect(() => {
+    if (!activeCaucus || isModerated) return
+
+    const now = Date.now()
+    const remaining = Math.max(0, (activeCaucus.endAt - now) / 1000)
+    const total = (activeCaucus.endAt - activeCaucus.startedAt) / 1000
+
+    if (remaining > 0) {
+      startCaucusTimer(
+        remaining,
+        (data) => {
+          totalRemainingSec = data.remainingSec
+          totalElapsedSec = data.elapsedSec
+          totalSec = total
+        },
+        () => endCaucus()
+      )
+    }
+
+    return () => {
+      stopCaucusTimer()
+    }
+  })
+
+  onDestroy(() => {
+    if (speakerTimerCleanup) speakerTimerCleanup()
+  })
+
+  const progressPercent = $derived(
+    totalSec > 0 ? ((totalSec - totalRemainingSec) / totalSec) * 100 : 0
+  )
+
+  function handleEndCurrentSpeaker(): void {
+    advanceCaucusSpeaker()
+  }
 </script>
 
 <div class="flex w-full max-w-xl flex-col items-center gap-8">
@@ -65,12 +153,9 @@
           <MessageSquare size={28} class="text-indigo-500" />
           <h2 class="text-xl font-bold text-foreground">有主持核心磋商</h2>
         </div>
-        {#if motion.type === 'moderated_caucus'}
+        {#if (motion as any).topic}
           <p class="mt-2 text-lg font-medium text-indigo-600 dark:text-indigo-400">
-            {motion.topic}
-          </p>
-          <p class="mt-1 text-sm text-muted-foreground">
-            每人 {motion.speakingTimePerPersonSec}秒 · 最多 {motion.maxSpeakers} 人
+            {(motion as any).topic}
           </p>
         {/if}
       {:else}
@@ -81,41 +166,131 @@
       {/if}
     </div>
 
-    <!-- 大倒计时 -->
-    <div class="text-center">
-      <div
-        class="font-mono text-7xl font-bold tabular-nums transition-colors"
-        class:text-red-500={remainingSec <= 30}
-        class:text-foreground={remainingSec > 30}
-      >
-        {formatTime(remainingSec)}
+    {#if isModerated && hasActiveSpeaker && currentSpeaker}
+      <!-- 有主持磋商：当前发言人 -->
+      <div class="w-full">
+        <ActiveSpeakerCard
+          delegationName={currentSpeaker.delegationName}
+          remainingSec={speakerRemainingSec}
+          elapsedSec={speakerElapsedSec}
+          totalSec={speakerTotalSec}
+          {isPaused}
+          positionLabel={`${speakers.length} 人中第 ${currentIdx + 1} 位`}
+          onpause={handlePause}
+          onresume={handleResume}
+          onend={handleEndSpeaker}
+          onyield={handleYield}
+        />
       </div>
-      <div class="mt-2 text-sm text-muted-foreground">
-        剩余时间 · 已过 {formatTime(elapsedSec)}
+
+      <!-- 下一位发言人 -->
+      {#if nextSpeaker}
+        <div class="w-full rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-medium text-amber-700 dark:text-amber-400">下一位</span>
+            <span class="text-sm font-semibold text-foreground">{nextSpeaker.delegationName}</span>
+          </div>
+        </div>
+      {/if}
+
+      <!-- 剩余发言队列 -->
+      {#if remainingSpeakers.length > 0}
+        <div class="w-full rounded-lg border bg-card">
+          <div class="flex items-center gap-2 px-4 py-2">
+            <Users size={14} class="text-muted-foreground" />
+            <span class="text-sm font-medium text-foreground">
+              剩余发言 ({remainingSpeakers.length})
+            </span>
+          </div>
+          <div class="divide-y">
+            {#each remainingSpeakers as s}
+              <div class="flex items-center gap-3 px-4 py-2">
+                <span class="text-sm text-foreground">{s.delegationName}</span>
+                <Badge variant="secondary" class="ml-auto text-[10px]">
+                  {formatTime(s.allocatedTimeSec)}
+                </Badge>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {:else if currentIdx + 1 >= speakers.length}
+        <div class="text-sm text-muted-foreground">最后一位发言人</div>
+      {/if}
+
+    {:else if isModerated && !hasActiveSpeaker && totalRemaining > 5}
+      <!-- 名单走完，时间剩余 → 可追加发言人 -->
+      <div class="w-full rounded-lg border bg-card p-4 text-center">
+        <div class="text-sm font-medium text-foreground">
+          所有发言人已完成
+        </div>
+        <div class="mt-1 font-mono text-2xl tabular-nums text-muted-foreground">
+          剩余 {formatTime(totalRemaining)}
+        </div>
+        <div class="mt-3">
+          {#if conf}
+            <DelegationSelector
+              delegations={conf.delegations}
+              placeholder="搜索并添加发言人..."
+              resetOnSelect={true}
+              excludeIds={listedIds}
+              onselect={handleAddSpeaker}
+            />
+          {/if}
+        </div>
       </div>
-    </div>
 
-    <!-- 进度条 -->
-    <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div
-        class="h-full rounded-full transition-all duration-1000 {remainingSec <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
-        style="width: {progressPercent}%"
-      ></div>
-    </div>
+      <div class="flex gap-4">
+        <Button
+          variant="destructive"
+          onclick={endCaucus}
+          class="min-w-[140px] gap-2"
+        >
+          <Timer size={14} />
+          提前结束磋商
+        </Button>
+      </div>
 
-    <Separator />
+    {:else if !isModerated}
+      <!-- 自由磋商：总倒计时 -->
+      <div class="text-center">
+        <div
+          class="font-mono text-7xl font-bold tabular-nums transition-colors"
+          class:text-red-500={totalRemainingSec <= 30}
+          class:text-foreground={totalRemainingSec > 30}
+        >
+          {formatTime(totalRemainingSec)}
+        </div>
+        <div class="mt-2 text-sm text-muted-foreground">
+          剩余时间 · 已过 {formatTime(totalElapsedSec)}
+        </div>
+      </div>
 
-    <!-- 控制 -->
-    <div class="flex gap-4">
-      <Button
-        variant="destructive"
-        onclick={endCaucus}
-        class="min-w-[140px] gap-2"
-      >
-        <Timer size={14} />
-        提前结束磋商
-      </Button>
-    </div>
+      <!-- 进度条 -->
+      <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          class="h-full rounded-full transition-all duration-1000 {totalRemainingSec <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
+          style="width: {progressPercent}%"
+        ></div>
+      </div>
+
+      <Separator />
+
+      <div class="flex gap-4">
+        <Button
+          variant="destructive"
+          onclick={endCaucus}
+          class="min-w-[140px] gap-2"
+        >
+          <Timer size={14} />
+          提前结束磋商
+        </Button>
+      </div>
+    {:else}
+      <div class="flex flex-col items-center gap-4 text-muted-foreground">
+        <Timer size={48} class="opacity-30" />
+        <p class="text-lg font-medium">等待发言...</p>
+      </div>
+    {/if}
   {:else}
     <div class="flex flex-col items-center gap-4 text-muted-foreground">
       <Timer size={48} class="opacity-30" />

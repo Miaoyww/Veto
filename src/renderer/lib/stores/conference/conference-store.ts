@@ -638,14 +638,34 @@ export function startCaucusWithSetup(): void {
   const conf = get(currentConference)
   if (!conf?.caucusSetup) return
 
-  const { motionId, proposerPosition, speakerDelegationIds } = conf.caucusSetup
+  const { motionId, speakerDelegationIds } = conf.caucusSetup
   const motion = conf.motions.find((m) => m.id === motionId)
   if (!motion) return
 
-  const proposerDelId = (motion as any).proposedByDelegationId as string
   const now = Date.now()
-  const endAt = now + (motion as any).totalTimeSec * 1000
+  const perSpeakerSec = (motion as any).speakingTimePerPersonSec as number ?? 60
+  const totalSec = (motion as any).totalTimeSec as number
   const topic = (motion as any).topic
+
+  // 构建 caucusSpeakers 列表
+  const caucusSpeakers = speakerDelegationIds.map((delId) => {
+    const del = conf.delegations.find((d) => d.id === delId)
+    return {
+      delegationId: delId,
+      delegationName: del?.name ?? delId,
+      status: 'waiting' as const,
+      allocatedTimeSec: perSpeakerSec
+    }
+  })
+
+  // 第一个发言人设置为 speaking
+  if (caucusSpeakers.length > 0) {
+    caucusSpeakers[0] = { ...caucusSpeakers[0], status: 'speaking' }
+  }
+
+  const firstSpeakerEndAt = caucusSpeakers.length > 0
+    ? now + perSpeakerSec * 1000
+    : now
 
   updateCurrentConference((c) => ({
     ...c,
@@ -655,14 +675,131 @@ export function startCaucusWithSetup(): void {
       motionId,
       type: 'moderated',
       startedAt: now,
-      endAt,
-      elapsedSec: 0
-    }
+      endAt: now + totalSec * 1000,
+      elapsedSec: 0,
+      caucusSpeakers,
+      currentSpeakerIndex: caucusSpeakers.length > 0 ? 0 : undefined
+    },
+    activeSpeaker: caucusSpeakers.length > 0
+      ? {
+          entryId: caucusSpeakers[0].delegationId,
+          startedAt: now,
+          endAt: firstSpeakerEndAt
+        }
+      : null
   }))
 
-  const label = `有主持核心磋商`
-  addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
+  const firstName = caucusSpeakers[0]?.delegationName ?? ''
+  addMinutesEntry('caucus_started', `有主持核心磋商开始${topic ? ': ' + topic : ''}，首位发言人: ${firstName}`, { motionId })
   addMinutesEntry('phase_changed', `进入阶段: 磋商`)
+  addMinutesEntry('speaker_started', `${firstName} 开始发言 (${perSpeakerSec}秒)`)
+}
+
+/** 结束当前磋商发言人，推进到下一位 */
+export function advanceCaucusSpeaker(): void {
+  const conf = get(currentConference)
+  if (!conf?.activeCaucus?.caucusSpeakers) return
+
+  const speakers = conf.activeCaucus.caucusSpeakers
+  const currentIdx = conf.activeCaucus.currentSpeakerIndex ?? -1
+
+  // 标记当前为 finished
+  const updatedSpeakers = speakers.map((s, i) =>
+    i === currentIdx ? { ...s, status: 'finished' as const } : s
+  )
+
+  // 检查总剩余时间
+  const totalRemaining = (conf.activeCaucus.endAt - Date.now()) / 1000
+  const nextIdx = currentIdx + 1
+
+  if (nextIdx < updatedSpeakers.length) {
+    // 还有发言人
+    updatedSpeakers[nextIdx] = { ...updatedSpeakers[nextIdx], status: 'speaking' }
+    const nextSpeaker = updatedSpeakers[nextIdx]
+    const nextName = nextSpeaker.delegationName
+    const perSpeakerSec = nextSpeaker.allocatedTimeSec
+    const now = Date.now()
+
+    updateCurrentConference((c) => ({
+      ...c,
+      activeCaucus: {
+        ...c.activeCaucus!,
+        caucusSpeakers: updatedSpeakers,
+        currentSpeakerIndex: nextIdx
+      },
+      activeSpeaker: {
+        entryId: nextSpeaker.delegationId,
+        startedAt: now,
+        endAt: now + perSpeakerSec * 1000
+      }
+    }))
+    addMinutesEntry('speaker_started', `${nextName} 开始发言 (${perSpeakerSec}秒)`)
+  } else if (totalRemaining > 5) {
+    // 名单已耗尽但仍有剩余时间 → 等待主席添加更多发言人
+    updateCurrentConference((c) => ({
+      ...c,
+      activeCaucus: {
+        ...c.activeCaucus!,
+        caucusSpeakers: updatedSpeakers,
+        currentSpeakerIndex: undefined
+      },
+      activeSpeaker: null
+    }))
+    addMinutesEntry('caucus_paused', '名单已走完，等待添加更多发言人')
+  } else {
+    // 所有发言人结束且时间到 → 结束磋商
+    endCaucus()
+  }
+}
+
+/** 在磋商进行中追加发言人（标首/标尾仅对初始列表生效） */
+export function appendCaucusSpeaker(delegationId: string): void {
+  const conf = get(currentConference)
+  if (!conf?.activeCaucus?.caucusSpeakers) return
+
+  const currentSpeakers = conf.activeCaucus.caucusSpeakers
+  if (currentSpeakers.some((s) => s.delegationId === delegationId)) return
+
+  const del = conf.delegations.find((d) => d.id === delegationId)
+  const motion = conf.motions.find((m) => m.id === conf.activeCaucus!.motionId) as any
+  const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
+
+  const newSpeaker = {
+    delegationId,
+    delegationName: del?.name ?? delegationId,
+    status: 'waiting' as const,
+    allocatedTimeSec: perSpeakerSec
+  }
+
+  // 如果当前没有活跃发言人，自动开始新发言人
+  const hasActiveSpeaker = conf.activeSpeaker != null
+  const now = Date.now()
+
+  if (hasActiveSpeaker) {
+    updateCurrentConference((c) => ({
+      ...c,
+      activeCaucus: {
+        ...c.activeCaucus!,
+        caucusSpeakers: [...currentSpeakers, newSpeaker]
+      }
+    }))
+  } else {
+    // 自动开始这个新发言人
+    updateCurrentConference((c) => ({
+      ...c,
+      activeCaucus: {
+        ...c.activeCaucus!,
+        caucusSpeakers: [...currentSpeakers, { ...newSpeaker, status: 'speaking' }],
+        currentSpeakerIndex: c.activeCaucus!.caucusSpeakers.length
+      },
+      activeSpeaker: {
+        entryId: delegationId,
+        startedAt: now,
+        endAt: now + perSpeakerSec * 1000
+      }
+    }))
+    addMinutesEntry('speaker_started', `${del?.name ?? delegationId} 开始发言 (${perSpeakerSec}秒)`)
+  }
 }
 
 export function endCaucus(): void {
