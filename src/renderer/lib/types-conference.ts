@@ -78,6 +78,7 @@ export type MotionType =
   | 'resume_resolution' // 恢复决议草案
   | 'closure_debate' // 结束辩论
   | 'suspend_meeting' // 暂时休会
+  | 'close_meeting' // 闭幕
   | 'reorder_resolution' // 调整投票顺序
 
 export interface AbstractMotion {
@@ -136,6 +137,11 @@ export interface SuspendMeetingMotion extends AbstractMotion {
   type: 'suspend_meeting'
 }
 
+/** 闭幕 */
+export interface CloseMeetingMotion extends AbstractMotion {
+  type: 'close_meeting'
+}
+
 /** 调整投票顺序 */
 export interface ReorderResolutionMotion extends AbstractMotion {
   type: 'reorder_resolution'
@@ -151,6 +157,7 @@ export type Motion =
   | ResumeResolutionMotion
   | ClosureDebateMotion
   | SuspendMeetingMotion
+  | CloseMeetingMotion
   | ReorderResolutionMotion
 
 /** 动议类型的中文标签 */
@@ -163,6 +170,7 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   resume_resolution: '恢复决议草案',
   closure_debate: '结束辩论',
   suspend_meeting: '暂时休会',
+  close_meeting: '闭幕',
   reorder_resolution: '调整投票顺序'
 }
 

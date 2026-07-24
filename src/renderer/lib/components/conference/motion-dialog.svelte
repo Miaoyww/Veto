@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     Presentation, Timer, MessageSquare, Pencil,
-    FileDown, FileUp, X, Gavel, Coffee, ListOrdered
+    FileDown, FileUp, X, Gavel, Coffee, ListOrdered, LogOut
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -31,7 +31,8 @@
     'unmoderated_caucus',
     'modify_speaking_time',
     'closure_debate',
-    'suspend_meeting'
+    'suspend_meeting',
+    'close_meeting'
   ]
 
   const MOTION_ICONS: Record<string, typeof Presentation> = {
@@ -40,7 +41,8 @@
     unmoderated_caucus: Coffee,
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
-    suspend_meeting: Timer
+    suspend_meeting: Timer,
+    close_meeting: LogOut
   }
 
   // ---- Form state ----

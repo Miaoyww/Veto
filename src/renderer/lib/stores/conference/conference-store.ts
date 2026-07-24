@@ -522,25 +522,98 @@ export function castVote(
 }
 
 export function closeVotingSession(sessionId: string): void {
-  updateCurrentConference((c) => ({
-    ...c,
-    votingSessions: c.votingSessions.map((s) => {
-      if (s.id !== sessionId) return s
-      const { yes, no, abstain } = tallyVotes(s.ballots)
-      const presentCount = c.delegations.filter(
-        (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
-      ).length
-      const threshold =
-        s.majorityRule === 'simple_majority'
-          ? Math.floor(presentCount / 2) + 1
-          : Math.ceil(presentCount * 2 / 3)
-      const result = yes >= threshold ? 'passed' : 'failed'
+  updateCurrentConference((c) => {
+    const session = c.votingSessions.find((s) => s.id === sessionId)
+    if (!session) return c
 
-      addMinutesEntry('voting_ended', `投票结束: Yes ${yes} / No ${no} / Abstain ${abstain} → ${result === 'passed' ? '通过' : '未通过'}`)
+    const { yes, no, abstain } = tallyVotes(session.ballots)
+    const presentCount = c.delegations.filter(
+      (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
+    ).length
+    const threshold =
+      session.majorityRule === 'simple_majority'
+        ? Math.floor(presentCount / 2) + 1
+        : Math.ceil(presentCount * 2 / 3)
+    const result: 'passed' | 'failed' = yes >= threshold ? 'passed' : 'failed'
 
-      return { ...s, endedAt: Date.now(), result }
-    })
-  }))
+    const now = Date.now()
+    const newMinutes = [...c.minutes, {
+      id: generateId(),
+      timestamp: now,
+      eventType: 'voting_ended' as MinutesEventType,
+      description: `投票结束: Yes ${yes} / No ${no} / Abstain ${abstain} → ${result === 'passed' ? '通过' : '未通过'}`
+    }]
+
+    // Update motion status if this voting session is for a motion
+    let newMotions = c.motions
+    let newPhase = c.phase
+    let newActiveSpeaker = c.activeSpeaker
+    let newActiveCaucus = c.activeCaucus
+
+    if (session.targetType === 'motion') {
+      const motion = c.motions.find((m) => m.id === session.targetId)
+      if (motion) {
+        const motionStatus: 'approved' | 'rejected' = result === 'passed' ? 'approved' : 'rejected'
+        newMotions = c.motions.map((m) =>
+          m.id === session.targetId ? { ...m, status: motionStatus } : m
+        )
+
+        // Execute motion action if passed
+        if (result === 'passed') {
+          if (motion.type === 'suspend_meeting') {
+            newPhase = 'suspended'
+            newActiveSpeaker = null
+            newActiveCaucus = null
+            newMinutes.push(
+              {
+                id: generateId(),
+                timestamp: now,
+                eventType: 'meeting_suspended' as MinutesEventType,
+                description: '暂时休会'
+              },
+              {
+                id: generateId(),
+                timestamp: now,
+                eventType: 'phase_changed' as MinutesEventType,
+                description: '进入阶段: 休会'
+              }
+            )
+          } else if (motion.type === 'close_meeting') {
+            newPhase = 'closed'
+            newActiveSpeaker = null
+            newActiveCaucus = null
+            newMinutes.push(
+              {
+                id: generateId(),
+                timestamp: now,
+                eventType: 'meeting_closed' as MinutesEventType,
+                description: '会议闭幕'
+              },
+              {
+                id: generateId(),
+                timestamp: now,
+                eventType: 'phase_changed' as MinutesEventType,
+                description: '进入阶段: 闭幕'
+              }
+            )
+          }
+        }
+      }
+    }
+
+    return {
+      ...c,
+      phase: newPhase,
+      activeSpeaker: newActiveSpeaker,
+      activeCaucus: newActiveCaucus,
+      votingSessions: c.votingSessions.map((s) =>
+        s.id === sessionId ? { ...s, endedAt: now, result } : s
+      ),
+      motions: newMotions,
+      minutes: newMinutes,
+      updatedAt: now
+    }
+  })
 }
 
 /** 纯函数：统计投票结果 */

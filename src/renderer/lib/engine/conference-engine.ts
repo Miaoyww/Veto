@@ -142,6 +142,7 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
 
     // 需要 2/3 多数表决
     case 'closure_debate':
+    case 'close_meeting':
     case 'postpone_resolution':
     case 'reorder_resolution':
       return { requiresVoting: true, votingMajority: 'two_thirds', autoApprove: false }

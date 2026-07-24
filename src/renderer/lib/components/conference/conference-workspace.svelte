@@ -6,13 +6,11 @@
   import VotingPanel from '$lib/components/conference/voting-panel.svelte'
   import CaucusTimer from '$lib/components/conference/caucus-timer.svelte'
   import MotionDialog from '$lib/components/conference/motion-dialog.svelte'
-  import { Gavel, Play, Square, Users, Monitor } from '@lucide/svelte'
+  import { Gavel, Play, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import {
     setPhase,
-    suspendMeeting,
-    resumeMeeting,
-    closeMeeting
+    resumeMeeting
   } from '$lib/stores/conference/conference-store'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 
@@ -64,6 +62,8 @@
 
   const isSuspended = $derived(conf?.phase === 'suspended')
   const isClosed = $derived(conf?.phase === 'closed')
+  const isTimerActive = $derived(conf?.activeSpeaker != null)
+  const canProposeMotion = $derived(!isTimerActive)
 </script>
 
 <div class="flex min-w-0 flex-1 flex-col bg-background">
@@ -90,7 +90,13 @@
         </Button>
 
         {#if primaryActionLabel}
-          <Button size="sm" class="h-8 gap-1.5 text-xs" onclick={handlePrimaryAction}>
+          <Button
+            size="sm"
+            class="h-8 gap-1.5 text-xs"
+            onclick={handlePrimaryAction}
+            disabled={!canProposeMotion}
+            title={isTimerActive ? '发言计时进行中，无法提出动议' : ''}
+          >
             <Play size={12} />
             {primaryActionLabel}
           </Button>
@@ -100,17 +106,6 @@
           <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
             <Play size={12} />
             恢复会议
-          </Button>
-        {:else if !isClosed}
-          <Button size="sm" variant="ghost" class="h-8 gap-1.5 text-xs" onclick={suspendMeeting}>
-            <Square size={12} />
-            休会
-          </Button>
-        {/if}
-
-        {#if conf.phase === 'general_debate'}
-          <Button size="sm" variant="ghost" class="h-8 gap-1.5 text-xs text-red-500" onclick={closeMeeting}>
-            闭幕
           </Button>
         {/if}
       </div>
