@@ -119,6 +119,41 @@
         {:else if phase === 'general_debate'}
           <GeneralDebateDisplay data={displayData} />
 
+        {:else if phase === 'caucus_setup'}
+          <!-- 磋商发言名单设置中 -->
+          <div class="flex flex-col items-center gap-10">
+            <div class="flex items-center gap-3 text-white/40">
+              <div class="h-px w-12 bg-white/10"></div>
+              <span class="text-lg tracking-[0.08em] uppercase">磋商准备</span>
+              <div class="h-px w-12 bg-white/10"></div>
+            </div>
+
+            {#if displayData.activeMotion?.topic}
+              <div class="text-7xl font-semibold tracking-wide text-[#5B92E5]/80">
+                {displayData.activeMotion.topic}
+              </div>
+            {/if}
+
+            {#if displayData.caucusSetup && displayData.caucusSetup.speakerNames.length > 0}
+              <div class="flex flex-col gap-3">
+                {#each displayData.caucusSetup.speakerNames as name, i}
+                  <div class="flex items-center gap-4">
+                    <span class="w-10 text-right font-mono text-2xl tabular-nums text-white/20">
+                      {i + 1}
+                    </span>
+                    <span class="text-3xl tracking-wide text-white/50">
+                      {name}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <div class="text-2xl tracking-wider text-white/15">
+                等待主席团添加发言代表团
+              </div>
+            {/if}
+          </div>
+
         {:else if displayData.caucusTimer && phase === 'caucus'}
           <!-- 磋商倒计时 -->
           <div class="flex flex-col items-center gap-10">

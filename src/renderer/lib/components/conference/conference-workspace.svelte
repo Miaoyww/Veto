@@ -5,6 +5,7 @@
   import SpeakersListPanel from '$lib/components/conference/speakers-list-panel.svelte'
   import VotingPanel from '$lib/components/conference/voting-panel.svelte'
   import CaucusTimer from '$lib/components/conference/caucus-timer.svelte'
+  import CaucusSetupPanel from '$lib/components/conference/caucus-setup-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion-dialog.svelte'
   import { Gavel, Play, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -41,6 +42,7 @@
     switch (conf.phase) {
       case 'general_debate':
       case 'caucus':
+      case 'caucus_setup':
         motionDialogOpen = true
         break
       case 'voting':
@@ -55,6 +57,7 @@
     switch (conf.phase) {
       case 'general_debate': return '提出动议'
       case 'caucus': return '提出动议'
+      case 'caucus_setup': return '提出动议'
       case 'voting': return ''
       default: return ''
     }
@@ -139,8 +142,9 @@
         </div>
       {:else if conf.phase === 'general_debate'}
         <SpeakersListPanel />
+      {:else if conf.phase === 'caucus_setup'}
+        <CaucusSetupPanel />
       {:else if conf.phase === 'caucus'}
-        <CaucusTimer />
         <CaucusTimer />
       {:else if conf.phase === 'voting'}
         <VotingPanel />

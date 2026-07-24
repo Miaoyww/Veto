@@ -11,6 +11,7 @@ export type ConferencePhase =
   | 'caucus' // 磋商中（有主持或自由磋商）
   | 'voting' // 投票表决中
   | 'motion' // 动议（Display 专用：编辑/表决/结果）
+  | 'caucus_setup' // 磋商发言名单设置
   | 'suspended' // 暂时休会
   | 'closed' // 闭幕
 
@@ -304,6 +305,15 @@ export interface Conference {
 
   // ---- 运行时状态（不持久化到单独的 store，直接内嵌）----
 
+  /** 磋商发言名单设置（caucus_setup 阶段使用） */
+  caucusSetup?: {
+    motionId: string
+    /** 动议国发言位置：标首（第一个）还是标尾（最后一个） */
+    proposerPosition: 'first' | 'last'
+    /** 已加入的代表团 ID 列表（有序） */
+    speakerDelegationIds: string[]
+  } | null
+
   /** 当前磋商计时器状态 */
   activeCaucus?: {
     motionId: string
@@ -385,6 +395,11 @@ export interface ConferenceDisplayData {
     totalTimeSec?: number
     /** 每人发言时间（秒），moderated_caucus */
     speakingTimePerPersonSec?: number
+  }
+  caucusSetup?: {
+    proposerPosition: 'first' | 'last'
+    speakerDelegationIds: string[]
+    speakerNames: string[]
   }
   caucusTimer?: {
     remainingSec: number

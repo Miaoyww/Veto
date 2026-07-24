@@ -50,6 +50,7 @@ export const PHASE_LABELS: Record<ConferencePhase, string> = {
   caucus: '磋商',
   voting: '投票表决',
   motion: '动议',
+  caucus_setup: '磋商准备',
   suspended: '休会',
   closed: '闭幕'
 }

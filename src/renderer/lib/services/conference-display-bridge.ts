@@ -303,6 +303,15 @@ export function buildDisplayData(
         }
       : undefined,
     caucusTimer: caucusData,
+    caucusSetup: conf.caucusSetup
+      ? {
+          proposerPosition: conf.caucusSetup.proposerPosition,
+          speakerDelegationIds: conf.caucusSetup.speakerDelegationIds,
+          speakerNames: conf.caucusSetup.speakerDelegationIds.map(
+            (id) => conf.delegations.find((d) => d.id === id)?.name ?? id
+          )
+        }
+      : undefined,
     recentMinutes: conf.minutes.slice(-10).map((m) => ({
       timestamp: m.timestamp,
       eventType: m.eventType,

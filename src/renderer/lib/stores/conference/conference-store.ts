@@ -443,7 +443,35 @@ function executeMotionAction(motion: Motion): void {
   if (!conf) return
 
   switch (motion.type) {
-    case 'moderated_caucus':
+    case 'moderated_caucus': {
+      // 若当前有发言人且未让渡 → 强制结束发言（剩余时间作废）
+      if (conf.activeSpeaker) {
+        const speaker = conf.speakersList.find((s) => s.id === conf.activeSpeaker!.entryId)
+        if (!speaker?.yield) {
+          // 强制结束，不让渡
+          updateCurrentConference((c) => ({
+            ...c,
+            activeSpeaker: null,
+            speakersList: c.speakersList.filter(
+              (s) => s.id !== conf.activeSpeaker!.entryId
+            )
+          }))
+          addMinutesEntry('speaker_interrupted', '发言人时间作废（磋商动议通过）')
+        }
+      }
+      // 创建 caucusSetup，动议国默认标首且已加入发言名单
+      const proposerDelId = (motion as any).proposedByDelegationId as string
+      updateCurrentConference((c) => ({
+        ...c,
+        phase: 'caucus_setup',
+        caucusSetup: {
+          motionId: motion.id,
+          proposerPosition: 'first',
+          speakerDelegationIds: proposerDelId ? [proposerDelId] : []
+        }
+      }))
+      break
+    }
     case 'unmoderated_caucus':
       startCaucusImpl(motion.id, conf)
       break
@@ -545,6 +573,94 @@ export function startCaucus(motionId: string): void {
   }))
 
   const label = caucusType === 'moderated' ? `有主持核心磋商` : `自由磋商`
+  addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
+  addMinutesEntry('phase_changed', `进入阶段: 磋商`)
+}
+
+// ---- 磋商发言名单设置 ----
+
+export function setCaucusProposerPosition(position: 'first' | 'last'): void {
+  updateCurrentConference((c) => {
+    if (!c.caucusSetup) return c
+    const motion = c.motions.find((m) => m.id === c.caucusSetup!.motionId)
+    const proposerId = (motion as any)?.proposedByDelegationId as string | undefined
+    if (!proposerId) return { ...c, caucusSetup: { ...c.caucusSetup, proposerPosition: position } }
+
+    const ids = c.caucusSetup.speakerDelegationIds.filter((id) => id !== proposerId)
+    const reordered = position === 'first'
+      ? [proposerId, ...ids]
+      : [...ids, proposerId]
+
+    return {
+      ...c,
+      caucusSetup: { ...c.caucusSetup, proposerPosition: position, speakerDelegationIds: reordered }
+    }
+  })
+}
+
+export function addToCaucusSpeakers(delegationId: string): void {
+  updateCurrentConference((c) => {
+    if (!c.caucusSetup) return c
+    if (c.caucusSetup.speakerDelegationIds.includes(delegationId)) return c
+
+    const motion = c.motions.find((m) => m.id === c.caucusSetup!.motionId)
+    const proposerId = (motion as any)?.proposedByDelegationId as string | undefined
+
+    // 标尾：插入到动议国之前；标首：追加到末尾
+    const ids = c.caucusSetup.speakerDelegationIds
+    const newIds = c.caucusSetup.proposerPosition === 'last' && proposerId
+      ? [...ids.slice(0, -1), delegationId, proposerId]
+      : [...ids, delegationId]
+
+    return {
+      ...c,
+      caucusSetup: { ...c.caucusSetup, speakerDelegationIds: newIds }
+    }
+  })
+}
+
+export function removeFromCaucusSpeakers(delegationId: string): void {
+  updateCurrentConference((c) => {
+    if (!c.caucusSetup) return c
+    return {
+      ...c,
+      caucusSetup: {
+        ...c.caucusSetup,
+        speakerDelegationIds: c.caucusSetup.speakerDelegationIds.filter(
+          (id) => id !== delegationId
+        )
+      }
+    }
+  })
+}
+
+export function startCaucusWithSetup(): void {
+  const conf = get(currentConference)
+  if (!conf?.caucusSetup) return
+
+  const { motionId, proposerPosition, speakerDelegationIds } = conf.caucusSetup
+  const motion = conf.motions.find((m) => m.id === motionId)
+  if (!motion) return
+
+  const proposerDelId = (motion as any).proposedByDelegationId as string
+  const now = Date.now()
+  const endAt = now + (motion as any).totalTimeSec * 1000
+  const topic = (motion as any).topic
+
+  updateCurrentConference((c) => ({
+    ...c,
+    phase: 'caucus',
+    caucusSetup: null,
+    activeCaucus: {
+      motionId,
+      type: 'moderated',
+      startedAt: now,
+      endAt,
+      elapsedSec: 0
+    }
+  }))
+
+  const label = `有主持核心磋商`
   addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
   addMinutesEntry('phase_changed', `进入阶段: 磋商`)
 }

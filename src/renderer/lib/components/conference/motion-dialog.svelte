@@ -52,7 +52,8 @@
   let selectedType = $state<MotionType | null>(null)
   // Moderated Caucus
   let mcTopic = $state('')
-  let mcTotalMin = $state(10)
+  let committedTopic = $state('')
+  let mcTotalSec = $state(360)
   let mcSpeakerSec = $state(60)
   // Unmoderated Caucus
   let ucDurationMin = $state(15)
@@ -65,7 +66,8 @@
     selectedProposerId = ''
     selectedType = null
     mcTopic = ''
-    mcTotalMin = 10
+    committedTopic = ''
+    mcTotalSec = 360
     mcSpeakerSec = 60
     ucDurationMin = 15
     newTimeSec = 90
@@ -93,9 +95,9 @@
     switch (selectedType) {
       case 'moderated_caucus':
         motionData.topic = mcTopic.trim() || '未指定主题'
-        motionData.totalTimeSec = mcTotalMin * 60
+        motionData.totalTimeSec = mcTotalSec
         motionData.speakingTimePerPersonSec = mcSpeakerSec
-        motionData.maxSpeakers = calcMaxSpeakers(mcTotalMin * 60, mcSpeakerSec)
+        motionData.maxSpeakers = calcMaxSpeakers(mcTotalSec, mcSpeakerSec)
         break
       case 'unmoderated_caucus':
         motionData.durationSec = ucDurationMin * 60
@@ -134,7 +136,7 @@
     motionDraft.set(null)
   }
 
-  const mcMaxSpeakers = $derived(calcMaxSpeakers(mcTotalMin * 60, mcSpeakerSec))
+  const mcMaxSpeakers = $derived(calcMaxSpeakers(mcTotalSec, mcSpeakerSec))
   const canPropose = $derived(selectedType !== null && selectedProposerId !== '')
 
   // 实时同步动议草稿到 Display
@@ -149,9 +151,9 @@
     motionDraft.set({
       proposedByName: proposerDel?.name,
       type: selectedType ?? undefined,
-      topic: selectedType === 'moderated_caucus' ? (mcTopic.trim() || undefined) : undefined,
+      topic: selectedType === 'moderated_caucus' ? (committedTopic.trim() || undefined) : undefined,
       totalTimeSec: selectedType === 'moderated_caucus'
-        ? mcTotalMin * 60
+        ? mcTotalSec
         : selectedType === 'unmoderated_caucus'
           ? ucDurationMin * 60
           : undefined,
@@ -217,12 +219,12 @@
           <div class="space-y-3">
             <div>
               <Label class="mb-1.5 block text-xs text-muted-foreground">主题</Label>
-              <Input bind:value={mcTopic} placeholder="如: Climate Finance" class="h-9 text-sm" />
+              <Input bind:value={mcTopic} placeholder="如: Climate Finance" class="h-9 text-sm" onblur={() => (committedTopic = mcTopic)} />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">总时长（分钟）</Label>
-                <Input type="number" min="1" max="120" bind:value={mcTotalMin} class="h-9 text-sm" />
+                <Label class="mb-1.5 block text-xs text-muted-foreground">总时长（秒）</Label>
+                <Input type="number" min="30" max="3600" step="30" bind:value={mcTotalSec} class="h-9 text-sm" />
               </div>
               <div>
                 <Label class="mb-1.5 block text-xs text-muted-foreground">每人发言（秒）</Label>
@@ -230,7 +232,7 @@
               </div>
             </div>
             <div class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
-              {mcTotalMin}分钟 ÷ 每人{mcSpeakerSec}秒 = 最多 <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
+              {mcTotalSec}秒 ÷ 每人{mcSpeakerSec}秒 = 最多 <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
             </div>
           </div>
         {:else if selectedType === 'unmoderated_caucus'}
