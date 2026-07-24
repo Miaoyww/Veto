@@ -339,9 +339,7 @@
     <!-- 等待连接 -->
     <div class="flex h-full w-full items-center justify-center">
       <div class="flex flex-col items-center gap-6 text-white/10">
-        <Gavel size={56} />
-        <div class="text-2xl font-light tracking-[0.06em]">等待主机连接</div>
-        <div class="text-base tracking-wider">请在主机窗口中打开一场大会</div>
+        <div class="text-5xl font-light tracking-[0.06em]">等待主机连接</div>
       </div>
     </div>
   {/if}
