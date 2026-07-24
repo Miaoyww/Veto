@@ -12,7 +12,8 @@
    */
   import { onMount } from 'svelte'
   import { Gavel, Mic, Vote, Coffee, Timer } from '@lucide/svelte'
-  import { getDisplayBridge } from '$lib/services/conference-display-bridge'
+  import { getDisplayBridge, onConnectionStatus } from '$lib/services/conference-display-bridge'
+  import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
   import { PHASE_LABELS, formatTime } from '$lib/engine/conference-engine'
   import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
@@ -20,12 +21,16 @@
   import RollCallDisplay from './roll-call/index.svelte'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
+  let connectionStatus = $state<ConnectionStatus>('connecting')
   let timerInterval: ReturnType<typeof setInterval> | null = null
 
   onMount(() => {
     const bridge = getDisplayBridge()
-    const unsub = bridge.onHostCommand((data: ConferenceDisplayData) => {
+    const unsubData = bridge.onHostCommand((data: ConferenceDisplayData) => {
       displayData = data
+    })
+    const unsubStatus = onConnectionStatus((status: ConnectionStatus) => {
+      connectionStatus = status
     })
 
     timerInterval = setInterval(() => {
@@ -54,7 +59,8 @@
     }, 500)
 
     return () => {
-      unsub()
+      unsubData()
+      unsubStatus()
       if (timerInterval) clearInterval(timerInterval)
     }
   })
@@ -149,19 +155,18 @@
                 <div class="text-9xl font-semibold tracking-wide text-white">
                   {displayData.readySpeaker.delegationName}
                 </div>
-                {#if displayData.readySpeaker.shortName}
-                  <div class="mt-1 text-9xl font-light tracking-[0.06em] text-white/30">
-                    {displayData.readySpeaker.shortName}
-                  </div>
-                {/if}
               </div>
 
               <div class="text-lg tracking-wider text-white/15">等待主席开始计时</div>
             </div>
 
           {:else}
-            <!-- 主发言名单（无当前发言人） -->
-            <div class="flex w-full max-w-2xl flex-col items-center gap-8">
+            <!-- 主发言名单（无当前发言人，无 ready） -->
+            {@const waiting = displayData.speakersList.filter((s: { status: string }) => s.status === 'waiting')}
+            {@const nextSpeaker = waiting[0]}
+            {@const restQueue = waiting.slice(1)}
+
+            <div class="flex w-full max-w-4xl flex-col items-center gap-8">
               <div class="flex items-center gap-3 text-white/40">
                 <div class="h-px w-12 bg-white/10"></div>
                 <Mic size={20} class="text-[#5B92E5]" />
@@ -169,32 +174,41 @@
                 <div class="h-px w-12 bg-white/10"></div>
               </div>
 
-              {#if displayData.speakersList.length > 0}
-                <div class="w-full space-y-1">
-                  {#each displayData.speakersList as speaker, i (i)}
-                    <div
-                      class="flex items-center gap-4 rounded-sm px-6 py-3 {speaker.status ===
-                      'speaking'
-                        ? 'border border-[#5B92E5]/20 bg-[#5B92E5]/5'
-                        : 'border border-transparent bg-white/[0.02]'}"
-                    >
-                      <span class="w-8 text-right text-sm tabular-nums text-white/15">{i + 1}</span>
-                      <span
-                        class="flex-1 text-xl font-medium {speaker.status === 'waiting'
-                          ? 'text-white/60'
-                          : speaker.status === 'speaking'
-                            ? 'text-[#5B92E5]'
-                            : 'text-white/20 line-through'}"
-                      >
+              {#if nextSpeaker}
+                <!-- 下一个发言 -->
+                <div class="w-full border border-white/10 bg-white/[0.02] px-8 py-6">
+                  <div class="text-lg font-medium tracking-[0.12em] text-white/30 uppercase">下一个发言</div>
+                  <div class="mt-3 text-9xl font-semibold tracking-wide text-white">
+                    {nextSpeaker.delegationName}
+                  </div>
+                  {#if nextSpeaker.shortName}
+                    <div class="mt-1 text-xl font-light tracking-[0.06em] text-white/20">
+                      {nextSpeaker.shortName}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+
+              {#if restQueue.length > 0}
+                <!-- 后续队列 -->
+                <div class="w-full space-y-px">
+                  {#each restQueue as speaker, i (i)}
+                    <div class="flex items-center gap-4 px-6 py-2.5">
+                      <span class="w-8 text-right text-sm tabular-nums text-white/25">
+                        {i + 2}
+                      </span>
+                      <span class="flex-1 text-xl font-medium text-white/50">
                         {speaker.delegationName}
                       </span>
                       {#if speaker.shortName}
-                        <span class="text-sm tracking-wider text-white/15">{speaker.shortName}</span>
+                        <span class="text-sm tracking-wider text-white/25">{speaker.shortName}</span>
                       {/if}
                     </div>
                   {/each}
                 </div>
-              {:else}
+              {/if}
+
+              {#if waiting.length === 0}
                 <div class="text-lg tracking-wider text-white/10">等待主席添加发言人</div>
               {/if}
             </div>
@@ -320,10 +334,15 @@
       </div>
     {/if}
   {:else}
-    <!-- 等待 WebSocket 连接 -->
+    <!-- 等待 / 重连 -->
     <div class="flex h-full w-full items-center justify-center">
       <div class="flex flex-col items-center gap-6 text-white/10">
-        <div class="text-9xl font-light tracking-[0.06em]">等待主机连接</div>
+        <div class="text-9xl font-light tracking-[0.06em]">
+          {connectionStatus === 'connecting' ? '正在连接...' : connectionStatus === 'disconnected' ? '连接断开，重连中...' : '等待主机连接'}
+        </div>
+        {#if connectionStatus === 'disconnected'}
+          <div class="text-lg tracking-wider text-white/5">自动重连中，请稍候</div>
+        {/if}
       </div>
     </div>
   {/if}

@@ -29,16 +29,39 @@ export interface ConferenceDisplayBridge {
 
 // ---- 共享 WebSocket 连接 ----
 
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
+
 let _ws: WebSocket | null = null
 let _wsListeners: Array<(data: ConferenceDisplayData) => void> = []
+let _statusListeners: Array<(status: ConnectionStatus) => void> = []
 let _pendingMessages: ConferenceDisplayData[] = []
+let _reconnectDelay = 1000
+let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+function setStatus(status: ConnectionStatus): void {
+  for (const cb of _statusListeners) {
+    cb(status)
+  }
+}
 
 function getWs(): WebSocket {
-  if (_ws && _ws.readyState === WebSocket.OPEN) return _ws
+  if (_ws && _ws.readyState === WebSocket.OPEN) {
+    setStatus('connected')
+    return _ws
+  }
 
+  // 清除已有重连定时器
+  if (_reconnectTimer) {
+    clearTimeout(_reconnectTimer)
+    _reconnectTimer = null
+  }
+
+  setStatus('connecting')
   _ws = new WebSocket(WS_URL)
 
   _ws.onopen = () => {
+    setStatus('connected')
+    _reconnectDelay = 1000 // 重置退避
     // 发送积压消息
     for (const msg of _pendingMessages) {
       _ws!.send(JSON.stringify({ type: 'host', data: msg }))
@@ -57,17 +80,41 @@ function getWs(): WebSocket {
     }
   }
 
+  _ws.onerror = () => {
+    // 连接失败由 onclose 处理（error 后必然 close）
+  }
+
   _ws.onclose = () => {
     _ws = null
-    // 自动重连（1秒后）
-    setTimeout(() => {
+    setStatus('disconnected')
+    // 自动重连（指数退避：1s → 2s → 4s → … → max 10s）
+    _reconnectTimer = setTimeout(() => {
       if (!_ws || _ws.readyState !== WebSocket.OPEN) {
         getWs()
       }
-    }, 1000)
+    }, _reconnectDelay)
+    _reconnectDelay = Math.min(_reconnectDelay * 2, 10000)
   }
 
   return _ws
+}
+
+/** 获取当前 WebSocket 连接状态 */
+function currentStatus(): ConnectionStatus {
+  if (!_ws) return 'disconnected'
+  if (_ws.readyState === WebSocket.OPEN) return 'connected'
+  if (_ws.readyState === WebSocket.CONNECTING) return 'connecting'
+  return 'disconnected'
+}
+
+/** 监听 WebSocket 连接状态变化（供 Display 端显示连接状态） */
+export function onConnectionStatus(callback: (status: ConnectionStatus) => void): () => void {
+  _statusListeners.push(callback)
+  // 立即通知当前状态（解决 HMR 后状态丢失问题）
+  callback(currentStatus())
+  return () => {
+    _statusListeners = _statusListeners.filter((cb) => cb !== callback)
+  }
 }
 
 // ---- Host 桥接 ----

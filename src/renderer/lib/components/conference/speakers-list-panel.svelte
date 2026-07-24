@@ -281,12 +281,42 @@
     </div>
   {/if}
 
-  <!-- 等待列表 -->
+  <!-- 下一个发言（仅当没有活跃发言者且无 ready 条目时显示） -->
+  {#if !isSpeakerActive && readyEntry === null && waitingSpeakers.length > 0}
+    {@const next = waitingSpeakers[0]}
+    {@const nextDel = conf?.delegations.find((d) => d.id === next.delegationId)}
+    <div class="rounded-lg border-2 border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+      <div class="flex items-center gap-3">
+        <div
+          class="h-3 w-3 shrink-0 rounded-full"
+          style="background-color: {nextDel?.color ?? '#888'}"
+        ></div>
+        <span class="text-xs font-medium text-amber-700 dark:text-amber-400">下一个发言</span>
+        <div class="flex-1"></div>
+        <Badge variant="secondary" class="text-[10px]">
+          {formatTime(next.allocatedTimeSec)}
+        </Badge>
+        <Button
+          size="sm"
+          class="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700"
+          onclick={() => prepareSpeaker(next.id)}
+        >
+          <Mic size={12} />
+          发言
+        </Button>
+      </div>
+      <div class="mt-2 text-lg font-semibold text-foreground">
+        {nextDel?.name ?? next.delegationId}
+      </div>
+    </div>
+  {/if}
+
+  <!-- 等待队列 -->
   <div class="rounded-lg border bg-card">
     <div class="flex items-center gap-2 px-4 py-3">
       <Users size={14} class="text-muted-foreground" />
       <span class="text-sm font-medium text-foreground">
-        待发言 ({waitingSpeakers.length})
+        发言队列 ({waitingSpeakers.length})
       </span>
     </div>
 
@@ -310,28 +340,15 @@
             <Badge variant="secondary" class="text-[10px]">
               {formatTime(entry.allocatedTimeSec)}
             </Badge>
-            <div class="flex gap-1">
-              <!-- 预发言：只标记 ready，不开始计时 -->
-              <Button
-                size="sm"
-                variant="outline"
-                class="h-7 gap-1 text-xs border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950"
-                disabled={isSpeakerActive || readyEntry !== null}
-                onclick={() => prepareSpeaker(entry.id)}
-              >
-                <Mic size={12} />
-                发言
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                class="h-7 text-xs text-muted-foreground hover:text-red-500"
-                disabled={isSpeakerActive}
-                onclick={() => removeFromSpeakersList(entry.id)}
-              >
-                <Trash2 size={12} />
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              class="h-7 text-xs text-muted-foreground hover:text-red-500"
+              disabled={isSpeakerActive}
+              onclick={() => removeFromSpeakersList(entry.id)}
+            >
+              <Trash2 size={12} />
+            </Button>
           </div>
         {/each}
       </div>
