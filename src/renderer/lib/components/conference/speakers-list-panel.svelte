@@ -1,10 +1,9 @@
 <script lang="ts">
   import {
     Mic, MicOff, Clock, Trash2, Users, ArrowRight, MessageCircle,
-    HelpCircle, UserPlus, Pause, Play
+    HelpCircle, Pause, Play
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import { Input } from '$lib/components/ui/input/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import { get } from 'svelte/store'
@@ -28,72 +27,17 @@
   } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import type { YieldChoice } from '$lib/types-conference'
-  import Fuse from 'fuse.js'
-  import PinyinMatch from 'pinyin-match'
+  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
 
   const conf = $derived($currentConference)
 
-  // ---- Fuse.js 实例（delegations 变化时重建） ----
-  const fuse = $derived.by(() => {
-    const delegations = conf?.delegations ?? []
-    return new Fuse(delegations, {
-      keys: ['name', 'shortName'],
-      threshold: 0.4,
-      includeScore: true
-    })
-  })
-
-  // ---- Speaker input ----
-  let speakerInput = $state('')
-  let showSuggestions = $state(false)
-
-  // 模糊搜索（fuse.js + pinyin-match）
-  const suggestions = $derived.by(() => {
-    const query = speakerInput.trim().toLowerCase()
-    if (!query || !conf) return [] as Array<{ id: string; name: string; shortName?: string; color: string }>
-
-    const results: Array<{ id: string; name: string; shortName?: string; color: string; _score: number }> = []
-    const seen = new Set<string>()
-
-    const addResult = (d: typeof conf.delegations[number], score: number) => {
-      if (seen.has(d.id)) return
-      seen.add(d.id)
-      results.push({ id: d.id, name: d.name, shortName: d.shortName, color: d.color, _score: score })
-    }
-
-    // 1. 直接子串匹配（最高优先级）
-    for (const d of conf.delegations) {
-      if (
-        d.name.toLowerCase().includes(query) ||
-        d.shortName?.toLowerCase().includes(query)
-      ) {
-        addResult(d, 0)
-      }
-    }
-
-    // 2. 拼音匹配（全拼 & 首字母）
-    for (const d of conf.delegations) {
-      const matchName = PinyinMatch.match(d.name, query)
-      const matchShort = d.shortName ? PinyinMatch.match(d.shortName, query) : false
-      if (matchName || matchShort) {
-        addResult(d, 0.1)
-      }
-    }
-
-    // 3. Fuse.js 模糊匹配（容错拼写）
-    const fuseResults = fuse.search(query)
-    for (const r of fuseResults) {
-      addResult(r.item, (r.score ?? 0.5) + 0.2)
-    }
-
-    // 按得分排序，取前 6
-    return results.sort((a, b) => a._score - b._score).slice(0, 6)
-  })
+  // 已存在于发言名单中的代表团 ID
+  const listedDelegationIds = $derived(
+    conf?.speakersList.map((s) => s.delegationId) ?? []
+  )
 
   function addSpeaker(delegationId: string): void {
     addToSpeakersList(delegationId)
-    speakerInput = ''
-    showSuggestions = false
   }
 
   // ---- Timer ----
@@ -248,36 +192,15 @@
   {:else}
     <!-- 添加发言人 -->
     <div class="rounded-lg border bg-card p-4">
-      <div class="flex items-center gap-2">
-        <UserPlus size={16} class="text-muted-foreground" />
-        <div class="relative flex-1">
-          <Input
-            class="h-8 text-sm"
-            placeholder="搜索代表团名称..."
-            bind:value={speakerInput}
-            onfocus={() => (showSuggestions = true)}
-            onblur={() => setTimeout(() => (showSuggestions = false), 150)}
-          />
-          {#if showSuggestions && suggestions.length > 0}
-            <div
-              class="absolute left-0 top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md"
-            >
-              {#each suggestions as del}
-                <button
-                  class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                  onclick={() => addSpeaker(del.id)}
-                >
-                  <span class="h-2 w-2 rounded-full" style="background-color: {del.color}"></span>
-                  <span>{del.name}</span>
-                  {#if del.shortName}
-                    <span class="text-xs text-muted-foreground">{del.shortName}</span>
-                  {/if}
-                </button>
-              {/each}
-            </div>
-          {/if}
-        </div>
-      </div>
+      {#if conf}
+        <DelegationSelector
+          delegations={conf.delegations}
+          placeholder="搜索代表团名称..."
+          onselect={addSpeaker}
+          resetOnSelect={true}
+          excludeIds={listedDelegationIds}
+        />
+      {/if}
     </div>
   {/if}
 

@@ -10,6 +10,7 @@ export type ConferencePhase =
   | 'general_debate' // 一般性辩论（主发言名单阶段）
   | 'caucus' // 磋商中（有主持或自由磋商）
   | 'voting' // 投票表决中
+  | 'motion' // 动议（Display 专用：编辑/表决/结果）
   | 'suspended' // 暂时休会
   | 'closed' // 闭幕
 
@@ -329,11 +330,27 @@ export interface Conference {
 
 // ---- 显示窗口同步数据 -----------------------------------------------------
 
+/** 动议编辑草稿 —— 实时同步到 Display 窗口 */
+export interface MotionDraft {
+  /** 动议提出方代表团名称 */
+  proposedByName?: string
+  /** 动议类型 */
+  type?: MotionType
+  /** 主题（moderated_caucus） */
+  topic?: string
+  /** 总时长秒数 */
+  totalTimeSec?: number
+  /** 每人发言秒数 */
+  speakingTimePerPersonSec?: number
+}
+
 export interface ConferenceDisplayData {
   conferenceId: string
   phase: ConferencePhase
   venue: string
   name: string
+  /** 动议编辑草稿（编辑中实时同步） */
+  motionDraft?: MotionDraft
   currentSpeaker?: {
     delegationName: string
     shortName?: string
@@ -363,6 +380,11 @@ export interface ConferenceDisplayData {
     topic?: string
     status: string
     proposedByName: string
+    motionId: string
+    /** 总时长（秒），moderated_caucus / unmoderated_caucus */
+    totalTimeSec?: number
+    /** 每人发言时间（秒），moderated_caucus */
+    speakingTimePerPersonSec?: number
   }
   caucusTimer?: {
     remainingSec: number

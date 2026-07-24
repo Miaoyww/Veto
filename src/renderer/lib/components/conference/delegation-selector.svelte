@@ -1,21 +1,28 @@
 <script lang="ts">
   /**
    * delegation-selector.svelte
+   * ────────────────────────────
    * 可复用的代表团模糊搜索选择器。
-   * 支持中文全称、简称、拼音首字母匹配。
+   * 支持中文全称、简称、拼音全拼/首字母、fuse.js 容错匹配。
    */
   import { Input } from '$lib/components/ui/input/index.js'
   import { cn } from '$lib/utils.js'
   import type { Delegation } from '$lib/types-conference'
+  import Fuse from 'fuse.js'
+  import PinyinMatch from 'pinyin-match'
 
   interface Props {
     delegations: Delegation[]
-    /** 当前已选中的代表团 ID */
+    /** 当前已选中的代表团 ID（双向绑定） */
     value?: string | null
     placeholder?: string
     class?: string
     /** 结果过滤：仅显示出席的代表团 */
     presentOnly?: boolean
+    /** 选择后立即重置（不清除 value 的状态显示），用于添加列表等场景 */
+    resetOnSelect?: boolean
+    /** 排除这些代表团 ID（如已在列表中） */
+    excludeIds?: string[]
     onselect?: (delegationId: string) => void
   }
 
@@ -25,6 +32,8 @@
     placeholder = '搜索代表团...',
     class: className = '',
     presentOnly = false,
+    resetOnSelect = false,
+    excludeIds = [],
     onselect
   }: Props = $props()
 
@@ -32,73 +41,77 @@
   let focused = $state(false)
   let selectedIndex = $state(0)
 
-  // 拼音首字母映射表 (内置常用——完整实现见 Phase 9)
-  const PINYIN_MAP: Record<string, string> = {
-    '中': 'zhong', '美': 'mei', '英': 'ying', '法': 'fa', '俄': 'e',
-    '德': 'de', '日': 'ri', '韩': 'han', '印': 'yin', '巴': 'ba',
-    '意': 'yi', '加': 'jia', '澳': 'ao', '荷': 'he', '瑞': 'rui',
-    '比': 'bi', '葡': 'pu', '西': 'xi', '波': 'bo', '挪': 'nuo',
-    '芬': 'fen', '丹': 'dan', '奥': 'ao', '土': 'tu', '埃': 'ai',
-    '南': 'nan', '阿': 'a', '伊': 'yi', '沙': 'sha', '以': 'yi',
-    '朝': 'chao', '越': 'yue', '古': 'gu', '委': 'wei', '叙': 'xu',
-    '乌': 'wu', '伊': 'yi', '利': 'li', '尼': 'ni', '肯': 'ken',
-    '墨': 'mo', '哥': 'ge', '智': 'zhi', '秘': 'mi', '爱': 'ai',
-    '希': 'xi', '捷': 'jie', '匈': 'xiong', '罗': 'luo', '保': 'bao'
-  }
+  // Fuse.js 实例（delegations 变化时重建）
+  const fuse = $derived.by(() => {
+    const excludeSet = new Set(excludeIds)
+    const pool = (presentOnly
+      ? delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting')
+      : delegations).filter((d) => !excludeSet.has(d.id))
+    return new Fuse(pool, {
+      keys: ['name', 'shortName'],
+      threshold: 0.4,
+      includeScore: true
+    })
+  })
 
-  function getInitials(name: string): string {
-    let result = ''
-    for (const char of name) {
-      const py = PINYIN_MAP[char]
-      if (py) result += py[0]
-    }
-    return result
-  }
+  // 被搜索的代表团池
+  const excludeSet = $derived(new Set(excludeIds))
+  const searchPool = $derived(
+    (presentOnly
+      ? delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting')
+      : delegations).filter((d) => !excludeSet.has(d.id))
+  )
 
-  function matchDelegation(d: Delegation, q: string): number {
-    // 0 = 不匹配, higher = better
-    const ql = q.toLowerCase()
-
-    // 精确匹配简称
-    if (d.shortName?.toLowerCase() === ql) return 100
-    // 前缀匹配全称
-    if (d.name.toLowerCase().startsWith(ql)) return 90
-    // 包含匹配
-    if (d.name.toLowerCase().includes(ql)) return 70
-    if (d.shortName?.toLowerCase().includes(ql)) return 60
-    // 拼音首字母
-    const initials = getInitials(d.name)
-    if (initials.startsWith(ql)) return 50
-    // 拼音全拼包含
-    for (const char of d.name) {
-      const py = PINYIN_MAP[char]
-      if (py && py.includes(ql)) return 40
-    }
-
-    return 0
-  }
-
+  // 3-tier 搜索：子串 → 拼音 → fuse.js
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase()
-    let pool = presentOnly
-      ? delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting')
-      : delegations
+    if (!q) return searchPool.slice(0, 6)
 
-    if (!q) return pool.slice(0, 5)
+    const results: Array<{ delegation: Delegation; _score: number }> = []
+    const seen = new Set<string>()
 
-    return pool
-      .map((d) => ({ delegation: d, score: matchDelegation(d, q) }))
-      .filter((e) => e.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map((e) => e.delegation)
+    const addResult = (d: Delegation, score: number) => {
+      if (seen.has(d.id)) return
+      seen.add(d.id)
+      results.push({ delegation: d, _score: score })
+    }
+
+    // 1. 直接子串匹配
+    for (const d of searchPool) {
+      if (d.name.toLowerCase().includes(q) || d.shortName?.toLowerCase().includes(q)) {
+        addResult(d, 0)
+      }
+    }
+
+    // 2. 拼音匹配
+    for (const d of searchPool) {
+      const matchName = PinyinMatch.match(d.name, q)
+      const matchShort = d.shortName ? PinyinMatch.match(d.shortName, q) : false
+      if (matchName || matchShort) {
+        addResult(d, 0.1)
+      }
+    }
+
+    // 3. Fuse.js 模糊匹配
+    const fuseResults = fuse.search(q)
+    for (const r of fuseResults) {
+      addResult(r.item, (r.score ?? 0.5) + 0.2)
+    }
+
+    return results.sort((a, b) => a._score - b._score).slice(0, 6).map((r) => r.delegation)
   })
 
   function select(delegationId: string): void {
-    value = delegationId
-    query = ''
-    focused = false
-    onselect?.(delegationId)
+    if (resetOnSelect) {
+      query = ''
+      focused = false
+      onselect?.(delegationId)
+    } else {
+      value = delegationId
+      query = ''
+      focused = false
+      onselect?.(delegationId)
+    }
   }
 
   function handleKeydown(e: KeyboardEvent): void {
@@ -121,7 +134,6 @@
 
   $effect(() => {
     if (focused) selectedIndex = 0
-    else selectedIndex = 0
   })
 
   const selectedDelegation = $derived(

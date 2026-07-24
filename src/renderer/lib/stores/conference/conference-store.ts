@@ -10,6 +10,7 @@
 import { writable, derived, get } from 'svelte/store'
 import type {
   Conference,
+  ConferenceDisplayData,
   Delegation,
   AgendaItem,
   SpeakerEntry,
@@ -73,6 +74,9 @@ export const currentConference = derived(
   [conferences, currentConferenceId],
   ([$conferences, $id]) => $conferences.find((c) => c.id === $id) ?? null
 )
+
+/** 动议编辑草稿（实时同步到 Display） */
+export const motionDraft = writable<ConferenceDisplayData['motionDraft'] | null>(null)
 
 // ---- 内部辅助 ----
 
@@ -407,24 +411,107 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
 }
 
 export function approveMotion(motionId: string): void {
+  const conf = get(currentConference)
+  const motion = conf?.motions.find((m) => m.id === motionId)
+  if (!motion) return
+
   updateCurrentConference((c) => ({
     ...c,
     motions: c.motions.map((m) =>
-      m.id === motionId ? { ...m, status: 'approved' } : m
+      m.id === motionId ? { ...m, status: 'approved' as const } : m
     )
   }))
   addMinutesEntry('motion_approved', `动议通过`, { motionId })
+
+  // 执行动议动作
+  executeMotionAction(motion)
 }
 
 export function rejectMotion(motionId: string): void {
   updateCurrentConference((c) => ({
     ...c,
     motions: c.motions.map((m) =>
-      m.id === motionId ? { ...m, status: 'rejected' } : m
+      m.id === motionId ? { ...m, status: 'rejected' as const } : m
     )
   }))
   addMinutesEntry('motion_rejected', `动议未通过`, { motionId })
 }
+
+/** 执行通过后的动议动作 */
+function executeMotionAction(motion: Motion): void {
+  const conf = get(currentConference)
+  if (!conf) return
+
+  switch (motion.type) {
+    case 'moderated_caucus':
+    case 'unmoderated_caucus':
+      startCaucusImpl(motion.id, conf)
+      break
+    case 'suspend_meeting':
+      updateCurrentConference((c) => ({
+        ...c,
+        phase: 'suspended',
+        activeSpeaker: null,
+        activeCaucus: null
+      }))
+      addMinutesEntry('meeting_suspended', `暂时休会`)
+      addMinutesEntry('phase_changed', `进入阶段: 休会`)
+      break
+    case 'close_meeting':
+      updateCurrentConference((c) => ({
+        ...c,
+        phase: 'closed',
+        activeSpeaker: null,
+        activeCaucus: null
+      }))
+      addMinutesEntry('meeting_closed', `会议闭幕`)
+      addMinutesEntry('phase_changed', `进入阶段: 闭幕`)
+      break
+    case 'modify_speaking_time':
+      updateCurrentConference((c) => ({
+        ...c,
+        defaultSpeakingTimeSec: (motion as any).newTimeSec
+      }))
+      break
+  }
+}
+
+/** toggleMotionSupport 的内部实现 */
+function startCaucusImpl(motionId: string, conf: Conference): void {
+  const motion = conf.motions.find((m) => m.id === motionId)
+  if (!motion) return
+
+  const now = Date.now()
+  let endAt = now
+  let caucusType: 'moderated' | 'unmoderated' = 'unmoderated'
+  let topic: string | undefined
+
+  if (motion.type === 'moderated_caucus') {
+    caucusType = 'moderated'
+    endAt = now + (motion as any).totalTimeSec * 1000
+    topic = (motion as any).topic
+  } else if (motion.type === 'unmoderated_caucus') {
+    caucusType = 'unmoderated'
+    endAt = now + (motion as any).durationSec * 1000
+  }
+
+  updateCurrentConference((c) => ({
+    ...c,
+    phase: 'caucus',
+    activeCaucus: {
+      motionId,
+      type: caucusType,
+      startedAt: now,
+      endAt,
+      elapsedSec: 0
+    }
+  }))
+
+  const label = caucusType === 'moderated' ? `有主持核心磋商` : `自由磋商`
+  addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
+  addMinutesEntry('phase_changed', `进入阶段: 磋商`)
+}
+
 
 export function startCaucus(motionId: string): void {
   const conf = get(currentConference)

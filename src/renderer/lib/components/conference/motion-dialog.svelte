@@ -10,6 +10,7 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import {
     currentConference,
+    motionDraft,
     proposeMotion,
     approveMotion
   } from '$lib/stores/conference/conference-store'
@@ -17,8 +18,10 @@
     resolveMotion,
     calcMaxSpeakers
   } from '$lib/engine/conference-engine'
+  import { navigate } from '$lib/router.svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
+  import DelegationSelector from '$lib/components/conference/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
@@ -58,17 +61,8 @@
   // Proposer
   let selectedProposerId = $state('')
 
-  $effect(() => {
-    if (open && conf && conf.delegations.length > 0 && !selectedProposerId) {
-      // 默认选中第一个在场代表团
-      const first = conf.delegations.find(
-        (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
-      )
-      selectedProposerId = first?.id ?? conf.delegations[0].id
-    }
-  })
-
   function resetForm(): void {
+    selectedProposerId = ''
     selectedType = null
     mcTopic = ''
     mcTotalMin = 10
@@ -80,6 +74,7 @@
   function handleOpenChange(value: boolean): void {
     if (!value) {
       resetForm()
+      motionDraft.set(null)
     }
     open = value
   }
@@ -129,14 +124,40 @@
           })
         }
       }
+    } else {
+      // 需要表决 → 打开动议表决页
+      navigate(`/conference/${conf.id}/motion`)
     }
 
     open = false
     resetForm()
+    motionDraft.set(null)
   }
 
   const mcMaxSpeakers = $derived(calcMaxSpeakers(mcTotalMin * 60, mcSpeakerSec))
   const canPropose = $derived(selectedType !== null && selectedProposerId !== '')
+
+  // 实时同步动议草稿到 Display
+  $effect(() => {
+    if (!open) {
+      motionDraft.set(null)
+      return
+    }
+    const proposerDel = selectedProposerId
+      ? conf?.delegations.find((d) => d.id === selectedProposerId)
+      : null
+    motionDraft.set({
+      proposedByName: proposerDel?.name,
+      type: selectedType ?? undefined,
+      topic: selectedType === 'moderated_caucus' ? (mcTopic.trim() || undefined) : undefined,
+      totalTimeSec: selectedType === 'moderated_caucus'
+        ? mcTotalMin * 60
+        : selectedType === 'unmoderated_caucus'
+          ? ucDurationMin * 60
+          : undefined,
+      speakingTimePerPersonSec: selectedType === 'moderated_caucus' ? mcSpeakerSec : undefined
+    })
+  })
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
@@ -149,35 +170,50 @@
           提出动议
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          选择动议类型并填写必要参数
+          选择提出方后选择动议类型
         </Dialog.Description>
       </Dialog.Header>
 
       <div class="flex flex-col gap-4 py-2">
-        <!-- 动议类型选择 -->
-        <div>
-          <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
-          <div class="grid grid-cols-2 gap-2">
-            {#each motionTypes as mt}
-              {@const Icon = MOTION_ICONS[mt] ?? Presentation}
-              <button
-                type="button"
-                class="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all {selectedType === mt
-                  ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400'
-                  : 'hover:bg-muted'}"
-                onclick={() => (selectedType = mt)}
-              >
-                <Icon size={14} />
-                <span class="text-xs font-medium">{MOTION_LABELS[mt]}</span>
-              </button>
-            {/each}
+        <!-- 第一步：动议提出方（始终可见） -->
+        {#if conf}
+          <div>
+            <Label class="mb-2 block text-xs text-muted-foreground">动议提出方</Label>
+            <DelegationSelector
+              delegations={conf.delegations}
+              bind:value={selectedProposerId}
+              placeholder="搜索并提出动议的代表团..."
+              presentOnly={true}
+            />
           </div>
-        </div>
+        {/if}
 
-        <Separator />
+        <!-- 第二步：动议类型选择（选完提出方后出现） -->
+        {#if selectedProposerId}
+          <Separator />
+          <div>
+            <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
+            <div class="grid grid-cols-2 gap-2">
+              {#each motionTypes as mt}
+                {@const Icon = MOTION_ICONS[mt] ?? Presentation}
+                <button
+                  type="button"
+                  class="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all {selectedType === mt
+                    ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400'
+                    : 'hover:bg-muted'}"
+                  onclick={() => (selectedType = mt)}
+                >
+                  <Icon size={14} />
+                  <span class="text-xs font-medium">{MOTION_LABELS[mt]}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
 
-        <!-- 动议参数表单 -->
-        {#if selectedType === 'moderated_caucus'}
+        <!-- 第三步：动议参数表单 -->
+        {#if selectedType}
+          <Separator />
           <div class="space-y-3">
             <div>
               <Label class="mb-1.5 block text-xs text-muted-foreground">主题</Label>
@@ -210,23 +246,7 @@
           </div>
         {:else if selectedType}
           <div class="text-xs text-muted-foreground">
-            此动议将直接提交表决
-          </div>
-        {/if}
-
-        <!-- 提出方 -->
-        {#if selectedType && conf}
-          <Separator />
-          <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">动议提出方</Label>
-            <select
-              bind:value={selectedProposerId}
-              class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {#each conf.delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting') as d (d.id)}
-                <option value={d.id}>{d.name}</option>
-              {/each}
-            </select>
+            此动议将进入举牌表决
           </div>
         {/if}
       </div>

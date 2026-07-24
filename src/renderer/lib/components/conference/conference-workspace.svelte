@@ -141,6 +141,7 @@
         <SpeakersListPanel />
       {:else if conf.phase === 'caucus'}
         <CaucusTimer />
+        <CaucusTimer />
       {:else if conf.phase === 'voting'}
         <VotingPanel />
       {:else if isSuspended}

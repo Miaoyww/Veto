@@ -20,6 +20,7 @@
   import { VETO_NAME } from '$lib/const'
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
+  import MotionDisplay from './motion/index.svelte'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
@@ -109,7 +110,10 @@
     <!-- 中部：主展示区（phase 动态切换） -->
     <div class="flex flex-1 items-center justify-center overflow-hidden px-16">
       <div class="flex w-full max-w-5xl flex-col items-center">
-        {#if phase === 'roll_call'}
+        {#if phase === 'motion'}
+          <MotionDisplay data={displayData} />
+
+        {:else if phase === 'roll_call'}
           <RollCallDisplay data={displayData} />
 
         {:else if phase === 'general_debate'}

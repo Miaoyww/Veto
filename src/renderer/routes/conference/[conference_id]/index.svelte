@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute } from '$lib/router.svelte'
   import { VETO_NAME } from '$lib/const'
-  import { currentConference, loadConference, currentConferenceId } from '$lib/stores/conference/conference-store'
+  import { currentConference, loadConference, currentConferenceId, motionDraft } from '$lib/stores/conference/conference-store'
   import { stopAllTimers } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import ConferenceSidebar from '$lib/components/conference/conference-sidebar.svelte'
@@ -20,11 +20,13 @@
     }
   })
 
-  // 自动同步当前状态到 Display 窗口
+  // 自动同步当前状态到 Display 窗口（含动议草稿）
   $effect(() => {
     const conf = $currentConference
     if (conf) {
-      getDisplayBridge().sendUpdate(buildDisplayData(conf))
+      getDisplayBridge().sendUpdate(
+        buildDisplayData(conf, { motionDraft: $motionDraft ?? undefined })
+      )
     }
   })
 

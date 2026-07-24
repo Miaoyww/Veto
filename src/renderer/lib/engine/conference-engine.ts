@@ -49,6 +49,7 @@ export const PHASE_LABELS: Record<ConferencePhase, string> = {
   general_debate: '一般性辩论',
   caucus: '磋商',
   voting: '投票表决',
+  motion: '动议',
   suspended: '休会',
   closed: '闭幕'
 }

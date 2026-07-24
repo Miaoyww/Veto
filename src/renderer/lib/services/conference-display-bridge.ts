@@ -199,7 +199,10 @@ import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
 
 export function buildDisplayData(
   conf: Conference,
-  extra?: { rollCall?: ConferenceDisplayData['rollCall'] }
+  extra?: {
+    rollCall?: ConferenceDisplayData['rollCall']
+    motionDraft?: ConferenceDisplayData['motionDraft']
+  }
 ): ConferenceDisplayData {
   // 当前发言人
   const currentSpeakerEntry = conf.activeSpeaker
@@ -243,9 +246,15 @@ export function buildDisplayData(
     }
   }
 
+  // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
+  const effectivePhase: Conference['phase'] | 'motion' =
+    extra?.motionDraft?.proposedByName || conf.motions.some((m) => m.status === 'pending')
+      ? 'motion'
+      : conf.phase
+
   return {
     conferenceId: conf.id,
-    phase: conf.phase,
+    phase: effectivePhase,
     venue: conf.venue,
     name: conf.name,
     currentSpeaker: currentSpeakerEntry && currentSpeakerDel
@@ -279,7 +288,18 @@ export function buildDisplayData(
           type: pendingMotion.type,
           topic: pendingMotion.type === 'moderated_caucus' ? (pendingMotion as any).topic : undefined,
           status: pendingMotion.status,
-          proposedByName: pendingMotionDel?.name ?? pendingMotion.proposedByDelegationId
+          proposedByName: pendingMotionDel?.name ?? pendingMotion.proposedByDelegationId,
+          motionId: pendingMotion.id,
+          totalTimeSec:
+            pendingMotion.type === 'moderated_caucus'
+              ? (pendingMotion as any).totalTimeSec
+              : pendingMotion.type === 'unmoderated_caucus'
+                ? (pendingMotion as any).durationSec
+                : undefined,
+          speakingTimePerPersonSec:
+            pendingMotion.type === 'moderated_caucus'
+              ? (pendingMotion as any).speakingTimePerPersonSec
+              : undefined
         }
       : undefined,
     caucusTimer: caucusData,
@@ -288,6 +308,7 @@ export function buildDisplayData(
       eventType: m.eventType,
       description: m.description
     })),
-    rollCall: extra?.rollCall
+    rollCall: extra?.rollCall,
+    motionDraft: extra?.motionDraft
   }
 }
