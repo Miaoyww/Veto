@@ -455,6 +455,17 @@ export interface PointDraft {
   type?: PointType
 }
 
+// ---- Display 窗口用的命名类型（避免内联类型导致 Svelte 模板推断为 any）----
+
+export interface ConferenceDisplaySpeaker {
+  delegationName: string
+  shortName?: string
+  remainingSec: number
+  allocatedSec: number
+  /** 计时状态 */
+  status: 'playing' | 'paused'
+}
+
 export interface ConferenceDisplayData {
   conferenceId: string
   phase: ConferencePhase
@@ -464,14 +475,7 @@ export interface ConferenceDisplayData {
   motionDraft?: MotionDraft
   /** 问题编辑草稿（编辑中实时同步） */
   pointDraft?: PointDraft
-  currentSpeaker?: {
-    delegationName: string
-    shortName?: string
-    remainingSec: number
-    allocatedSec: number
-    /** 计时状态 */
-    status: 'playing' | 'paused'
-  }
+  currentSpeaker?: ConferenceDisplaySpeaker
   /** 预发言状态（ready 阶段，即将发言的代表团） */
   readySpeaker?: {
     delegationName: string

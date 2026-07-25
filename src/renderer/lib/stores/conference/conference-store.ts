@@ -112,9 +112,10 @@ export async function saveConferencesNow(): Promise<void> {
     clearTimeout(_saveTimer)
     _saveTimer = null
   }
-  const confs = get(conferences)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(confs))
-  await saveToStore(STORE_DOMAIN, confs)
+  const json = JSON.stringify(get(conferences))
+  localStorage.setItem(STORAGE_KEY, json)
+  // 通过 JSON round-trip 确保纯 JSON 对象（剥离 Svelte $state 代理等）
+  await saveToStore(STORE_DOMAIN, JSON.parse(json))
 }
 
 // ---- 核心 Stores ----------------------------------------------------------
