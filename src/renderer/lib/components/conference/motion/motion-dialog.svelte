@@ -123,8 +123,10 @@
   // Substantive Vote
   let documentName = $state('')
   let committedDocumentName = $state('')
-  // Change Attendance
-  let newAttendance = $state<'present' | 'absent'>('present')
+  // Change Attendance —— 由当前出席状态决定，只能选相反状态
+  let newAttendance = $derived<'present' | 'absent'>(
+    selectedDelegation?.attendance === 'present' ? 'absent' : 'present'
+  )
 
   function resetForm(): void {
     selectedProposerId = ''
@@ -142,7 +144,6 @@
     committedNewTimeSec = 90
     documentName = ''
     committedDocumentName = ''
-    newAttendance = 'present'
   }
 
   function handleOpenChange(value: boolean): void {
@@ -423,28 +424,17 @@
           <Separator />
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">新出席状态</Label>
-            <div class="flex gap-2">
-              <button
-                type="button"
-                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance ===
-                'present'
-                  ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                  : 'hover:bg-muted'}"
-                onclick={() => (newAttendance = 'present')}
-              >
-                出席
-              </button>
-              <button
-                type="button"
-                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance ===
-                'absent'
-                  ? 'border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400'
-                  : 'hover:bg-muted'}"
-                onclick={() => (newAttendance = 'absent')}
-              >
-                缺席
-              </button>
+            <div
+              class="flex-1 rounded-lg border px-3 py-2 text-sm text-center font-medium {newAttendance ===
+              'present'
+                ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                : 'border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400'}"
+            >
+              {newAttendance === 'present' ? '出席' : '缺席'}
             </div>
+            <p class="mt-1 text-[10px] text-muted-foreground">
+              当前为{selectedDelegation?.attendance === 'present' ? '出席' : '缺席'}，只能变更为相反状态
+            </p>
           </div>
         {:else if selectedType}
           <div class="text-xs text-muted-foreground">此动议将进入举牌表决</div>
