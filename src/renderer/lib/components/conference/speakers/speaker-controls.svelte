@@ -17,19 +17,16 @@
     onyield?: (type: 'chair' | 'delegate' | 'question' | 'comment') => void
   }
 
-  let {
-    isPaused = false,
-    canYield = true,
-    onpause,
-    onresume,
-    onend,
-    onyield
-  }: Props = $props()
+  let { isPaused = false, canYield = true, onpause, onresume, onend, onyield }: Props = $props()
 </script>
 
 <div class="flex flex-wrap items-center justify-center gap-2">
   {#if isPaused}
-    <Button size="sm" class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700" onclick={() => onresume?.()}>
+    <Button
+      size="sm"
+      class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
+      onclick={() => onresume?.()}
+    >
       <Play size={12} />
       继续计时
     </Button>
@@ -46,19 +43,19 @@
   {#if canYield}
     <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('chair')}>
       <Users size={12} class="mr-1" />
-      Yield to Chair
+      让渡给主席
     </Button>
     <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('delegate')}>
       <ArrowRight size={12} class="mr-1" />
-      Yield to Delegate
+      让渡给代表
     </Button>
     <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('question')}>
       <HelpCircle size={12} class="mr-1" />
-      Yield to Question
+      让渡给提问
     </Button>
     <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('comment')}>
       <MessageCircle size={12} class="mr-1" />
-      Yield to Comment
+      让渡给评论
     </Button>
   {:else}
     <span class="text-xs text-muted-foreground">（本次发言不可让渡）</span>
