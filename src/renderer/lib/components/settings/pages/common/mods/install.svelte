@@ -130,7 +130,7 @@
       >
         <Upload class="size-7 opacity-60" />
         <div class="text-center">
-          <p class="text-sm font-medium">拖放 .csmod 文件，或点击选择</p>
+          <p class="text-sm font-medium">拖放 .vmod 文件，或点击选择</p>
           <p class="mt-0.5 text-xs opacity-70">支持本地离线导入，无需网络</p>
         </div>
         <Button
