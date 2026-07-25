@@ -1251,14 +1251,24 @@ export function startVotingSession(
     targetId,
     majorityRule,
     ballots: [],
-    startedAt: Date.now()
+    startedAt: Date.now(),
+    currentDelegationId: null,
+    round: 1
   }
 
-  updateCurrentConference((c) => ({
-    ...c,
-    phase: 'voting',
-    votingSessions: [...c.votingSessions, session]
-  }))
+  updateCurrentConference((c) => {
+    // 按 sortOrder 排序出席代表团，取第一个作为当前投票代表团
+    const presentDelegations = [...c.delegations]
+      .filter((d) => d.attendance === 'present')
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+    const firstDelegationId = presentDelegations[0]?.id ?? null
+
+    return {
+      ...c,
+      phase: 'voting',
+      votingSessions: [...c.votingSessions, { ...session, currentDelegationId: firstDelegationId }]
+    }
+  })
 
   addMinutesEntry(
     'voting_started',
@@ -1272,27 +1282,111 @@ export function startVotingSession(
 export function castVote(
   sessionId: string,
   delegationId: string,
-  vote: 'yes' | 'no' | 'abstain'
+  vote: 'yes' | 'no' | 'abstain' | 'skip'
 ): void {
-  updateCurrentConference((c) => ({
-    ...c,
-    votingSessions: c.votingSessions.map((s) => {
-      if (s.id !== sessionId) return s
-      const existing = s.ballots.findIndex((b) => b.delegationId === delegationId)
-      const newBallot: VoteBallot = { delegationId, vote }
-      const ballots =
-        existing >= 0
-          ? s.ballots.map((b, i) => (i === existing ? newBallot : b))
-          : [...s.ballots, newBallot]
-      return { ...s, ballots }
-    })
-  }))
+  updateCurrentConference((c) => {
+    const session = c.votingSessions.find((s) => s.id === sessionId)
+    if (!session) return c
+
+    // 只有当前代表团才能投票
+    if (session.currentDelegationId !== delegationId) {
+      console.warn(`castVote: delegation ${delegationId} is not the current voter (current=${session.currentDelegationId})`)
+      return c
+    }
+
+    // 第二轮只能投 yes/no
+    if (session.round >= 2 && (vote === 'abstain' || vote === 'skip')) {
+      console.warn(`castVote: round ${session.round} does not allow ${vote}`)
+      return c
+    }
+
+    // 记录/更新 ballot
+    const existing = session.ballots.findIndex((b) => b.delegationId === delegationId)
+    const newBallot: VoteBallot = { delegationId, vote }
+    let ballots: VoteBallot[]
+    if (existing >= 0) {
+      ballots = session.ballots.map((b, i) => (i === existing ? newBallot : b))
+    } else {
+      ballots = [...session.ballots, newBallot]
+    }
+
+    // 计算下一个代表团
+    const presentDelegations = [...c.delegations]
+      .filter((d) => d.attendance === 'present')
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+
+    const { nextDelegationId, nextRound } = advanceVoting(
+      session.round,
+      delegationId,
+      ballots,
+      presentDelegations
+    )
+
+    return {
+      ...c,
+      votingSessions: c.votingSessions.map((s) =>
+        s.id === sessionId
+          ? { ...s, ballots, currentDelegationId: nextDelegationId, round: nextRound }
+          : s
+      )
+    }
+  })
+}
+
+/**
+ * 计算投票后的下一个代表团和轮次。
+ * 返回 null currentDelegationId 表示全部投完。
+ */
+function advanceVoting(
+  currentRound: number,
+  justVotedDelegationId: string,
+  ballots: VoteBallot[],
+  presentDelegations: Delegation[]
+): { nextDelegationId: string | null; nextRound: number } {
+  if (currentRound === 1) {
+    // 第一轮：找下一个出席代表团
+    const currentIdx = presentDelegations.findIndex((d) => d.id === justVotedDelegationId)
+    const nextDelegation = presentDelegations[currentIdx + 1]
+    if (nextDelegation) {
+      return { nextDelegationId: nextDelegation.id, nextRound: 1 }
+    }
+    // 第一轮结束，检查是否有跳过的代表团
+    const skippedIds = new Set(
+      ballots.filter((b) => b.vote === 'skip').map((b) => b.delegationId)
+    )
+    if (skippedIds.size > 0) {
+      // 进入第二轮：第一个跳过的代表团（按原顺序）
+      const firstSkipped = presentDelegations.find((d) => skippedIds.has(d.id))
+      return { nextDelegationId: firstSkipped?.id ?? null, nextRound: 2 }
+    }
+    // 没有跳过，全部投完
+    return { nextDelegationId: null, nextRound: 1 }
+  }
+
+  // 第二轮：找下一个 skip 的代表团
+  const skippedDelegations = presentDelegations.filter((d) => {
+    const ballot = ballots.find((b) => b.delegationId === d.id)
+    return ballot?.vote === 'skip'
+  })
+  const currentSkippedIdx = skippedDelegations.findIndex((d) => d.id === justVotedDelegationId)
+  const nextSkipped = skippedDelegations[currentSkippedIdx + 1]
+  if (nextSkipped) {
+    return { nextDelegationId: nextSkipped.id, nextRound: 2 }
+  }
+  // 第二轮全部投完
+  return { nextDelegationId: null, nextRound: 2 }
 }
 
 export function closeVotingSession(sessionId: string): void {
   updateCurrentConference((c) => {
     const session = c.votingSessions.find((s) => s.id === sessionId)
     if (!session) return c
+
+    // 还有代表团未投票，不允许关闭
+    if (session.currentDelegationId !== null) {
+      console.warn('closeVotingSession: not all delegations have voted yet')
+      return c
+    }
 
     const { yes, no, abstain } = tallyVotes(session.ballots)
     const presentCount = c.delegations.filter(
@@ -1454,7 +1548,7 @@ export function closeVotingSession(sessionId: string): void {
   })
 }
 
-/** 纯函数：统计投票结果 */
+/** 纯函数：统计投票结果（skip 不计入任何类别） */
 export function tallyVotes(ballots: VoteBallot[]): { yes: number; no: number; abstain: number } {
   let yes = 0
   let no = 0
@@ -1462,7 +1556,8 @@ export function tallyVotes(ballots: VoteBallot[]): { yes: number; no: number; ab
   for (const b of ballots) {
     if (b.vote === 'yes') yes++
     else if (b.vote === 'no') no++
-    else abstain++
+    else if (b.vote === 'abstain') abstain++
+    // skip 不计入
   }
   return { yes, no, abstain }
 }

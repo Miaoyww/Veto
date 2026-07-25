@@ -277,6 +277,50 @@
                 </div>
               </div>
 
+              {#if !displayData.votingSession.result}
+                <!-- 轮次 & 代表团投票状态 -->
+                <div class="flex flex-col items-center gap-4">
+                  <div class="text-xs tracking-[0.1em] text-white/20 uppercase">
+                    {displayData.votingSession.round === 2
+                      ? 'ROUND 2 · SECOND CALL'
+                      : 'ROLL CALL VOTE'}
+                  </div>
+                  <div class="grid grid-cols-5 gap-x-6 gap-y-2">
+                    {#each displayData.votingSession.ballots as entry}
+                      {@const isCurrent =
+                        entry.delegationId === displayData.votingSession.currentDelegationId}
+                      <div
+                        class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors {isCurrent
+                          ? 'bg-[#5B92E5]/10 ring-1 ring-[#5B92E5]/30'
+                          : ''}"
+                      >
+                        <!-- 状态指示器 -->
+                        <div
+                          class="h-2 w-2 flex-shrink-0 rounded-full {entry.vote === 'yes'
+                            ? 'bg-emerald-400'
+                            : entry.vote === 'no'
+                              ? 'bg-red-400'
+                              : entry.vote === 'abstain'
+                                ? 'bg-amber-400'
+                                : entry.vote === 'skip'
+                                  ? 'bg-slate-500'
+                                  : 'border border-white/20 bg-transparent'}"
+                        ></div>
+                        <span
+                          class={entry.vote === null
+                            ? 'text-white/30'
+                            : entry.vote === 'skip'
+                              ? 'text-slate-400'
+                              : 'text-white/70'}
+                        >
+                          {entry.delegationName}
+                        </span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
               {#if displayData.votingSession.result}
                 <div
                   class="rounded-sm px-10 py-3 text-xl font-semibold tracking-[0.06em] {displayData
@@ -285,8 +329,8 @@
                     : 'bg-white/5 text-white/40 border border-white/10'}"
                 >
                   {displayData.votingSession.result === 'passed'
-                    ? '✓ 通过  ADOPTED'
-                    : '✗ 未通过  REJECTED'}
+                    ? '通过  ADOPTED'
+                    : '未通过  REJECTED'}
                 </div>
               {/if}
             </div>

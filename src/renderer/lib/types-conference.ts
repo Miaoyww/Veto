@@ -240,9 +240,11 @@ export interface DraftResolution {
 
 // ---- 投票系统 ------------------------------------------------------------
 
+export type VoteValue = 'yes' | 'no' | 'abstain' | 'skip'
+
 export interface VoteBallot {
   delegationId: string
-  vote: 'yes' | 'no' | 'abstain'
+  vote: VoteValue
 }
 
 export interface VotingSession {
@@ -257,6 +259,10 @@ export interface VotingSession {
   startedAt: number
   endedAt?: number
   result?: 'passed' | 'failed'
+  /** 当前正在投票的代表团 ID（唱名表决顺序控制）；null 表示全部投完 */
+  currentDelegationId: string | null
+  /** 当前轮次：1 = 第一轮，2 = 第二轮（跳过代表团补投） */
+  round: number
 }
 
 // ---- 会议记录 ------------------------------------------------------------
@@ -472,6 +478,17 @@ export interface ConferenceDisplayData {
     majorityRule: string
     tally: { yes: number; no: number; abstain: number; present: number }
     result?: string
+    /** 当前轮次 */
+    round: number
+    /** 当前正在投票的代表团 ID */
+    currentDelegationId: string | null
+    /** 每个出席代表团的投票状态，按投票顺序排列 */
+    ballots: Array<{
+      delegationId: string
+      delegationName: string
+      shortName?: string
+      vote: string | null
+    }>
   }
   activeMotion?: {
     type: MotionType

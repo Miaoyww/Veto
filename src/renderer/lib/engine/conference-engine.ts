@@ -96,7 +96,7 @@ export function determinePassFail(
   return yesCount >= threshold ? 'passed' : 'failed'
 }
 
-/** 纯函数：统计投票 */
+/** 纯函数：统计投票（skip 不计入任何类别） */
 export function tallyVotesEngine(ballots: VoteBallot[]): {
   yes: number
   no: number
@@ -108,7 +108,8 @@ export function tallyVotesEngine(ballots: VoteBallot[]): {
   for (const b of ballots) {
     if (b.vote === 'yes') yes++
     else if (b.vote === 'no') no++
-    else abstain++
+    else if (b.vote === 'abstain') abstain++
+    // skip 不计入
   }
   return { yes, no, abstain }
 }

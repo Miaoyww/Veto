@@ -278,11 +278,30 @@ export function buildDisplayData(
   if (activeVoting) {
     const tally = tallyVotes(activeVoting.ballots)
     const thresholds = calculateMajorityThresholds(conf.delegations)
+
+    // 构建每个出席代表团的投票状态
+    const presentDelegations = [...conf.delegations]
+      .filter((d) => d.attendance === 'present')
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+
+    const ballotsDisplay = presentDelegations.map((d) => {
+      const ballot = activeVoting.ballots.find((b) => b.delegationId === d.id)
+      return {
+        delegationId: d.id,
+        delegationName: d.name,
+        shortName: d.shortName,
+        vote: ballot?.vote ?? null
+      }
+    })
+
     votingData = {
       targetDescription: activeVoting.targetType === 'motion' ? '动议' : '决议草案',
       majorityRule: activeVoting.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数',
       tally: { ...tally, present: thresholds.presentCount },
-      result: activeVoting.result
+      result: activeVoting.result,
+      round: activeVoting.round ?? 1,
+      currentDelegationId: activeVoting.currentDelegationId ?? null,
+      ballots: ballotsDisplay
     }
   }
 

@@ -50,7 +50,4 @@
 
   <!-- CENTER: Main workspace -->
   <ConferenceWorkspace />
-
-  <!-- RIGHT: Minutes timeline -->
-  <MinutesPanel />
 </div>
