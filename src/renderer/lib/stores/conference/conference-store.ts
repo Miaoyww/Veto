@@ -22,11 +22,10 @@ import type {
   VoteBallot,
   MinutesEntry,
   MinutesEventType,
-  ConferencePhase,
-  type PointType,
-  type Point,
-  POINT_LABELS
+  ConferencePhase
 } from '$lib/types-conference'
+import type { PointType, Point } from '$lib/types-conference'
+import { POINT_LABELS } from '$lib/types-conference'
 import { bootstrapStore, saveToStore } from '../store-bridge'
 
 const STORAGE_KEY = 'veto_conferences'
@@ -117,6 +116,9 @@ export const currentConference = derived(
 /** 动议编辑草稿（实时同步到 Display） */
 export const motionDraft = writable<ConferenceDisplayData['motionDraft'] | null>(null)
 
+/** 问题编辑草稿（实时同步到 Display） */
+export const pointDraft = writable<ConferenceDisplayData['pointDraft'] | null>(null)
+
 // ---- 内部辅助 ----
 
 function updateCurrentConference(updater: (conf: Conference) => Conference): void {
@@ -173,6 +175,7 @@ export function createConference(
     motions: [],
     dismissedResolvedMotionIds: [],
     points: [],
+    dismissedPointIds: [],
     draftResolutions: [],
     votingSessions: [],
     minutes: [],
@@ -675,6 +678,19 @@ export function proposePoint(data: {
   )
 
   return id
+}
+
+/** 将最近一条问题标记为已结束，Display 端不再展示 */
+export function dismissLatestPoint(): void {
+  updateCurrentConference((c) => {
+    if (c.points.length === 0) return c
+    const lastPoint = c.points[c.points.length - 1]
+    if (c.dismissedPointIds.includes(lastPoint.id)) return c
+    return {
+      ...c,
+      dismissedPointIds: [...c.dismissedPointIds, lastPoint.id]
+    }
+  })
 }
 
 export function approveMotion(motionId: string): void {

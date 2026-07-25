@@ -238,6 +238,7 @@ export function buildDisplayData(
   extra?: {
     rollCall?: ConferenceDisplayData['rollCall']
     motionDraft?: ConferenceDisplayData['motionDraft']
+    pointDraft?: ConferenceDisplayData['pointDraft']
     speakerTransition?: 'timeout' | 'ended'
   }
 ): ConferenceDisplayData {
@@ -389,8 +390,12 @@ export function buildDisplayData(
         }
       : undefined,
     activePoint: (() => {
-      const latestPoint = conf.points.length > 0 ? conf.points[conf.points.length - 1] : undefined
+      const latestPoint = conf.points?.length > 0 ? conf.points[conf.points.length - 1] : undefined
       if (!latestPoint) return undefined
+      // 已被主席结束的问题不再展示
+      if (conf.dismissedPointIds?.includes(latestPoint.id)) return undefined
+      // 仅展示最近 8 秒内提出的问题
+      if (Date.now() - latestPoint.proposedAt > 8000) return undefined
       const pointDel = conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
       return {
         type: latestPoint.type,
@@ -429,6 +434,7 @@ export function buildDisplayData(
         }
       : undefined,
     rollCall: extra?.rollCall,
-    motionDraft: extra?.motionDraft
+    motionDraft: extra?.motionDraft,
+    pointDraft: extra?.pointDraft
   }
 }

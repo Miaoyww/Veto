@@ -48,6 +48,8 @@
       case 'resolution_passed':
       case 'resolution_failed':
         return FileText
+      case 'point_proposed':
+        return MessageSquare
       default:
         return Calendar
     }
@@ -61,6 +63,7 @@
     if (eventType.includes('phase') || eventType.includes('roll_call') || eventType.includes('created')) return 'text-purple-500'
     if (eventType.includes('suspended') || eventType.includes('closed')) return 'text-red-500'
     if (eventType.includes('resolution')) return 'text-rose-500'
+    if (eventType.includes('point')) return 'text-amber-500'
     return 'text-muted-foreground'
   }
 </script>

@@ -22,6 +22,7 @@
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
   import MotionDisplay from './motion/index.svelte'
+  import QuestionDisplay from './question/index.svelte'
   import CaucusSetupDisplay from './caucus-setup/index.svelte'
   import CaucusDisplay from './caucus/index.svelte'
 
@@ -142,7 +143,9 @@
     <!-- 中部：主展示区（phase 动态切换） -->
     <div class="flex flex-1 items-center justify-center overflow-hidden px-16">
       <div class="flex w-full max-w-5xl flex-col items-center">
-        {#if effectivePhase === 'motion'}
+        {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
+          <QuestionDisplay data={displayData} />
+        {:else if effectivePhase === 'motion'}
           <MotionDisplay data={displayData} />
         {:else if effectivePhase === 'roll_call'}
           <RollCallDisplay data={displayData} />

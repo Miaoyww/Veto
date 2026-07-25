@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute } from '$lib/router.svelte'
   import { VETO_NAME } from '$lib/const'
-  import { currentConference, loadConference, currentConferenceId, motionDraft, saveConferencesNow } from '$lib/stores/conference/conference-store'
+  import { currentConference, loadConference, currentConferenceId, motionDraft, pointDraft, saveConferencesNow } from '$lib/stores/conference/conference-store'
   import { destroyAllTimers } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import ConferenceSidebar from '$lib/components/conference/layout/conference-sidebar.svelte'
@@ -25,7 +25,10 @@
     const conf = $currentConference
     if (conf) {
       getDisplayBridge().sendUpdate(
-        buildDisplayData(conf, { motionDraft: $motionDraft ?? undefined })
+        buildDisplayData(conf, {
+          motionDraft: $motionDraft ?? undefined,
+          pointDraft: $pointDraft ?? undefined
+        })
       )
     }
   })

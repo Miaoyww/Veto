@@ -339,6 +339,8 @@ export interface Conference {
   dismissedResolvedMotionIds: string[]
   /** 所有问题（Point） */
   points: Point[]
+  /** 已被主席结束的问题 ID（结束后不再在 Display 展示） */
+  dismissedPointIds: string[]
   /** 决议草案 */
   draftResolutions: DraftResolution[]
   /** 投票记录 */
@@ -417,6 +419,14 @@ export interface MotionDraft {
   newTimeSec?: number
 }
 
+/** 问题编辑草稿 —— 实时同步到 Display 窗口 */
+export interface PointDraft {
+  /** 问题提出方代表团名称 */
+  proposedByName?: string
+  /** 问题类型 */
+  type?: PointType
+}
+
 export interface ConferenceDisplayData {
   conferenceId: string
   phase: ConferencePhase
@@ -424,6 +434,8 @@ export interface ConferenceDisplayData {
   name: string
   /** 动议编辑草稿（编辑中实时同步） */
   motionDraft?: MotionDraft
+  /** 问题编辑草稿（编辑中实时同步） */
+  pointDraft?: PointDraft
   currentSpeaker?: {
     delegationName: string
     shortName?: string

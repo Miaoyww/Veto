@@ -21,6 +21,7 @@
   import ConferencePage from './conference/[conference_id]/index.svelte'
   import ConferenceRollCallPage from './conference/[conference_id]/roll-call.svelte'
   import ConferenceMotionPage from './conference/[conference_id]/motion.svelte'
+  import ConferenceQuestionPage from './conference/[conference_id]/question.svelte'
   import ConferenceDisplayPage from './conference-display/[conference_id]/index.svelte'
 
   let selectedMode = $state<string | null>(null)
@@ -62,6 +63,8 @@
     <ConferenceRollCallPage />
   {:else if routeId === '/conference/[conference_id]/motion'}
     <ConferenceMotionPage />
+  {:else if routeId === '/conference/[conference_id]/question'}
+    <ConferenceQuestionPage />
   {:else if routeId === '/conference/[conference_id]'}
     <ConferencePage />
   {:else if routeId === '/conference-display/[conference_id]'}

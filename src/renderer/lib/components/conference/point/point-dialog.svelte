@@ -6,10 +6,12 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import {
     currentConference,
+    pointDraft,
     proposePoint
   } from '$lib/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/types-conference'
   import type { PointType } from '$lib/types-conference'
+  import { navigate } from '$lib/router.svelte'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
@@ -36,19 +38,20 @@
 
   // ---- Form state ----
   let selectedType = $state<PointType | null>(null)
-  let selectedProposerId = $state('')
+  let selectedProposerId = $state<string | null>(null)
 
   const isTimerActive = $derived(conf?.activeSpeaker != null)
-  const canPropose = $derived(selectedType !== null && selectedProposerId !== '')
+  const canPropose = $derived(selectedType !== null && selectedProposerId != null)
 
   function resetForm(): void {
-    selectedProposerId = ''
+    selectedProposerId = null
     selectedType = null
   }
 
   function handleOpenChange(value: boolean): void {
     if (!value) {
       resetForm()
+      pointDraft.set(null)
     }
     open = value
   }
@@ -64,8 +67,12 @@
       proposedByDelegationId: proposerId
     })
 
+    // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
+    navigate(`/conference/${conf.id}/question`)
+
     open = false
     resetForm()
+    pointDraft.set(null)
   }
 
   function isPointTypeDisabled(type: PointType): boolean {
@@ -77,6 +84,21 @@
     if (type === 'point_of_order') return ''
     return '发言进行中，仅程序性问题可打断发言。其他问题建议通过意向条传递'
   }
+
+  // 实时同步问题草稿到 Display
+  $effect(() => {
+    if (!open) {
+      pointDraft.set(null)
+      return
+    }
+    const proposerDel = selectedProposerId
+      ? conf?.delegations.find((d) => d.id === selectedProposerId)
+      : null
+    pointDraft.set({
+      proposedByName: proposerDel?.name,
+      type: selectedType ?? undefined
+    })
+  })
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
