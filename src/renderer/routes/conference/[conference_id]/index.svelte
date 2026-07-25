@@ -7,7 +7,6 @@
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import ConferenceSidebar from '$lib/components/conference/layout/conference-sidebar.svelte'
   import ConferenceWorkspace from '$lib/components/conference/layout/conference-workspace.svelte'
-  import MinutesPanel from '$lib/components/conference/layout/minutes-panel.svelte'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
 
@@ -44,7 +43,7 @@
   <title>{VETO_NAME} - 模拟大会</title>
 </svelte:head>
 
-<div class="flex h-[calc(100vh-2.25rem)] w-screen overflow-hidden">
+<div class="grid h-[calc(100vh-2.25rem)] w-screen grid-cols-[auto_1fr] overflow-hidden">
   <!-- LEFT: Delegation sidebar -->
   <ConferenceSidebar />
 

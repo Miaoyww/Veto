@@ -350,7 +350,7 @@
   })
 </script>
 
-<div class="flex w-full max-w-3xl flex-col gap-4">
+<div class="flex w-full flex-col gap-4">
   {#if conf}
     {#if isCaucus && isModerated}
       <!-- ═══ 有主持磋商头部 ═══ -->

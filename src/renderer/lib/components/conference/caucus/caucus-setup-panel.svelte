@@ -53,7 +53,7 @@
   }
 </script>
 
-<div class="flex w-full max-w-2xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   {#if conf && setup && motion}
     <!-- 动议信息摘要 -->
     <div
