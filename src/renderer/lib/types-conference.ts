@@ -82,6 +82,20 @@ export interface SpeakerEntry {
   yield?: YieldChoice
   /** 是否允许让渡（通过让渡获得时间的发言人不可再次让渡），默认 true */
   canYield?: boolean
+  /** 运行时引用 —— 不参与序列化，由引擎在反序列化时还原 */
+  delegation?: Delegation
+  /**
+   * @deprecated 过渡字段：使用 delegation.name 替代。
+   * 仅在未配置引擎的旧代码路径中使用。
+   */
+  delegationName?: string
+}
+
+/** 发言名单的 JSON 序列化格式 */
+export interface SpeakerListData {
+  id: string
+  name: string
+  entries: SpeakerEntry[]
 }
 
 // ---- 问题系统 ------------------------------------------------------------
@@ -347,7 +361,7 @@ export interface Conference {
   /** 议题列表 */
   agenda: AgendaItem[]
   /** 主发言名单 */
-  speakersList: SpeakerEntry[]
+  speakerLists?: SpeakerListData
   /** 所有动议 */
   motions: Motion[]
   /** 已被主席忽略的已决动议 ID（取消对话框后不再展示其结果） */
@@ -392,13 +406,8 @@ export interface Conference {
     elapsedSec: number
     /** 暂停时间戳（非空 = 已暂停，用于自由磋商暂停） */
     pausedAt?: number
-    /** 有主持磋商发言顺序（按发言列表顺序） */
-    caucusSpeakers?: Array<{
-      delegationId: string
-      delegationName: string
-      status: 'waiting' | 'ready' | 'speaking'
-      allocatedTimeSec: number
-    }>
+    /** 有主持磋商发言顺序（复用 SpeakerEntry，运行时 delegation 引用由引擎还原） */
+    caucusSpeakers?: SpeakerEntry[]
     /** 当前发言人在 caucusSpeakers 中的索引 */
     currentSpeakerIndex?: number
   } | null

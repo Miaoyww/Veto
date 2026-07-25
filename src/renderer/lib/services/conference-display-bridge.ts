@@ -227,14 +227,19 @@ export function setDisplayBridge(bridge: ConferenceDisplayBridge): void {
   currentBridge = bridge
 }
 
-// ---- 辅助：从 Conference 构建 DisplayData --------------------------------
+// ---- 辅助：从 Conference / ConferenceEngine 构建 DisplayData -----------------
 
 import type { Conference } from '$lib/types-conference'
 import { tallyVotes } from '$lib/stores/conference/conference-store'
 import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
+import type { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
 
+/**
+ * 构建 Display 窗口数据。
+ * 接受 ConferenceEngine（优先，可直接使用 delegation 引用）或 Conference JSON。
+ */
 export function buildDisplayData(
-  conf: Conference,
+  source: Conference | ConferenceEngine,
   extra?: {
     rollCall?: ConferenceDisplayData['rollCall']
     motionDraft?: ConferenceDisplayData['motionDraft']
@@ -242,25 +247,42 @@ export function buildDisplayData(
     speakerTransition?: 'timeout' | 'ended'
   }
 ): ConferenceDisplayData {
+  // 统一为 Conference JSON 格式
+  const conf: Conference = 'toJSON' in source ? source.toJSON() : source
+
+  // 如果传入的是引擎，则使用引擎方法获取 delegation 信息以优化查找
+  const engine: ConferenceEngine | null = 'toJSON' in source ? source : null
+  // 辅助：按 delegationId 获取代表团名称
+  const getDelName = (delegationId: string): string | undefined =>
+    engine?.getDelegation(delegationId)?.name ??
+    conf.delegations.find((d) => d.id === delegationId)?.name
+
   // 当前发言人
   let currentSpeakerName: string | undefined
   let currentSpeakerAllocatedSec = 120
 
   if (conf.activeSpeaker) {
-    // 先检查主发言名单
-    const entry = conf.speakersList.find((s) => s.id === conf.activeSpeaker!.entryId)
-    if (entry) {
-      const del = conf.delegations.find((d) => d.id === entry.delegationId)
-      currentSpeakerName = del?.name ?? entry.delegationId
-      currentSpeakerAllocatedSec = entry.allocatedTimeSec
-    } else if (conf.activeCaucus?.caucusSpeakers) {
-      // 在磋商发言名单中查找
-      const cs = conf.activeCaucus.caucusSpeakers.find(
-        (s) => s.delegationId === conf.activeSpeaker!.entryId && s.status === 'speaking'
-      )
-      if (cs) {
-        currentSpeakerName = cs.delegationName
-        currentSpeakerAllocatedSec = cs.allocatedTimeSec
+    // 优先从引擎获取（带 delegation 引用）
+    const engineEntry = engine?.speakerList.entries.find(
+      (s) => s.id === conf.activeSpeaker!.entryId
+    )
+    if (engineEntry) {
+      currentSpeakerName = engineEntry.delegation?.name ?? engineEntry.delegationId
+      currentSpeakerAllocatedSec = engineEntry.allocatedTimeSec
+    } else {
+      // 回退：从 conf 数据查找
+      const entry = conf.speakerLists?.entries.find((s) => s.id === conf.activeSpeaker!.entryId)
+      if (entry) {
+        currentSpeakerName = getDelName(entry.delegationId) ?? entry.delegationId
+        currentSpeakerAllocatedSec = entry.allocatedTimeSec
+      } else if (conf.activeCaucus?.caucusSpeakers) {
+        const cs = conf.activeCaucus.caucusSpeakers.find(
+          (s) => s.delegationId === conf.activeSpeaker!.entryId && s.status === 'speaking'
+        )
+        if (cs) {
+          currentSpeakerName = (cs as any).delegationName ?? getDelName(cs.delegationId) ?? cs.delegationId
+          currentSpeakerAllocatedSec = cs.allocatedTimeSec
+        }
       }
     }
   }
@@ -308,7 +330,8 @@ export function buildDisplayData(
   // 当前动议
   const pendingMotion = conf.motions.find((m) => m.status === 'pending')
   const pendingMotionDel = pendingMotion
-    ? conf.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId)
+    ? (engine?.getDelegation(pendingMotion.proposedByDelegationId) ??
+       conf.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId))
     : null
 
   // 最近被处理的动议（通过/否决），用于 Display 展示表决结果
@@ -326,7 +349,8 @@ export function buildDisplayData(
   const displayMotion = pendingMotion ?? (!hasActiveMotionPhase ? lastResolvedMotion : undefined)
   const displayMotionDel =
     displayMotion && displayMotion !== pendingMotion
-      ? conf.delegations.find((d) => d.id === displayMotion.proposedByDelegationId)
+      ? (engine?.getDelegation(displayMotion.proposedByDelegationId) ??
+         conf.delegations.find((d) => d.id === displayMotion.proposedByDelegationId))
       : pendingMotionDel
 
   // 磋商计时
@@ -378,19 +402,37 @@ export function buildDisplayData(
       }
     })(),
     readySpeaker: (() => {
-      const ready = conf.speakersList.find((s) => s.status === 'ready')
+      // 优先从引擎获取（带 delegation 引用）
+      const engineReady = engine?.readySpeaker
+      if (engineReady) {
+        const name = engineReady.delegation?.name ?? engineReady.delegationId
+        return { delegationName: name, shortName: engineReady.delegation?.shortName }
+      }
+      // 回退：从 conf 数据查找
+      const ready = conf.speakerLists?.entries.find((s) => s.status === 'ready')
       if (!ready) return undefined
       const d = conf.delegations.find((del) => del.id === ready.delegationId)
       return d ? { delegationName: d.name, shortName: d.shortName } : undefined
     })(),
-    speakersList: conf.speakersList.map((s) => {
-      const d = conf.delegations.find((del) => del.id === s.delegationId)
-      return {
-        delegationName: d?.name ?? s.delegationId,
-        shortName: d?.shortName,
-        status: s.status
+    speakersList: (() => {
+      // 优先从引擎获取
+      if (engine) {
+        return engine.speakerList.entries.map((s) => ({
+          delegationName: s.delegation?.name ?? s.delegationId,
+          shortName: s.delegation?.shortName,
+          status: s.status
+        }))
       }
-    }),
+      // 回退：从 conf 数据查找
+      return (conf.speakerLists?.entries ?? []).map((s) => {
+        const d = conf.delegations.find((del) => del.id === s.delegationId)
+        return {
+          delegationName: d?.name ?? s.delegationId,
+          shortName: d?.shortName,
+          status: s.status
+        }
+      })
+    })(),
     votingSession: votingData,
     activeMotion: displayMotion
       ? {
@@ -422,11 +464,10 @@ export function buildDisplayData(
     activePoint: (() => {
       const latestPoint = conf.points?.length > 0 ? conf.points[conf.points.length - 1] : undefined
       if (!latestPoint) return undefined
-      // 已被主席结束的问题不再展示
       if (conf.dismissedPointIds?.includes(latestPoint.id)) return undefined
-      // 仅展示最近 8 秒内提出的问题
       if (Date.now() - latestPoint.proposedAt > 8000) return undefined
-      const pointDel = conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
+      const pointDel = engine?.getDelegation(latestPoint.proposedByDelegationId) ??
+        conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
       return {
         type: latestPoint.type,
         proposedByName: pointDel?.name ?? latestPoint.proposedByDelegationId,
@@ -438,14 +479,16 @@ export function buildDisplayData(
       ? (() => {
           const csMotion = conf.motions.find((m) => m.id === conf.caucusSetup!.motionId) as any
           const proposerId = csMotion?.proposedByDelegationId
-          const proposerDel = proposerId ? conf.delegations.find((d) => d.id === proposerId) : null
+          const proposerDel = proposerId
+            ? (engine?.getDelegation(proposerId) ?? conf.delegations.find((d) => d.id === proposerId))
+            : null
           return {
           topic: csMotion?.topic,
           proposerName: proposerDel?.name,
           proposerPosition: conf.caucusSetup!.proposerPosition,
           speakerDelegationIds: conf.caucusSetup!.speakerDelegationIds,
           speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
-            (id) => conf.delegations.find((d) => d.id === id)?.name ?? id
+            (id) => engine?.getDelegation(id)?.name ?? conf.delegations.find((d) => d.id === id)?.name ?? id
           )
         }
       })()

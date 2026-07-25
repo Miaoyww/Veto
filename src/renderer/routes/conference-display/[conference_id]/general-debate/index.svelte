@@ -149,5 +149,7 @@
   </div>
 {:else}
   {@const waiting = data.speakersList.filter((s: { status: string }) => s.status === 'waiting')}
+  {console.log('data.speakersList:', data.speakersList)}
+  {console.log('waiting:', waiting)}
   <SpeakerQueueDisplay speakers={waiting} max={4} />
 {/if}

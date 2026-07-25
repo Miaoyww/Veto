@@ -51,7 +51,7 @@
 
   // ── 发言队列数据（按 mode 取不同数据源）──────────────────────────
   const rawSpeakers = $derived(
-    mode === 'general_debate' ? (conf?.speakersList ?? []) : (activeCaucus?.caucusSpeakers ?? [])
+    mode === 'general_debate' ? (conf?.speakerLists?.entries ?? []) : (activeCaucus?.caucusSpeakers ?? [])
   )
 
   // 统一格式：id, delegationName, status, allocatedTimeSec
@@ -95,7 +95,7 @@
   const activeSpeakerCanYield = $derived.by(() => {
     if (isCaucus) return false // 磋商暂不支持让渡
     if (!conf?.activeSpeaker) return false
-    const entry = conf.speakersList.find((s: any) => s.id === conf.activeSpeaker!.entryId)
+    const entry = conf.speakerLists?.entries.find((s: any) => s.id === conf.activeSpeaker!.entryId)
     return entry?.canYield !== false
   })
 
@@ -126,7 +126,7 @@
 
   // ── DelegationSelector 相关（general_debate only）───────────────
   const listedDelegationIds = $derived(
-    mode === 'general_debate' ? (conf?.speakersList.map((s: any) => s.delegationId) ?? []) : []
+    mode === 'general_debate' ? (conf?.speakerLists?.entries.map((s: any) => s.delegationId) ?? []) : []
   )
 
   // ── 统一 sync helper ───────────────────────────────────────────
@@ -262,7 +262,7 @@
   }
 
   function beginSpeaking(entryId: string): void {
-    const entry = conf?.speakersList.find((s: any) => s.id === entryId)
+    const entry = conf?.speakerLists?.entries.find((s: any) => s.id === entryId)
     if (!entry) return
     startSpeaker(entryId)
     isPaused = false

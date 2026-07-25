@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: miaoyww.veto.app
 productName: veto
 directories:
   buildResources: build
