@@ -138,6 +138,7 @@ export interface MotionResolution {
 export function resolveMotion(motionType: MotionType): MotionResolution {
   switch (motionType) {
     // 需要简单多数表决
+    case 'open_speakers_list':
     case 'moderated_caucus':
     case 'unmoderated_caucus':
     case 'modify_speaking_time':
@@ -155,10 +156,6 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     // 实质性投票：动议本身自动通过，直接进入唱名表决
     case 'substantive_vote':
       return { requiresVoting: false, votingMajority: 'two_thirds', autoApprove: true }
-
-    // 无需表决，自动通过
-    case 'open_speakers_list':
-      return { requiresVoting: false, votingMajority: 'simple_majority', autoApprove: true }
 
     default:
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
