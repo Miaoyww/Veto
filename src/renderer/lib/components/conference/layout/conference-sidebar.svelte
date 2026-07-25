@@ -1,9 +1,7 @@
 <script lang="ts">
   import { Users, Gavel, Building2, ArrowLeft } from '@lucide/svelte'
   import { navigate } from '$lib/router.svelte'
-  import {
-    currentConference
-  } from '$lib/stores/conference/conference-store'
+  import { currentConference } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { Button } from '$lib/components/ui/button'
   import { cn } from '$lib/utils.js'
@@ -11,11 +9,8 @@
   const conf = $derived($currentConference)
 
   const presentCount = $derived(
-    conf?.delegations.filter(
-      (d) => d.attendance === 'present'
-    ).length ?? 0
+    conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0
   )
-
 </script>
 
 <aside class="flex h-full w-[260px] shrink-0 flex-col border-r bg-muted/30">
@@ -37,20 +32,8 @@
     <div class="px-5 pt-2 pb-3">
       <h1 class="text-base font-bold leading-tight text-foreground">{conf.name}</h1>
       <div class="mt-2 flex flex-wrap items-center gap-1.5">
-        <span class="inline-flex items-center gap-1 rounded-md bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-          <Building2 size={10} />
+        <span class="inline-flex items-center gap-1 py-0.5 text-[11px] font-medium">
           {conf.venue}
-        </span>
-      </div>
-    </div>
-
-    <!-- 阶段指示器 -->
-    <div class="mx-3 mb-3">
-      <div class="flex items-center gap-2 rounded-md bg-card px-3 py-2">
-        <Gavel size={14} class="text-muted-foreground" />
-        <span class="text-xs text-muted-foreground">当前阶段</span>
-        <span class="ml-auto text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-          {PHASE_LABELS[conf.phase] ?? conf.phase}
         </span>
       </div>
     </div>
@@ -89,11 +72,9 @@
         {/each}
       </div>
     </div>
-
   {:else}
     <div class="flex flex-1 items-center justify-center px-5 text-center">
       <p class="text-sm text-muted-foreground">未加载大会</p>
     </div>
   {/if}
 </aside>
-
