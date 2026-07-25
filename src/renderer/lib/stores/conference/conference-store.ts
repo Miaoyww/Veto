@@ -244,9 +244,9 @@ export function completeRollCall(): void {
       'roll_call_completed',
       `点名完成: 实到 ${presentCount}/${c.delegations.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
     )
-    addMinutesEntry('phase_changed', `进入阶段: 一般性辩论`)
+    addMinutesEntry('phase_changed', `进入阶段: 等待开启主发言名单`)
 
-    return { ...c, phase: 'general_debate' }
+    return { ...c, phase: 'pending_speakers_list' }
   })
 }
 
@@ -742,6 +742,21 @@ function executeMotionAction(motion: Motion): void {
   if (!conf) return
 
   switch (motion.type) {
+    case 'open_speakers_list':
+      updateCurrentConference((c) => {
+        const now = Date.now()
+        // 如果从投票阶段退出，结束所有进行中的投票会话
+        const endedSessions = c.votingSessions.map((s) =>
+          !s.endedAt ? { ...s, endedAt: now } : s
+        )
+        return {
+          ...c,
+          phase: 'general_debate',
+          votingSessions: endedSessions
+        }
+      })
+      addMinutesEntry('phase_changed', `进入阶段: 一般性辩论（主发言名单已开启）`)
+      break
     case 'moderated_caucus': {
       // 若当前有发言人且未让渡 → 强制结束发言（剩余时间作废）
       if (conf.activeSpeaker) {
@@ -1542,10 +1557,10 @@ export function suspendMeeting(): void {
 export function resumeMeeting(): void {
   updateCurrentConference((c) => ({
     ...c,
-    phase: 'general_debate'
+    phase: 'pending_speakers_list'
   }))
   addMinutesEntry('meeting_resumed', `会议恢复`)
-  addMinutesEntry('phase_changed', `进入阶段: 一般性辩论`)
+  addMinutesEntry('phase_changed', `进入阶段: 等待开启主发言名单`)
 }
 
 export function closeMeeting(): void {

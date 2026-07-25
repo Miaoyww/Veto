@@ -7,6 +7,7 @@
 export type ConferencePhase =
   | 'preamble' // 刚创建，尚未开始点名
   | 'roll_call' // 点名
+  | 'pending_speakers_list' // 等待开启主发言名单（点名结束 / 休会恢复后）
   | 'general_debate' // 一般性辩论（主发言名单阶段）
   | 'caucus' // 磋商中（有主持或自由磋商）
   | 'voting' // 投票表决中

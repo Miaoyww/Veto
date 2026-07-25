@@ -46,6 +46,7 @@ export function transitionPhase(
 export const PHASE_LABELS: Record<ConferencePhase, string> = {
   preamble: '会前准备',
   roll_call: '点名',
+  pending_speakers_list: '等待开启主发言名单',
   general_debate: '一般性辩论',
   caucus: '磋商',
   voting: '投票表决',

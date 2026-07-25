@@ -38,6 +38,7 @@
   function handlePrimaryAction(): void {
     if (!conf) return
     switch (conf.phase) {
+      case 'pending_speakers_list':
       case 'general_debate':
       case 'caucus':
       case 'caucus_setup':
@@ -52,6 +53,8 @@
   const primaryActionLabel = $derived.by(() => {
     if (!conf) return ''
     switch (conf.phase) {
+      case 'pending_speakers_list':
+        return '动议与程序'
       case 'general_debate':
         return '动议与程序'
       case 'caucus':
@@ -155,6 +158,16 @@
             <Play size={18} />
             进入点名页面
           </Button>
+        </div>
+      {:else if conf.phase === 'pending_speakers_list'}
+        <div class="flex flex-col items-center gap-6 text-center">
+          <div class="flex flex-col items-center gap-2">
+            <Users size={48} class="opacity-30" />
+            <h2 class="text-xl font-bold text-foreground">等待开启主发言名单</h2>
+            <p class="text-sm text-muted-foreground">
+              点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论
+            </p>
+          </div>
         </div>
       {:else if conf.phase === 'general_debate'}
         <SpeakerQueue mode="general_debate" />

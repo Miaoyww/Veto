@@ -31,8 +31,20 @@
   // 常用动议列表——根据当前阶段动态调整
   const motionTypes = $derived.by((): MotionType[] => {
     if (conf?.phase === 'voting') {
-      // 结束辩论后：只能进行实质性投票或休会/闭幕
-      return ['substantive_vote', 'suspend_meeting', 'close_meeting']
+      // 结束辩论后：可进行实质性投票、开启主发言名单（退出投票阶段）、休会/闭幕
+      return ['substantive_vote', 'open_speakers_list', 'suspend_meeting', 'close_meeting']
+    }
+    if (conf?.phase === 'pending_speakers_list') {
+      // 等待开启主发言名单：首要动议为开启主发言名单
+      return [
+        'open_speakers_list',
+        'moderated_caucus',
+        'unmoderated_caucus',
+        'modify_speaking_time',
+        'closure_debate',
+        'suspend_meeting',
+        'close_meeting'
+      ]
     }
     return [
       'open_speakers_list',

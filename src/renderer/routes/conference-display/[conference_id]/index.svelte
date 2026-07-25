@@ -11,7 +11,7 @@
    * 4. 底部近期记录
    */
   import { onMount, onDestroy } from 'svelte'
-  import { Gavel, Vote, Coffee, Timer } from '@lucide/svelte'
+  import { Gavel, Vote, Coffee, Timer, Users } from '@lucide/svelte'
   import { getDisplayBridge, onConnectionStatus, setExternalWsUrl } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
@@ -218,6 +218,14 @@
                   : '✗ 未通过  REJECTED'}
               </div>
             {/if}
+          </div>
+        {:else if effectivePhase === 'pending_speakers_list'}
+          <!-- 等待开启主发言名单 -->
+          <div class="flex flex-col items-center gap-6 text-white/15">
+            <Users size={56} />
+            <div class="text-8xl font-light tracking-[0.06em]">等待开启</div>
+            <div class="text-9xl font-light tracking-[0.06em]">主发言名单</div>
+            <div class="text-lg tracking-wider text-white/10">AWAITING SPEAKERS LIST</div>
           </div>
         {:else if effectivePhase === 'suspended'}
           <!-- 休会 -->
