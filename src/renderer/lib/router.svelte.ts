@@ -117,4 +117,5 @@ function refreshRoute(): void {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('popstate', refreshRoute)
+  window.addEventListener('hashchange', refreshRoute)
 }
