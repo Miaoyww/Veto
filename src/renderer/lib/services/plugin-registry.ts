@@ -141,9 +141,12 @@ export async function processModPackage(
 	zip: JSZip,
 	manifest: PluginManifest
 ): Promise<InstalledPlugin> {
+	const type = manifest.type
+	const isDataMod = type === 'faction' || type === 'scenario' || type === 'ruleset' || type === 'campaign'
+
 	// 1. 读取 definitions
 	let definitions: string | null = null;
-	if (manifest.type === 'faction' || manifest.type === 'campaign') {
+	if (isDataMod) {
 		definitions = await buildStructuredModData(zip, manifest);
 	} else if (manifest.definitions) {
 		const defPath =
@@ -164,7 +167,7 @@ export async function processModPackage(
 			if (f) i18nRecord[locale] = await f.async('string');
 		}
 	}
-	if (manifest.type === 'faction' || manifest.type === 'campaign') {
+	if (isDataMod) {
 		const i18nFiles = zip.filter(
 			(path, f) =>
 				!f.dir &&

@@ -6,7 +6,53 @@
  */
 import type { PluginStorage } from './plugin-storage'
 import { onPluginListChanged as notifyChanged } from './plugin-storage'
-import type { InstalledPlugin, ModAsset } from '../plugin-db'
+import type { InstalledPlugin, PluginManifest, PluginDetail, ModAsset } from '../plugin-db'
+
+/** veto:plugins:list 返回的条目 */
+interface PluginListItem {
+  id: string
+  name: string
+  version: string
+  author: string
+  type: PluginManifest['type']
+  description?: string
+  disabled: boolean
+  incompatible: boolean
+  dependencies?: string[]
+  injects?: { formulas?: string; events?: string; ui?: string }
+  hasDefinitions: boolean
+  hasI18n: boolean
+  hasAssets: boolean
+  hasDelegations: boolean
+}
+
+/** 判断给定类型的插件是否需要 definitions */
+function typeNeedsDefinitions(type: PluginManifest['type']): boolean {
+  return type === 'faction' || type === 'scenario' || type === 'ruleset' || type === 'campaign'
+}
+
+/** 判断插件是否值得加载（有对应类型的数据） */
+function shouldLoadPlugin(item: PluginListItem): boolean {
+  if (typeNeedsDefinitions(item.type)) {
+    return item.hasDefinitions || item.hasI18n
+  }
+  // utility / dependency：有 delegations 即可（会议集成）
+  return item.hasDelegations
+}
+
+/** 将 IPC 返回的 detail 转换为 InstalledPlugin */
+function detailToPlugin(data: PluginDetail): InstalledPlugin {
+  return {
+    id: data.manifest.id,
+    manifest: data.manifest,
+    definitions: data.definitions,
+    i18n: data.i18n ?? {},
+    assetKeys: [],
+    installedAt: 0,
+    campaignFiles: data.campaignFiles,
+    delegations: data.delegations
+  }
+}
 
 /**
  * IPC 文件系统存储实现
@@ -18,15 +64,14 @@ export class IpcPluginStorage implements PluginStorage {
   // ─── Plugin 元数据存储 ──────────────────────────────────────────────
 
   async savePlugin(plugin: InstalledPlugin): Promise<void> {
-    // 资源文件已在 installPlugin 中批量发送，此处仅作元数据更新
-    // 如果只是更新元数据（不涉及资源），构造轻量 payload
     const assets: Array<{ path: string; data: string; mimeType: string }> = []
 
     const result = await window.veto.plugins.install({
       manifest: plugin.manifest as unknown as Record<string, unknown>,
       definitions: plugin.definitions,
       i18n: plugin.i18n,
-      assets
+      assets,
+      delegations: plugin.delegations
     })
 
     if (!result.success) {
@@ -37,45 +82,30 @@ export class IpcPluginStorage implements PluginStorage {
   }
 
   async getPlugin(id: string): Promise<InstalledPlugin | undefined> {
-    const data = await window.veto.plugins.get(id)
+    const data = (await window.veto.plugins.get(id)) as PluginDetail | null
     if (!data) return undefined
-
-    return {
-      id: data.manifest.id as string,
-      manifest: data.manifest as InstalledPlugin['manifest'],
-      definitions: data.definitions,
-      i18n: data.i18n ?? {},
-      assetKeys: [],
-      installedAt: 0, // 主进程不追踪此字段
-      campaignFiles: data.campaignFiles as Record<string, string> | undefined,
-      delegations: (data as Record<string, unknown>).delegations as string | null | undefined
-    }
+    return detailToPlugin(data)
   }
 
   async getAllPlugins(): Promise<InstalledPlugin[]> {
-    const list = await window.veto.plugins.list()
+    const list = (await window.veto.plugins.list()) as PluginListItem[]
     const plugins: InstalledPlugin[] = []
 
     for (const item of list) {
-      if (item.disabled) continue
-      // 需要 definitions、delegations 或 i18n 中至少有一项
-      if (!(item as any).hasDefinitions && !(item as any).hasDelegations && !(item as any).hasI18n) continue
+      if (item.disabled || !shouldLoadPlugin(item)) continue
 
-      const detail = await window.veto.plugins.get(item.id)
-      // 有 definitions 或 delegations 即视为有效
-      const hasContent = detail?.definitions || (detail as any)?.delegations
+      const data = (await window.veto.plugins.get(item.id)) as PluginDetail | null
+      if (!data) continue
+
+      // 按类型验证数据完整性
+      const type = data.manifest.type
+      const hasContent =
+        typeNeedsDefinitions(type)
+          ? !!data.definitions
+          : !!data.delegations
 
       if (hasContent) {
-        plugins.push({
-          id: item.id,
-          manifest: detail.manifest as InstalledPlugin['manifest'],
-          definitions: detail.definitions,
-          i18n: detail.i18n ?? {},
-          assetKeys: [],
-          installedAt: 0,
-          campaignFiles: detail.campaignFiles as Record<string, string> | undefined,
-          delegations: (detail as Record<string, unknown>).delegations as string | null | undefined
-        })
+        plugins.push(detailToPlugin(data))
       }
     }
 
@@ -88,7 +118,7 @@ export class IpcPluginStorage implements PluginStorage {
   }
 
   async isInstalled(id: string): Promise<boolean> {
-    const list = await window.veto.plugins.list()
+    const list = (await window.veto.plugins.list()) as PluginListItem[]
     return list.some((p) => p.id === id)
   }
 
@@ -99,7 +129,6 @@ export class IpcPluginStorage implements PluginStorage {
   }
 
   async getAsset(key: string): Promise<ModAsset | undefined> {
-    // key 格式："{pluginId}/{assetPath}"
     const parts = key.split('/')
     const pluginId = parts[0]!
     const assetPath = parts.slice(1).join('/')
@@ -107,7 +136,6 @@ export class IpcPluginStorage implements PluginStorage {
     const result = await window.veto.assets.get(pluginId, assetPath)
     if (!result) return undefined
 
-    // 将 base64 转回 Blob
     const binaryStr = atob(result.data)
     const bytes = new Uint8Array(binaryStr.length)
     for (let i = 0; i < binaryStr.length; i++) {
@@ -129,7 +157,6 @@ export class IpcPluginStorage implements PluginStorage {
     const result = await window.veto.assets.get(pluginId, assetPath)
     if (!result) return null
 
-    // base64 → blob URL
     const binaryStr = atob(result.data)
     const bytes = new Uint8Array(binaryStr.length)
     for (let i = 0; i < binaryStr.length; i++) {

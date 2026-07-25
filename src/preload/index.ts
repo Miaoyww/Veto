@@ -32,9 +32,18 @@ const veto = {
       }>
     > => ipcRenderer.invoke('veto:plugins:list'),
 
-    /** 获取插件详情（含 definitions 内容） */
-    get: (pluginId: string): Promise<unknown> =>
-      ipcRenderer.invoke('veto:plugins:get', pluginId),
+    /** 获取插件详情（含 definitions / delegations 等内容） */
+    get: (
+      pluginId: string
+    ): Promise<{
+      manifest: Record<string, unknown>
+      definitions: string | null
+      i18n: Record<string, string>
+      campaignFiles?: Record<string, string>
+      delegations?: string | null
+      disabled: boolean
+      incompatible: boolean
+    } | null> => ipcRenderer.invoke('veto:plugins:get', pluginId),
 
     /** 启用/禁用插件 */
     toggle: (pluginId: string, enabled: boolean): Promise<{ success: boolean }> =>

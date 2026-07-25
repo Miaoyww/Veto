@@ -127,11 +127,16 @@ function registerIpcHandlers(): void {
     const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
     if (!plugin) return null
 
+    const type = plugin.manifest.type
+
+    // ── 按插件类型分流读取 ──────────────────────────────────────────
+    const needsDefinitions =
+      type === 'faction' || type === 'scenario' || type === 'ruleset' || type === 'campaign'
+
     let definitions: string | null = null
-    if (plugin.path.definitions) {
+    if (needsDefinitions && plugin.path.definitions) {
       try {
         if (plugin.path.definitionsIsDir) {
-          // 目录模式：扫描所有 JSON 文件并合并
           const files = fs
             .readdirSync(plugin.path.definitions)
             .filter((f) => f.endsWith('.json'))
@@ -159,9 +164,9 @@ function registerIpcHandlers(): void {
       }
     }
 
-    // 读取 i18n 文件
+    // i18n：faction / scenario / ruleset / campaign 类型
     const i18n: Record<string, string> = {}
-    if (plugin.path.i18n && fs.existsSync(plugin.path.i18n)) {
+    if (needsDefinitions && plugin.path.i18n && fs.existsSync(plugin.path.i18n)) {
       try {
         const i18nFiles = fs.readdirSync(plugin.path.i18n)
         for (const file of i18nFiles) {
@@ -175,21 +180,23 @@ function registerIpcHandlers(): void {
       }
     }
 
-    // 读取战役资源文件
+    // 战役资源文件：仅 campaign 类型
     const campaignFiles: Record<string, string> = {}
-    const campaignKeys = ['mapConfig', 'deployments', 'facilities', 'events'] as const
-    for (const key of campaignKeys) {
-      const filePath = plugin.path[key]
-      if (filePath && fs.existsSync(filePath)) {
-        try {
-          campaignFiles[key] = fs.readFileSync(filePath, 'utf-8')
-        } catch {
-          /* ignore */
+    if (type === 'campaign') {
+      const campaignKeys = ['mapConfig', 'deployments', 'facilities', 'events'] as const
+      for (const key of campaignKeys) {
+        const filePath = plugin.path[key]
+        if (filePath && fs.existsSync(filePath)) {
+          try {
+            campaignFiles[key] = fs.readFileSync(filePath, 'utf-8')
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
 
-    // 读取代表团预设文件
+    // 代表团预设：任何类型都可以提供（会议集成）
     let delegations: string | null = null
     if (plugin.path.delegations && fs.existsSync(plugin.path.delegations)) {
       try {

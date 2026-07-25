@@ -88,8 +88,23 @@ export interface InstalledPlugin {
   installedAt: number
   /** 战役资源文件内容（type='campaign' 时有效） */
   campaignFiles?: Record<string, string>
-  /** 代表团预设 JSON 字符串 */
+  /** 代表团预设 JSON 字符串（任何类型都可提供） */
   delegations?: string | null
+}
+
+/**
+ * veto:plugins:get IPC 返回的插件详情。
+ * 与 InstalledPlugin 对应，但不含 assetKeys / installedAt（主进程不追踪）。
+ * 增加 disabled / incompatible 状态字段。
+ */
+export interface PluginDetail {
+  manifest: PluginManifest
+  definitions: string | null
+  i18n: Record<string, string>
+  campaignFiles?: Record<string, string>
+  delegations?: string | null
+  disabled: boolean
+  incompatible: boolean
 }
 
 /** dist/registry.json 中每个条目的结构（manifest 字段 + 注册中心元数据） */
