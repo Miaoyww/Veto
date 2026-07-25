@@ -167,6 +167,10 @@ const veto = {
     sendToDisplay: (data: unknown): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('veto:conference:send-to-display', data),
 
+    /** 切换 Display 窗口全屏 */
+    toggleFullscreen: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:conference:toggle-fullscreen'),
+
     /** 监听来自主机的数据更新（显示窗口侧使用） */
     onDisplayUpdate: (callback: (data: unknown) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: unknown) => {

@@ -12,6 +12,7 @@
    */
   import { onMount, onDestroy } from 'svelte'
   import { Gavel, Vote, Coffee, Timer, Users } from '@lucide/svelte'
+  import TitleBar from '$lib/components/titlebar.svelte'
   import { getDisplayBridge, onConnectionStatus, setExternalWsUrl } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
@@ -29,6 +30,11 @@
 
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
+  let isFullScreen = $state(false)
+
+  function toggleFullscreen(): void {
+    window.veto?.conference?.toggleFullscreen?.()
+  }
 
   onMount(() => {
     const bridge = getDisplayBridge()
@@ -41,18 +47,29 @@
       connectionStatus = status
     })
 
-    // 监听来自主进程的 WS 配置消息（仅展示模式）
+    // 监听来自主进程的 Display 更新（全屏状态变更等）
     const unsubDisplayUpdate = window.veto?.conference?.onDisplayUpdate?.((data: unknown) => {
-      const msg = data as { type?: string; wsUrl?: string }
+      const msg = data as { type?: string; wsUrl?: string; isFullScreen?: boolean }
       if (msg.type === 'ws-config' && msg.wsUrl) {
         setExternalWsUrl(msg.wsUrl)
+      } else if (msg.type === 'fullscreen-change') {
+        isFullScreen = msg.isFullScreen ?? false
       }
     })
+
+    // 监听 Escape 键退出全屏（仅 Display 窗口）
+    function onKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && isFullScreen) {
+        toggleFullscreen()
+      }
+    }
+    window.addEventListener('keydown', onKeydown)
 
     return () => {
       unsubData()
       unsubStatus()
       unsubDisplayUpdate?.()
+      window.removeEventListener('keydown', onKeydown)
     }
   })
 
@@ -134,12 +151,23 @@
       color: #c8ccd4;
       overflow: hidden;
     }
+    .drag-region {
+      -webkit-app-region: drag;
+    }
+    .no-drag {
+      -webkit-app-region: no-drag;
+    }
   </style>
 </svelte:head>
 
 <div class="flex h-screen w-screen flex-col bg-[#0a0e14] text-[#c8ccd4]">
+  {#if !isFullScreen}
+    <TitleBar variant="display" onToggleFullscreen={toggleFullscreen} />
+  {/if}
+
   {#if displayData}
     <!-- 顶部横幅：大会信息 -->
+    {#if !isFullScreen}
     <div class="relative flex items-center gap-8 border-b border-white/10 px-16 py-7">
       <div class="flex items-center gap-5">
         <div>
@@ -171,6 +199,7 @@
         </div>
       </div>
     </div>
+    {/if}
 
     <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
     {#if attendanceChange}
@@ -296,7 +325,7 @@
     </div>
 
     <!-- 底部：近期记录 -->
-      {#if displayData.recentMinutes.length > 0}
+      {#if !isFullScreen && displayData.recentMinutes.length > 0}
         <div class="border-t border-white/5 px-16 py-4">
           <div class="flex items-center gap-8 text-sm">
             <span class="text-xs font-medium tracking-[0.08em] text-white/15 uppercase">近期记录</span

@@ -490,6 +490,19 @@ function registerIpcHandlers(): void {
         displayWindow!.show()
       })
 
+      displayWindow.on('enter-full-screen', () => {
+        displayWindow?.webContents.send('veto:conference:display-update', {
+          type: 'fullscreen-change',
+          isFullScreen: true
+        })
+      })
+      displayWindow.on('leave-full-screen', () => {
+        displayWindow?.webContents.send('veto:conference:display-update', {
+          type: 'fullscreen-change',
+          isFullScreen: false
+        })
+      })
+
       displayWindow.on('closed', () => {
         displayWindow = null
       })
@@ -537,6 +550,14 @@ function registerIpcHandlers(): void {
       displayWindow.webContents.send('veto:conference:display-update', data)
     }
     return { success: true }
+  })
+
+  ipcMain.handle('veto:conference:toggle-fullscreen', () => {
+    if (displayWindow && !displayWindow.isDestroyed()) {
+      displayWindow.setFullScreen(!displayWindow.isFullScreen())
+      return { success: true, isFullScreen: displayWindow.isFullScreen() }
+    }
+    return { success: false }
   })
 
   // ── 资源文件 ──────────────────────────────────────────────────────

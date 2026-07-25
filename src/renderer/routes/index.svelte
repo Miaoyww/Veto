@@ -51,12 +51,14 @@
   <link rel="icon" type="image/x-icon" href={logo} />
 </svelte:head>
 
-<TitleBar />
+{#if routeId !== '/conference-display/[conference_id]'}
+  <TitleBar />
+{/if}
 <ModeWatcher />
 <MyAlertDialog />
 <SettingsDialog />
 
-<div class="pt-9">
+<div class={routeId === '/conference-display/[conference_id]' ? '' : 'pt-9'}>
   {#if routeId === '/battle/[battle_id]'}
     <BattlePage />
   {:else if routeId === '/conference/[conference_id]/roll-call'}
