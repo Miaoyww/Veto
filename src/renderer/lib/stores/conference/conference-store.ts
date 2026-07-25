@@ -224,7 +224,7 @@ export function getConferenceById(id: string): Conference | null {
 
 export function setAttendance(
   delegationId: string,
-  attendance: 'present' | 'absent' | 'present_and_voting'
+  attendance: 'present' | 'absent'
 ): void {
   updateCurrentConference((c) => ({
     ...c,
@@ -235,7 +235,7 @@ export function setAttendance(
 export function completeRollCall(): void {
   updateCurrentConference((c) => {
     const presentCount = c.delegations.filter(
-      (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
+      (d) => d.attendance === 'present'
     ).length
     const simpleMajority = Math.floor(presentCount / 2) + 1
     const twoThirds = Math.ceil((presentCount * 2) / 3)
@@ -1283,7 +1283,7 @@ export function closeVotingSession(sessionId: string): void {
 
     const { yes, no, abstain } = tallyVotes(session.ballots)
     const presentCount = c.delegations.filter(
-      (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
+      (d) => d.attendance === 'present'
     ).length
     const threshold =
       session.majorityRule === 'simple_majority'
@@ -1561,7 +1561,7 @@ export function addMinutesEntry(
 
 export function getPresentCount(delegations: Delegation[]): number {
   return delegations.filter(
-    (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
+    (d) => d.attendance === 'present'
   ).length
 }
 

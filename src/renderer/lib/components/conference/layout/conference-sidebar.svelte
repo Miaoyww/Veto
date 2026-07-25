@@ -12,7 +12,7 @@
 
   const presentCount = $derived(
     conf?.delegations.filter(
-      (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
+      (d) => d.attendance === 'present'
     ).length ?? 0
   )
 
@@ -73,7 +73,7 @@
 
       <div class="overflow-y-auto px-3 pb-3" style="max-height: calc(100% - 24px);">
         {#each conf.delegations as delegation (delegation.id)}
-          {@const isPresent = delegation.attendance === 'present' || delegation.attendance === 'present_and_voting'}
+          {@const isPresent = delegation.attendance === 'present'}
           <div
             class={cn(
               'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',

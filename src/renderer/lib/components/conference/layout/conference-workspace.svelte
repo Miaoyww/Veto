@@ -7,7 +7,7 @@
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
-  import { Gavel, Play, Users, Monitor, HelpCircle } from '@lucide/svelte'
+  import { Gavel, Play, Users, Monitor, HelpCircle, UserRoundCheck } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -96,6 +96,17 @@
         >
           <Monitor size={12} />
           显示窗口
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          class="h-8 gap-1.5 text-xs"
+          title="代表管理"
+          onclick={() => navigate(`/conference/${conf.id}/delegations`)}
+        >
+          <UserRoundCheck size={12} />
+          代表管理
         </Button>
 
         {#if canProposePoint}

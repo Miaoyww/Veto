@@ -115,7 +115,7 @@
   {#if conf && activeSession}
     <div class="rounded-lg border bg-card">
       <div class="divide-y">
-        {#each conf.delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting') as delegation (delegation.id)}
+        {#each conf.delegations.filter((d) => d.attendance === 'present') as delegation (delegation.id)}
           {@const ballot = activeSession.ballots.find((b) => b.delegationId === delegation.id)}
           <div class="flex items-center gap-3 px-4 py-2.5">
             <div

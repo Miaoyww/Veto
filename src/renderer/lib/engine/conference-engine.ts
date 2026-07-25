@@ -67,7 +67,7 @@ export interface MajorityThresholds {
 
 export function calculateMajorityThresholds(delegations: Delegation[]): MajorityThresholds {
   const presentCount = delegations.filter(
-    (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
+    (d) => d.attendance === 'present'
   ).length
   return {
     presentCount,

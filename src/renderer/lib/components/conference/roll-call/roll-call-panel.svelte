@@ -185,7 +185,7 @@
         <div class="w-full rounded-xl border bg-card">
           <div class="divide-y px-6">
             {#each sortedDelegations as delegation (delegation.id)}
-              {@const isPresent = delegation.attendance === 'present' || delegation.attendance === 'present_and_voting'}
+              {@const isPresent = delegation.attendance === 'present'}
               <div class="flex items-center gap-3 py-2.5">
                 <div
                   class="h-3 w-3 shrink-0 rounded-full"

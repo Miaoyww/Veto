@@ -25,6 +25,7 @@
   import QuestionDisplay from './question/index.svelte'
   import CaucusSetupDisplay from './caucus-setup/index.svelte'
   import CaucusDisplay from './caucus/index.svelte'
+  import AttendanceChangeDisplay from './attendance-change.svelte'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
@@ -91,6 +92,37 @@
 
   onDestroy(() => {
     if (phaseDelayTimer) clearTimeout(phaseDelayTimer)
+    if (attendanceTimer) clearTimeout(attendanceTimer)
+  })
+
+  // ---- 出席状态变更（来自代表管理页面，全屏展示） ----
+  let attendanceChange = $state<{
+    delegationName: string
+    shortName?: string
+    status: 'present' | 'absent'
+  } | null>(null)
+  let attendanceTimer: ReturnType<typeof setTimeout> | null = null
+  let _lastMarkedId = $state('')
+
+  $effect(() => {
+    const lastMarked = displayData?.rollCall?.lastMarked
+    if (!lastMarked) return
+
+    const notifId = `${lastMarked.delegationName}-${lastMarked.status}-${lastMarked.index ?? ''}`
+    if (notifId === _lastMarkedId) return
+    _lastMarkedId = notifId
+
+    if (attendanceTimer) clearTimeout(attendanceTimer)
+
+    attendanceChange = {
+      delegationName: lastMarked.delegationName,
+      shortName: lastMarked.shortName,
+      status: lastMarked.status
+    }
+
+    attendanceTimer = setTimeout(() => {
+      attendanceChange = null
+    }, 3500)
   })
 </script>
 
@@ -140,8 +172,16 @@
       </div>
     </div>
 
-    <!-- 中部：主展示区（phase 动态切换） -->
-    <div class="flex flex-1 items-center justify-center overflow-hidden px-16">
+    <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
+    {#if attendanceChange}
+      <AttendanceChangeDisplay
+        delegationName={attendanceChange.delegationName}
+        shortName={attendanceChange.shortName}
+        status={attendanceChange.status}
+      />
+    {:else}
+      <!-- 中部：主展示区（phase 动态切换） -->
+      <div class="flex flex-1 items-center justify-center overflow-hidden px-16">
       <div class="flex w-full max-w-5xl flex-col items-center">
         {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
           <QuestionDisplay data={displayData} />
@@ -256,20 +296,21 @@
     </div>
 
     <!-- 底部：近期记录 -->
-    {#if displayData.recentMinutes.length > 0}
-      <div class="border-t border-white/5 px-16 py-4">
-        <div class="flex items-center gap-8 text-sm">
-          <span class="text-xs font-medium tracking-[0.08em] text-white/15 uppercase">近期记录</span
-          >
-          {#each displayData.recentMinutes.slice(-5) as m}
-            <span class="flex items-center gap-2 text-white/20">
-              <span class="text-white/25">{MINUTES_EVENT_LABELS[m.eventType] ?? m.eventType}</span>
-              <span class="text-white/8">|</span>
-              <span>{m.description}</span>
-            </span>
-          {/each}
+      {#if displayData.recentMinutes.length > 0}
+        <div class="border-t border-white/5 px-16 py-4">
+          <div class="flex items-center gap-8 text-sm">
+            <span class="text-xs font-medium tracking-[0.08em] text-white/15 uppercase">近期记录</span
+            >
+            {#each displayData.recentMinutes.slice(-5) as m}
+              <span class="flex items-center gap-2 text-white/20">
+                <span class="text-white/25">{MINUTES_EVENT_LABELS[m.eventType] ?? m.eventType}</span>
+                <span class="text-white/8">|</span>
+                <span>{m.description}</span>
+              </span>
+            {/each}
+          </div>
         </div>
-      </div>
+      {/if}
     {/if}
   {:else}
     <!-- 等待 / 重连 -->

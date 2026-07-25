@@ -63,6 +63,12 @@ function parseRoute(url: URL): ParsedRoute {
     params.conference_id = conferenceQuestionMatch[1]!
     routeId = '/conference/[conference_id]/question'
   }
+  // /conference/<id>/delegations
+  const conferenceDelegationsMatch = actualPath.match(/^\/conference\/([\w-]+)\/delegations$/)
+  if (conferenceDelegationsMatch) {
+    params.conference_id = conferenceDelegationsMatch[1]!
+    routeId = '/conference/[conference_id]/delegations'
+  }
   // /conference/<id>
   const conferenceMatch = actualPath.match(/^\/conference\/([\w-]+)$/)
   if (conferenceMatch) {

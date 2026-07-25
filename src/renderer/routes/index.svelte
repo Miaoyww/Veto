@@ -22,6 +22,7 @@
   import ConferenceRollCallPage from './conference/[conference_id]/roll-call.svelte'
   import ConferenceMotionPage from './conference/[conference_id]/motion.svelte'
   import ConferenceQuestionPage from './conference/[conference_id]/question.svelte'
+  import ConferenceDelegationsPage from './conference/[conference_id]/delegations.svelte'
   import ConferenceDisplayPage from './conference-display/[conference_id]/index.svelte'
 
   let selectedMode = $state<string | null>(null)
@@ -54,7 +55,6 @@
 <ModeWatcher />
 <MyAlertDialog />
 <SettingsDialog />
-<Toaster richColors position="bottom-right" />
 
 <div class="pt-9">
   {#if routeId === '/battle/[battle_id]'}
@@ -65,6 +65,8 @@
     <ConferenceMotionPage />
   {:else if routeId === '/conference/[conference_id]/question'}
     <ConferenceQuestionPage />
+  {:else if routeId === '/conference/[conference_id]/delegations'}
+    <ConferenceDelegationsPage />
   {:else if routeId === '/conference/[conference_id]'}
     <ConferencePage />
   {:else if routeId === '/conference-display/[conference_id]'}

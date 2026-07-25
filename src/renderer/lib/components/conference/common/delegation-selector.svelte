@@ -45,7 +45,7 @@
   const fuse = $derived.by(() => {
     const excludeSet = new Set(excludeIds)
     const pool = (presentOnly
-      ? delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting')
+      ? delegations.filter((d) => d.attendance === 'present')
       : delegations).filter((d) => !excludeSet.has(d.id))
     return new Fuse(pool, {
       keys: ['name', 'shortName'],
@@ -58,7 +58,7 @@
   const excludeSet = $derived(new Set(excludeIds))
   const searchPool = $derived(
     (presentOnly
-      ? delegations.filter((d) => d.attendance === 'present' || d.attendance === 'present_and_voting')
+      ? delegations.filter((d) => d.attendance === 'present')
       : delegations).filter((d) => !excludeSet.has(d.id))
   )
 

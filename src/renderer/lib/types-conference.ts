@@ -31,7 +31,7 @@ export interface Delegation {
   /** 是否拥有否决权 */
   vetoPower: boolean
   /** 点名出勤状态 */
-  attendance: 'present' | 'absent' | 'present_and_voting'
+  attendance: 'present' | 'absent'
   /** 排序权重（越小越靠前） */
   sortOrder: number
 }
