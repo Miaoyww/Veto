@@ -142,7 +142,7 @@ export async function processModPackage(
 	manifest: PluginManifest
 ): Promise<InstalledPlugin> {
 	const type = manifest.type
-	const isDataMod = type === 'faction' || type === 'scenario' || type === 'ruleset' || type === 'campaign'
+	const isDataMod = type === 'faction' || type === 'campaign'
 
 	// 1. 读取 definitions
 	let definitions: string | null = null;

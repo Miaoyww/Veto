@@ -18,7 +18,7 @@ export interface PluginManifest {
   name: string
   version: string
   author: string
-  type: 'faction' | 'scenario' | 'ruleset' | 'campaign' | 'utility' | 'dependency'
+  type: 'faction' | 'campaign' | 'utility' | 'dependency' | 'preset'
   download_url?: string
   repo: string
   hash?: string

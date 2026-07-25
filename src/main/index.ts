@@ -131,7 +131,7 @@ function registerIpcHandlers(): void {
 
     // ── 按插件类型分流读取 ──────────────────────────────────────────
     const needsDefinitions =
-      type === 'faction' || type === 'scenario' || type === 'ruleset' || type === 'campaign'
+      type === 'faction' || type === 'campaign'
 
     let definitions: string | null = null
     if (needsDefinitions && plugin.path.definitions) {

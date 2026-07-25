@@ -28,7 +28,7 @@ interface PluginListItem {
 
 /** 判断给定类型的插件是否需要 definitions */
 function typeNeedsDefinitions(type: PluginManifest['type']): boolean {
-  return type === 'faction' || type === 'scenario' || type === 'ruleset' || type === 'campaign'
+  return type === 'faction' || type === 'campaign'
 }
 
 /** 判断插件是否值得加载（有对应类型的数据） */

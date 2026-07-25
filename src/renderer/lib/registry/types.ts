@@ -145,10 +145,11 @@ export interface ModData {
 	metadata?: ModMetadata;
 	/**
 	 * Mod 类型。
-	 * - faction / scenario / ruleset / campaign：需由战局显式激活才加载
+	 * - faction / campaign：需由战局显式激活才加载
 	 * - utility / dependency：注入时立即激活
+	 * - preset：会议代表团预设插件
 	 */
-	type?: 'faction' | 'scenario' | 'ruleset' | 'campaign' | 'utility' | 'dependency';
+	type?: 'faction' | 'campaign' | 'utility' | 'dependency' | 'preset';
 	dependencies?: string[];
 	conflicts?: string[];
 	/** 新增军种定义（后注入可覆盖同 id 的条目） */

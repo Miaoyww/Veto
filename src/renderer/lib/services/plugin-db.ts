@@ -114,7 +114,7 @@ export interface PluginManifest {
   name: string
   version: string
   author: string
-  type: 'faction' | 'scenario' | 'ruleset' | 'campaign' | 'utility' | 'dependency'
+  type: 'faction' | 'campaign' | 'utility' | 'dependency' | 'preset'
   /** .vmod 包的下载地址 */
   download_url?: string
   /** 包文件的 SHA-256 十六进制哈希，用于完整性校验 */
