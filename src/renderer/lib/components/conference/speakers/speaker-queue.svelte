@@ -10,12 +10,13 @@
   import { onDestroy } from 'svelte'
   import { get } from 'svelte/store'
   import {
-    Mic, Trash2, Users, Timer, Coffee, MessageSquare
+    Timer, Coffee, MessageSquare
   } from '@lucide/svelte'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
+  import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
+  import NextSpeakerCard from '$lib/components/conference/speakers/next-speaker-card.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
   import {
@@ -372,67 +373,35 @@
         oncancel={cancelReadySpeaker}
       />
 
-      <!-- 剩余发言队列 -->
       {#if waitingSpeakers.length > 0}
-        <div class="rounded-lg border bg-card">
-          <div class="flex items-center gap-2 px-4 py-2">
-            <Users size={14} class="text-muted-foreground" />
-            <span class="text-sm font-medium text-foreground">剩余发言 ({waitingSpeakers.length})</span>
-          </div>
-          <div class="divide-y">
-            {#each waitingSpeakers as s}
-              <div class="flex items-center gap-3 px-4 py-2">
-                <span class="text-sm text-foreground">{s.delegationName}</span>
-                <Badge variant="secondary" class="ml-auto text-[10px]">{formatTime(s.allocatedTimeSec)}</Badge>
-              </div>
-            {/each}
-          </div>
-        </div>
+        <WaitingSpeakerList title="剩余发言" speakers={waitingSpeakers} />
       {/if}
 
-    {:else if isCaucus && isModerated && activeSpeaker && activeSpeaker.status === 'speaking' && conf.activeSpeaker}
-      <!-- ═══ Caucus active speaker ═══ -->
+    {:else if activeSpeaker && isSpeakerActive && conf.activeSpeaker}
+      <!-- ═══ Active speaker (caucus / general debate) ═══ -->
       <ActiveSpeakerCard
         delegationName={activeSpeaker.delegationName}
         remainingSec={displayRemaining}
         elapsedSec={displayElapsed}
         totalSec={displayTotal}
         {isPaused}
-        positionLabel={`${speakers.length} 人中第 ${currentIdx + 1} 位`}
+        positionLabel={isCaucus ? `${speakers.length} 人中第 ${currentIdx + 1} 位` : undefined}
         onpause={pauseSpeaking}
         onresume={resumeSpeaking}
         onend={() => finishSpeaker()}
         onyield={(type: YieldType) => finishSpeaker(type)}
       />
 
-      <!-- 下一位 -->
-      {#if nextSpeaker}
-        <div class="w-full rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-medium text-amber-700 dark:text-amber-400">下一位</span>
-            <span class="text-sm font-semibold text-foreground">{nextSpeaker.delegationName}</span>
-          </div>
-        </div>
-      {:else if currentIdx + 1 >= speakers.length}
-        <div class="text-sm text-muted-foreground">最后一位发言人</div>
-      {/if}
+      {#if isCaucus}
+        {#if nextSpeaker}
+          <NextSpeakerCard label="下一位" delegationName={nextSpeaker.delegationName} />
+        {:else if currentIdx + 1 >= speakers.length}
+          <div class="text-sm text-muted-foreground">最后一位发言人</div>
+        {/if}
 
-      <!-- 剩余发言队列 -->
-      {#if waitingSpeakers.length > 0}
-        <div class="rounded-lg border bg-card">
-          <div class="flex items-center gap-2 px-4 py-2">
-            <Users size={14} class="text-muted-foreground" />
-            <span class="text-sm font-medium text-foreground">剩余发言 ({waitingSpeakers.length})</span>
-          </div>
-          <div class="divide-y">
-            {#each waitingSpeakers as s}
-              <div class="flex items-center gap-3 px-4 py-2">
-                <span class="text-sm text-foreground">{s.delegationName}</span>
-                <Badge variant="secondary" class="ml-auto text-[10px]">{formatTime(s.allocatedTimeSec)}</Badge>
-              </div>
-            {/each}
-          </div>
-        </div>
+        {#if waitingSpeakers.length > 0}
+          <WaitingSpeakerList title="剩余发言" speakers={waitingSpeakers} />
+        {/if}
       {/if}
 
     {:else if isCaucus && isModerated}
@@ -441,20 +410,6 @@
         <Timer size={48} class="opacity-30" />
         <p class="text-lg font-medium">等待发言...</p>
       </div>
-
-    {:else if !isCaucus && isSpeakerActive && activeSpeaker && conf.activeSpeaker}
-      <!-- ═══ General Debate active speaker ═══ -->
-      <ActiveSpeakerCard
-        delegationName={activeSpeaker.delegationName}
-        remainingSec={displayRemaining}
-        elapsedSec={displayElapsed}
-        totalSec={displayTotal}
-        {isPaused}
-        onpause={pauseSpeaking}
-        onresume={resumeSpeaking}
-        onend={() => finishSpeaker()}
-        onyield={(type: YieldType) => finishSpeaker(type)}
-      />
 
     {:else if !isCaucus && readyEntry}
       <!-- ═══ General Debate ready speaker ═══ -->
@@ -477,52 +432,25 @@
         />
       </div>
 
-      <!-- 下一个发言 -->
       {#if nextSpeaker}
-        <div class="rounded-lg border-2 border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-medium text-amber-700 dark:text-amber-400">下一个发言</span>
-            <div class="flex-1"></div>
-            <Badge variant="secondary" class="text-[10px]">{formatTime(nextSpeaker.allocatedTimeSec)}</Badge>
-            <Button size="sm" class="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700" onclick={() => prepareSpeaker(nextSpeaker.id)}>
-              <Mic size={12} />
-              发言
-            </Button>
-          </div>
-          <div class="mt-2 text-lg font-semibold text-foreground">{nextSpeaker.delegationName}</div>
-        </div>
+        <NextSpeakerCard
+          label="下一个发言"
+          delegationName={nextSpeaker.delegationName}
+          allocatedTimeSec={nextSpeaker.allocatedTimeSec}
+          showPrepareButton
+          onprepare={() => prepareSpeaker(nextSpeaker.id)}
+        />
       {/if}
 
-      <!-- 等待队列 -->
-      <div class="rounded-lg border bg-card">
-        <div class="flex items-center gap-2 px-4 py-3">
-          <Users size={14} class="text-muted-foreground" />
-          <span class="text-sm font-medium text-foreground">发言队列 ({waitingSpeakers.length})</span>
-        </div>
-
-        {#if waitingSpeakers.length === 0}
-          <div class="px-4 pb-4 text-center text-xs text-muted-foreground">主发言名单为空，请添加代表团</div>
-        {:else}
-          <div class="divide-y">
-            {#each waitingSpeakers as entry, i}
-              <div class="flex items-center gap-3 px-4 py-2.5">
-                <span class="w-6 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
-                <span class="min-w-0 flex-1 text-sm text-foreground">{entry.delegationName}</span>
-                <Badge variant="secondary" class="text-[10px]">{formatTime(entry.allocatedTimeSec)}</Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  class="h-7 text-xs text-muted-foreground hover:text-red-500"
-                  disabled={isSpeakerActive}
-                  onclick={() => removeFromSpeakersList(entry.id)}
-                >
-                  <Trash2 size={12} />
-                </Button>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
+      <WaitingSpeakerList
+        title="发言队列"
+        speakers={waitingSpeakers}
+        showIndex
+        showDelete
+        emptyMessage="主发言名单为空，请添加代表团"
+        disabled={isSpeakerActive}
+        ondelete={(id: string) => removeFromSpeakersList(id)}
+      />
     {/if}
 
     <!-- 名单耗尽提示（caucus only） -->
