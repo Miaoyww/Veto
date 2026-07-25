@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ExternalLink, FileText, MessageCircle, RefreshCw, Download, Loader, CheckCircle2, AlertCircle } from '@lucide/svelte'
+  import { ExternalLink, FileText, MessageCircle, RefreshCw, Download, Loader, CheckCircle2, AlertCircle, Terminal } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Label } from '$lib/components/ui/label'
   import SettingCard from '../../settings-card.svelte'
@@ -131,6 +131,10 @@
   async function quitAndInstall(): Promise<void> {
     await window.veto.updater.quitAndInstall()
   }
+
+  async function openDevTools(): Promise<void> {
+    await window.veto.app.openDevTools()
+  }
 </script>
 
 <div class="space-y-8" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
@@ -147,6 +151,14 @@
   <div class="space-y-3">
     <SettingCard title="版本号" description="当前应用版本。">
       <Label>v{version}</Label>
+    </SettingCard>
+
+    <!-- 开发者工具 -->
+    <SettingCard title="开发者工具" description="打开 Chromium DevTools 进行调试。">
+      <Button variant="outline" size="sm" onclick={openDevTools}>
+        <Terminal size={13} class="mr-1.5" />
+        打开开发者工具
+      </Button>
     </SettingCard>
 
     <!-- 检查更新 -->

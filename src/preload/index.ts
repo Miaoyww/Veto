@@ -117,6 +117,12 @@ const veto = {
     getVersion: (): Promise<string> => ipcRenderer.invoke('veto:updater:get-version')
   },
 
+  app: {
+    /** 打开开发者工具 */
+    openDevTools: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('veto:app:open-devtools')
+  },
+
   conference: {
     /** 打开显示窗口 */
     openDisplay: (conferenceId: string): Promise<{ success: boolean }> =>

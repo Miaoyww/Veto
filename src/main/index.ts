@@ -497,6 +497,16 @@ function registerIpcHandlers(): void {
       return null
     }
   })
+
+  // ── 开发者工具 ──────────────────────────────────────────────────────
+  ipcMain.handle('veto:app:open-devtools', () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win) {
+      win.webContents.openDevTools({ mode: 'detach' })
+      return { success: true }
+    }
+    return { success: false, error: 'No window found' }
+  })
 }
 
 // ── 自动更新初始化 ────────────────────────────────────────────────────
