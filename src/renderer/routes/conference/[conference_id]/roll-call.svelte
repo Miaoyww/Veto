@@ -4,7 +4,6 @@
   import { ArrowLeft, Check, X, Users, Flag, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'
-  import { cn } from '$lib/utils.js'
   import {
     currentConference,
     currentConferenceId,
@@ -36,7 +35,6 @@
   let lastRollCallMarked = $state<{
     delegationName: string
     shortName?: string
-    color: string
     status: 'present' | 'absent'
     index: number
   } | null>(null)
@@ -97,6 +95,9 @@
   const progress = $derived(totalCount > 0 ? Math.round((currentIndex / totalCount) * 100) : 0)
 
   const showConfirmOverlay = $derived(isTransitioning && lastRollCallMarked !== null)
+  const absentDelegations = $derived(
+    sortedDelegations.filter((d) => d.attendance !== 'present')
+  )
 
   function markPresent(): void {
     if (!currentDelegation || isTransitioning) return
@@ -130,6 +131,24 @@
       lastRollCallMarked = null
       currentIndex++
     }, 1500)
+  }
+
+  function markAllPresent(): void {
+    if (!conf || isTransitioning) return
+    const remaining = sortedDelegations.slice(currentIndex)
+    for (const d of remaining) {
+      setAttendance(d.id, 'present')
+    }
+    currentIndex = sortedDelegations.length
+  }
+
+  function markAllAbsent(): void {
+    if (!conf || isTransitioning) return
+    const remaining = sortedDelegations.slice(currentIndex)
+    for (const d of remaining) {
+      setAttendance(d.id, 'absent')
+    }
+    currentIndex = sortedDelegations.length
   }
 
   function goBack(): void {
@@ -276,6 +295,30 @@
               {/if}
             </div>
           {/if}
+
+          <!-- 快捷操作 -->
+          <div class="flex gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              class="gap-1.5 text-xs"
+              onclick={markAllPresent}
+              disabled={isTransitioning || currentIndex >= sortedDelegations.length}
+            >
+              <Check size={12} />
+              全部出席
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              class="gap-1.5 text-xs"
+              onclick={markAllAbsent}
+              disabled={isTransitioning || currentIndex >= sortedDelegations.length}
+            >
+              <X size={12} />
+              全部缺席
+            </Button>
+          </div>
         </div>
 
       {:else}
@@ -301,22 +344,26 @@
             </div>
           </div>
 
-          <!-- 结果列表 -->
-          <div class="w-full rounded-xl border bg-card">
-            <div class="divide-y px-6">
-              {#each sortedDelegations as delegation (delegation.id)}
-                {@const isPresent = delegation.attendance === 'present'}
-                <div class="flex items-center gap-3 py-2.5">
-                  <span class={cn('flex-1 text-sm', isPresent ? 'text-foreground' : 'text-muted-foreground/50 line-through')}>
-                    {delegation.name}
-                  </span>
-                  <span class={cn('text-xs font-medium', isPresent ? 'text-emerald-600' : 'text-muted-foreground')}>
-                    {isPresent ? '出席' : '缺席'}
-                  </span>
-                </div>
-              {/each}
+          <!-- 未出席列表 -->
+          {#if absentDelegations.length > 0}
+            <div class="w-full rounded-xl border bg-card">
+              <div class="px-6 py-3 text-xs font-medium text-muted-foreground">
+                未出席 ({absentDelegations.length})
+              </div>
+              <div class="divide-y px-6">
+                {#each absentDelegations as delegation (delegation.id)}
+                  <div class="flex items-center gap-3 py-2.5">
+                    <span class="flex-1 text-sm text-muted-foreground/70">
+                      {delegation.shortName ?? delegation.name}
+                    </span>
+                    <span class="text-xs text-muted-foreground">缺席</span>
+                  </div>
+                {/each}
+              </div>
             </div>
-          </div>
+          {:else}
+            <p class="text-sm text-emerald-600 font-medium">全部出席</p>
+          {/if}
 
           <div class="flex gap-4">
             <Button variant="outline" size="lg" onclick={goBack}>
