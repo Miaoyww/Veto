@@ -122,7 +122,7 @@
 
     attendanceTimer = setTimeout(() => {
       attendanceChange = null
-    }, 3500)
+    }, 1500)
   })
 </script>
 

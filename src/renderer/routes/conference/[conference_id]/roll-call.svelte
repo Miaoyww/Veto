@@ -40,29 +40,34 @@
   } | null>(null)
 
   // 自动同步当前状态到 Display 窗口（含点名进度）
+  // 用 rAF 合并同一帧内的多次更新，避免重复构建/发送
+  let _sendRaf = 0
   $effect(() => {
     const c = $currentConference
-    if (c) {
-      // 点名进行中发送完整数据，完成后发送汇总
-      const rollCallInfo = thresholds
-        ? {
-            currentIndex,
-            totalCount,
-            presentCount: thresholds.presentCount,
-            simpleMajorityThreshold: thresholds.simpleMajorityThreshold,
-            twoThirdsThreshold: thresholds.twoThirdsThreshold,
-            ...(currentDelegation
-              ? {
-                  currentDelegationName: currentDelegation.name,
-                  currentDelegationShortName: currentDelegation.shortName,
-                }
-              : {}),
-            lastMarked: lastRollCallMarked ?? undefined,
-          }
-        : undefined
+    if (!c) return
 
+    // 在此处读取所有响应式值，确保 Svelte 正确追踪依赖
+    const rollCallInfo = thresholds
+      ? {
+          currentIndex,
+          totalCount,
+          presentCount: thresholds.presentCount,
+          simpleMajorityThreshold: thresholds.simpleMajorityThreshold,
+          twoThirdsThreshold: thresholds.twoThirdsThreshold,
+          ...(currentDelegation
+            ? {
+                currentDelegationName: currentDelegation.name,
+                currentDelegationShortName: currentDelegation.shortName,
+              }
+            : {}),
+          lastMarked: lastRollCallMarked ?? undefined,
+        }
+      : undefined
+
+    cancelAnimationFrame(_sendRaf)
+    _sendRaf = requestAnimationFrame(() => {
       getDisplayBridge().sendUpdate(buildDisplayData(c, { rollCall: rollCallInfo }))
-    }
+    })
   })
 
   async function openDisplayWindow(): Promise<void> {

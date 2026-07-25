@@ -53,34 +53,20 @@
 
         <div class="text-lg tracking-wider text-white/15">等待主席下一步操作</div>
       </div>
-
     {:else}
-      <!-- ===== 进行中（lastMarked 过渡 / 正常进行 共用此区域） ===== -->
+      <!-- ===== 进行中 ===== -->
       <div class="flex flex-col items-center gap-6">
         <div class="text-center">
           <div class="text-9xl font-semibold text-white">
             {rc.currentDelegationName}
           </div>
+          {#if rc.currentDelegationShortName}
+            <p class="text-4xl tracking-[0.08em] text-white/25">
+              {rc.currentDelegationShortName}
+            </p>
+          {/if}
         </div>
       </div>
-
-      {#if rc.lastMarked}
-        <!-- 过渡 badge：叠加在代表团名和进度条之间 -->
-        <div
-          class="mt-2 flex items-center gap-3 rounded-sm px-8 py-2.5 {rc.lastMarked.status ===
-          'present'
-            ? 'border border-[#5B92E5]/30 bg-[#5B92E5]/10'
-            : 'border border-white/10 bg-white/[0.02]'}"
-        >
-          <span
-            class="text-2xl font-semibold tracking-[0.08em] {rc.lastMarked.status === 'present'
-              ? 'text-[#5B92E5]'
-              : 'text-white/30'}"
-          >
-            {rc.lastMarked.status === 'present' ? '出席 PRESENT' : '缺席 ABSENT'}
-          </span>
-        </div>
-      {/if}
 
       <div class="flex items-center gap-3 text-white/40">
         <div class="h-px w-12 bg-white/10"></div>
@@ -101,17 +87,12 @@
 
       <!-- 统计 -->
       <div class="flex gap-16 text-base tracking-wider text-white/25">
+        <span>已出席 <span class="font-semibold text-[#5B92E5]">{rc.presentCount}</span></span>
         <span
-          >已出席 <span class="font-semibold text-[#5B92E5]">{rc.presentCount}</span></span
-        >
-        <span
-          >简单多数 <span class="font-semibold text-white/40"
-            >{rc.simpleMajorityThreshold}</span
+          >简单多数 <span class="font-semibold text-white/40">{rc.simpleMajorityThreshold}</span
           ></span
         >
-        <span
-          >2/3多数 <span class="font-semibold text-white/40">{rc.twoThirdsThreshold}</span
-          ></span
+        <span>2/3多数 <span class="font-semibold text-white/40">{rc.twoThirdsThreshold}</span></span
         >
       </div>
     {/if}
