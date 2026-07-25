@@ -214,7 +214,7 @@
         {/if}
 
         <!-- 第三步：动议参数表单 -->
-        {#if selectedType}
+        {#if selectedType === 'moderated_caucus'}
           <Separator />
           <div class="space-y-3">
             <div>
