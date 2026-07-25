@@ -10,6 +10,7 @@
 
   interface Props {
     isPaused?: boolean
+    canYield?: boolean
     onpause?: () => void
     onresume?: () => void
     onend?: () => void
@@ -18,6 +19,7 @@
 
   let {
     isPaused = false,
+    canYield = true,
     onpause,
     onresume,
     onend,
@@ -41,20 +43,24 @@
     <MicOff size={12} class="mr-1" />
     结束发言
   </Button>
-  <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('chair')}>
-    <Users size={12} class="mr-1" />
-    Yield to Chair
-  </Button>
-  <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('delegate')}>
-    <ArrowRight size={12} class="mr-1" />
-    Yield to Delegate
-  </Button>
-  <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('question')}>
-    <HelpCircle size={12} class="mr-1" />
-    Yield to Question
-  </Button>
-  <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('comment')}>
-    <MessageCircle size={12} class="mr-1" />
-    Yield to Comment
-  </Button>
+  {#if canYield}
+    <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('chair')}>
+      <Users size={12} class="mr-1" />
+      Yield to Chair
+    </Button>
+    <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('delegate')}>
+      <ArrowRight size={12} class="mr-1" />
+      Yield to Delegate
+    </Button>
+    <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('question')}>
+      <HelpCircle size={12} class="mr-1" />
+      Yield to Question
+    </Button>
+    <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => onyield?.('comment')}>
+      <MessageCircle size={12} class="mr-1" />
+      Yield to Comment
+    </Button>
+  {:else}
+    <span class="text-xs text-muted-foreground">（本次发言不可让渡）</span>
+  {/if}
 </div>

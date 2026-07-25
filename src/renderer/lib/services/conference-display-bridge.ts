@@ -397,6 +397,14 @@ export function buildDisplayData(
       eventType: m.eventType,
       description: m.description
     })),
+    yieldPending: conf.yieldPending
+      ? {
+          yieldType: conf.yieldPending.yieldType,
+          originalDelegationName: conf.yieldPending.originalDelegationName,
+          remainingSec: Math.round(conf.yieldPending.remainingSec),
+          questionerDelegationName: conf.yieldPending.questionerDelegationName
+        }
+      : undefined,
     rollCall: extra?.rollCall,
     motionDraft: extra?.motionDraft
   }

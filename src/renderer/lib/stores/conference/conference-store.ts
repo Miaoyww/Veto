@@ -15,6 +15,7 @@ import type {
   AgendaItem,
   SpeakerEntry,
   YieldChoice,
+  YieldPendingState,
   Motion,
   DraftResolution,
   VotingSession,
@@ -371,7 +372,9 @@ export function resumeSpeaker(remainingSec: number): void {
         startedAt: now,
         endAt: now + remainingSec * 1000,
         pausedAt: undefined
-      }
+      },
+      // 清理让渡待处理状态：计时器已恢复，让渡解析完成
+      yieldPending: null
     }
   })
 }
@@ -388,7 +391,8 @@ export function endSpeaker(yieldChoice?: YieldChoice): void {
   updateCurrentConference((c) => ({
     ...c,
     speakersList: c.speakersList.filter((s) => s.id !== currentSpeaker.entryId),
-    activeSpeaker: null
+    activeSpeaker: null,
+    yieldPending: null
   }))
 
   const del = conf?.delegations.find((d) => d.id === entry?.delegationId)
@@ -407,8 +411,191 @@ export function endSpeaker(yieldChoice?: YieldChoice): void {
   }
 }
 
+/**
+ * 处理让渡选择。
+ * - chair → 直接结束发言
+ * - delegate/question/comment → 暂停计时，进入 yieldPending 状态等待主席解析
+ */
 export function handleYield(yieldChoice: YieldChoice): void {
-  endSpeaker(yieldChoice)
+  const conf = get(currentConference)
+  const currentSpeaker = conf?.activeSpeaker
+  if (!currentSpeaker) return
+
+  const entry = conf?.speakersList.find((s) => s.id === currentSpeaker.entryId)
+  if (!entry) return
+
+  const elapsed = (Date.now() - currentSpeaker.startedAt) / 1000
+  const remaining = Math.max(0, (entry?.allocatedTimeSec ?? 120) - elapsed)
+  const del = conf?.delegations.find((d) => d.id === entry?.delegationId)
+
+  // 记录让渡选择到 speaker entry
+  updateCurrentConference((c) => ({
+    ...c,
+    speakersList: c.speakersList.map((s) =>
+      s.id === entry.id ? { ...s, yield: yieldChoice } : s
+    )
+  }))
+
+  const yieldLabels: Record<string, string> = {
+    chair: '让渡给主席团',
+    delegate: '让渡给另一位代表',
+    question: '让渡给提问',
+    comment: '让渡给评论'
+  }
+  const logMsg = `${del?.name ?? entry?.delegationId} ${yieldLabels[yieldChoice.type] ?? yieldChoice.type}（剩余 ${Math.round(remaining)} 秒）`
+  addMinutesEntry('yield', logMsg, { delegationId: entry?.delegationId })
+
+  // chair 类型直接结束
+  if (yieldChoice.type === 'chair') {
+    resolveYieldToChair()
+    return
+  }
+
+  // delegate / question / comment → 暂停计时器，设置 yieldPending
+  const delegationName = del?.name ?? entry?.delegationId
+  updateCurrentConference((c) => ({
+    ...c,
+    activeSpeaker: c.activeSpeaker
+      ? { ...c.activeSpeaker, pausedAt: Date.now() }
+      : null,
+    yieldPending: {
+      originalEntryId: entry.id,
+      originalDelegationId: entry.delegationId,
+      originalDelegationName: delegationName,
+      yieldType: yieldChoice.type as 'delegate' | 'question' | 'comment',
+      remainingSec: remaining,
+      allocatedSec: entry.allocatedTimeSec
+    }
+  }))
+}
+
+// ---- 让渡解析函数 ----------------------------------------------------------
+
+/** 让渡给主席：移除原发言人，剩余时间作废 */
+export function resolveYieldToChair(): void {
+  const conf = get(currentConference)
+  if (!conf?.yieldPending && !conf?.activeSpeaker) return
+
+  const yp = conf?.yieldPending
+  const entryId = yp?.originalEntryId ?? conf?.activeSpeaker?.entryId
+
+  updateCurrentConference((c) => ({
+    ...c,
+    speakersList: c.speakersList.filter((s) => s.id !== entryId),
+    activeSpeaker: null,
+    yieldPending: null
+  }))
+
+  if (yp) {
+    addMinutesEntry('speaker_finished',
+      `${yp.originalDelegationName} 让渡给主席团，剩余时间作废`,
+      { delegationId: yp.originalDelegationId })
+  }
+}
+
+/** 让渡给代表：指定目标代表团获得剩余时间（不可再次让渡） */
+export function resolveYieldToDelegate(targetDelegationId: string): void {
+  const conf = get(currentConference)
+  if (!conf?.yieldPending || conf.yieldPending.yieldType !== 'delegate') return
+
+  const yp = conf.yieldPending
+  const targetDel = conf.delegations.find((d) => d.id === targetDelegationId)
+  if (!targetDel) return
+
+  const newEntry: SpeakerEntry = {
+    id: generateId(),
+    delegationId: targetDelegationId,
+    addedAt: Date.now(),
+    allocatedTimeSec: Math.round(yp.remainingSec),
+    status: 'ready',
+    canYield: false
+  }
+
+  updateCurrentConference((c) => ({
+    ...c,
+    speakersList: [
+      newEntry,
+      ...c.speakersList.filter((s) => s.id !== yp.originalEntryId)
+    ],
+    activeSpeaker: null,
+    yieldPending: null
+  }))
+
+  addMinutesEntry('speaker_finished',
+    `${yp.originalDelegationName} 让渡给 ${targetDel.name}（剩余 ${Math.round(yp.remainingSec)} 秒）`,
+    { delegationId: yp.originalDelegationId })
+}
+
+/** 让渡给提问：指定提问方，原发言人恢复剩余时间回答问题（不可再次让渡） */
+export function resolveYieldToQuestion(questionerDelegationId: string): void {
+  const conf = get(currentConference)
+  if (!conf?.yieldPending || conf.yieldPending.yieldType !== 'question') return
+
+  const yp = conf.yieldPending
+  const questionerDel = conf.delegations.find((d) => d.id === questionerDelegationId)
+  if (!questionerDel) return
+
+  // 更新 yieldPending 记录提问方信息，同时确保 activeSpeaker.pausedAt 已设置。
+  // 计时器保持暂停状态，等待主席在控制台点击"继续计时"后再恢复。
+  updateCurrentConference((c) => ({
+    ...c,
+    activeSpeaker: c.activeSpeaker
+      ? { ...c.activeSpeaker, pausedAt: c.activeSpeaker.pausedAt ?? Date.now() }
+      : null,
+    speakersList: c.speakersList.map((s) =>
+      s.id === yp.originalEntryId ? { ...s, canYield: false } : s
+    ),
+    yieldPending: {
+      ...yp,
+      questionerDelegationId: questionerDel.id,
+      questionerDelegationName: questionerDel.name
+    }
+  }))
+
+  addMinutesEntry('yield',
+    `${questionerDel.name} 向 ${yp.originalDelegationName} 提问（剩余 ${Math.round(yp.remainingSec)} 秒回答）`,
+    { delegationId: questionerDel.id })
+}
+
+/** 让渡给评论：指定评论方获得剩余时间评论（不可再次让渡） */
+export function resolveYieldToComment(commenterDelegationId: string): void {
+  const conf = get(currentConference)
+  if (!conf?.yieldPending || conf.yieldPending.yieldType !== 'comment') return
+
+  const yp = conf.yieldPending
+  const commenterDel = conf.delegations.find((d) => d.id === commenterDelegationId)
+  if (!commenterDel) return
+
+  const newEntry: SpeakerEntry = {
+    id: generateId(),
+    delegationId: commenterDelegationId,
+    addedAt: Date.now(),
+    allocatedTimeSec: Math.round(yp.remainingSec),
+    status: 'ready',
+    canYield: false
+  }
+
+  updateCurrentConference((c) => ({
+    ...c,
+    speakersList: [
+      newEntry,
+      ...c.speakersList.filter((s) => s.id !== yp.originalEntryId)
+    ],
+    activeSpeaker: null,
+    yieldPending: null
+  }))
+
+  addMinutesEntry('yield',
+    `${commenterDel.name} 获得 ${Math.round(yp.remainingSec)} 秒评论时间（来自 ${yp.originalDelegationName} 的让渡）`,
+    { delegationId: commenterDel.id })
+}
+
+/** 清理让渡待处理状态（取消让渡操作时使用） */
+export function cancelYieldPending(): void {
+  updateCurrentConference((c) => ({
+    ...c,
+    yieldPending: null
+  }))
 }
 
 // ---- 动议 ----

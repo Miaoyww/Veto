@@ -14,6 +14,7 @@
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
   import NextSpeakerCard from '$lib/components/conference/speakers/next-speaker-card.svelte'
+  import YieldResolutionPanel from '$lib/components/conference/speakers/yield-resolution-panel.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
@@ -86,6 +87,29 @@
   let isCaucusPaused = $state(false)
 
   const isSpeakerActive = $derived(activeSpeaker !== null && activeSpeaker?.status === 'speaking')
+
+  // ── 让渡相关状态 ─────────────────────────────────────────────────
+  const yieldPending = $derived(conf?.yieldPending ?? null)
+
+  // 当前活跃发言人是否可以让渡
+  const activeSpeakerCanYield = $derived.by(() => {
+    if (isCaucus) return false // 磋商暂不支持让渡
+    if (!conf?.activeSpeaker) return false
+    const entry = conf.speakersList.find((s: any) => s.id === conf.activeSpeaker!.entryId)
+    return entry?.canYield !== false
+  })
+
+  // 让渡给问题的回答阶段：提问方已指定且计时器需要恢复
+  const isYieldAnswering = $derived(
+    yieldPending?.yieldType === 'question' && yieldPending?.questionerDelegationId != null
+  )
+
+  // 回答阶段的 yieldNote
+  const yieldNote = $derived.by(() => {
+    if (isYieldAnswering) return `正在回答来自 ${yieldPending?.questionerDelegationName} 的提问`
+    if (!activeSpeakerCanYield && conf?.activeSpeaker) return '（本次发言不可让渡）'
+    return undefined
+  })
 
   // ── 总时间预算（caucus only）───────────────────────────────────
   const totalBudgetRemaining = $derived(
@@ -248,6 +272,10 @@
     if (mode === 'general_debate') {
       if (yieldType) {
         handleYield({ type: yieldType })
+        // handleYield 会处理让渡逻辑：
+        // - chair: 直接结束发言
+        // - delegate/question/comment: 暂停计时器，设置 yieldPending 状态
+        // 计时器已停止，等待主席在 yield resolution panel 中操作
       } else {
         endSpeaker()
       }
@@ -255,7 +283,7 @@
       // caucus: yield type 暂时只做 advance，后续可扩展
       advanceCaucusSpeaker()
     }
-    syncDisplay({ speakerTransition: 'ended' })
+    syncDisplay({ speakerTransition: yieldType ? 'ended' : 'ended' })
   }
 
   function cancelReadySpeaker(): void {
@@ -416,6 +444,29 @@
           onstart={startCaucusSpeakerHandler}
           oncancel={cancelReadySpeaker}
         />
+
+      <!-- 让渡解析面板：发言人做出非 chair 让渡后显示 -->
+      {:else if yieldPending && !isCaucus}
+        <YieldResolutionPanel conference={conf} yieldPending={yieldPending} />
+
+        <!-- 让渡给问题的回答阶段：显示原发言人（不可让渡） -->
+        {#if isYieldAnswering}
+          <div class="mt-4">
+            <ActiveSpeakerCard
+              delegationName={yieldPending.originalDelegationName}
+              remainingSec={displayRemaining}
+              elapsedSec={yieldPending.allocatedSec - displayRemaining}
+              totalSec={yieldPending.allocatedSec}
+              {isPaused}
+              canYield={false}
+              yieldNote={`回答来自 ${yieldPending.questionerDelegationName} 的提问`}
+              onpause={pauseSpeaking}
+              onresume={resumeSpeaking}
+              onend={() => finishSpeaker()}
+            />
+          </div>
+        {/if}
+
       {:else if isSpeakerActive && conf.activeSpeaker}
         <ActiveSpeakerCard
           delegationName={activeSpeaker.delegationName}
@@ -423,6 +474,8 @@
           elapsedSec={displayElapsed}
           totalSec={displayTotal}
           {isPaused}
+          canYield={activeSpeakerCanYield}
+          {yieldNote}
           positionLabel={isCaucus ? `${speakers.length} 人中第 ${currentIdx + 1} 位` : undefined}
           onpause={pauseSpeaking}
           onresume={resumeSpeaking}

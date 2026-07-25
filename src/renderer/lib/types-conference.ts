@@ -56,6 +56,22 @@ export interface YieldChoice {
   fromDelegationId?: string
 }
 
+/** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
+export interface YieldPendingState {
+  originalEntryId: string
+  originalDelegationId: string
+  originalDelegationName: string
+  yieldType: 'delegate' | 'question' | 'comment'
+  /** 让渡时的剩余秒数 */
+  remainingSec: number
+  /** 原发言人分配的总时长 */
+  allocatedSec: number
+  /** 提问方代表团 ID（question 类型专用） */
+  questionerDelegationId?: string
+  /** 提问方代表团名称（question 类型专用） */
+  questionerDelegationName?: string
+}
+
 export interface SpeakerEntry {
   id: string
   delegationId: string
@@ -67,6 +83,8 @@ export interface SpeakerEntry {
   status: 'waiting' | 'ready' | 'speaking' | 'finished' | 'interrupted'
   /** 发言人做出的让渡选择 */
   yield?: YieldChoice
+  /** 是否允许让渡（通过让渡获得时间的发言人不可再次让渡），默认 true */
+  canYield?: boolean
 }
 
 // ---- 动议系统 ------------------------------------------------------------
@@ -349,6 +367,9 @@ export interface Conference {
     /** 暂停时间戳（非空 = 已暂停） */
     pausedAt?: number
   } | null
+
+  /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
+  yieldPending?: YieldPendingState | null
 }
 
 // ---- 显示窗口同步数据 -----------------------------------------------------
@@ -438,6 +459,13 @@ export interface ConferenceDisplayData {
     eventType: MinutesEventType
     description: string
   }>
+  /** 让渡处理中状态（Display 端展示让渡流程） */
+  yieldPending?: {
+    yieldType: 'delegate' | 'question' | 'comment'
+    originalDelegationName: string
+    remainingSec: number
+    questionerDelegationName?: string
+  }
   /** 点名进度（roll_call 阶段使用） */
   rollCall?: {
     currentIndex: number

@@ -13,6 +13,8 @@
     elapsedSec: number
     totalSec: number
     isPaused?: boolean
+    canYield?: boolean
+    yieldNote?: string
     /** "N 人中第 X 位" 的可选副标题 */
     positionLabel?: string
     onpause?: () => void
@@ -27,6 +29,8 @@
     elapsedSec,
     totalSec,
     isPaused = false,
+    canYield = true,
+    yieldNote,
     positionLabel,
     onpause,
     onresume,
@@ -53,6 +57,9 @@
   </div>
 
   <div class="mt-4">
-    <SpeakerControls {isPaused} {onpause} {onresume} {onend} {onyield} />
+    <SpeakerControls {isPaused} {canYield} {onpause} {onresume} {onend} {onyield} />
   </div>
+  {#if yieldNote}
+    <div class="mt-2 text-xs text-amber-600 dark:text-amber-400">{yieldNote}</div>
+  {/if}
 </div>
