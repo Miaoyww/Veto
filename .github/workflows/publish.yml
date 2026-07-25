@@ -1,84 +1,38 @@
-name: Publish
+name: Release
 
 on:
   push:
-    tags: ["*"]
+    tags: ['v*']
 
 permissions:
   contents: write
 
 jobs:
-
-  version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ github.ref_name }}
-    steps:
-      - name: Version
-        run: echo "publish version is ${{ github.ref_name }}"
-
-
-  build:
-    needs: version
-    permissions:
-      contents: write
+  release:
     strategy:
-      fail-fast: false
       matrix:
         include:
-          - platform: windows-latest
-            arch: x64
-          - platform: windows-latest
-            arch: arm64
-          - platform: macos-latest
-            arch: x64
-          - platform: macos-latest
-            arch: arm64
-          - platform: ubuntu-22.04
-            arch: x64
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
 
-    runs-on: ${{ matrix.platform }}
-    env:
-      Version: ${{ needs.version.outputs.version }}
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: pnpm
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm ci
 
-      - name: Build Electron app
-        run: pnpm build
-
-      - name: Package with electron-builder
-        uses: electron-userland/electron-builder-action@v1
+      - name: Publish
+        run: npx electron-builder --${{ matrix.platform }} --publish always
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: --${{ matrix.platform == 'windows-latest' && 'win' || matrix.platform == 'macos-latest' && 'mac' || 'linux' }} --${{ matrix.arch }}
-
-      - name: Upload artifacts to release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: v${{ needs.version.outputs.version }}
-          draft: true
-          prerelease: true
-          files: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.snap
-            dist/*.deb
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
