@@ -1,10 +1,10 @@
 {
   "name": "veto",
-  "version": "0.20.0",
-  "description": "An Electron application with Svelte and TypeScript",
+  "version": "0.25.0",
+  "description": "Veto —— A modern, cross-platform, and extensible Model United Nations Conference platform.",
   "main": "./out/main/index.js",
   "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "homepage": "https://veto.miaoyww.top",
   "repository": "https://github.com/Miaoyww/Veto",
   "scripts": {
     "format": "prettier --plugin prettier-plugin-svelte --write .",
