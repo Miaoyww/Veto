@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Users, Globe, Gavel, Building2, ArrowLeft } from '@lucide/svelte'
+  import { Users, Gavel, Building2, ArrowLeft } from '@lucide/svelte'
   import { navigate } from '$lib/router.svelte'
   import {
     currentConference
@@ -16,13 +16,6 @@
     ).length ?? 0
   )
 
-  const speakersOrder = $derived(
-    conf?.speakersList.filter((s) => s.status === 'waiting') ?? []
-  )
-
-  const currentSpeaker = $derived(
-    conf?.speakersList.find((s) => s.status === 'speaking') ?? null
-  )
 </script>
 
 <aside class="flex h-full w-[260px] shrink-0 flex-col border-r bg-muted/30">
@@ -97,37 +90,6 @@
       </div>
     </div>
 
-    <!-- 发言顺序预览 -->
-    {#if speakersOrder.length > 0 || currentSpeaker}
-      <div class="border-t px-5 py-3">
-        <div class="mb-1.5 flex items-center gap-1">
-          <Globe size={10} class="text-muted-foreground" />
-          <span class="text-[10px] font-medium text-muted-foreground">发言顺序</span>
-        </div>
-
-        {#if currentSpeaker}
-          {@const del = conf.delegations.find((d) => d.id === currentSpeaker.delegationId)}
-          <div class="mb-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-            🎤 正在发言: {del?.shortName ?? del?.name ?? currentSpeaker.delegationId}
-          </div>
-        {/if}
-
-        <div class="flex flex-col gap-0.5">
-          {#each speakersOrder.slice(0, 5) as entry, i}
-            {@const del = conf.delegations.find((d) => d.id === entry.delegationId)}
-            <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <span class="w-4 text-right font-mono text-[9px]">{i + 1}</span>
-              <span class="truncate">{del?.shortName ?? del?.name ?? entry.delegationId}</span>
-            </div>
-          {/each}
-          {#if speakersOrder.length > 5}
-            <div class="text-[10px] text-muted-foreground/60">
-              ...还有 {speakersOrder.length - 5} 位等待
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
   {:else}
     <div class="flex flex-1 items-center justify-center px-5 text-center">
       <p class="text-sm text-muted-foreground">未加载大会</p>
