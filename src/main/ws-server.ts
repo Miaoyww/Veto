@@ -13,12 +13,13 @@
 
 import * as http from 'http'
 import * as crypto from 'crypto'
+import type { Duplex } from 'stream'
 
 const WS_PORT = 19527
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 interface WsClient {
-  socket: import('net').Socket
+  socket: Duplex
   isHost: boolean
 }
 

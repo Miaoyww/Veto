@@ -37,7 +37,6 @@ function refreshPlugins(): void {
 }
 
 function createWindow(): void {
-  // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 720,
@@ -45,28 +44,25 @@ function createWindow(): void {
     minHeight: 720,
 
     show: false,
-    frame: false, // 是否显示窗口边框
-    center: true, // 窗口居中
+    frame: false,
+    center: true,
 
     autoHideMenuBar: true,
 
     icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-
-      // 禁用渲染器沙盒
       sandbox: false,
-      // 禁用同源策略
       webSecurity: false,
-      // 允许 HTTP
       allowRunningInsecureContent: true,
-      // 禁用拼写检查
       spellcheck: false
     }
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    if (mainWindow) {
+      mainWindow.show()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -74,8 +70,6 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -128,7 +122,8 @@ function registerIpcHandlers(): void {
       try {
         if (plugin.path.definitionsIsDir) {
           // 目录模式：扫描所有 JSON 文件并合并
-          const files = fs.readdirSync(plugin.path.definitions)
+          const files = fs
+            .readdirSync(plugin.path.definitions)
             .filter((f) => f.endsWith('.json'))
             .sort()
           const merged: Record<string, unknown> = {}
@@ -139,7 +134,7 @@ function registerIpcHandlers(): void {
               if (Array.isArray(val) && Array.isArray(merged[key])) {
                 ;(merged[key] as unknown[]).push(...(val as unknown[]))
               } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
-                merged[key] = { ...(merged[key] as object ?? {}), ...(val as object) }
+                merged[key] = { ...((merged[key] as object) ?? {}), ...(val as object) }
               } else {
                 merged[key] = val
               }
@@ -202,7 +197,8 @@ function registerIpcHandlers(): void {
       const dirPath = join(plugin.path.plugin, subDir)
       if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) return []
 
-      return fs.readdirSync(dirPath)
+      return fs
+        .readdirSync(dirPath)
         .filter((f) => f.endsWith('.json'))
         .sort()
     } catch {
@@ -501,7 +497,6 @@ function registerIpcHandlers(): void {
       return null
     }
   })
-
 }
 
 // ── 自动更新初始化 ────────────────────────────────────────────────────
