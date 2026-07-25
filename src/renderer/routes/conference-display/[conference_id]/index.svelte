@@ -175,10 +175,10 @@
       <div class="flex items-center gap-5">
         <div>
           <h1 class="text-[28px] font-semibold tracking-[0.04em] text-white">
-            {displayData.name}
+            {displayData.venue}
           </h1>
           <p class="mt-0.5 text-sm tracking-wider text-white/30 uppercase">
-            {displayData.venue}
+            {displayData.name}
           </p>
         </div>
       </div>
