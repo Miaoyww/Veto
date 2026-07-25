@@ -6,20 +6,16 @@
 
 @font-face {
 	font-family: 'HarmonyOS SansSC';
-	src:
-		url('/fonts/HarmonyOS_SansSC_Regular') format('ttf'),
-		url('/fonts/HarmonyOS_SansSC_Regular') format('ttf');
+	src: local('HarmonyOS Sans SC'), local('HarmonyOS SansSC');
 	font-weight: 400;
 	font-style: normal;
 }
 
 @font-face {
 	font-family: 'HarmonyOS SansSC';
-	src:
-		url('/fonts/HarmonyOS_SansSC_Bold') format('ttf'),
-		url('/fonts/HarmonyOS_SansSC_Bold') format('ttf');
+	src: local('HarmonyOS Sans SC Bold'), local('HarmonyOS SansSC Bold');
 	font-weight: 700;
-	font-style: bold;
+	font-style: normal;
 }
 
 html,
@@ -31,7 +27,7 @@ body {
 	overscroll-behavior: none;
 	overflow-x: hidden;
 	scrollbar-width: none;
-	font-family: 'HarmonyOS SansSC', sans-serif;
+	font-family: 'HarmonyOS SansSC', 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
 }
 
 html::-webkit-scrollbar,

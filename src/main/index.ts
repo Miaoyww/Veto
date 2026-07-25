@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
 import { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -73,7 +73,7 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadURL('veto://app/index.html')
   }
 }
 
@@ -431,9 +431,9 @@ function registerIpcHandlers(): void {
         `${process.env['ELECTRON_RENDERER_URL']}#/conference-display/${conferenceId}`
       )
     } else {
-      displayWindow.loadFile(join(__dirname, '../renderer/index.html'), {
-        hash: `/conference-display/${conferenceId}`
-      })
+      displayWindow.loadURL(
+        `veto://app/index.html#/conference-display/${conferenceId}`
+      )
     }
 
     // 等待页面加载完成，确保 listener 已注册
@@ -556,6 +556,20 @@ function setupAutoUpdater(): void {
   })
 }
 
+// ── 注册自定义协议（必须在 app.whenReady 之前）────────────────────────
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'veto',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true
+    }
+  }
+])
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -582,6 +596,69 @@ app.whenReady().then(() => {
 
   // 注册 IPC 处理器
   registerIpcHandlers()
+
+  // ── 注册 veto:// 自定义协议处理器 ─────────────────────────────────
+  const rendererRoot = join(__dirname, '../renderer')
+
+  protocol.handle('veto', (request) => {
+    const url = new URL(request.url)
+    // veto://app/xxx → out/renderer/xxx
+    let filePath = url.pathname.replace(/^\/+/, '')
+
+    // veto://app/ → index.html
+    if (!filePath || filePath === 'app') {
+      filePath = 'index.html'
+    }
+    // veto://app/assets/... → assets/...
+    if (filePath.startsWith('app/')) {
+      filePath = filePath.slice(4)
+    }
+
+    const fullPath = join(rendererRoot, filePath)
+
+    // 安全检查：确保路径不越出 renderer 目录
+    if (!fullPath.startsWith(rendererRoot)) {
+      return new Response('Forbidden', { status: 403 })
+    }
+
+    const ext = extname(fullPath).toLowerCase()
+    const mimeTypes: Record<string, string> = {
+      '.html': 'text/html',
+      '.js': 'application/javascript',
+      '.mjs': 'application/javascript',
+      '.css': 'text/css',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+      '.ttf': 'font/ttf',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav'
+    }
+
+    try {
+      const data = fs.readFileSync(fullPath)
+      return new Response(data, {
+        status: 200,
+        headers: { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' }
+      })
+    } catch {
+      // SPA fallback：非文件路径返回 index.html（支持 pushState 路由）
+      try {
+        const html = fs.readFileSync(join(rendererRoot, 'index.html'))
+        return new Response(html, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' }
+        })
+      } catch {
+        return new Response('Not Found', { status: 404 })
+      }
+    }
+  })
 
   createWindow()
 
