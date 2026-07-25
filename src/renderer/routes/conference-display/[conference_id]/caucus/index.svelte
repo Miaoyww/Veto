@@ -2,6 +2,7 @@
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
+  import { Mic } from '@lucide/svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>
@@ -30,18 +31,37 @@
 
     {#if currentSpeaker}
       <!-- 当前发言人 -->
+      <div class="flex items-center gap-3 text-white/40">
+        <div class="h-px w-12 bg-white/10"></div>
+        <Mic
+          size={20}
+          class={data.currentSpeaker.status === 'paused' ? 'text-[#C9A84C]' : 'text-[#5B92E5]'}
+        />
+        <span class="text-lg tracking-[0.08em] uppercase">
+          {data.currentSpeaker.status === 'paused' ? '计时已暂停' : '正在发言'}
+        </span>
+        <div class="h-px w-12 bg-white/10"></div>
+      </div>
+
       <div class="text-center">
-        <div class="text-sm tracking-[0.08em] text-white/30 uppercase">正在发言</div>
-        <div class="mt-2 text-6xl font-semibold text-white">
-          {currentSpeaker.delegationName}
+        <div class="text-8xl font-semibold tracking-wide text-white">
+          {data.currentSpeaker.delegationName}
         </div>
-        <div
-          class="mt-4 font-mono text-[90px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]"
-        >
-          {formatTime(
-            Math.max(0, data.currentSpeaker?.remainingSec ?? data.caucusTimer.remainingSec)
-          )}
-        </div>
+        {#if data.currentSpeaker.shortName}
+          <div class="mt-1 text-4xl font-light tracking-[0.06em] text-white/30">
+            {data.currentSpeaker.shortName}
+          </div>
+        {/if}
+      </div>
+
+      <!-- 倒计时 -->
+      <div
+        class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data
+          .currentSpeaker.status === 'paused'
+          ? 'text-[#C9A84C]'
+          : 'text-[#5B92E5]'}"
+      >
+        {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
       </div>
     {/if}
 
@@ -53,25 +73,6 @@
       </div>
     {:else if currentIdx + 1 >= speakers.length}
       <div class="text-lg tracking-wider text-white/15">最后一位发言人</div>
-    {/if}
-
-    {#if restQueue.length > 0}
-      <!-- 后续队列 -->
-      <div class="w-full space-y-px">
-        {#each restQueue as speaker, i (i)}
-          <div class="flex items-center justify-center gap-4 px-6 py-2.5">
-            <span class="text-sm tabular-nums text-white/25">
-              {i + 2}
-            </span>
-            <span class="text-xl font-medium text-white/50">
-              {speaker.delegationName}
-            </span>
-            {#if speaker.shortName}
-              <span class="text-sm tracking-wider text-white/25">{speaker.shortName}</span>
-            {/if}
-          </div>
-        {/each}
-      </div>
     {/if}
   </div>
 {:else}

@@ -49,11 +49,15 @@
     displayRemaining = data.remainingSec
     displayElapsed = data.elapsedSec
     displayTotal = data.totalSec
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function onExpire(): void {
     endSpeaker()
     isPaused = false
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   /** Step 1: 预发言 — 标记代表团准备发言 */
@@ -103,6 +107,8 @@
     } else {
       endSpeaker()
     }
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   const activeSpeaker = $derived(conf?.speakersList.find((s) => s.status === 'speaking') ?? null)

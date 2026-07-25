@@ -21,9 +21,9 @@
   <div class="flex flex-col items-center gap-10">
     <div class="flex items-center gap-3 text-white/40">
       <div class="h-px w-12 bg-white/10"></div>
-      <Mic size={20} class={data.currentSpeaker.isPaused ? 'text-[#C9A84C]' : 'text-[#5B92E5]'} />
+      <Mic size={20} class={data.currentSpeaker.status === 'paused' ? 'text-[#C9A84C]' : 'text-[#5B92E5]'} />
       <span class="text-lg tracking-[0.08em] uppercase">
-        {data.currentSpeaker.isPaused ? '计时已暂停' : '正在发言'}
+        {data.currentSpeaker.status === 'paused' ? '计时已暂停' : '正在发言'}
       </span>
       <div class="h-px w-12 bg-white/10"></div>
     </div>
@@ -40,7 +40,7 @@
     </div>
 
     <!-- 倒计时 -->
-    <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data.currentSpeaker.isPaused ? 'text-[#C9A84C]' : 'text-[#5B92E5]'}">
+    <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data.currentSpeaker.status === 'paused' ? 'text-[#C9A84C]' : 'text-[#5B92E5]'}">
       {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
     </div>
   </div>

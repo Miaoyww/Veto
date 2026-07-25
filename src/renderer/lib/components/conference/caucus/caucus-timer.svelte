@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
+  import { get } from 'svelte/store'
   import { Timer, Coffee, MessageSquare, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
@@ -19,6 +20,7 @@
     destroyTimer
   } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
+  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 
   const conf = $derived($currentConference)
   const activeCaucus = $derived(conf?.activeCaucus ?? null)
@@ -48,27 +50,37 @@
     getTimer('caucus')?.stop()
     isPaused = true
     pauseSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function handleResume(): void {
     isPaused = false
     resumeSpeakerStore(speakerRemainingSec)
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function handleEndSpeaker(): void {
     getTimer('caucus')?.stop()
     isPaused = false
     advanceCaucusSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function handleYield(type: 'chair' | 'delegate' | 'question' | 'comment'): void {
     getTimer('caucus')?.stop()
     isPaused = false
     advanceCaucusSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function handleStartSpeaker(): void {
     startCaucusSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   function handleCancelReadySpeaker(): void {
@@ -76,6 +88,8 @@
     getTimer('caucus')?.stop()
     isPaused = false
     advanceCaucusSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 
   const nextSpeaker = $derived(currentIdx >= 0 && currentIdx + 1 < speakers.length ? speakers[currentIdx + 1] : null)
@@ -99,10 +113,14 @@
         (data) => {
           speakerRemainingSec = data.remainingSec
           speakerElapsedSec = data.elapsedSec
+          const c = get(currentConference)
+          if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
         },
         () => {
           // Speaker time expired → advance to next
           advanceCaucusSpeaker()
+          const c = get(currentConference)
+          if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
         }
       )
     }
@@ -127,8 +145,14 @@
           totalRemainingSec = data.remainingSec
           totalElapsedSec = data.elapsedSec
           totalSec = total
+          const c = get(currentConference)
+          if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
         },
-        () => endCaucus()
+        () => {
+          endCaucus()
+          const c = get(currentConference)
+          if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
+        }
       )
     }
 
@@ -146,6 +170,8 @@
 
   function handleEndCurrentSpeaker(): void {
     advanceCaucusSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
 </script>
 

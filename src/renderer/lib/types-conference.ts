@@ -377,8 +377,8 @@ export interface ConferenceDisplayData {
     shortName?: string
     remainingSec: number
     allocatedSec: number
-    /** 计时是否已暂停 */
-    isPaused?: boolean
+    /** 计时状态 */
+    status: 'playing' | 'paused'
   }
   /** 预发言状态（ready 阶段，即将发言的代表团） */
   readySpeaker?: {
@@ -418,6 +418,8 @@ export interface ConferenceDisplayData {
     remainingSec: number
     totalSec: number
     type: 'moderated' | 'unmoderated'
+    /** 计时状态 */
+    status: 'running' | 'paused'
     topic?: string
     /** 有主持磋商发言顺序 */
     caucusSpeakers?: Array<{

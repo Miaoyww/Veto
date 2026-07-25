@@ -27,7 +27,6 @@
 
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
-  let timerInterval: ReturnType<typeof setInterval> | null = null
 
   onMount(() => {
     const bridge = getDisplayBridge()
@@ -38,35 +37,9 @@
       connectionStatus = status
     })
 
-    timerInterval = setInterval(() => {
-      if (!displayData) return
-
-      // Tick current speaker (除非暂停)
-      const speaker = displayData.currentSpeaker
-      if (speaker && !speaker.isPaused && speaker.remainingSec > 0) {
-        const newRemaining = Math.max(0, speaker.remainingSec - 0.5)
-        displayData = {
-          ...displayData,
-          currentSpeaker: { ...speaker, remainingSec: newRemaining }
-        }
-        return
-      }
-
-      // Tick caucus timer
-      const caucus = displayData.caucusTimer
-      if (caucus && caucus.remainingSec > 0) {
-        const newRemaining = Math.max(0, caucus.remainingSec - 0.5)
-        displayData = {
-          ...displayData,
-          caucusTimer: { ...caucus, remainingSec: newRemaining }
-        }
-      }
-    }, 500)
-
     return () => {
       unsubData()
       unsubStatus()
-      if (timerInterval) clearInterval(timerInterval)
     }
   })
 

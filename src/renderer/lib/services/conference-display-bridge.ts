@@ -61,6 +61,7 @@ function getWs(): WebSocket {
 
   _ws.onopen = () => {
     setStatus('connected')
+    console.log('[DisplayBridge] WebSocket connected')
     _reconnectDelay = 1000 // 重置退避
     // 发送积压消息
     for (const msg of _pendingMessages) {
@@ -72,6 +73,11 @@ function getWs(): WebSocket {
   _ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as ConferenceDisplayData
+      console.log('[DisplayBridge] WS message received:', {
+        phase: data.phase,
+        speaker: data.currentSpeaker?.remainingSec,
+        caucus: data.caucusTimer?.remainingSec
+      })
       for (const cb of _wsListeners) {
         cb(data)
       }
@@ -135,6 +141,11 @@ function createHostBridge(): ConferenceDisplayBridge {
     sendUpdate: (data: ConferenceDisplayData): void => {
       const ws = getWs()
       const payload = JSON.stringify({ type: 'host', data })
+      console.log('[DisplayBridge] sendUpdate →', {
+        phase: data.phase,
+        speaker: data.currentSpeaker?.remainingSec,
+        caucus: data.caucusTimer?.remainingSec
+      })
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(payload)
       } else {
@@ -255,6 +266,7 @@ export function buildDisplayData(
       remainingSec: Math.max(0, (conf.activeCaucus.endAt - now) / 1000),
       totalSec: (conf.activeCaucus.endAt - conf.activeCaucus.startedAt) / 1000,
       type: conf.activeCaucus.type,
+      status: conf.activeSpeaker?.pausedAt != null ? 'paused' : 'running',
       topic: conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
         ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
         : undefined,
@@ -285,7 +297,7 @@ export function buildDisplayData(
             ? Math.max(0, (conf.activeSpeaker.endAt - Date.now()) / 1000)
             : 0,
           allocatedSec: currentSpeakerAllocatedSec,
-          isPaused: conf.activeSpeaker?.pausedAt != null
+          status: conf.activeSpeaker?.pausedAt != null ? 'paused' : 'playing'
         }
       : undefined,
     readySpeaker: (() => {
