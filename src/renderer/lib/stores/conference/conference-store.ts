@@ -699,15 +699,11 @@ export function approveMotion(motionId: string): void {
   const motion = conf?.motions.find((m) => m.id === motionId)
   if (!motion) return
 
-  // 实质性投票：状态更新由 executeMotionAction 在原子操作中一并完成，
-  // 避免中间状态导致 Display 端闪现上一次投票结果
-  if (motion.type !== 'substantive_vote') {
-    updateCurrentConference((c) => ({
-      ...c,
-      motions: c.motions.map((m) => (m.id === motionId ? { ...m, status: 'approved' as const } : m))
-    }))
-    addMinutesEntry('motion_approved', `动议通过`, { motionId })
-  }
+  updateCurrentConference((c) => ({
+    ...c,
+    motions: c.motions.map((m) => (m.id === motionId ? { ...m, status: 'approved' as const } : m))
+  }))
+  addMinutesEntry('motion_approved', `动议通过`, { motionId })
 
   // 执行动议动作
   executeMotionAction(motion)
@@ -842,58 +838,17 @@ function executeMotionAction(motion: Motion): void {
       addMinutesEntry('phase_changed', '进入阶段: 投票表决')
       break
     case 'substantive_vote': {
-      // 在一个原子更新中完成：动议状态变更 + 文件名称记录 + 投票会话创建。
-      // 分步更新会导致中间状态被 Display 端捕获，闪现上一次投票的旧结果。
+      // 记录文件名称
       const docName = (motion as any).documentName as string
-      const trimmedDocName = docName?.trim() ?? ''
-      const sessionId = generateId()
-      const now = Date.now()
-      const session: VotingSession = {
-        id: sessionId,
-        targetType: 'motion',
-        targetId: motion.id,
-        majorityRule: 'two_thirds',
-        ballots: [],
-        startedAt: now
+      if (docName) {
+        addDocumentName(docName)
       }
-      updateCurrentConference((c) => {
-        const filtered = trimmedDocName
-          ? c.documentNames.filter((n) => n !== trimmedDocName)
-          : c.documentNames
-        return {
-          ...c,
-          phase: 'voting',
-          motions: c.motions.map((m) =>
-            m.id === motion.id ? { ...m, status: 'approved' as const } : m
-          ),
-          documentNames: trimmedDocName
-            ? [trimmedDocName, ...filtered].slice(0, 20)
-            : c.documentNames,
-          votingSessions: [...c.votingSessions, session],
-          minutes: [
-            ...c.minutes,
-            {
-              id: generateId(),
-              timestamp: now,
-              eventType: 'motion_approved' as MinutesEventType,
-              description: `动议通过（实质性投票: ${trimmedDocName || '未命名文件'}）`,
-              relatedMotionId: motion.id
-            },
-            {
-              id: generateId(),
-              timestamp: now,
-              eventType: 'voting_started' as MinutesEventType,
-              description: `对「${trimmedDocName || '未命名文件'}」开始实质性投票 (2/3多数)`
-            },
-            {
-              id: generateId(),
-              timestamp: now,
-              eventType: 'phase_changed' as MinutesEventType,
-              description: '进入阶段: 投票表决'
-            }
-          ]
-        }
-      })
+      // 启动唱名投票
+      const sessionId = startVotingSession('motion', motion.id, 'two_thirds')
+      addMinutesEntry(
+        'voting_started',
+        `对「${docName || '未命名文件'}」开始实质性投票 (2/3多数)`
+      )
       break
     }
   }

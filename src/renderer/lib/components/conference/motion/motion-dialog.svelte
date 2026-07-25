@@ -70,13 +70,13 @@
 
   // ---- Form state ----
   let selectedType = $state<MotionType | null>(null)
-  // Moderated Caucus
+  // Moderated Caucus（无预设值，必须手动填写）
   let mcTopic = $state('')
   let committedTopic = $state('')
-  let mcTotalSec = $state(360)
-  let committedMcTotalSec = $state(360)
-  let mcSpeakerSec = $state(60)
-  let committedMcSpeakerSec = $state(60)
+  let mcTotalSec = $state<number | null>(null)
+  let committedMcTotalSec = $state<number | null>(null)
+  let mcSpeakerSec = $state<number | null>(null)
+  let committedMcSpeakerSec = $state<number | null>(null)
   // Unmoderated Caucus
   let ucDurationMin = $state(15)
   let committedUcDurationMin = $state(15)
@@ -94,10 +94,10 @@
     selectedType = null
     mcTopic = ''
     committedTopic = ''
-    mcTotalSec = 360
-    committedMcTotalSec = 360
-    mcSpeakerSec = 60
-    committedMcSpeakerSec = 60
+    mcTotalSec = null
+    committedMcTotalSec = null
+    mcSpeakerSec = null
+    committedMcSpeakerSec = null
     ucDurationMin = 15
     committedUcDurationMin = 15
     newTimeSec = 90
@@ -121,26 +121,30 @@
     const proposerId = selectedProposerId || conf.delegations[0]?.id
     if (!proposerId) return
 
+    // 使用 committed 值（onblur 已提交），保证 Display 端动画已完整播放
     let motionData: any = {
       type: selectedType,
       proposedByDelegationId: proposerId
     }
 
     switch (selectedType) {
-      case 'moderated_caucus':
-        motionData.topic = mcTopic.trim() || '未指定主题'
-        motionData.totalTimeSec = mcTotalSec
-        motionData.speakingTimePerPersonSec = mcSpeakerSec
-        motionData.maxSpeakers = calcMaxSpeakers(mcTotalSec, mcSpeakerSec)
+      case 'moderated_caucus': {
+        const total = committedMcTotalSec ?? 0
+        const perSpeaker = committedMcSpeakerSec ?? 0
+        motionData.topic = committedTopic.trim() || '未指定主题'
+        motionData.totalTimeSec = total
+        motionData.speakingTimePerPersonSec = perSpeaker
+        motionData.maxSpeakers = calcMaxSpeakers(total, perSpeaker)
         break
+      }
       case 'unmoderated_caucus':
-        motionData.durationSec = ucDurationMin * 60
+        motionData.durationSec = committedUcDurationMin * 60
         break
       case 'modify_speaking_time':
-        motionData.newTimeSec = newTimeSec
+        motionData.newTimeSec = committedNewTimeSec
         break
       case 'substantive_vote':
-        motionData.documentName = documentName.trim() || '未命名文件'
+        motionData.documentName = committedDocumentName.trim() || '未命名文件'
         break
     }
 
@@ -173,11 +177,37 @@
     motionDraft.set(null)
   }
 
-  const mcMaxSpeakers = $derived(calcMaxSpeakers(mcTotalSec, mcSpeakerSec))
+  const mcMaxSpeakers = $derived(
+    mcTotalSec != null && mcSpeakerSec != null && mcSpeakerSec > 0
+      ? calcMaxSpeakers(mcTotalSec, mcSpeakerSec)
+      : 0
+  )
+
+  // 当前表单是否有未失焦的输入（live !== committed），防止动画未完成就提交
+  const isDirty = $derived.by(() => {
+    switch (selectedType) {
+      case 'moderated_caucus':
+        return mcTopic !== committedTopic || mcTotalSec !== committedMcTotalSec || mcSpeakerSec !== committedMcSpeakerSec
+      case 'unmoderated_caucus':
+        return ucDurationMin !== committedUcDurationMin
+      case 'modify_speaking_time':
+        return newTimeSec !== committedNewTimeSec
+      case 'substantive_vote':
+        return documentName !== committedDocumentName
+      default:
+        return false
+    }
+  })
+
   const canPropose = $derived(
     selectedType !== null &&
     selectedProposerId !== '' &&
-    (selectedType !== 'substantive_vote' || documentName.trim() !== '')
+    !isDirty &&
+    (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
+    (selectedType !== 'moderated_caucus' || (
+      committedMcTotalSec != null && committedMcTotalSec > 0 &&
+      committedMcSpeakerSec != null && committedMcSpeakerSec > 0
+    ))
   )
 
   // 实时同步动议草稿到 Display
@@ -266,16 +296,36 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <Label class="mb-1.5 block text-xs text-muted-foreground">总时长（秒）</Label>
-                <Input type="number" min="30" max="3600" step="30" bind:value={mcTotalSec} class="h-9 text-sm" onblur={() => (committedMcTotalSec = mcTotalSec)} />
+                <Input
+                  type="number"
+                  min="30"
+                  max="3600"
+                  step="30"
+                  placeholder="必填"
+                  bind:value={mcTotalSec}
+                  class="h-9 text-sm"
+                  onblur={() => (committedMcTotalSec = mcTotalSec)}
+                />
               </div>
               <div>
                 <Label class="mb-1.5 block text-xs text-muted-foreground">每人发言（秒）</Label>
-                <Input type="number" min="15" max="600" step="15" bind:value={mcSpeakerSec} class="h-9 text-sm" onblur={() => (committedMcSpeakerSec = mcSpeakerSec)} />
+                <Input
+                  type="number"
+                  min="15"
+                  max="600"
+                  step="15"
+                  placeholder="必填"
+                  bind:value={mcSpeakerSec}
+                  class="h-9 text-sm"
+                  onblur={() => (committedMcSpeakerSec = mcSpeakerSec)}
+                />
               </div>
             </div>
-            <div class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
-              {mcTotalSec}秒 ÷ 每人{mcSpeakerSec}秒 = 最多 <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
-            </div>
+            {#if committedMcTotalSec != null && committedMcSpeakerSec != null && committedMcTotalSec > 0 && committedMcSpeakerSec > 0}
+              <div class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
+                {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多 <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
+              </div>
+            {/if}
           </div>
         {:else if selectedType === 'unmoderated_caucus'}
           <div>

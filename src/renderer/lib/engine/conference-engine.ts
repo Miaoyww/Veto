@@ -145,6 +145,7 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     case 'resume_resolution':
     case 'reorder_resolution':
     case 'suspend_meeting':
+    case 'substantive_vote':
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
 
     // 需要 2/3 多数表决
@@ -152,10 +153,6 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     case 'close_meeting':
     case 'postpone_resolution':
       return { requiresVoting: true, votingMajority: 'two_thirds', autoApprove: false }
-
-    // 实质性投票：动议本身自动通过，直接进入唱名表决
-    case 'substantive_vote':
-      return { requiresVoting: false, votingMajority: 'two_thirds', autoApprove: true }
 
     default:
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
