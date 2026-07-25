@@ -522,6 +522,7 @@
             placeholder="搜索代表团名称..."
             onselect={addSpeaker}
             resetOnSelect={true}
+            presentOnly={true}
             excludeIds={listedDelegationIds}
           />
         </div>
