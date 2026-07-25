@@ -1,7 +1,5 @@
 <script lang="ts">
   import PlusIcon from '@lucide/svelte/icons/plus'
-  import XIcon from '@lucide/svelte/icons/x'
-  import Trash2Icon from '@lucide/svelte/icons/trash-2'
   import UsersIcon from '@lucide/svelte/icons/users'
   import { navigate } from '$lib/router.svelte'
   import { createConference } from '$lib/stores/conference/conference-store'
@@ -20,12 +18,6 @@
   let venue = $state('')
   let defaultSpeakingTimeSec = $state(120)
 
-  // 议题列表
-  let agendaItems = $state<{ key: number; title: string; description: string }[]>([
-    { key: 1, title: '', description: '' }
-  ])
-  let agendaKeyCounter = $state(1)
-
   // 代表团文本
   let delegationsText = $state('')
 
@@ -35,24 +27,6 @@
 法兰西共和国,法国
 大不列颠及北爱尔兰联合王国,英国
 俄罗斯联邦,俄罗斯`
-
-  function addAgendaItem(): void {
-    agendaKeyCounter++
-    agendaItems = [...agendaItems, { key: agendaKeyCounter, title: '', description: '' }]
-  }
-
-  function removeAgendaItem(key: number): void {
-    if (agendaItems.length <= 1) return
-    agendaItems = agendaItems.filter((a) => a.key !== key)
-  }
-
-  function updateAgendaTitle(key: number, title: string): void {
-    agendaItems = agendaItems.map((a) => (a.key === key ? { ...a, title } : a))
-  }
-
-  function updateAgendaDesc(key: number, description: string): void {
-    agendaItems = agendaItems.map((a) => (a.key === key ? { ...a, description } : a))
-  }
 
   function insertP5(): void {
     if (delegationsText.trim()) {
@@ -86,12 +60,10 @@
     const parsedDelegations = parseDelegations()
     if (parsedDelegations.length === 0) return
 
-    const validAgenda = agendaItems.filter((a) => a.title.trim())
-
     const id = createConference(
       trimmedName,
       venue.trim() || '未指定会场',
-      validAgenda.map((a) => ({ title: a.title.trim(), description: a.description.trim() || undefined })),
+      [],
       parsedDelegations,
       { defaultSpeakingTimeSec }
     )
@@ -105,8 +77,6 @@
     name = ''
     venue = ''
     defaultSpeakingTimeSec = 120
-    agendaKeyCounter = 1
-    agendaItems = [{ key: 1, title: '', description: '' }]
     delegationsText = ''
   }
 
@@ -137,7 +107,7 @@
           新建大会
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          设定会场、议题以及参与代表团，创建后进入模拟流程。
+          设定会场与参与代表团，创建后进入模拟流程。
         </Dialog.Description>
       </Dialog.Header>
 
@@ -148,7 +118,6 @@
           <Input
             id="conf-name"
             bind:value={name}
-            placeholder="如：安理会2026年第3次紧急会议"
             class="h-9"
           />
         </section>
@@ -161,52 +130,8 @@
           <Input
             id="conf-venue"
             bind:value={venue}
-            placeholder="如：联合国安全理事会"
             class="h-9"
           />
-        </section>
-
-        <Separator />
-
-        <!-- 议题列表 -->
-        <section class="px-1 py-3">
-          <div class="mb-3 flex items-center justify-between">
-            <span class="text-xs font-medium text-muted-foreground">议题列表</span>
-            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" onclick={addAgendaItem}>
-              <PlusIcon size={12} />
-              添加议题
-            </Button>
-          </div>
-
-          <div class="flex flex-col gap-3">
-            {#each agendaItems as item (item.key)}
-              <div class="flex items-start gap-2">
-                <div class="flex flex-1 flex-col gap-1.5">
-                  <Input
-                    value={item.title}
-                    placeholder="议题标题（如：核裁军、气候变化）"
-                    class="h-8 text-sm"
-                    oninput={(e) => updateAgendaTitle(item.key, (e.target as HTMLInputElement).value)}
-                  />
-                  <Input
-                    value={item.description}
-                    placeholder="简要描述（可选）"
-                    class="h-8 text-sm text-muted-foreground"
-                    oninput={(e) => updateAgendaDesc(item.key, (e.target as HTMLInputElement).value)}
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  class="mt-0.5 shrink-0 text-muted-foreground hover:text-red-500"
-                  disabled={agendaItems.length <= 1}
-                  onclick={() => removeAgendaItem(item.key)}
-                >
-                  <Trash2Icon size={14} />
-                </Button>
-              </div>
-            {/each}
-          </div>
         </section>
 
         <Separator />
@@ -228,7 +153,6 @@
 
           <Textarea
             bind:value={delegationsText}
-            placeholder="每行一个代表团，格式：全称,简称&#10;示例：&#10;中华人民共和国,中国&#10;美利坚合众国,美国&#10;德意志联邦共和国,德国"
             class="min-h-[160px] font-mono text-xs"
           />
           <p class="mt-1 text-[10px] text-muted-foreground">
