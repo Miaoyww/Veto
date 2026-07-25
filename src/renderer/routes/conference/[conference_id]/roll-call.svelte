@@ -114,7 +114,7 @@
       isTransitioning = false
       lastRollCallMarked = null
       currentIndex++
-    }, 1800)
+    }, 1500)
   }
 
   function markAbsent(): void {
@@ -132,7 +132,7 @@
       isTransitioning = false
       lastRollCallMarked = null
       currentIndex++
-    }, 1800)
+    }, 1500)
   }
 
   function goBack(): void {
@@ -222,32 +222,7 @@
             <div
               class="relative flex w-full flex-col items-center gap-6 rounded-2xl border-2 bg-card p-14 shadow-lg transition-all duration-500 {isTransitioning ? statusClass : 'border-indigo-200 dark:border-indigo-800'}"
             >
-              <!-- 确认浮层 -->
-              {#if showConfirmOverlay && lastRollCallMarked}
-                <div class="absolute inset-0 flex items-center justify-center rounded-2xl {lastRollCallMarked.status === 'present' ? 'bg-emerald-500/8' : 'bg-muted-foreground/5'}">
-                  <div class="flex flex-col items-center gap-3">
-                    {#if lastRollCallMarked.status === 'present'}
-                      <div class="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 ring-4 ring-emerald-200 dark:bg-emerald-900/40 dark:ring-emerald-700/50">
-                        <Check size={40} class="text-emerald-600 dark:text-emerald-400" stroke-width={3} />
-                      </div>
-                      <span class="text-xl font-bold text-emerald-700 dark:text-emerald-400">出席</span>
-                    {:else}
-                      <div class="flex h-20 w-20 items-center justify-center rounded-full bg-muted ring-4 ring-muted-foreground/20 dark:bg-muted/30 dark:ring-muted-foreground/30">
-                        <X size={40} class="text-muted-foreground" stroke-width={3} />
-                      </div>
-                      <span class="text-xl font-bold text-muted-foreground">缺席</span>
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-
-              <div
-                class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-border text-4xl font-bold text-white shadow-inner transition-opacity duration-300"
-                class:opacity-30={isTransitioning}
-                style="background-color: {currentDelegation.color}"
-              >
-                {currentDelegation.shortName?.charAt(0) ?? currentDelegation.name.charAt(0)}
-              </div>
+              <!-- 代表团信息 -->
 
               <div class="text-center transition-opacity duration-300" class:opacity-30={isTransitioning}>
                 <div class="text-3xl font-bold text-foreground">{currentDelegation.name}</div>
@@ -256,35 +231,46 @@
                 {/if}
               </div>
 
-              {#if currentDelegation.vetoPower && !isTransitioning}
-                <Badge variant="outline" class="border-red-300 bg-red-50 px-3 py-1 text-sm font-bold text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-400">
-                  否决权 VETO POWER
-                </Badge>
+              {#if !isTransitioning}
+                <div class="mt-2 flex gap-4">
+                  <Button
+                    size="lg"
+                    class="min-w-[160px] gap-2 bg-emerald-600 text-base hover:bg-emerald-700"
+                    onclick={markPresent}
+                    disabled={isTransitioning}
+                  >
+                    <Check size={20} />
+                    出席
+                    <span class="text-xs opacity-60">P</span>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    class="min-w-[160px] gap-2 text-base"
+                    onclick={markAbsent}
+                    disabled={isTransitioning}
+                  >
+                    <X size={20} />
+                    缺席
+                    <span class="text-xs opacity-40">A</span>
+                  </Button>
+                </div>
+              {:else if showConfirmOverlay && lastRollCallMarked}
+                <!-- 点名结果（卡片底部） -->
+                <div class="mt-2 flex flex-col items-center gap-2">
+                  {#if lastRollCallMarked.status === 'present'}
+                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 ring-4 ring-emerald-200 dark:bg-emerald-900/40 dark:ring-emerald-700/50">
+                      <Check size={28} class="text-emerald-600 dark:text-emerald-400" stroke-width={3} />
+                    </div>
+                    <span class="text-lg font-bold text-emerald-700 dark:text-emerald-400">出席</span>
+                  {:else}
+                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-muted ring-4 ring-muted-foreground/20 dark:bg-muted/30 dark:ring-muted-foreground/30">
+                      <X size={28} class="text-muted-foreground" stroke-width={3} />
+                    </div>
+                    <span class="text-lg font-bold text-muted-foreground">缺席</span>
+                  {/if}
+                </div>
               {/if}
-
-              <div class="mt-2 flex gap-4">
-                <Button
-                  size="lg"
-                  class="min-w-[160px] gap-2 bg-emerald-600 text-base hover:bg-emerald-700"
-                  onclick={markPresent}
-                  disabled={isTransitioning}
-                >
-                  <Check size={20} />
-                  出席
-                  <span class="text-xs opacity-60">P</span>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  class="min-w-[160px] gap-2 text-base"
-                  onclick={markAbsent}
-                  disabled={isTransitioning}
-                >
-                  <X size={20} />
-                  缺席
-                  <span class="text-xs opacity-40">A</span>
-                </Button>
-              </div>
 
               {#if currentIndex > 0}
                 <button class="text-xs text-muted-foreground hover:text-foreground" onclick={goBack} disabled={isTransitioning}>
