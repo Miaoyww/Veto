@@ -8,6 +8,7 @@
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import { Gavel, Play, Users, Monitor, HelpCircle, UserRoundCheck } from '@lucide/svelte'
+  import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -145,8 +146,9 @@
     </div>
 
     <!-- 阶段对应内容 -->
-    <div class="flex flex-1 items-center justify-center overflow-hidden p-6">
+    <div class="flex flex-1 min-h-0 p-6">
       {#if conf.phase === 'preamble'}
+        <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-6 text-center">
           <div class="flex flex-col items-center gap-2">
             <Users size={48} class="opacity-30" />
@@ -158,7 +160,9 @@
             开始点名
           </Button>
         </div>
+        </div>
       {:else if conf.phase === 'roll_call'}
+        <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-6 text-center">
           <div class="flex flex-col items-center gap-2">
             <Users size={48} class="opacity-30" />
@@ -170,7 +174,9 @@
             进入点名页面
           </Button>
         </div>
+        </div>
       {:else if conf.phase === 'pending_speakers_list'}
+        <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-6 text-center">
           <div class="flex flex-col items-center gap-2">
             <Users size={48} class="opacity-30" />
@@ -180,28 +186,41 @@
             </p>
           </div>
         </div>
+        </div>
       {:else if conf.phase === 'general_debate'}
-        <SpeakerQueue mode="general_debate" />
+        <ScrollArea class="flex-1">
+          <SpeakerQueue mode="general_debate" />
+        </ScrollArea>
       {:else if conf.phase === 'caucus_setup'}
-        <CaucusSetupPanel />
+        <ScrollArea class="flex-1">
+          <CaucusSetupPanel />
+        </ScrollArea>
       {:else if conf.phase === 'caucus'}
-        <SpeakerQueue mode="caucus" />
+        <ScrollArea class="flex-1">
+          <SpeakerQueue mode="caucus" />
+        </ScrollArea>
       {:else if conf.phase === 'voting'}
-        <VotingPanel />
+        <ScrollArea class="flex-1">
+          <VotingPanel />
+        </ScrollArea>
       {:else if isSuspended}
+        <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-4 text-muted-foreground">
           <Gavel size={48} class="opacity-30" />
           <p class="text-lg font-medium">会议休会中</p>
           <p class="text-sm opacity-70">点击"恢复会议"继续</p>
         </div>
+        </div>
       {:else if isClosed}
+        <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-4 text-muted-foreground">
           <Gavel size={48} class="opacity-30" />
           <p class="text-lg font-medium">会议已闭幕</p>
           <p class="text-sm opacity-70">感谢各位代表的参与</p>
         </div>
+        </div>
       {:else}
-        <div class="text-muted-foreground">当前阶段: {conf.phase}</div>
+        <div class="flex flex-1 items-center justify-center text-muted-foreground">当前阶段: {conf.phase}</div>
       {/if}
     </div>
 
