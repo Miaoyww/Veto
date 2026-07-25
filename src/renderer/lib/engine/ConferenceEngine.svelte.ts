@@ -766,6 +766,11 @@ export class ConferenceEngine {
 
     this.points = [...this.points, point]
 
+    // 程序性问题：若有活跃发言人且未暂停，则自动暂停计时器
+    if (type === 'point_of_order' && this.activeSpeaker && this.activeSpeaker.pausedAt == null) {
+      this.pauseSpeaking()
+    }
+
     const del = this.delegations.find((d) => d.id === delegationId)
     const pointLabel = POINT_LABELS[point.type]
     this.addMinutesEntry(

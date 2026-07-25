@@ -134,7 +134,7 @@
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">问题类型</Label>
             <div class="flex flex-col gap-2">
-              {#each pointTypes as pt}
+              {#each pointTypes as pt (pt)}
                 {@const Icon = POINT_ICONS[pt] ?? HelpCircle}
                 {@const disabled = isPointTypeDisabled(pt)}
                 <button
