@@ -125,8 +125,10 @@ const veto = {
 
   conference: {
     /** 打开显示窗口 */
-    openDisplay: (conferenceId: string): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke('veto:conference:open-display', conferenceId),
+    openDisplay: (
+      conferenceIdOrParams: string | { conferenceId?: string; wsUrl?: string; label?: string }
+    ): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:conference:open-display', conferenceIdOrParams),
 
     /** 关闭显示窗口 */
     closeDisplay: (): Promise<{ success: boolean }> =>

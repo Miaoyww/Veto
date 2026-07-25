@@ -12,7 +12,7 @@
    */
   import { onMount } from 'svelte'
   import { Gavel, Vote, Coffee, Timer } from '@lucide/svelte'
-  import { getDisplayBridge, onConnectionStatus } from '$lib/services/conference-display-bridge'
+  import { getDisplayBridge, onConnectionStatus, setExternalWsUrl } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
@@ -31,15 +31,26 @@
   onMount(() => {
     const bridge = getDisplayBridge()
     const unsubData = bridge.onHostCommand((data: ConferenceDisplayData) => {
+      // 忽略 ws-config 控制消息（非显示数据）
+      if ((data as any).type === 'ws-config') return
       displayData = data
     })
     const unsubStatus = onConnectionStatus((status: ConnectionStatus) => {
       connectionStatus = status
     })
 
+    // 监听来自主进程的 WS 配置消息（仅展示模式）
+    const unsubDisplayUpdate = window.veto?.conference?.onDisplayUpdate?.((data: unknown) => {
+      const msg = data as { type?: string; wsUrl?: string }
+      if (msg.type === 'ws-config' && msg.wsUrl) {
+        setExternalWsUrl(msg.wsUrl)
+      }
+    })
+
     return () => {
       unsubData()
       unsubStatus()
+      unsubDisplayUpdate?.()
     }
   })
 

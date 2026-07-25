@@ -65,6 +65,14 @@ function createWindow(): void {
     }
   })
 
+  mainWindow.on('closed', () => {
+    // 主窗口关闭时一并关闭 display 窗口
+    if (displayWindow && !displayWindow.isDestroyed()) {
+      displayWindow.close()
+    }
+    mainWindow = null
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -388,63 +396,87 @@ function registerIpcHandlers(): void {
 
   // ── 模拟大会：双窗口控制 ──────────────────────────────────────────
 
-  ipcMain.handle('veto:conference:open-display', async (_event, conferenceId: string) => {
-    if (displayWindow && !displayWindow.isDestroyed()) {
-      displayWindow.focus()
-      // 等待一小段时间再发，确保 renderer 的 listener 已就绪
-      setTimeout(() => {
-        displayWindow?.webContents.send('veto:conference:display-update', { conferenceId })
-      }, 500)
+  ipcMain.handle(
+    'veto:conference:open-display',
+    async (
+      _event,
+      conferenceIdOrParams: string | { conferenceId?: string; wsUrl?: string; label?: string }
+    ) => {
+      const isParams = typeof conferenceIdOrParams === 'object'
+      const conferenceId = isParams ? (conferenceIdOrParams.conferenceId || 'standalone') : conferenceIdOrParams
+      const wsUrl = isParams ? conferenceIdOrParams.wsUrl : undefined
+      const label = isParams ? conferenceIdOrParams.label : undefined
+
+      if (displayWindow && !displayWindow.isDestroyed()) {
+        displayWindow.focus()
+        // 如果指定了外部 WS URL，通知 display 窗口更新连接
+        if (wsUrl) {
+          setTimeout(() => {
+            displayWindow?.webContents.send('veto:conference:display-update', {
+              type: 'ws-config',
+              wsUrl
+            })
+          }, 500)
+        }
+        return { success: true }
+      }
+
+      displayWindow = new BrowserWindow({
+        width: 1920,
+        height: 1080,
+        minWidth: 800,
+        minHeight: 600,
+        show: false,
+        frame: false,
+        center: true,
+        autoHideMenuBar: true,
+        title: label || 'VETO 大会 - 显示窗口',
+        webPreferences: {
+          preload: join(__dirname, '../preload/index.js'),
+          sandbox: false,
+          webSecurity: false,
+          allowRunningInsecureContent: true,
+          spellcheck: false
+        }
+      })
+
+      displayWindow.on('ready-to-show', () => {
+        displayWindow!.show()
+      })
+
+      displayWindow.on('closed', () => {
+        displayWindow = null
+      })
+
+      // Load the display route
+      if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+        displayWindow.loadURL(
+          `${process.env['ELECTRON_RENDERER_URL']}#/conference-display/${conferenceId}`
+        )
+      } else {
+        displayWindow.loadURL(
+          `veto://app/index.html#/conference-display/${conferenceId}`
+        )
+      }
+
+      // 等待页面加载完成，确保 listener 已注册
+      await new Promise<void>((resolve) => {
+        displayWindow!.webContents.once('did-finish-load', () => {
+          resolve()
+        })
+      })
+
+      // 如果指定了外部 WS URL，发送配置到 display 窗口
+      if (wsUrl) {
+        displayWindow!.webContents.send('veto:conference:display-update', {
+          type: 'ws-config',
+          wsUrl
+        })
+      }
+
       return { success: true }
     }
-
-    displayWindow = new BrowserWindow({
-      width: 1920,
-      height: 1080,
-      minWidth: 800,
-      minHeight: 600,
-      show: false,
-      frame: false,
-      center: true,
-      autoHideMenuBar: true,
-      title: 'VETO 模拟大会 - 显示窗口',
-      webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
-        sandbox: false,
-        webSecurity: false,
-        allowRunningInsecureContent: true,
-        spellcheck: false
-      }
-    })
-
-    displayWindow.on('ready-to-show', () => {
-      displayWindow!.show()
-    })
-
-    displayWindow.on('closed', () => {
-      displayWindow = null
-    })
-
-    // Load the display route
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      displayWindow.loadURL(
-        `${process.env['ELECTRON_RENDERER_URL']}#/conference-display/${conferenceId}`
-      )
-    } else {
-      displayWindow.loadURL(
-        `veto://app/index.html#/conference-display/${conferenceId}`
-      )
-    }
-
-    // 等待页面加载完成，确保 listener 已注册
-    await new Promise<void>((resolve) => {
-      displayWindow!.webContents.once('did-finish-load', () => {
-        resolve()
-      })
-    })
-
-    return { success: true }
-  })
+  )
 
   ipcMain.handle('veto:conference:close-display', () => {
     if (displayWindow && !displayWindow.isDestroyed()) {

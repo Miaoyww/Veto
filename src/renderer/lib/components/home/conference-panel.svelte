@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Search, Plus, Users } from '@lucide/svelte'
+  import { Search, Plus, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
   import * as InputGroup from '$lib/components/ui/input-group/index.js'
@@ -7,6 +7,7 @@
   import { conferences } from '$lib/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
+  import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
   import { cn } from '$lib/utils.js'
   import { fly } from 'svelte/transition'
 
@@ -19,6 +20,7 @@
 
   let query = $state('')
   let dialogOpen = $state(false)
+  let displayOnlyDialogOpen = $state(false)
 
   const filteredConferences = $derived(
     query.trim()
@@ -54,7 +56,15 @@
     </InputGroup.Root>
 
     <!-- 右侧：操作 -->
-    <div class="flex justify-end">
+    <div class="flex justify-end gap-2">
+      <Button
+        variant="outline"
+        onclick={() => (displayOnlyDialogOpen = true)}
+        class="gap-2"
+      >
+        <Monitor size={16} />
+        仅展示
+      </Button>
       <Button onclick={() => (dialogOpen = true)} class="gap-2">
         <Plus size={16} />
         新建大会
@@ -93,3 +103,6 @@
 
 <!-- Create Conference Dialog -->
 <CreateConferenceDialog bind:open={dialogOpen} />
+
+<!-- Display Only Dialog -->
+<DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />

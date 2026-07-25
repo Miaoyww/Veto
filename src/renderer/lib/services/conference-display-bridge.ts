@@ -12,7 +12,32 @@
 
 import type { ConferenceDisplayData } from '$lib/types-conference'
 
-const WS_URL = 'ws://localhost:19527'
+const DEFAULT_WS_URL = 'ws://localhost:19527'
+
+/** 当前 WS 连接地址（可由外部 IPC 消息更新） */
+let _currentWsUrl: string | null = null
+
+export function getWsUrl(): string {
+  return _currentWsUrl || DEFAULT_WS_URL
+}
+
+/** 更新 WS 地址并重连（仅展示模式由 IPC 触发） */
+export function setExternalWsUrl(url: string): void {
+  if (_currentWsUrl === url) return
+  _currentWsUrl = url
+  console.log('[DisplayBridge] External WS URL set:', url)
+  // 断开当前连接并重连
+  if (_ws) {
+    _ws.close()
+    _ws = null
+  }
+  if (_reconnectTimer) {
+    clearTimeout(_reconnectTimer)
+    _reconnectTimer = null
+  }
+  _reconnectDelay = 1000
+  getWs()
+}
 
 // ---- 抽象接口 ------------------------------------------------------------
 
@@ -57,7 +82,7 @@ function getWs(): WebSocket {
   }
 
   setStatus('connecting')
-  _ws = new WebSocket(WS_URL)
+  _ws = new WebSocket(getWsUrl())
 
   _ws.onopen = () => {
     setStatus('connected')

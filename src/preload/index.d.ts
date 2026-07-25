@@ -69,7 +69,9 @@ export interface VetoAPI {
     openDevTools: () => Promise<{ success: boolean; error?: string }>
   }
   conference: {
-    openDisplay: (conferenceId: string) => Promise<{ success: boolean }>
+    openDisplay: (
+      conferenceIdOrParams: string | { conferenceId?: string; wsUrl?: string; label?: string }
+    ) => Promise<{ success: boolean }>
     closeDisplay: () => Promise<{ success: boolean }>
     sendToDisplay: (data: unknown) => Promise<{ success: boolean }>
     onDisplayUpdate: (callback: (data: unknown) => void) => () => void

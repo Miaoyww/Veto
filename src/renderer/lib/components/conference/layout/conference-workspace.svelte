@@ -8,10 +8,7 @@
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import { Gavel, Play, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import {
-    setPhase,
-    resumeMeeting
-  } from '$lib/stores/conference/conference-store'
+  import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 
   const conf = $derived($currentConference)
@@ -54,11 +51,16 @@
   const primaryActionLabel = $derived.by(() => {
     if (!conf) return ''
     switch (conf.phase) {
-      case 'general_debate': return '提出动议'
-      case 'caucus': return '提出动议'
-      case 'caucus_setup': return '提出动议'
-      case 'voting': return ''
-      default: return ''
+      case 'general_debate':
+        return '提出动议'
+      case 'caucus':
+        return '提出动议'
+      case 'caucus_setup':
+        return '提出动议'
+      case 'voting':
+        return ''
+      default:
+        return ''
     }
   })
 
