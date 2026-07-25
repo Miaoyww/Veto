@@ -5,9 +5,6 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
-  import { Switch } from '$lib/components/ui/switch'
-  import { Badge } from '$lib/components/ui/badge'
-  import { Separator } from '$lib/components/ui/separator'
   import {
     AlertDialog,
     AlertDialogAction,
@@ -62,24 +59,15 @@
   // ---- 添加代表团表单 ----
   let showAddForm = $state(false)
   let newName = $state('')
-  let newColor = $state('#3b82f6')
-  let newVetoPower = $state(false)
 
   // ---- 重新点名确认 ----
   let showResetConfirm = $state(false)
 
-  const PRESET_COLORS = [
-    '#e11d48', '#f97316', '#eab308', '#22c55e', '#06b6d4',
-    '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#ec4899',
-    '#64748b', '#78716c'
-  ]
-
   function handleAdd(): void {
     const name = newName.trim()
     if (!name) return
-    addDelegation(name, newColor, newVetoPower)
+    addDelegation(name)
     newName = ''
-    newVetoPower = false
     showAddForm = false
   }
 
@@ -103,14 +91,12 @@
             totalCount: c.delegations.length,
             currentDelegationName: del?.name,
             currentDelegationShortName: del?.shortName,
-            currentDelegationColor: del?.color,
             presentCount: freshThresholds.presentCount,
             simpleMajorityThreshold: freshThresholds.simpleMajorityThreshold,
             twoThirdsThreshold: freshThresholds.twoThirdsThreshold,
             lastMarked: {
               delegationName: del?.name ?? '',
               shortName: del?.shortName,
-              color: del?.color ?? '#64748b',
               status: isPresent ? 'present' : 'absent',
               index: idx >= 0 ? idx : 0
             }
@@ -232,28 +218,6 @@
                   onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAdd() }}
                 />
               </div>
-              <div class="flex flex-col gap-1.5">
-                <Label class="text-xs">颜色</Label>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each PRESET_COLORS as color}
-                    <button
-                      class="h-6 w-6 rounded-full border-2 transition-all {newColor === color ? 'scale-110 border-foreground ring-2 ring-offset-1 ring-offset-background' : 'border-border'}"
-                      style="background-color: {color}"
-                      onclick={() => (newColor = color)}
-                    ></button>
-                  {/each}
-                </div>
-              </div>
-              <div class="flex items-end gap-2 pb-0.5">
-                <div class="flex items-center gap-2">
-                  <Switch
-                    id="new-veto"
-                    checked={newVetoPower}
-                    oncheckedchange={(v: boolean) => (newVetoPower = v)}
-                  />
-                  <Label for="new-veto" class="text-xs">拥有否决权</Label>
-                </div>
-              </div>
               <div class="flex items-end justify-end gap-2">
                 <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => (showAddForm = false)}>
                   取消
@@ -271,9 +235,7 @@
         <div class="rounded-xl border bg-card">
           <!-- 表头 -->
           <div class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground">
-            <div class="w-8"></div>
             <div class="flex-1">代表团</div>
-            <div class="w-20 text-center">否决权</div>
             <div class="w-36 text-center">出席状态</div>
             <div class="w-12"></div>
           </div>
@@ -282,13 +244,6 @@
             {#each sortedDelegations as delegation (delegation.id)}
               {@const isPresent = delegation.attendance === 'present'}
               <div class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30">
-                <!-- 颜色圆点 -->
-                <div
-                  class="h-4 w-4 shrink-0 rounded-full border-2 {isPresent ? 'border-foreground/30' : 'border-muted-foreground/20 opacity-40'}"
-                  class:opacity-40={!isPresent}
-                  style="background-color: {delegation.color}"
-                ></div>
-
                 <!-- 名称 -->
                 <div class="flex min-w-0 flex-1 flex-col">
                   <span
@@ -301,17 +256,6 @@
                   </span>
                   {#if delegation.shortName}
                     <span class="truncate text-xs text-muted-foreground">{delegation.shortName}</span>
-                  {/if}
-                </div>
-
-                <!-- 否决权 -->
-                <div class="w-20 text-center">
-                  {#if delegation.vetoPower}
-                    <Badge variant="outline" class="border-red-300 bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-400">
-                      VETO
-                    </Badge>
-                  {:else}
-                    <span class="text-xs text-muted-foreground/40">—</span>
                   {/if}
                 </div>
 

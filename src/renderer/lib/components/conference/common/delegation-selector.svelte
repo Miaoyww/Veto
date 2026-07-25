@@ -144,10 +144,6 @@
 <div class={cn('relative', className)}>
   {#if selectedDelegation && !focused}
     <div class="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2">
-      <div
-        class="h-2.5 w-2.5 shrink-0 rounded-full"
-        style="background-color: {selectedDelegation.color}"
-      ></div>
       <span class="text-sm">{selectedDelegation.name}</span>
       <button
         class="ml-auto text-xs text-muted-foreground hover:text-foreground"
@@ -175,16 +171,9 @@
             )}
             onmousedown={() => select(d.id)}
           >
-            <div
-              class="h-2.5 w-2.5 shrink-0 rounded-full"
-              style="background-color: {d.color}"
-            ></div>
             <span class="text-foreground">{d.name}</span>
             {#if d.shortName}
               <span class="text-xs text-muted-foreground">({d.shortName})</span>
-            {/if}
-            {#if d.vetoPower}
-              <span class="ml-auto rounded bg-red-100 px-1 py-0.5 text-[9px] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">V</span>
             {/if}
           </button>
         {/each}

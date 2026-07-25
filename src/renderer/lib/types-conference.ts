@@ -26,10 +26,6 @@ export interface Delegation {
   shortName?: string
   /** 国旗 emoji 或图片 URL（可选） */
   flagUrl?: string
-  /** UI 配色 */
-  color: string
-  /** 是否拥有否决权 */
-  vetoPower: boolean
   /** 点名出勤状态 */
   attendance: 'present' | 'absent'
   /** 排序权重（越小越靠前） */
@@ -539,7 +535,6 @@ export interface ConferenceDisplayData {
     totalCount: number
     currentDelegationName?: string
     currentDelegationShortName?: string
-    currentDelegationColor?: string
     presentCount: number
     simpleMajorityThreshold: number
     twoThirdsThreshold: number
@@ -547,7 +542,6 @@ export interface ConferenceDisplayData {
     lastMarked?: {
       delegationName: string
       shortName?: string
-      color: string
       status: 'present' | 'absent'
       index: number
     }

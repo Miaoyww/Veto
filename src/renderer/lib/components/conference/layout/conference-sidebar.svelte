@@ -80,24 +80,10 @@
               isPresent ? '' : 'opacity-50'
             )}
           >
-            <!-- 颜色标识 -->
-            <div
-              class="h-3 w-3 shrink-0 rounded-full border border-border"
-              style="background-color: {delegation.color}"
-            ></div>
             <!-- 名称 -->
             <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
               {delegation.name}
             </span>
-            <!-- 否决权 badge -->
-            {#if delegation.vetoPower}
-              <span
-                class="shrink-0 rounded bg-red-100 px-1 py-0.5 text-[9px] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                title="拥有否决权"
-              >
-                VETO
-              </span>
-            {/if}
             <!-- 出席状态 icon -->
             <span class="shrink-0 text-[10px]">
               {#if isPresent}

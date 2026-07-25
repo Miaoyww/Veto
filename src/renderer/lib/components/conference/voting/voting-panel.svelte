@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Vote, Check, X, Minus } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import {
     currentConference,
@@ -118,18 +117,9 @@
         {#each conf.delegations.filter((d) => d.attendance === 'present') as delegation (delegation.id)}
           {@const ballot = activeSession.ballots.find((b) => b.delegationId === delegation.id)}
           <div class="flex items-center gap-3 px-4 py-2.5">
-            <div
-              class="h-3 w-3 shrink-0 rounded-full"
-              style="background-color: {delegation.color}"
-            ></div>
             <span class="min-w-0 flex-1 text-sm text-foreground">
               {delegation.name}
             </span>
-            {#if delegation.vetoPower}
-              <Badge variant="outline" class="border-red-200 bg-red-50 text-[9px] text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-                VETO
-              </Badge>
-            {/if}
             <div class="flex gap-1">
               <Button
                 size="sm"

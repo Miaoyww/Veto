@@ -140,7 +140,7 @@ export function createConference(
   name: string,
   venue: string,
   agendaItems: { title: string; description?: string }[],
-  delegations: { name: string; shortName?: string; vetoPower: boolean; color: string }[],
+  delegations: { name: string; shortName?: string }[],
   options?: { defaultSpeakingTimeSec?: number }
 ): string {
   const id = generateId()
@@ -149,8 +149,6 @@ export function createConference(
     id: generateId(),
     name: d.name,
     shortName: d.shortName,
-    color: d.color,
-    vetoPower: d.vetoPower,
     attendance: 'absent',
     sortOrder: i
   }))
@@ -268,7 +266,7 @@ export function resetRollCall(): void {
 
 // ---- 代表团管理 ----
 
-export function addDelegation(name: string, color: string, vetoPower: boolean): string {
+export function addDelegation(name: string): string {
   const id = generateId()
   const conf = get(currentConference)
   const sortOrder = conf?.delegations.length ?? 0
@@ -280,8 +278,6 @@ export function addDelegation(name: string, color: string, vetoPower: boolean): 
       {
         id,
         name,
-        color,
-        vetoPower,
         attendance: 'absent',
         sortOrder
       }

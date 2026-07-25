@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Check, X, Users, Flag } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
-  import { Badge } from '$lib/components/ui/badge/index.js'
   import {
     currentConference,
     setAttendance,
@@ -96,8 +95,7 @@
           <div class="flex w-full flex-col items-center gap-6 rounded-2xl border-2 border-indigo-200 bg-card p-12 shadow-lg dark:border-indigo-800">
             <!-- 国旗/色块 -->
             <div
-              class="flex h-24 w-24 items-center justify-center rounded-full border-4 border-border text-3xl font-bold text-white shadow-inner"
-              style="background-color: {currentDelegation.color}"
+              class="flex h-24 w-24 items-center justify-center rounded-full border-4 border-border text-3xl font-bold text-foreground shadow-inner bg-muted"
             >
               {#if currentDelegation.flagUrl}
                 <img src={currentDelegation.flagUrl} alt="" class="h-full w-full rounded-full object-cover" />
@@ -113,13 +111,6 @@
                 <div class="mt-1 text-lg text-muted-foreground">{currentDelegation.shortName}</div>
               {/if}
             </div>
-
-            <!-- 否决权标识 -->
-            {#if currentDelegation.vetoPower}
-              <Badge variant="outline" class="border-red-300 bg-red-50 px-3 py-1 text-sm font-bold text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-400">
-                否决权 VETO POWER
-              </Badge>
-            {/if}
 
             <!-- 操作按钮 -->
             <div class="flex gap-4">
@@ -187,10 +178,6 @@
             {#each sortedDelegations as delegation (delegation.id)}
               {@const isPresent = delegation.attendance === 'present'}
               <div class="flex items-center gap-3 py-2.5">
-                <div
-                  class="h-3 w-3 shrink-0 rounded-full"
-                  style="background-color: {delegation.color}"
-                ></div>
                 <span class={cn('flex-1 text-sm', isPresent ? 'text-foreground' : 'text-muted-foreground/50 line-through')}>
                   {delegation.name}
                 </span>

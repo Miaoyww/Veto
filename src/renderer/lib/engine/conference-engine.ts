@@ -96,16 +96,6 @@ export function determinePassFail(
   return yesCount >= threshold ? 'passed' : 'failed'
 }
 
-/** 检查是否有否决权国家投了反对票 */
-export function checkVeto(ballots: VoteBallot[], delegations: Delegation[]): boolean {
-  const vetoDelegationIds = new Set(
-    delegations.filter((d) => d.vetoPower).map((d) => d.id)
-  )
-  return ballots.some(
-    (b) => vetoDelegationIds.has(b.delegationId) && b.vote === 'no'
-  )
-}
-
 /** 纯函数：统计投票 */
 export function tallyVotesEngine(ballots: VoteBallot[]): {
   yes: number

@@ -57,7 +57,6 @@
               ? {
                   currentDelegationName: currentDelegation.name,
                   currentDelegationShortName: currentDelegation.shortName,
-                  currentDelegationColor: currentDelegation.color,
                 }
               : {}),
             lastMarked: lastRollCallMarked ?? undefined,
@@ -105,7 +104,6 @@
     lastRollCallMarked = {
       delegationName: currentDelegation.name,
       shortName: currentDelegation.shortName,
-      color: currentDelegation.color,
       status: 'present',
       index: currentIndex,
     }
@@ -123,7 +121,6 @@
     lastRollCallMarked = {
       delegationName: currentDelegation.name,
       shortName: currentDelegation.shortName,
-      color: currentDelegation.color,
       status: 'absent',
       index: currentIndex,
     }
@@ -310,7 +307,6 @@
               {#each sortedDelegations as delegation (delegation.id)}
                 {@const isPresent = delegation.attendance === 'present'}
                 <div class="flex items-center gap-3 py-2.5">
-                  <div class="h-3 w-3 shrink-0 rounded-full" style="background-color: {delegation.color}"></div>
                   <span class={cn('flex-1 text-sm', isPresent ? 'text-foreground' : 'text-muted-foreground/50 line-through')}>
                     {delegation.name}
                   </span>

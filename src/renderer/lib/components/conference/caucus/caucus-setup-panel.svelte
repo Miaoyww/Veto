@@ -158,10 +158,6 @@
             {#if del}
               <div class="flex items-center gap-3 px-4 py-2.5">
                 <span class="w-6 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
-                <div
-                  class="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style="background-color: {del.color}"
-                ></div>
                 <span class="min-w-0 flex-1 text-sm text-foreground">{del.name}</span>
                 {#if proposerDel?.id === delId}
                   <Badge variant="outline" class="text-[10px]">动议国</Badge>

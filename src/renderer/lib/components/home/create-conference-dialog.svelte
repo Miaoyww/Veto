@@ -30,11 +30,11 @@
   let delegationsText = $state('')
 
   // 常用五常模板
-  const P5_TEMPLATE = `中华人民共和国,中国,true,#ef4444
-美利坚合众国,美国,true,#3b82f6
-法兰西共和国,法国,true,#2563eb
-大不列颠及北爱尔兰联合王国,英国,true,#1e40af
-俄罗斯联邦,俄罗斯,true,#7c3aed`
+  const P5_TEMPLATE = `中华人民共和国,中国
+美利坚合众国,美国
+法兰西共和国,法国
+大不列颠及北爱尔兰联合王国,英国
+俄罗斯联邦,俄罗斯`
 
   function addAgendaItem(): void {
     agendaKeyCounter++
@@ -65,19 +65,15 @@
   function parseDelegations(): {
     name: string
     shortName?: string
-    vetoPower: boolean
-    color: string
   }[] {
     return delegationsText
       .split('\n')
       .map((line) => {
         const parts = line.split(',').map((s) => s.trim())
-        if (parts.length < 4) return null
+        if (parts.length < 1 || !parts[0]) return null
         return {
           name: parts[0],
-          shortName: parts[1] || undefined,
-          vetoPower: parts[2]?.toLowerCase() === 'true',
-          color: parts[3]
+          shortName: parts[1] || undefined
         }
       })
       .filter((d): d is NonNullable<typeof d> => d !== null)
@@ -232,11 +228,11 @@
 
           <Textarea
             bind:value={delegationsText}
-            placeholder="每行一个代表团，格式：全称,简称,有否决权,颜色&#10;示例：&#10;中华人民共和国,中国,true,#ef4444&#10;美利坚合众国,美国,true,#3b82f6&#10;德意志联邦共和国,德国,false,#374151"
+            placeholder="每行一个代表团，格式：全称,简称&#10;示例：&#10;中华人民共和国,中国&#10;美利坚合众国,美国&#10;德意志联邦共和国,德国"
             class="min-h-[160px] font-mono text-xs"
           />
           <p class="mt-1 text-[10px] text-muted-foreground">
-            格式：全称,简称,有否决权(true/false),颜色代码
+            格式：全称,简称（简称可选）
           </p>
         </section>
 
