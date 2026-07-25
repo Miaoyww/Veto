@@ -2,9 +2,9 @@
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
   "composite": true,
   "include": [
-    "src/renderer/src/env.d.ts",
-    "src/renderer/src/**/*",
-    "src/renderer/src/**/*.svelte",
+    "src/renderer/env.d.ts",
+    "src/renderer/**/*",
+    "src/renderer/**/*.svelte",
     "src/preload/*.d.ts"
   ],
   "compilerOptions": {
@@ -15,8 +15,8 @@
     "checkJs": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
-      "$lib/*": ["./src/renderer/src/lib/*"],
-      "$units/*": ["./src/renderer/src/units/*"]
+      "$lib/*": ["./src/renderer/lib/*"],
+      "$units/*": ["./src/renderer/units/*"]
     }
   }
 }
