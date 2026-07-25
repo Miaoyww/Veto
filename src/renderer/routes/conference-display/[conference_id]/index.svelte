@@ -18,7 +18,6 @@
     setExternalWsUrl
   } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
-  import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
@@ -29,6 +28,7 @@
   import QuestionDisplay from './question/index.svelte'
   import CaucusSetupDisplay from './caucus-setup/index.svelte'
   import CaucusDisplay from './caucus/index.svelte'
+  import ConferenceHeader from '$lib/components/conference/display/conference-header.svelte'
   import VotingDisplay from './voting/index.svelte'
   import PendingSpeakersListDisplay from './pending-speakers-list/index.svelte'
   import SuspendedDisplay from './suspended/index.svelte'
@@ -83,6 +83,17 @@
   })
 
   const phase = $derived(displayData?.phase ?? null)
+
+  const headerThresholds = $derived.by(() => {
+    const present = displayData?.votingSession?.tally.present
+    if (present != null && present > 0) {
+      return {
+        simpleMajority: Math.floor(present / 2) + 1,
+        twoThirds: Math.ceil((present * 2) / 3)
+      }
+    }
+    return null
+  })
 
   // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
   let effectivePhase = $state<string | null>(null)
@@ -175,38 +186,14 @@
   {/if}
 
   {#if displayData}
-    <!-- 顶部横幅：大会信息 -->
-    <div class="relative flex items-center gap-8 border-b border-white/10 px-16 py-7">
-      <div class="flex items-center gap-5">
-        <div>
-          <h1 class="text-[28px] font-semibold tracking-[0.04em] text-white">
-            {displayData.venue}
-          </h1>
-          <p class="mt-0.5 text-sm tracking-wider text-white/30 uppercase">
-            {displayData.name}
-          </p>
-        </div>
-      </div>
-
-      <!-- 磋商主题 -->
-      {#if displayData.caucusTimer?.topic}
-        <div class="absolute left-1/2 -translate-x-1/2 text-6xl font-medium tracking-wide">
-          {displayData.caucusTimer.topic}
-        </div>
-      {/if}
-
-      <!-- 阶段指示器 -->
-      <div class="ml-auto">
-        <div
-          class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-2.5"
-        >
-          <div class="h-2 w-2 rounded-full bg-[#5B92E5]"></div>
-          <span class="text-base font-medium tracking-[0.05em] text-white/70 uppercase">
-            {PHASE_LABELS[effectivePhase] ?? effectivePhase}
-          </span>
-        </div>
-      </div>
-    </div>
+    <ConferenceHeader
+      venue={displayData.venue}
+      name={displayData.name}
+      phase={effectivePhase}
+      caucusTopic={displayData.caucusTimer?.topic}
+      simpleMajority={headerThresholds?.simpleMajority}
+      twoThirds={headerThresholds?.twoThirds}
+    />
 
     <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
     {#if attendanceChange}
