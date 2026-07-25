@@ -121,7 +121,7 @@
 
       <!-- 磋商主题 -->
       {#if displayData.caucusTimer?.topic}
-        <div class="absolute left-1/2 -translate-x-1/2 text-8xl font-medium tracking-wide">
+        <div class="absolute left-1/2 -translate-x-1/2 text-6xl font-medium tracking-wide">
           {displayData.caucusTimer.topic}
         </div>
       {/if}
