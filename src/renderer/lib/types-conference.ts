@@ -267,6 +267,7 @@ export interface VotingSession {
 
 export type MinutesEventType =
   | 'roll_call_completed'
+  | 'roll_call_reset'
   | 'speaker_started'
   | 'speaker_finished'
   | 'yield'
@@ -290,6 +291,7 @@ export type MinutesEventType =
 
 export const MINUTES_EVENT_LABELS: Record<MinutesEventType, string> = {
   roll_call_completed: '点名完成',
+  roll_call_reset: '重新点名',
   speaker_started: '开始发言',
   speaker_finished: '发言结束',
   yield: '让渡时间',

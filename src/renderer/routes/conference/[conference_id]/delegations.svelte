@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute, navigate } from '$lib/router.svelte'
-  import { ArrowLeft, Users, Plus, Trash2, Flag, UserRoundCheck } from '@lucide/svelte'
+  import { ArrowLeft, Users, Plus, Trash2, Flag, UserRoundCheck, RotateCcw } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
@@ -28,6 +28,7 @@
     updateDelegation,
     addDelegation,
     removeDelegation,
+    resetRollCall,
     saveConferencesNow
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds, destroyAllTimers } from '$lib/engine/conference-engine'
@@ -63,6 +64,9 @@
   let newName = $state('')
   let newColor = $state('#3b82f6')
   let newVetoPower = $state(false)
+
+  // ---- 重新点名确认 ----
+  let showResetConfirm = $state(false)
 
   const PRESET_COLORS = [
     '#e11d48', '#f97316', '#eab308', '#22c55e', '#06b6d4',
@@ -137,7 +141,42 @@
     <span class="text-sm font-semibold text-foreground">代表管理</span>
     <span class="text-xs text-muted-foreground">{conf?.name}</span>
 
-    <div class="ml-auto">
+    <div class="ml-auto flex items-center gap-2">
+      <AlertDialog open={showResetConfirm} onopenchange={(v: boolean) => (showResetConfirm = v)}>
+        <AlertDialogTrigger asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            class="h-8 gap-1.5 text-xs text-amber-600 hover:text-amber-700 border-amber-300 hover:border-amber-400 dark:text-amber-400 dark:border-amber-700 dark:hover:text-amber-300 dark:hover:border-amber-600"
+            disabled={!conf || sortedDelegations.length === 0}
+          >
+            <RotateCcw size={12} />
+            重新点名
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>重新点名</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作将把所有代表团的出席状态重置为"缺席"，并将大会阶段回退到"点名"阶段。确定要继续吗？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              class="bg-amber-600 hover:bg-amber-700"
+              onclick={() => {
+                resetRollCall()
+                showResetConfirm = false
+                navigate(`/conference/${conferenceId}/roll-call`)
+              }}
+            >
+              确认重新点名
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Button
         size="sm"
         class="h-8 gap-1.5 text-xs"

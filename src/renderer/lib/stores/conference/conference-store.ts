@@ -250,6 +250,22 @@ export function completeRollCall(): void {
   })
 }
 
+export function resetRollCall(): void {
+  updateCurrentConference((c) => {
+    addMinutesEntry(
+      'roll_call_reset',
+      `重新点名: 所有代表团出席状态已重置`
+    )
+    addMinutesEntry('phase_changed', `进入阶段: 点名`)
+
+    return {
+      ...c,
+      phase: 'roll_call',
+      delegations: c.delegations.map((d) => ({ ...d, attendance: 'absent' as const }))
+    }
+  })
+}
+
 // ---- 代表团管理 ----
 
 export function addDelegation(name: string, color: string, vetoPower: boolean): string {
