@@ -44,7 +44,6 @@
     <!-- 表决信息 -->
     <div class="px-5 pb-3">
       <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-        <Calculator size={12} />
         <span>表决信息</span>
       </div>
       <div class="mt-1.5 grid grid-cols-2 gap-2">
