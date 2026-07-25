@@ -7,6 +7,7 @@ import log from 'electron-log'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory, getPluginsDir } from './plugin-discovery'
 import { loadPluginConfig, savePluginConfig, enablePlugin, disablePlugin } from './plugin-store'
+import { loadStore, saveStore, deleteStore, migrateFromLocalStorage } from './veto-store'
 import { startWsServer } from './ws-server'
 import type { PluginInstance } from './plugin-discovery'
 import type { PluginConfig } from './plugin-store'
@@ -361,6 +362,26 @@ function registerIpcHandlers(): void {
   ipcMain.handle('veto:config:set', (_event, config: PluginConfig) => {
     savePluginConfig(config)
     refreshPlugins()
+    return { success: true }
+  })
+
+  // ── 应用数据存储（文件持久化）────────────────────────────────────
+  ipcMain.handle('veto:store:load', (_event, domain: string) => {
+    return loadStore(domain as 'conferences' | 'battles' | 'settings')
+  })
+
+  ipcMain.handle('veto:store:save', (_event, domain: string, data: unknown) => {
+    saveStore(domain as 'conferences' | 'battles' | 'settings', data)
+    return { success: true }
+  })
+
+  ipcMain.handle('veto:store:delete', (_event, domain: string) => {
+    deleteStore(domain as 'conferences' | 'battles' | 'settings')
+    return { success: true }
+  })
+
+  ipcMain.handle('veto:store:migrate', (_event, domain: string, jsonData: string) => {
+    migrateFromLocalStorage(domain as 'conferences' | 'battles' | 'settings', jsonData)
     return { success: true }
   })
 

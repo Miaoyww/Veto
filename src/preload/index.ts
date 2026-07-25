@@ -100,6 +100,24 @@ const veto = {
     }
   },
 
+  store: {
+    /** 从文件加载数据 */
+    load: (domain: string): Promise<unknown> =>
+      ipcRenderer.invoke('veto:store:load', domain),
+
+    /** 保存数据到文件 */
+    save: (domain: string, data: unknown): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:store:save', domain, data),
+
+    /** 删除数据文件 */
+    delete: (domain: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:store:delete', domain),
+
+    /** 从 localStorage 迁移数据到文件（仅当文件不存在时） */
+    migrate: (domain: string, jsonData: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:store:migrate', domain, jsonData)
+  },
+
   updater: {
     /** 检查更新 */
     check: (): Promise<{ success: boolean; result?: unknown; error?: string }> =>

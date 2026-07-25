@@ -23,8 +23,10 @@ import {
 import type { StatusInstance, MessageCategory } from '$lib/types'
 import { gameClock } from '$lib/engine/game-clock.store'
 import { resolveStatus } from '$lib/engine/status-resolver'
+import { bootstrapStore, saveToStore, deleteFromStore } from '../store-bridge'
 
 const STORAGE_KEY = 'wars_battles'
+const STORE_DOMAIN = 'battles'
 
 function generateId(): string {
   return crypto.randomUUID()
@@ -47,6 +49,8 @@ function saveBattlesToStorage(battles: Battle[]) {
   if (_saveTimer) clearTimeout(_saveTimer)
   _saveTimer = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(battles))
+    // 双重写入：同步写文件
+    saveToStore(STORE_DOMAIN, battles)
   }, 2000)
 }
 
@@ -57,23 +61,29 @@ function saveBattlesToStorage(battles: Battle[]) {
 export async function saveBattleWithToast() {
   const { toast } = await import('svelte-sonner')
   flushRuntimePositions()
-  saveBattlesNow()
-  toast.success('已保存', { description: '当前推演状态已保存到浏览器。' })
+  await saveBattlesNow()
+  toast.success('已保存', { description: '当前推演状态已保存。' })
 }
 
-/** 立即将当前 battles 状态写入 localStorage（绕过防抖），用于手动保存。 */
-export function saveBattlesNow() {
+/** 立即将当前 battles 状态写入 localStorage 和文件（绕过防抖），用于手动保存。 */
+export async function saveBattlesNow(): Promise<void> {
   if (typeof localStorage === 'undefined') return
   if (_saveTimer) {
     clearTimeout(_saveTimer)
     _saveTimer = null
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(get(battles)))
+  await saveToStore(STORE_DOMAIN, get(battles))
 }
 
 // ============ 所有战局列表 ============
 export const battles = writable<Battle[]>(loadBattlesFromStorage())
 battles.subscribe(saveBattlesToStorage)
+
+/** 启动完成 Promise：文件数据已加载并同步到 localStorage */
+export const battlesReady: Promise<void> = bootstrapStore<Battle[]>(STORE_DOMAIN, []).then((data) => {
+  battles.set(data)
+})
 
 // ============ 当前激活的战局ID ============
 export const currentBattleId = writable<string | null>(null)
@@ -783,15 +793,13 @@ export function resetCurrentBattle() {
   selectedPlacedUnitId.set(null)
 }
 
-/** 清除所有战局数据（localStorage 同步清理） */
-export function clearAllBattles() {
+/** 清除所有战局数据（localStorage + 文件同步清理） */
+export async function clearAllBattles(): Promise<void> {
   battles.set([])
   currentBattleId.set(null)
   currentFactionId.set(null)
   selectedPlacedUnitId.set(null)
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY)
-  }
+  await deleteFromStore(STORE_DOMAIN)
 }
 
 /**
@@ -826,6 +834,7 @@ export function importBattles(data: unknown): [number, number] {
   }
   if (toAdd.length > 0) {
     battles.update((list) => [...list, ...toAdd])
+    // save is handled by the debounced subscribe; trigger immediate flush for import
     saveBattlesNow()
   }
   return [imported, skipped]

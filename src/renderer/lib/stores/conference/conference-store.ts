@@ -23,20 +23,34 @@ import type {
   MinutesEventType,
   ConferencePhase
 } from '$lib/types-conference'
+import { bootstrapStore, saveToStore } from '../store-bridge'
 
 const STORAGE_KEY = 'veto_conferences'
+const STORE_DOMAIN = 'conferences'
 
 function generateId(): string {
   return crypto.randomUUID()
 }
 
-// ---- localStorage 持久化 ----
+// ---- 文件持久化（双重写入：localStorage + 文件）--------------------
 
 function loadConferencesFromStorage(): Conference[] {
   if (typeof localStorage === 'undefined') return []
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const now = Date.now()
+    const list: Conference[] = JSON.parse(raw)
+    // 清理已过期的计时器状态（避免恢复后显示 00:00 的"正在发言"）
+    for (const conf of list) {
+      if (conf.activeSpeaker && conf.activeSpeaker.endAt <= now) {
+        conf.activeSpeaker = null
+      }
+      if (conf.activeCaucus && conf.activeCaucus.endAt <= now) {
+        conf.activeCaucus = null
+      }
+    }
+    return list
   } catch {
     return []
   }
@@ -48,16 +62,20 @@ function saveConferencesToStorage(confs: Conference[]): void {
   if (_saveTimer) clearTimeout(_saveTimer)
   _saveTimer = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(confs))
+    // 双重写入：同步写文件
+    saveToStore(STORE_DOMAIN, confs)
   }, 2000)
 }
 
-export function saveConferencesNow(): void {
+/** 立即保存（绕过防抖），用于离开页面前保存计时器状态 */
+export async function saveConferencesNow(): Promise<void> {
   if (typeof localStorage === 'undefined') return
   if (_saveTimer) {
     clearTimeout(_saveTimer)
     _saveTimer = null
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(get(conferences)))
+  await saveToStore(STORE_DOMAIN, get(conferences))
 }
 
 // ---- 核心 Stores ----
@@ -65,6 +83,21 @@ export function saveConferencesNow(): void {
 /** 所有大会列表 */
 export const conferences = writable<Conference[]>(loadConferencesFromStorage())
 conferences.subscribe(saveConferencesToStorage)
+
+/** 启动完成 Promise：文件数据已加载并同步到 localStorage */
+export const conferencesReady: Promise<void> = bootstrapStore<Conference[]>(STORE_DOMAIN, []).then((data) => {
+  // 清理已过期的计时器状态
+  const now = Date.now()
+  for (const conf of data) {
+    if (conf.activeSpeaker && conf.activeSpeaker.endAt <= now) {
+      conf.activeSpeaker = null
+    }
+    if (conf.activeCaucus && conf.activeCaucus.endAt <= now) {
+      conf.activeCaucus = null
+    }
+  }
+  conferences.set(data)
+})
 
 /** 当前激活的大会 ID */
 export const currentConferenceId = writable<string | null>(null)

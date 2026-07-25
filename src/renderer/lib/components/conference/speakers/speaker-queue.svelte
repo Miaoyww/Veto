@@ -30,6 +30,7 @@
     resumeSpeaker,
     endSpeaker,
     handleYield,
+    saveConferencesNow,
     // caucus
     endCaucus,
     advanceCaucusSpeaker,
@@ -153,11 +154,36 @@
           syncDisplay({ speakerTransition: 'timeout' })
         }
       )
+    } else {
+      // 发言时间已过期（如从 localStorage 恢复的脏数据），立刻清理
+      isPaused = false
+      if (mode === 'general_debate') {
+        endSpeaker()
+      } else {
+        advanceCaucusSpeaker()
+      }
+      syncDisplay({ speakerTransition: 'timeout' })
     }
 
     return () => {
       getTimer(mode === 'general_debate' ? 'speakers-list' : 'caucus')?.stop()
     }
+  })
+
+  // ── 暂停状态恢复：组件挂载时若发言人处于暂停，恢复本地显示状态 ──
+  $effect(() => {
+    const speaker = conf?.activeSpeaker
+    if (!speaker || speaker.pausedAt == null) return
+    if (isCaucus && !isModerated) return
+
+    const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
+    const elapsed = (speaker.pausedAt - speaker.startedAt) / 1000
+    const remaining = Math.max(0, allocSec - elapsed)
+
+    displayRemaining = remaining
+    displayElapsed = elapsed
+    displayTotal = allocSec
+    isPaused = true
   })
 
   // ── 自由磋商：总倒计时 $effect ─────────────────────────────────
@@ -282,6 +308,8 @@
 
   // ── Cleanup ────────────────────────────────────────────────────
   onDestroy(() => {
+    // 离开组件前立即保存，确保计时器状态持久化
+    saveConferencesNow()
     destroyTimer('speakers-list')
     destroyTimer('caucus')
   })

@@ -29,12 +29,17 @@
 
   // 从主进程文件系统恢复用户已安装的插件到运行时 ModRegistry
   if (typeof window !== 'undefined') {
-    dbGetAllPlugins().then((plugins) => {
-      for (const plugin of plugins) {
-        injectToRegistry(plugin)
-      }
-      markPluginsReady()
-    })
+    Promise.all([
+      dbGetAllPlugins().then((plugins) => {
+        for (const plugin of plugins) {
+          injectToRegistry(plugin)
+        }
+        markPluginsReady()
+      }),
+      // 从文件加载应用数据，同步到 localStorage
+      import('$lib/stores/conference/conference-store').then((m) => m.conferencesReady),
+      import('$lib/stores/battle/battle-store').then((m) => m.battlesReady)
+    ])
   }
 </script>
 

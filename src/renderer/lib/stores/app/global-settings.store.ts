@@ -1,48 +1,42 @@
 import { writable } from 'svelte/store';
+import { bootstrapStore, saveToStore, deleteFromStore } from '../store-bridge';
 
 export interface GlobalSettings {
 	/** 新建战局时的默认图标风格 */
 	defaultIconStyle: 'nato' | 'simple';
 	/** 界面语言 */
 	language: 'zh-cn' | 'en';
+	/** 主题模式 */
+	theme: 'light' | 'dark' | 'system';
 }
-
-const STORAGE_KEY = 'veto_global_settings';
 
 const DEFAULTS: GlobalSettings = {
 	defaultIconStyle: 'nato',
-	language: 'zh-cn'
+	language: 'zh-cn',
+	theme: 'system'
 };
 
-function loadSettings(): GlobalSettings {
-	if (typeof localStorage === 'undefined') return { ...DEFAULTS };
-	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
-	} catch {
-		return { ...DEFAULTS };
-	}
-}
-
 function createGlobalSettings() {
-	const { subscribe, set, update } = writable<GlobalSettings>(loadSettings());
+	const { subscribe, set, update } = writable<GlobalSettings>({ ...DEFAULTS });
+
+	// 异步启动：从文件加载（文件是权威来源，同步到 localStorage）
+	bootstrapStore<GlobalSettings>('settings', DEFAULTS).then((data) => {
+		set(data);
+	});
 
 	return {
 		subscribe,
 		patch(partial: Partial<GlobalSettings>) {
 			update((s) => {
 				const next = { ...s, ...partial };
-				if (typeof localStorage !== 'undefined') {
-					localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-				}
+				// 双重写入：localStorage + 文件（fire-and-forget）
+				saveToStore('settings', next);
 				return next;
 			});
 		},
-		reset() {
+		async reset() {
 			set({ ...DEFAULTS });
-			if (typeof localStorage !== 'undefined') {
-				localStorage.removeItem(STORAGE_KEY);
-			}
+			await deleteFromStore('settings');
 		}
 	};
 }

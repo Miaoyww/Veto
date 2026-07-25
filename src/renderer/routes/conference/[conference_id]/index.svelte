@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute } from '$lib/router.svelte'
   import { VETO_NAME } from '$lib/const'
-  import { currentConference, loadConference, currentConferenceId, motionDraft } from '$lib/stores/conference/conference-store'
+  import { currentConference, loadConference, currentConferenceId, motionDraft, saveConferencesNow } from '$lib/stores/conference/conference-store'
   import { destroyAllTimers } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import ConferenceSidebar from '$lib/components/conference/layout/conference-sidebar.svelte'
@@ -30,7 +30,9 @@
     }
   })
 
-  onDestroy(() => {
+  onDestroy(async () => {
+    // 离开页面前立即保存，确保 activeSpeaker 计时器状态不丢失
+    await saveConferencesNow()
     destroyAllTimers()
   })
 </script>
