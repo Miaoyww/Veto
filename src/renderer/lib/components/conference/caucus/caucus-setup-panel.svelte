@@ -29,6 +29,12 @@
   // 已在名单中的代表团 ID（用于排除）
   const listedIds = $derived(setup?.speakerDelegationIds ?? [])
 
+  // 容量计算：总时间 / 每人发言时间 = 最多可容纳代表数
+  const perSpeakerSec = $derived((motion as any)?.speakingTimePerPersonSec ?? 60)
+  const totalSec = $derived(setup?.remainingSec ?? (motion as any)?.totalTimeSec ?? 0)
+  const maxSpeakers = $derived(Math.max(1, Math.floor(totalSec / perSpeakerSec)))
+  const isAtCapacity = $derived(listedIds.length >= maxSpeakers)
+
   function handleAdd(delegationId: string): void {
     addToCaucusSpeakers(delegationId)
   }
@@ -109,15 +115,26 @@
       <div class="flex items-center gap-2">
         <Users size={16} class="text-muted-foreground" />
         <span class="text-sm font-medium text-foreground">添加发言代表团</span>
+        <span class="ml-auto text-xs text-muted-foreground">
+          最多 {maxSpeakers} 人 · 已添加 {listedIds.length} 人
+        </span>
       </div>
       <div class="mt-3">
-        <DelegationSelector
-          delegations={conf.delegations}
-          placeholder="搜索并添加代表团..."
-          resetOnSelect={true}
-          excludeIds={listedIds}
-          onselect={handleAdd}
-        />
+        {#if isAtCapacity}
+          <div
+            class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+          >
+            名单已满（{totalSec}秒 ÷ {perSpeakerSec}秒/人 = {maxSpeakers}人）
+          </div>
+        {:else}
+          <DelegationSelector
+            delegations={conf.delegations}
+            placeholder="搜索并添加代表团..."
+            resetOnSelect={true}
+            excludeIds={listedIds}
+            onselect={handleAdd}
+          />
+        {/if}
       </div>
     </div>
 
@@ -126,7 +143,7 @@
       <div class="flex items-center gap-2 px-4 py-3">
         <GripVertical size={14} class="text-muted-foreground" />
         <span class="text-sm font-medium text-foreground">
-          磋商发言名单 ({listedIds.length})
+          磋商发言名单 ({listedIds.length}/{maxSpeakers})
         </span>
       </div>
 

@@ -85,19 +85,21 @@ export const conferences = writable<Conference[]>(loadConferencesFromStorage())
 conferences.subscribe(saveConferencesToStorage)
 
 /** 启动完成 Promise：文件数据已加载并同步到 localStorage */
-export const conferencesReady: Promise<void> = bootstrapStore<Conference[]>(STORE_DOMAIN, []).then((data) => {
-  // 清理已过期的计时器状态
-  const now = Date.now()
-  for (const conf of data) {
-    if (conf.activeSpeaker && conf.activeSpeaker.endAt <= now) {
-      conf.activeSpeaker = null
+export const conferencesReady: Promise<void> = bootstrapStore<Conference[]>(STORE_DOMAIN, []).then(
+  (data) => {
+    // 清理已过期的计时器状态
+    const now = Date.now()
+    for (const conf of data) {
+      if (conf.activeSpeaker && conf.activeSpeaker.endAt <= now) {
+        conf.activeSpeaker = null
+      }
+      if (conf.activeCaucus && conf.activeCaucus.endAt <= now) {
+        conf.activeCaucus = null
+      }
     }
-    if (conf.activeCaucus && conf.activeCaucus.endAt <= now) {
-      conf.activeCaucus = null
-    }
+    conferences.set(data)
   }
-  conferences.set(data)
-})
+)
 
 /** 当前激活的大会 ID */
 export const currentConferenceId = writable<string | null>(null)
@@ -216,9 +218,7 @@ export function setAttendance(
 ): void {
   updateCurrentConference((c) => ({
     ...c,
-    delegations: c.delegations.map((d) =>
-      d.id === delegationId ? { ...d, attendance } : d
-    )
+    delegations: c.delegations.map((d) => (d.id === delegationId ? { ...d, attendance } : d))
   }))
 }
 
@@ -228,7 +228,7 @@ export function completeRollCall(): void {
       (d) => d.attendance === 'present' || d.attendance === 'present_and_voting'
     ).length
     const simpleMajority = Math.floor(presentCount / 2) + 1
-    const twoThirds = Math.ceil(presentCount * 2 / 3)
+    const twoThirds = Math.ceil((presentCount * 2) / 3)
 
     addMinutesEntry(
       'roll_call_completed',
@@ -245,7 +245,7 @@ export function completeRollCall(): void {
 export function addDelegation(name: string, color: string, vetoPower: boolean): string {
   const id = generateId()
   const conf = get(currentConference)
-  const sortOrder = (conf?.delegations.length ?? 0)
+  const sortOrder = conf?.delegations.length ?? 0
 
   updateCurrentConference((c) => ({
     ...c,
@@ -318,9 +318,7 @@ export function removeFromSpeakersList(entryId: string): void {
 export function readySpeaker(entryId: string): void {
   updateCurrentConference((c) => ({
     ...c,
-    speakersList: c.speakersList.map((s) =>
-      s.id === entryId ? { ...s, status: 'ready' } : s
-    )
+    speakersList: c.speakersList.map((s) => (s.id === entryId ? { ...s, status: 'ready' } : s))
   }))
 
   const conf = get(currentConference)
@@ -334,9 +332,7 @@ export function startSpeaker(entryId: string): void {
   updateCurrentConference((c) => ({
     ...c,
     speakersList: c.speakersList.map((s) =>
-      s.id === entryId
-        ? { ...s, status: 'speaking', remainingTimeSec: undefined }
-        : s
+      s.id === entryId ? { ...s, status: 'speaking', remainingTimeSec: undefined } : s
     ),
     activeSpeaker: {
       entryId,
@@ -348,7 +344,10 @@ export function startSpeaker(entryId: string): void {
   const entry = get(currentConference)?.speakersList.find((s) => s.id === entryId)
   const conf = get(currentConference)
   const del = conf?.delegations.find((d) => d.id === entry?.delegationId)
-  addMinutesEntry('speaker_started', `${del?.name ?? entry?.delegationId} 开始发言 (${entry?.allocatedTimeSec ?? 120}秒)`)
+  addMinutesEntry(
+    'speaker_started',
+    `${del?.name ?? entry?.delegationId} 开始发言 (${entry?.allocatedTimeSec ?? 120}秒)`
+  )
 }
 
 export function pauseSpeaker(): void {
@@ -432,13 +431,16 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
 
   const conf = get(currentConference)
   const del = conf?.delegations.find((d) => d.id === motion.proposedByDelegationId)
-  const motionLabel = motion.type === 'moderated_caucus'
-    ? `有主持核心磋商: ${(motion as any).topic}`
-    : motion.type
-  addMinutesEntry('motion_proposed', `${del?.name ?? motion.proposedByDelegationId} 提出动议: ${motionLabel}`, {
-    delegationId: motion.proposedByDelegationId,
-    motionId: id
-  })
+  const motionLabel =
+    motion.type === 'moderated_caucus' ? `有主持核心磋商: ${(motion as any).topic}` : motion.type
+  addMinutesEntry(
+    'motion_proposed',
+    `${del?.name ?? motion.proposedByDelegationId} 提出动议: ${motionLabel}`,
+    {
+      delegationId: motion.proposedByDelegationId,
+      motionId: id
+    }
+  )
 
   return id
 }
@@ -450,9 +452,7 @@ export function approveMotion(motionId: string): void {
 
   updateCurrentConference((c) => ({
     ...c,
-    motions: c.motions.map((m) =>
-      m.id === motionId ? { ...m, status: 'approved' as const } : m
-    )
+    motions: c.motions.map((m) => (m.id === motionId ? { ...m, status: 'approved' as const } : m))
   }))
   addMinutesEntry('motion_approved', `动议通过`, { motionId })
 
@@ -463,9 +463,7 @@ export function approveMotion(motionId: string): void {
 export function rejectMotion(motionId: string): void {
   updateCurrentConference((c) => ({
     ...c,
-    motions: c.motions.map((m) =>
-      m.id === motionId ? { ...m, status: 'rejected' as const } : m
-    )
+    motions: c.motions.map((m) => (m.id === motionId ? { ...m, status: 'rejected' as const } : m))
   }))
   addMinutesEntry('motion_rejected', `动议未通过`, { motionId })
 }
@@ -485,9 +483,7 @@ function executeMotionAction(motion: Motion): void {
           updateCurrentConference((c) => ({
             ...c,
             activeSpeaker: null,
-            speakersList: c.speakersList.filter(
-              (s) => s.id !== conf.activeSpeaker!.entryId
-            )
+            speakersList: c.speakersList.filter((s) => s.id !== conf.activeSpeaker!.entryId)
           }))
           addMinutesEntry('speaker_interrupted', '发言人时间作废（磋商动议通过）')
         }
@@ -573,7 +569,6 @@ function startCaucusImpl(motionId: string, conf: Conference): void {
   addMinutesEntry('phase_changed', `进入阶段: 磋商`)
 }
 
-
 export function startCaucus(motionId: string): void {
   const conf = get(currentConference)
   const motion = conf?.motions.find((m) => m.id === motionId)
@@ -620,9 +615,7 @@ export function setCaucusProposerPosition(position: 'first' | 'last'): void {
     if (!proposerId) return { ...c, caucusSetup: { ...c.caucusSetup, proposerPosition: position } }
 
     const ids = c.caucusSetup.speakerDelegationIds.filter((id) => id !== proposerId)
-    const reordered = position === 'first'
-      ? [proposerId, ...ids]
-      : [...ids, proposerId]
+    const reordered = position === 'first' ? [proposerId, ...ids] : [...ids, proposerId]
 
     return {
       ...c,
@@ -641,9 +634,16 @@ export function addToCaucusSpeakers(delegationId: string): void {
 
     // 标尾：插入到动议国之前；标首：追加到末尾
     const ids = c.caucusSetup.speakerDelegationIds
-    const newIds = c.caucusSetup.proposerPosition === 'last' && proposerId
-      ? [...ids.slice(0, -1), delegationId, proposerId]
-      : [...ids, delegationId]
+    const newIds =
+      c.caucusSetup.proposerPosition === 'last' && proposerId
+        ? [...ids.slice(0, -1), delegationId, proposerId]
+        : [...ids, delegationId]
+
+    // 人数上限：总时间 / 每人发言时间，不可超过
+    const perSpeakerSec = (motion as any)?.speakingTimePerPersonSec ?? 60
+    const totalSec = c.caucusSetup.remainingSec ?? (motion as any)?.totalTimeSec ?? 0
+    const maxSpeakers = Math.floor(totalSec / perSpeakerSec)
+    if (newIds.length > maxSpeakers) return c
 
     return {
       ...c,
@@ -659,9 +659,7 @@ export function removeFromCaucusSpeakers(delegationId: string): void {
       ...c,
       caucusSetup: {
         ...c.caucusSetup,
-        speakerDelegationIds: c.caucusSetup.speakerDelegationIds.filter(
-          (id) => id !== delegationId
-        )
+        speakerDelegationIds: c.caucusSetup.speakerDelegationIds.filter((id) => id !== delegationId)
       }
     }
   })
@@ -676,12 +674,16 @@ export function startCaucusWithSetup(): void {
   if (!motion) return
 
   const now = Date.now()
-  const perSpeakerSec = (motion as any).speakingTimePerPersonSec as number ?? 60
-  const totalSec = remainingSec ?? (motion as any).totalTimeSec as number
+  const perSpeakerSec = ((motion as any).speakingTimePerPersonSec as number) ?? 60
+  const totalSec = remainingSec ?? ((motion as any).totalTimeSec as number)
   const topic = (motion as any).topic
 
+  // 按总时间 / 每人时间计算最大可容纳人数，超出的截断
+  const maxSpeakers = Math.max(1, Math.floor(totalSec / perSpeakerSec))
+  const trimmedIds = speakerDelegationIds.slice(0, maxSpeakers)
+
   // 构建 caucusSpeakers 列表
-  const caucusSpeakers = speakerDelegationIds.map((delId) => {
+  const caucusSpeakers = trimmedIds.map((delId) => {
     const del = conf.delegations.find((d) => d.id === delId)
     return {
       delegationId: delId,
@@ -709,11 +711,15 @@ export function startCaucusWithSetup(): void {
       caucusSpeakers,
       currentSpeakerIndex: caucusSpeakers.length > 0 ? 0 : undefined
     },
-    activeSpeaker: null  // 等待主席手动开始
+    activeSpeaker: null // 等待主席手动开始
   }))
 
   const firstName = caucusSpeakers[0]?.delegationName ?? ''
-  addMinutesEntry('caucus_started', `有主持核心磋商开始${topic ? ': ' + topic : ''}，首位发言人（就绪）: ${firstName}`, { motionId })
+  addMinutesEntry(
+    'caucus_started',
+    `有主持核心磋商开始${topic ? ': ' + topic : ''}，首位发言人（就绪）: ${firstName}`,
+    { motionId }
+  )
   addMinutesEntry('phase_changed', `进入阶段: 磋商`)
 }
 
@@ -730,11 +736,13 @@ export function advanceCaucusSpeaker(): void {
 
   // 检查总剩余时间
   const totalRemaining = (conf.activeCaucus.endAt - Date.now()) / 1000
+  const motion = conf.motions.find((m) => m.id === conf.activeCaucus!.motionId) as any
+  const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
   // 下一位发言人自动移到 currentIdx 位置
   const nextIdx = currentIdx
 
-  if (nextIdx < updatedSpeakers.length) {
-    // 还有发言人 → 进入 ready 状态，等待主席手动开始
+  if (nextIdx < updatedSpeakers.length && totalRemaining >= perSpeakerSec) {
+    // 还有发言人且时间充足 → 进入 ready 状态，等待主席手动开始
     updatedSpeakers[nextIdx] = { ...updatedSpeakers[nextIdx], status: 'ready' }
     const nextName = updatedSpeakers[nextIdx].delegationName
 
@@ -745,11 +753,14 @@ export function advanceCaucusSpeaker(): void {
         caucusSpeakers: updatedSpeakers,
         currentSpeakerIndex: nextIdx
       },
-      activeSpeaker: null  // 等待主席手动开始
+      activeSpeaker: null // 等待主席手动开始
     }))
     addMinutesEntry('speaker_ready', `${nextName} 准备发言（等待主席开始计时）`)
-  } else if (totalRemaining > 5) {
-    // 名单已耗尽但仍有剩余时间 → 回到 caucus_setup 重新设置
+  } else if (nextIdx < updatedSpeakers.length && totalRemaining < perSpeakerSec) {
+    // 还有发言人但剩余时间不足一人 → 自动结束磋商
+    endCaucus()
+  } else if (totalRemaining >= perSpeakerSec) {
+    // 名单已耗尽但仍有足够时间 → 回到 caucus_setup 重新设置
     updateCurrentConference((c) => ({
       ...c,
       phase: 'caucus_setup',
@@ -814,6 +825,11 @@ export function appendCaucusSpeaker(delegationId: string): void {
   const del = conf.delegations.find((d) => d.id === delegationId)
   const motion = conf.motions.find((m) => m.id === conf.activeCaucus!.motionId) as any
   const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
+
+  // 人数上限：剩余时间不足以容纳新增发言人时拒绝添加
+  const totalRemaining = (conf.activeCaucus.endAt - Date.now()) / 1000
+  const futureCount = currentSpeakers.length + 1
+  if (futureCount * perSpeakerSec > totalRemaining) return
 
   const newSpeaker = {
     delegationId,
@@ -905,7 +921,10 @@ export function startVotingSession(
     votingSessions: [...c.votingSessions, session]
   }))
 
-  addMinutesEntry('voting_started', `开始投票表决 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`)
+  addMinutesEntry(
+    'voting_started',
+    `开始投票表决 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`
+  )
   addMinutesEntry('phase_changed', `进入阶段: 投票表决`)
 
   return id
@@ -943,16 +962,19 @@ export function closeVotingSession(sessionId: string): void {
     const threshold =
       session.majorityRule === 'simple_majority'
         ? Math.floor(presentCount / 2) + 1
-        : Math.ceil(presentCount * 2 / 3)
+        : Math.ceil((presentCount * 2) / 3)
     const result: 'passed' | 'failed' = yes >= threshold ? 'passed' : 'failed'
 
     const now = Date.now()
-    const newMinutes = [...c.minutes, {
-      id: generateId(),
-      timestamp: now,
-      eventType: 'voting_ended' as MinutesEventType,
-      description: `投票结束: Yes ${yes} / No ${no} / Abstain ${abstain} → ${result === 'passed' ? '通过' : '未通过'}`
-    }]
+    const newMinutes = [
+      ...c.minutes,
+      {
+        id: generateId(),
+        timestamp: now,
+        eventType: 'voting_ended' as MinutesEventType,
+        description: `投票结束: Yes ${yes} / No ${no} / Abstain ${abstain} → ${result === 'passed' ? '通过' : '未通过'}`
+      }
+    ]
 
     // Update motion status if this voting session is for a motion
     let newMotions = c.motions
@@ -1027,9 +1049,7 @@ export function closeVotingSession(sessionId: string): void {
 }
 
 /** 纯函数：统计投票结果 */
-export function tallyVotes(
-  ballots: VoteBallot[]
-): { yes: number; no: number; abstain: number } {
+export function tallyVotes(ballots: VoteBallot[]): { yes: number; no: number; abstain: number } {
   let yes = 0
   let no = 0
   let abstain = 0
@@ -1144,5 +1164,5 @@ export function getSimpleMajorityThreshold(presentCount: number): number {
 }
 
 export function getTwoThirdsThreshold(presentCount: number): number {
-  return Math.ceil(presentCount * 2 / 3)
+  return Math.ceil((presentCount * 2) / 3)
 }

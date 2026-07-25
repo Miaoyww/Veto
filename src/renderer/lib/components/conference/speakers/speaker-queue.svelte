@@ -9,9 +9,7 @@
    */
   import { onDestroy } from 'svelte'
   import { get } from 'svelte/store'
-  import {
-    Timer, Coffee, MessageSquare
-  } from '@lucide/svelte'
+  import { Timer, Coffee, MessageSquare } from '@lucide/svelte'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
@@ -38,11 +36,7 @@
     pauseCaucus,
     resumeCaucus
   } from '$lib/stores/conference/conference-store'
-  import {
-    createTimer,
-    getTimer,
-    destroyTimer
-  } from '$lib/engine/conference-engine'
+  import { createTimer, getTimer, destroyTimer } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import type { YieldType } from '$lib/types-conference'
@@ -56,16 +50,15 @@
 
   // ── 发言队列数据（按 mode 取不同数据源）──────────────────────────
   const rawSpeakers = $derived(
-    mode === 'general_debate'
-      ? (conf?.speakersList ?? [])
-      : (activeCaucus?.caucusSpeakers ?? [])
+    mode === 'general_debate' ? (conf?.speakersList ?? []) : (activeCaucus?.caucusSpeakers ?? [])
   )
 
   // 统一格式：id, delegationName, status, allocatedTimeSec
   const speakers = $derived(
     rawSpeakers.map((s: any) => ({
       id: s.id ?? s.delegationId,
-      delegationName: s.delegationName ?? (conf?.delegations.find((d: any) => d.id === s.delegationId)?.name ?? ''),
+      delegationName:
+        s.delegationName ?? conf?.delegations.find((d: any) => d.id === s.delegationId)?.name ?? '',
       status: s.status as 'waiting' | 'ready' | 'speaking',
       allocatedTimeSec: s.allocatedTimeSec ?? 120
     }))
@@ -75,9 +68,7 @@
   const readyEntry = $derived(speakers.find((s: any) => s.status === 'ready') ?? null)
   const waitingSpeakers = $derived(speakers.filter((s: any) => s.status === 'waiting'))
   const currentIdx = $derived(activeCaucus?.currentSpeakerIndex ?? -1)
-  const caucusCurrentSpeaker = $derived(
-    isCaucus && currentIdx >= 0 ? speakers[currentIdx] : null
-  )
+  const caucusCurrentSpeaker = $derived(isCaucus && currentIdx >= 0 ? speakers[currentIdx] : null)
 
   // 当前活跃的发言人（有主持/一般性辩论）
   const activeSpeaker = $derived(isCaucus ? caucusCurrentSpeaker : activeEntry)
@@ -111,9 +102,7 @@
 
   // ── DelegationSelector 相关（general_debate only）───────────────
   const listedDelegationIds = $derived(
-    mode === 'general_debate'
-      ? (conf?.speakersList.map((s: any) => s.delegationId) ?? [])
-      : []
+    mode === 'general_debate' ? (conf?.speakersList.map((s: any) => s.delegationId) ?? []) : []
   )
 
   // ── 统一 sync helper ───────────────────────────────────────────
@@ -125,9 +114,9 @@
   // ── 有主持 / 一般性辩论：逐人计时 $effect ─────────────────────
   $effect(() => {
     const speaker = conf?.activeSpeaker
-    if (isCaucus && !isModerated) return  // 自由磋商走另一个 effect
+    if (isCaucus && !isModerated) return // 自由磋商走另一个 effect
     if (!speaker) return
-    if (speaker.pausedAt != null) return   // 暂停中不启动
+    if (speaker.pausedAt != null) return // 暂停中不启动
 
     const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
     displayTotal = allocSec
@@ -327,13 +316,32 @@
       <!-- 总时间预算进度条 -->
       <div class="flex items-center gap-3 text-sm text-muted-foreground">
         <span>总剩余</span>
-        <span class="font-mono font-semibold text-foreground">{formatTime(totalBudgetRemaining)}</span>
+        <span class="font-mono font-semibold text-foreground"
+          >{formatTime(totalBudgetRemaining)}</span
+        >
         <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div
-            class="h-full rounded-full transition-all duration-1000 {totalBudgetRemaining <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
-            style="width: {totalBudgetSec > 0 ? ((totalBudgetSec - totalBudgetRemaining) / totalBudgetSec) * 100 : 0}%"
+            class="h-full rounded-full transition-all duration-1000 {totalBudgetRemaining <= 30
+              ? 'bg-red-500'
+              : 'bg-indigo-500'}"
+            style="width: {totalBudgetSec > 0
+              ? ((totalBudgetSec - totalBudgetRemaining) / totalBudgetSec) * 100
+              : 0}%"
           ></div>
         </div>
+      </div>
+
+      <!-- 容量指示：尚可容纳代表数 -->
+      {@const perTime = activeEntry?.allocatedTimeSec ?? 60}
+      {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
+      <div
+        class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}"
+      >
+        剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span> 人（{formatTime(
+          totalBudgetRemaining
+        )} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span class="ml-1 text-red-400"
+            >— 当前发言人结束后将自动终止磋商</span
+          >{/if}
       </div>
 
       <Separator />
@@ -349,7 +357,9 @@
 
         <div class="text-center">
           {#if isCaucusPaused}
-            <div class="mb-2 text-sm font-medium text-amber-500 uppercase tracking-wider">计时已暂停</div>
+            <div class="mb-2 text-sm font-medium text-amber-500 uppercase tracking-wider">
+              计时已暂停
+            </div>
           {/if}
           <div
             class="font-mono text-7xl font-bold tabular-nums transition-colors"
@@ -367,7 +377,11 @@
         <!-- 进度条 -->
         <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            class="h-full rounded-full transition-all duration-1000 {isCaucusPaused ? 'bg-amber-500' : totalRemainingSec <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
+            class="h-full rounded-full transition-all duration-1000 {isCaucusPaused
+              ? 'bg-amber-500'
+              : totalRemainingSec <= 30
+                ? 'bg-red-500'
+                : 'bg-indigo-500'}"
             style="width: {progressPercent}%"
           ></div>
         </div>
