@@ -12,7 +12,8 @@
     currentConference,
     motionDraft,
     proposeMotion,
-    approveMotion
+    approveMotion,
+    dismissLastResolvedMotion
   } from '$lib/stores/conference/conference-store'
   import {
     resolveMotion,
@@ -54,11 +55,15 @@
   let mcTopic = $state('')
   let committedTopic = $state('')
   let mcTotalSec = $state(360)
+  let committedMcTotalSec = $state(360)
   let mcSpeakerSec = $state(60)
+  let committedMcSpeakerSec = $state(60)
   // Unmoderated Caucus
   let ucDurationMin = $state(15)
+  let committedUcDurationMin = $state(15)
   // Modify Speaking Time
   let newTimeSec = $state(90)
+  let committedNewTimeSec = $state(90)
   // Proposer
   let selectedProposerId = $state('')
 
@@ -68,15 +73,20 @@
     mcTopic = ''
     committedTopic = ''
     mcTotalSec = 360
+    committedMcTotalSec = 360
     mcSpeakerSec = 60
+    committedMcSpeakerSec = 60
     ucDurationMin = 15
+    committedUcDurationMin = 15
     newTimeSec = 90
+    committedNewTimeSec = 90
   }
 
   function handleOpenChange(value: boolean): void {
     if (!value) {
       resetForm()
       motionDraft.set(null)
+      dismissLastResolvedMotion()
     }
     open = value
   }
@@ -153,11 +163,12 @@
       type: selectedType ?? undefined,
       topic: selectedType === 'moderated_caucus' ? (committedTopic.trim() || undefined) : undefined,
       totalTimeSec: selectedType === 'moderated_caucus'
-        ? mcTotalSec
+        ? committedMcTotalSec
         : selectedType === 'unmoderated_caucus'
-          ? ucDurationMin * 60
+          ? committedUcDurationMin * 60
           : undefined,
-      speakingTimePerPersonSec: selectedType === 'moderated_caucus' ? mcSpeakerSec : undefined
+      speakingTimePerPersonSec: selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
+      newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined
     })
   })
 </script>
@@ -184,7 +195,6 @@
             <DelegationSelector
               delegations={conf.delegations}
               bind:value={selectedProposerId}
-              placeholder="搜索并提出动议的代表团..."
               presentOnly={true}
             />
           </div>
@@ -219,16 +229,16 @@
           <div class="space-y-3">
             <div>
               <Label class="mb-1.5 block text-xs text-muted-foreground">主题</Label>
-              <Input bind:value={mcTopic} placeholder="如: Climate Finance" class="h-9 text-sm" onblur={() => (committedTopic = mcTopic)} />
+              <Input bind:value={mcTopic} class="h-9 text-sm" onblur={() => (committedTopic = mcTopic)} />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <Label class="mb-1.5 block text-xs text-muted-foreground">总时长（秒）</Label>
-                <Input type="number" min="30" max="3600" step="30" bind:value={mcTotalSec} class="h-9 text-sm" />
+                <Input type="number" min="30" max="3600" step="30" bind:value={mcTotalSec} class="h-9 text-sm" onblur={() => (committedMcTotalSec = mcTotalSec)} />
               </div>
               <div>
                 <Label class="mb-1.5 block text-xs text-muted-foreground">每人发言（秒）</Label>
-                <Input type="number" min="15" max="600" step="15" bind:value={mcSpeakerSec} class="h-9 text-sm" />
+                <Input type="number" min="15" max="600" step="15" bind:value={mcSpeakerSec} class="h-9 text-sm" onblur={() => (committedMcSpeakerSec = mcSpeakerSec)} />
               </div>
             </div>
             <div class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
@@ -238,13 +248,13 @@
         {:else if selectedType === 'unmoderated_caucus'}
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
-            <Input type="number" min="1" max="120" bind:value={ucDurationMin} class="h-9 text-sm w-32" />
+            <Input type="number" min="1" max="120" bind:value={ucDurationMin} class="h-9 text-sm w-32" onblur={() => (committedUcDurationMin = ucDurationMin)} />
             <p class="mt-1 text-[10px] text-muted-foreground">开始后将进行倒计时</p>
           </div>
         {:else if selectedType === 'modify_speaking_time'}
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">新的默认发言时间（秒）</Label>
-            <Input type="number" min="30" max="600" step="15" bind:value={newTimeSec} class="h-9 text-sm w-32" />
+            <Input type="number" min="30" max="600" step="15" bind:value={newTimeSec} class="h-9 text-sm w-32" onblur={() => (committedNewTimeSec = newTimeSec)} />
           </div>
         {:else if selectedType}
           <div class="text-xs text-muted-foreground">

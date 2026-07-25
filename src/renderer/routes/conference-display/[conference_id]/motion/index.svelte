@@ -8,8 +8,8 @@
    */
   import { Presentation, MessageSquare, Coffee, Pencil, Gavel, Timer, LogOut } from '@lucide/svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
-  import type { ConferenceDisplayData } from '$lib/types-conference'
-  import { onDestroy } from 'svelte'
+  import type { ConferenceDisplayData, MotionDraft } from '$lib/types-conference'
+  import type { MotionType } from '$lib/types-conference'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
@@ -36,31 +36,62 @@
   const typeForIcon = $derived(activeMotion?.type ?? draft?.type)
   const Icon = $derived(typeForIcon ? (MOTION_ICONS[typeForIcon] ?? Presentation) : Presentation)
 
-  // 延迟清空的 topic，避免 focus 模式退出时内容立刻回弹
-  let displayTopic = $state('')
-  let topicTimer: ReturnType<typeof setTimeout> | null = null
+  /**
+   * 按动议类型生成 Display 上展示的标题和副标题。
+   * - moderated_caucus → 标题=议题文本，副标题=空
+   * - unmoderated_caucus → 标题="自由磋商"，副标题="为 N 分钟"
+   * - modify_speaking_time → 标题="修改发言时间"，副标题="为 N 秒"
+   * - 其他 → 标题=动议类型中文名，副标题=空
+   */
+  function getDisplayParts(
+    d: MotionDraft | null,
+    am: ConferenceDisplayData['activeMotion']
+  ): { title: string; subtitle: string } {
+    const type = (am?.type ?? d?.type) as MotionType | undefined
+    if (!type) return { title: '', subtitle: '' }
 
-  $effect(() => {
-    const t = draft?.topic
-    if (t) {
-      if (topicTimer) {
-        clearTimeout(topicTimer)
-        topicTimer = null
+    switch (type) {
+      case 'moderated_caucus': {
+        const topic = am?.topic ?? d?.topic ?? ''
+        return { title: topic, subtitle: topic ? '动议主题' : '' }
       }
-      displayTopic = t
-    } else if (displayTopic && !topicTimer) {
-      topicTimer = setTimeout(() => {
-        displayTopic = ''
-        topicTimer = null
-      }, 500)
+      case 'unmoderated_caucus': {
+        const sec = am?.totalTimeSec ?? d?.totalTimeSec
+        if (sec) {
+          const min = sec / 60
+          return {
+            title: '自由磋商',
+            subtitle: `为 ${min % 1 === 0 ? min : min.toFixed(1)} 分钟`
+          }
+        }
+        return { title: '自由磋商', subtitle: '' }
+      }
+      case 'modify_speaking_time': {
+        const sec = am?.newTimeSec ?? d?.newTimeSec
+        return {
+          title: '修改发言时间',
+          subtitle: sec != null ? `为 ${sec} 秒` : ''
+        }
+      }
+      case 'suspend_meeting':
+        return { title: '暂时休会', subtitle: '' }
+      case 'close_meeting':
+        return { title: '闭幕', subtitle: '' }
+      case 'closure_debate':
+        return { title: '结束辩论', subtitle: '' }
+      case 'open_speakers_list':
+        return { title: '开启主发言名单', subtitle: '' }
+      default:
+        return { title: MOTION_LABELS[type] ?? type, subtitle: '' }
     }
-  })
+  }
 
-  onDestroy(() => {
-    if (topicTimer) clearTimeout(topicTimer)
-  })
+  const displayParts = $derived(getDisplayParts(draft, activeMotion))
+  const displayTitle = $derived(displayParts.title)
+  const displaySubtitle = $derived(displayParts.subtitle)
 
-  const isFocused = $derived(draft?.type != null && displayTopic !== '')
+  // focus 模式：有标题内容时放大展示
+  const isFocused = $derived(draft?.type != null && displayTitle !== '')
 </script>
 
 <div class="flex w-full flex-col items-center">
@@ -72,15 +103,23 @@
           class="flex w-full flex-col items-center gap-4"
           style="transition: all 0.7s ease; min-height: {isFocused ? '75vh' : 'auto'}"
         >
-          <!-- 主题大字（focus 模式：居中） -->
-          {#if isFocused && displayTopic}
-            <div class="flex flex-1 items-center justify-center">
+          <!-- 描述大字（focus 模式：居中） -->
+          {#if isFocused && displayTitle}
+            <div class="flex flex-1 flex-col items-center justify-center gap-4">
               <div
                 class="font-semibold tracking-wide text-white"
-                style="animation: fadeUp 0.7s ease both; font-size: 9rem"
+                style="animation: fadeUp 0.7s ease both; font-size: 7rem"
               >
-                {displayTopic}
+                {displayTitle}
               </div>
+              {#if displaySubtitle}
+                <div
+                  class="tracking-wide text-white/60"
+                  style="animation: fadeUp 0.7s ease both; font-size: 4rem"
+                >
+                  {displaySubtitle}
+                </div>
+              {/if}
             </div>
           {/if}
 
@@ -128,6 +167,11 @@
                 {/if}
               </div>
             {/if}
+            {#if draft?.newTimeSec != null}
+              <div class="text-3xl tracking-wider text-white/25">
+                发言时间：<span class="text-white/45">{draft.newTimeSec} 秒</span>
+              </div>
+            {/if}
           </div>
         </div>
       {:else if motionStage === 'voting' && activeMotion}
@@ -139,8 +183,11 @@
           >
         </div>
 
-        <div class="mt-4 text-8xl font-semibold tracking-wide text-white">
-          <span>{activeMotion.topic}</span>
+        <div class="mt-4 flex flex-col items-center gap-2">
+          <span class="text-7xl font-semibold tracking-wide text-white">{displayTitle}</span>
+          {#if displaySubtitle}
+            <span class="text-4xl tracking-wide text-white/60">{displaySubtitle}</span>
+          {/if}
         </div>
         <div class="mt-3 text-3xl tracking-wider text-white/40">
           由 <span class="text-white/70">{activeMotion.proposedByName}</span> 提出
@@ -148,13 +195,6 @@
 
         {#if activeMotion.type === 'moderated_caucus'}
           <div class="mt-5 space-y-2 text-2xl tracking-wider text-white/25">
-            {#if activeMotion.topic}
-              <p>
-                类型: <span class="text-white/45"
-                  >{MOTION_LABELS[activeMotion.type] ?? activeMotion.type}</span
-                >
-              </p>
-            {/if}
             {#if activeMotion.totalTimeSec}
               <p>总时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span></p>
             {/if}
@@ -169,6 +209,10 @@
         {:else if activeMotion.type === 'unmoderated_caucus' && activeMotion.totalTimeSec}
           <div class="mt-5 text-2xl tracking-wider text-white/25">
             时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
+          </div>
+        {:else if activeMotion.type === 'modify_speaking_time' && activeMotion.newTimeSec != null}
+          <div class="mt-5 text-2xl tracking-wider text-white/25">
+            修改发言时间为 <span class="text-white/45">{activeMotion.newTimeSec} 秒</span>
           </div>
         {/if}
 

@@ -290,7 +290,9 @@ export function buildDisplayData(
   const hasActiveMotionPhase =
     extra?.motionDraft?.proposedByName || conf.motions.some((m) => m.status === 'pending')
   const resolvedMotions = conf.motions.filter(
-    (m) => m.status === 'approved' || m.status === 'rejected'
+    (m) =>
+      (m.status === 'approved' || m.status === 'rejected') &&
+      !conf.dismissedResolvedMotionIds.includes(m.id)
   )
   const lastResolvedMotion =
     resolvedMotions.length > 0 ? resolvedMotions[resolvedMotions.length - 1] : undefined
@@ -372,6 +374,10 @@ export function buildDisplayData(
           speakingTimePerPersonSec:
             displayMotion.type === 'moderated_caucus'
               ? (displayMotion as any).speakingTimePerPersonSec
+              : undefined,
+          newTimeSec:
+            displayMotion.type === 'modify_speaking_time'
+              ? (displayMotion as any).newTimeSec
               : undefined
         }
       : undefined,

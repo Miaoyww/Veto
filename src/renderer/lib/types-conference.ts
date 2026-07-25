@@ -312,6 +312,8 @@ export interface Conference {
   speakersList: SpeakerEntry[]
   /** 所有动议 */
   motions: Motion[]
+  /** 已被主席忽略的已决动议 ID（取消对话框后不再展示其结果） */
+  dismissedResolvedMotionIds: string[]
   /** 决议草案 */
   draftResolutions: DraftResolution[]
   /** 投票记录 */
@@ -386,6 +388,8 @@ export interface MotionDraft {
   totalTimeSec?: number
   /** 每人发言秒数 */
   speakingTimePerPersonSec?: number
+  /** 新的发言时间秒数（modify_speaking_time） */
+  newTimeSec?: number
 }
 
 export interface ConferenceDisplayData {
@@ -429,6 +433,8 @@ export interface ConferenceDisplayData {
     totalTimeSec?: number
     /** 每人发言时间（秒），moderated_caucus */
     speakingTimePerPersonSec?: number
+    /** 新的发言时间（秒），modify_speaking_time */
+    newTimeSec?: number
   }
   caucusSetup?: {
     topic?: string

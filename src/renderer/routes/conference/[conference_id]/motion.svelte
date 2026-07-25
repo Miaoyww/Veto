@@ -162,6 +162,10 @@
               <div class="mt-3 text-sm text-muted-foreground">
                 新发言时间：<span class="font-medium text-foreground">{(pendingMotion as any).newTimeSec} 秒</span>
               </div>
+            {:else if pendingMotion.type === 'closure_debate'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                结束当前议题辩论，进入投票表决阶段
+              </div>
             {/if}
           </div>
 

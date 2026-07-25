@@ -138,7 +138,10 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
   switch (motionType) {
     // 需要简单多数表决
     case 'moderated_caucus':
+    case 'unmoderated_caucus':
     case 'modify_speaking_time':
+    case 'resume_resolution':
+    case 'reorder_resolution':
     case 'suspend_meeting':
       return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
 
@@ -146,13 +149,10 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     case 'closure_debate':
     case 'close_meeting':
     case 'postpone_resolution':
-    case 'reorder_resolution':
       return { requiresVoting: true, votingMajority: 'two_thirds', autoApprove: false }
 
     // 无需表决，自动通过
     case 'open_speakers_list':
-    case 'unmoderated_caucus':
-    case 'resume_resolution':
       return { requiresVoting: false, votingMajority: 'simple_majority', autoApprove: true }
 
     default:

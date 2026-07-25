@@ -168,6 +168,7 @@ export function createConference(
     agenda: agendaList,
     speakersList: [],
     motions: [],
+    dismissedResolvedMotionIds: [],
     draftResolutions: [],
     votingSessions: [],
     minutes: [],
@@ -655,6 +656,21 @@ export function rejectMotion(motionId: string): void {
   addMinutesEntry('motion_rejected', `动议未通过`, { motionId })
 }
 
+/** 忽略最后一个已决动议的结果展示（取消对话框时调用，避免 Display 回退到旧结果） */
+export function dismissLastResolvedMotion(): void {
+  updateCurrentConference((c) => {
+    const resolved = c.motions
+      .filter((m) => m.status === 'approved' || m.status === 'rejected')
+      .filter((m) => !c.dismissedResolvedMotionIds.includes(m.id))
+    const last = resolved.length > 0 ? resolved[resolved.length - 1] : null
+    if (!last) return c
+    return {
+      ...c,
+      dismissedResolvedMotionIds: [...c.dismissedResolvedMotionIds, last.id]
+    }
+  })
+}
+
 /** 执行通过后的动议动作 */
 function executeMotionAction(motion: Motion): void {
   const conf = get(currentConference)
@@ -716,6 +732,29 @@ function executeMotionAction(motion: Motion): void {
         ...c,
         defaultSpeakingTimeSec: (motion as any).newTimeSec
       }))
+      break
+    case 'closure_debate':
+      // 结束当前发言人（如有）
+      if (conf.activeSpeaker) {
+        updateCurrentConference((c) => ({
+          ...c,
+          activeSpeaker: null
+        }))
+      }
+      // 结束当前磋商（如有）
+      if (conf.activeCaucus) {
+        updateCurrentConference((c) => ({
+          ...c,
+          activeCaucus: null
+        }))
+        addMinutesEntry('caucus_ended', '辩论结束，磋商终止')
+      }
+      // 切换到投票表决阶段
+      updateCurrentConference((c) => ({
+        ...c,
+        phase: 'voting'
+      }))
+      addMinutesEntry('phase_changed', '进入阶段: 投票表决')
       break
   }
 }
@@ -1213,6 +1252,41 @@ export function closeVotingSession(sessionId: string): void {
                 timestamp: now,
                 eventType: 'phase_changed' as MinutesEventType,
                 description: '进入阶段: 闭幕'
+              }
+            )
+          } else if (motion.type === 'closure_debate') {
+            newPhase = 'voting'
+            newActiveSpeaker = null
+            newActiveCaucus = null
+            newMinutes.push({
+              id: generateId(),
+              timestamp: now,
+              eventType: 'phase_changed' as MinutesEventType,
+              description: '进入阶段: 投票表决'
+            })
+          } else if (motion.type === 'unmoderated_caucus') {
+            const durationSec = (motion as any).durationSec as number
+            newPhase = 'caucus'
+            newActiveSpeaker = null
+            newActiveCaucus = {
+              motionId: motion.id,
+              type: 'unmoderated',
+              startedAt: now,
+              endAt: now + durationSec * 1000,
+              elapsedSec: 0
+            }
+            newMinutes.push(
+              {
+                id: generateId(),
+                timestamp: now,
+                eventType: 'caucus_started' as MinutesEventType,
+                description: '自由磋商开始'
+              },
+              {
+                id: generateId(),
+                timestamp: now,
+                eventType: 'phase_changed' as MinutesEventType,
+                description: '进入阶段: 磋商'
               }
             )
           }
