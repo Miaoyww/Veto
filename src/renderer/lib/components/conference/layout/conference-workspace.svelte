@@ -41,9 +41,8 @@
       case 'general_debate':
       case 'caucus':
       case 'caucus_setup':
-        motionDialogOpen = true
-        break
       case 'voting':
+        motionDialogOpen = true
         break
       default:
         break
@@ -54,13 +53,13 @@
     if (!conf) return ''
     switch (conf.phase) {
       case 'general_debate':
-        return '提出动议'
+        return '动议与程序'
       case 'caucus':
-        return '提出动议'
+        return '动议与程序'
       case 'caucus_setup':
-        return '提出动议'
+        return '动议与程序'
       case 'voting':
-        return ''
+        return '动议与程序'
       default:
         return ''
     }

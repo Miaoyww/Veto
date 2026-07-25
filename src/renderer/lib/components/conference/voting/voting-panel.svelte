@@ -14,9 +14,27 @@
 
   const conf = $derived($currentConference)
 
-  // 找到当前进行中的投票
+  // 找到当前进行中的投票；若无则回退到最近一次已结束的投票（展示结果）
   const activeSession = $derived(
-    conf?.votingSessions.find((s) => !s.endedAt) ?? null
+    conf?.votingSessions.find((s) => !s.endedAt) ??
+      (() => {
+        const ended = conf?.votingSessions
+          .filter((s) => s.endedAt)
+          .sort((a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0))
+        return ended?.[0] ?? null
+      })()
+  )
+
+  // 获取关联的动议信息（用于实质性投票的文件名称）
+  const targetMotion = $derived(
+    activeSession?.targetType === 'motion'
+      ? conf?.motions.find((m) => m.id === activeSession.targetId)
+      : null
+  )
+  const documentName = $derived(
+    targetMotion?.type === 'substantive_vote'
+      ? (targetMotion as any).documentName as string | undefined
+      : undefined
   )
 
   const thresholds = $derived(
@@ -30,7 +48,7 @@
   const totalVoted = $derived(tally.yes + tally.no + tally.abstain)
 
   function handleCloseVoting(): void {
-    if (activeSession) {
+    if (activeSession && !activeSession.endedAt) {
       closeVotingSession(activeSession.id)
     }
   }
@@ -53,8 +71,11 @@
   <div class="text-center">
     <h2 class="flex items-center justify-center gap-2 text-xl font-bold text-foreground">
       <Vote size={22} class="text-blue-500" />
-      投票表决
+      {documentName ? `实质性投票` : '投票表决'}
     </h2>
+    {#if documentName}
+      <p class="mt-1 text-base font-semibold text-foreground">「{documentName}」</p>
+    {/if}
     {#if activeSession}
       <p class="mt-1 text-sm text-muted-foreground">
         {activeSession.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'}表决

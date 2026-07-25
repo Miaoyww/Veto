@@ -113,6 +113,7 @@ export type MotionType =
   | 'suspend_meeting' // 暂时休会
   | 'close_meeting' // 闭幕
   | 'reorder_resolution' // 调整投票顺序
+  | 'substantive_vote' // 实质性投票
 
 export interface AbstractMotion {
   id: string
@@ -182,6 +183,13 @@ export interface ReorderResolutionMotion extends AbstractMotion {
   newOrder: string[]
 }
 
+/** 实质性投票（对决议草案、修正案等文件的唱名表决） */
+export interface SubstantiveVoteMotion extends AbstractMotion {
+  type: 'substantive_vote'
+  /** 被表决的文件名称 */
+  documentName: string
+}
+
 export type Motion =
   | ModeratedCaucusMotion
   | UnmoderatedCaucusMotion
@@ -192,6 +200,7 @@ export type Motion =
   | SuspendMeetingMotion
   | CloseMeetingMotion
   | ReorderResolutionMotion
+  | SubstantiveVoteMotion
 
 /** 动议类型的中文标签 */
 export const MOTION_LABELS: Record<MotionType, string> = {
@@ -204,7 +213,8 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   closure_debate: '结束辩论',
   suspend_meeting: '暂时休会',
   close_meeting: '闭幕',
-  reorder_resolution: '调整投票顺序'
+  reorder_resolution: '调整投票顺序',
+  substantive_vote: '实质性投票'
 }
 
 export interface Point {
@@ -343,6 +353,8 @@ export interface Conference {
   dismissedPointIds: string[]
   /** 决议草案 */
   draftResolutions: DraftResolution[]
+  /** 已记录的文件名称（用于实质性投票时的输入提示） */
+  documentNames: string[]
   /** 投票记录 */
   votingSessions: VotingSession[]
   /** 会议记录 */
@@ -417,6 +429,8 @@ export interface MotionDraft {
   speakingTimePerPersonSec?: number
   /** 新的发言时间秒数（modify_speaking_time） */
   newTimeSec?: number
+  /** 文件名称（substantive_vote） */
+  documentName?: string
 }
 
 /** 问题编辑草稿 —— 实时同步到 Display 窗口 */
@@ -472,6 +486,8 @@ export interface ConferenceDisplayData {
     speakingTimePerPersonSec?: number
     /** 新的发言时间（秒），modify_speaking_time */
     newTimeSec?: number
+    /** 文件名称（substantive_vote） */
+    documentName?: string
   }
   activePoint?: {
     type: PointType

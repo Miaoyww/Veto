@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     Presentation, Timer, MessageSquare, Pencil,
-    FileDown, FileUp, X, Gavel, Coffee, ListOrdered, LogOut
+    FileDown, FileUp, X, Gavel, Coffee, ListOrdered, LogOut, Vote, FileText
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -28,16 +28,22 @@
 
   const conf = $derived($currentConference)
 
-  // 常用动议列表（排除需要在表单中选择具体类型的）
-  const motionTypes: MotionType[] = [
-    'open_speakers_list',
-    'moderated_caucus',
-    'unmoderated_caucus',
-    'modify_speaking_time',
-    'closure_debate',
-    'suspend_meeting',
-    'close_meeting'
-  ]
+  // 常用动议列表——根据当前阶段动态调整
+  const motionTypes = $derived.by((): MotionType[] => {
+    if (conf?.phase === 'voting') {
+      // 结束辩论后：只能进行实质性投票或休会/闭幕
+      return ['substantive_vote', 'suspend_meeting', 'close_meeting']
+    }
+    return [
+      'open_speakers_list',
+      'moderated_caucus',
+      'unmoderated_caucus',
+      'modify_speaking_time',
+      'closure_debate',
+      'suspend_meeting',
+      'close_meeting'
+    ]
+  })
 
   const MOTION_ICONS: Record<string, typeof Presentation> = {
     open_speakers_list: Presentation,
@@ -46,7 +52,8 @@
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
     suspend_meeting: Timer,
-    close_meeting: LogOut
+    close_meeting: LogOut,
+    substantive_vote: Vote
   }
 
   // ---- Form state ----
@@ -64,6 +71,9 @@
   // Modify Speaking Time
   let newTimeSec = $state(90)
   let committedNewTimeSec = $state(90)
+  // Substantive Vote
+  let documentName = $state('')
+  let committedDocumentName = $state('')
   // Proposer
   let selectedProposerId = $state('')
 
@@ -80,6 +90,8 @@
     committedUcDurationMin = 15
     newTimeSec = 90
     committedNewTimeSec = 90
+    documentName = ''
+    committedDocumentName = ''
   }
 
   function handleOpenChange(value: boolean): void {
@@ -115,6 +127,9 @@
       case 'modify_speaking_time':
         motionData.newTimeSec = newTimeSec
         break
+      case 'substantive_vote':
+        motionData.documentName = documentName.trim() || '未命名文件'
+        break
     }
 
     proposeMotion(motionData)
@@ -147,7 +162,11 @@
   }
 
   const mcMaxSpeakers = $derived(calcMaxSpeakers(mcTotalSec, mcSpeakerSec))
-  const canPropose = $derived(selectedType !== null && selectedProposerId !== '')
+  const canPropose = $derived(
+    selectedType !== null &&
+    selectedProposerId !== '' &&
+    (selectedType !== 'substantive_vote' || documentName.trim() !== '')
+  )
 
   // 实时同步动议草稿到 Display
   $effect(() => {
@@ -168,7 +187,8 @@
           ? committedUcDurationMin * 60
           : undefined,
       speakingTimePerPersonSec: selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
-      newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined
+      newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined,
+      documentName: selectedType === 'substantive_vote' ? (committedDocumentName.trim() || undefined) : undefined
     })
   })
 </script>
@@ -180,10 +200,10 @@
       <Dialog.Header class="pb-1">
         <Dialog.Title class="flex items-center gap-2 text-base font-semibold">
           <Presentation size={18} class="text-indigo-500" />
-          提出动议
+          动议与程序
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          选择提出方后选择动议类型
+          选择提出方后选择动议或程序类型
         </Dialog.Description>
       </Dialog.Header>
 
@@ -255,6 +275,28 @@
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">新的默认发言时间（秒）</Label>
             <Input type="number" min="30" max="600" step="15" bind:value={newTimeSec} class="h-9 text-sm w-32" onblur={() => (committedNewTimeSec = newTimeSec)} />
+          </div>
+        {:else if selectedType === 'substantive_vote'}
+          <Separator />
+          <div>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">文件名称</Label>
+            <Input
+              bind:value={documentName}
+              class="h-9 text-sm"
+              placeholder="例如：决议草案 1.1"
+              onblur={() => (committedDocumentName = documentName)}
+              list="document-name-suggestions"
+            />
+            {#if conf?.documentNames?.length}
+              <datalist id="document-name-suggestions">
+                {#each conf.documentNames as name}
+                  <option value={name} />
+                {/each}
+              </datalist>
+            {/if}
+            <p class="mt-1 text-[10px] text-muted-foreground">
+              此文件将进入唱名表决（2/3多数）
+            </p>
           </div>
         {:else if selectedType}
           <div class="text-xs text-muted-foreground">

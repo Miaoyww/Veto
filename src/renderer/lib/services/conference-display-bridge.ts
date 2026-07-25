@@ -265,8 +265,15 @@ export function buildDisplayData(
     }
   }
 
-  // 当前投票
-  const activeVoting = conf.votingSessions.find((s) => !s.endedAt)
+  // 当前投票：优先进行中的，否则回退到最近一次已结束的（展示结果）
+  const activeVoting =
+    conf.votingSessions.find((s) => !s.endedAt) ??
+    (() => {
+      const ended = conf.votingSessions
+        .filter((s) => s.endedAt)
+        .sort((a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0))
+      return ended[0]
+    })()
   let votingData: ConferenceDisplayData['votingSession'] | undefined
   if (activeVoting) {
     const tally = tallyVotes(activeVoting.ballots)
@@ -386,6 +393,10 @@ export function buildDisplayData(
           newTimeSec:
             displayMotion.type === 'modify_speaking_time'
               ? (displayMotion as any).newTimeSec
+              : undefined,
+          documentName:
+            displayMotion.type === 'substantive_vote'
+              ? (displayMotion as any).documentName
               : undefined
         }
       : undefined,

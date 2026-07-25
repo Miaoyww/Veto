@@ -161,7 +161,9 @@
             <div class="flex items-center gap-3 text-white/40">
               <div class="h-px w-12 bg-white/10"></div>
               <Vote size={20} class="text-[#5B92E5]" />
-              <span class="text-lg tracking-[0.08em] uppercase">投票表决</span>
+              <span class="text-lg tracking-[0.08em] uppercase">
+                {displayData.activeMotion?.documentName ? '实质性投票' : '投票表决'}
+              </span>
               <span class="text-sm tracking-wider text-white/20">
                 {displayData.votingSession.majorityRule === '简单多数'
                   ? 'SIMPLE MAJORITY'
@@ -169,6 +171,12 @@
               </span>
               <div class="h-px w-12 bg-white/10"></div>
             </div>
+
+            {#if displayData.activeMotion?.documentName}
+              <div class="text-4xl font-semibold tracking-wide text-white/60">
+                「{displayData.activeMotion.documentName}」
+              </div>
+            {/if}
 
             <!-- 计票 -->
             <div class="grid grid-cols-3 gap-8">

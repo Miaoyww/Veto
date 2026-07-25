@@ -6,7 +6,7 @@
    *
    * 阶段流转：editing（编辑中） → voting（表决中） → result（结果）
    */
-  import { Presentation, MessageSquare, Coffee, Pencil, Gavel, Timer, LogOut } from '@lucide/svelte'
+  import { Presentation, MessageSquare, Coffee, Pencil, Gavel, Timer, LogOut, Vote } from '@lucide/svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData, MotionDraft } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
@@ -30,7 +30,8 @@
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
     suspend_meeting: Timer,
-    close_meeting: LogOut
+    close_meeting: LogOut,
+    substantive_vote: Vote
   }
 
   const typeForIcon = $derived(activeMotion?.type ?? draft?.type)
@@ -81,6 +82,10 @@
         return { title: '结束辩论', subtitle: '' }
       case 'open_speakers_list':
         return { title: '开启主发言名单', subtitle: '' }
+      case 'substantive_vote': {
+        const docName = am?.documentName ?? d?.documentName ?? ''
+        return { title: docName, subtitle: docName ? '实质性投票' : '' }
+      }
       default:
         return { title: MOTION_LABELS[type] ?? type, subtitle: '' }
     }

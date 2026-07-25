@@ -10,7 +10,7 @@
   import { currentRoute, navigate } from '$lib/router.svelte'
   import {
     Presentation, Timer, MessageSquare, Pencil,
-    Gavel, Coffee, LogOut, Check, X, ArrowLeft, Vote
+    Gavel, Coffee, LogOut, Check, X, ArrowLeft, Vote, FileText
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
@@ -46,7 +46,8 @@
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
     suspend_meeting: Timer,
-    close_meeting: LogOut
+    close_meeting: LogOut,
+    substantive_vote: Vote
   }
 
   const pendingMotion = $derived(
@@ -165,6 +166,10 @@
             {:else if pendingMotion.type === 'closure_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
                 结束当前议题辩论，进入投票表决阶段
+              </div>
+            {:else if pendingMotion.type === 'substantive_vote'}
+              <div class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">
+                <p>文件名称：<span class="font-medium text-foreground">{(pendingMotion as any).documentName}</span></p>
               </div>
             {/if}
           </div>
