@@ -6,15 +6,50 @@
 
 @font-face {
 	font-family: 'HarmonyOS SansSC';
-	src: local('HarmonyOS Sans SC'), local('HarmonyOS SansSC');
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Thin.ttf') format('truetype');
+	font-weight: 100;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'HarmonyOS SansSC';
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Light.ttf') format('truetype');
+	font-weight: 300;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'HarmonyOS SansSC';
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Regular.ttf') format('truetype');
 	font-weight: 400;
 	font-style: normal;
 }
 
 @font-face {
 	font-family: 'HarmonyOS SansSC';
-	src: local('HarmonyOS Sans SC Bold'), local('HarmonyOS SansSC Bold');
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Medium.ttf') format('truetype');
+	font-weight: 500;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'HarmonyOS SansSC';
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Semibold.ttf') format('truetype');
+	font-weight: 600;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'HarmonyOS SansSC';
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Bold.ttf') format('truetype');
 	font-weight: 700;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'HarmonyOS SansSC';
+	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Black.ttf') format('truetype');
+	font-weight: 900;
 	font-style: normal;
 }
 
@@ -135,6 +170,7 @@ body::-webkit-scrollbar {
 }
 
 @theme inline {
+	--font-sans: 'HarmonyOS SansSC', 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
