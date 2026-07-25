@@ -17,7 +17,7 @@
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
-  import { VETO_NAME } from '$lib/const'
+  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
 
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
@@ -122,7 +122,7 @@
 
     attendanceTimer = setTimeout(() => {
       attendanceChange = null
-    }, 1500)
+    }, ROLL_CALL_MARK_DELAY)
   })
 </script>
 

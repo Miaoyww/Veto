@@ -1,20 +1,18 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute, navigate } from '$lib/router.svelte'
-  import { ArrowLeft, Check, X, Users, Flag, Monitor } from '@lucide/svelte'
+  import { ArrowLeft, Check, X, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
-  import { Badge } from '$lib/components/ui/badge'
-  import {
+    import {
     currentConference,
     currentConferenceId,
     loadConference,
     setAttendance,
-    completeRollCall,
-    setPhase
+    completeRollCall
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import { VETO_NAME } from '$lib/const'
+  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
 
@@ -118,7 +116,7 @@
       isTransitioning = false
       lastRollCallMarked = null
       currentIndex++
-    }, 1500)
+    }, ROLL_CALL_MARK_DELAY)
   }
 
   function markAbsent(): void {
@@ -135,7 +133,7 @@
       isTransitioning = false
       lastRollCallMarked = null
       currentIndex++
-    }, 1500)
+    }, ROLL_CALL_MARK_DELAY)
   }
 
   function markAllPresent(): void {
@@ -224,24 +222,21 @@
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
-                class="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                class="h-full rounded-full bg-foreground/25 transition-all duration-300"
                 style="width: {progress}%"
               ></div>
             </div>
             <div class="flex gap-4 text-xs text-muted-foreground">
-              <span>已出席 <span class="font-semibold text-emerald-600">{presentCount}</span></span>
-              <span>简单多数 <span class="font-semibold text-amber-600">{thresholds.simpleMajorityThreshold}</span></span>
-              <span>2/3多数 <span class="font-semibold text-rose-600">{thresholds.twoThirdsThreshold}</span></span>
+              <span>已出席 <span class="font-semibold text-foreground">{presentCount}</span></span>
+              <span>简单多数 <span class="font-semibold text-foreground">{thresholds.simpleMajorityThreshold}</span></span>
+              <span>2/3多数 <span class="font-semibold text-foreground">{thresholds.twoThirdsThreshold}</span></span>
             </div>
           </div>
 
           <!-- 当前代表团 -->
           {#if currentDelegation}
-            {@const statusClass = lastRollCallMarked?.status === 'present'
-              ? 'border-emerald-400 bg-emerald-50/30 dark:border-emerald-600 dark:bg-emerald-950/20'
-              : 'border-muted-foreground/30 bg-muted/10 dark:border-muted-foreground/20'}
             <div
-              class="relative flex w-full flex-col items-center gap-6 rounded-2xl border-2 bg-card p-14 shadow-lg transition-all duration-500 {isTransitioning ? statusClass : 'border-indigo-200 dark:border-indigo-800'}"
+              class="relative flex w-full flex-col items-center gap-6 rounded-lg border bg-card p-14 transition-all duration-500 {isTransitioning ? 'opacity-70' : ''}"
             >
               <!-- 代表团信息 -->
 
@@ -256,7 +251,7 @@
                 <div class="mt-2 flex gap-4">
                   <Button
                     size="lg"
-                    class="min-w-[160px] gap-2 bg-emerald-600 text-base hover:bg-emerald-700"
+                    class="min-w-[160px] gap-2 text-base"
                     onclick={markPresent}
                     disabled={isTransitioning}
                   >
@@ -277,19 +272,11 @@
                   </Button>
                 </div>
               {:else if showConfirmOverlay && lastRollCallMarked}
-                <!-- 点名结果（卡片底部） -->
+                <!-- 点名结果 -->
                 <div class="mt-2 flex flex-col items-center gap-2">
-                  {#if lastRollCallMarked.status === 'present'}
-                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 ring-4 ring-emerald-200 dark:bg-emerald-900/40 dark:ring-emerald-700/50">
-                      <Check size={28} class="text-emerald-600 dark:text-emerald-400" stroke-width={3} />
-                    </div>
-                    <span class="text-lg font-bold text-emerald-700 dark:text-emerald-400">出席</span>
-                  {:else}
-                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-muted ring-4 ring-muted-foreground/20 dark:bg-muted/30 dark:ring-muted-foreground/30">
-                      <X size={28} class="text-muted-foreground" stroke-width={3} />
-                    </div>
-                    <span class="text-lg font-bold text-muted-foreground">缺席</span>
-                  {/if}
+                  <span class="text-lg font-bold text-foreground">
+                    {lastRollCallMarked.status === 'present' ? '出席' : '缺席'}
+                  </span>
                 </div>
               {/if}
 
@@ -330,21 +317,20 @@
         <!-- ===== 点名完成 ===== -->
         <div class="flex w-full max-w-lg flex-col items-center gap-8">
           <div class="flex items-center gap-2">
-            <Flag size={24} class="text-indigo-500" />
             <h2 class="text-2xl font-bold text-foreground">点名完成</h2>
           </div>
 
           <div class="grid w-full grid-cols-3 gap-4">
-            <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-800 dark:bg-emerald-950/30">
-              <div class="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{presentCount}</div>
+            <div class="rounded-lg border bg-card p-6 text-center">
+              <div class="text-3xl font-bold text-foreground">{presentCount}</div>
               <div class="mt-1 text-sm text-muted-foreground">出席 / {totalCount}</div>
             </div>
-            <div class="rounded-xl border-2 border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/30">
-              <div class="text-3xl font-bold text-amber-700 dark:text-amber-400">{thresholds.simpleMajorityThreshold}</div>
+            <div class="rounded-lg border bg-card p-6 text-center">
+              <div class="text-3xl font-bold text-foreground">{thresholds.simpleMajorityThreshold}</div>
               <div class="mt-1 text-sm text-muted-foreground">简单多数</div>
             </div>
-            <div class="rounded-xl border-2 border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-800 dark:bg-rose-950/30">
-              <div class="text-3xl font-bold text-rose-700 dark:text-rose-400">{thresholds.twoThirdsThreshold}</div>
+            <div class="rounded-lg border bg-card p-6 text-center">
+              <div class="text-3xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</div>
               <div class="mt-1 text-sm text-muted-foreground">2/3 多数</div>
             </div>
           </div>
@@ -367,15 +353,14 @@
               </div>
             </div>
           {:else}
-            <p class="text-sm text-emerald-600 font-medium">全部出席</p>
+            <p class="text-sm font-medium">全部出席</p>
           {/if}
 
           <div class="flex gap-4">
             <Button variant="outline" size="lg" onclick={goBack}>
               ← 返回修改
             </Button>
-            <Button size="lg" class="min-w-[160px] gap-2 bg-indigo-600 text-base hover:bg-indigo-700" onclick={handleComplete}>
-              <Flag size={18} />
+            <Button size="lg" class="min-w-[160px] gap-2 text-base" onclick={handleComplete}>
               完成点名
             </Button>
           </div>
