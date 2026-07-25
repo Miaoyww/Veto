@@ -11,7 +11,6 @@
    * 4. 底部近期记录
    */
   import { onMount, onDestroy } from 'svelte'
-  import { Gavel, Vote, Coffee, Timer, Users } from '@lucide/svelte'
   import TitleBar from '$lib/components/titlebar.svelte'
   import {
     getDisplayBridge,
@@ -30,6 +29,12 @@
   import QuestionDisplay from './question/index.svelte'
   import CaucusSetupDisplay from './caucus-setup/index.svelte'
   import CaucusDisplay from './caucus/index.svelte'
+  import VotingDisplay from './voting/index.svelte'
+  import PendingSpeakersListDisplay from './pending-speakers-list/index.svelte'
+  import SuspendedDisplay from './suspended/index.svelte'
+  import ClosedDisplay from './closed/index.svelte'
+  import ReadyDisplay from './ready/index.svelte'
+  import ConnectionStatusDisplay from './connection-status/index.svelte'
   import AttendanceChangeDisplay from './attendance-change.svelte'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
@@ -227,183 +232,20 @@
           {:else if displayData.caucusTimer && effectivePhase === 'caucus'}
             <CaucusDisplay data={displayData} />
           {:else if displayData.votingSession && effectivePhase === 'voting'}
-            <!-- 投票 -->
-            <div class="flex flex-col items-center gap-10">
-              <div class="flex items-center gap-3 text-white/40">
-                <div class="h-px w-12 bg-white/10"></div>
-                <Vote size={20} class="text-[#5B92E5]" />
-                <span class="text-lg tracking-[0.08em] uppercase">
-                  {displayData.activeMotion?.documentName ? '实质性投票' : '投票表决'}
-                </span>
-                <span class="text-sm tracking-wider text-white/20">
-                  {displayData.votingSession.majorityRule === '简单多数'
-                    ? 'SIMPLE MAJORITY'
-                    : 'TWO-THIRDS MAJORITY'}
-                </span>
-                <div class="h-px w-12 bg-white/10"></div>
-              </div>
-
-              {#if displayData.activeMotion?.documentName}
-                <div class="text-4xl font-semibold tracking-wide text-white/60">
-                  「{displayData.activeMotion.documentName}」
-                </div>
-              {/if}
-
-              <!-- 计票 -->
-              <div class="grid grid-cols-3 gap-8">
-                <div
-                  class="flex w-52 flex-col items-center gap-3 rounded-sm border border-white/10 bg-white/[0.02] px-10 py-10"
-                >
-                  <div class="text-9xl font-light tabular-nums leading-none text-[#5B92E5]">
-                    {displayData.votingSession.tally.yes}
-                  </div>
-                  <div class="text-sm tracking-[0.12em] text-white/30 uppercase">赞成</div>
-                </div>
-                <div
-                  class="flex w-52 flex-col items-center gap-3 rounded-sm border border-white/10 bg-white/[0.02] px-10 py-10"
-                >
-                  <div class="text-9xl font-light tabular-nums leading-none text-white/40">
-                    {displayData.votingSession.tally.no}
-                  </div>
-                  <div class="text-sm tracking-[0.12em] text-white/30 uppercase">反对</div>
-                </div>
-                <div
-                  class="flex w-52 flex-col items-center gap-3 rounded-sm border border-white/10 bg-white/[0.02] px-10 py-10"
-                >
-                  <div class="text-9xl font-light tabular-nums leading-none text-white/40">
-                    {displayData.votingSession.tally.abstain}
-                  </div>
-                  <div class="text-sm tracking-[0.12em] text-white/30 uppercase">弃权</div>
-                </div>
-              </div>
-
-              {#if !displayData.votingSession.result}
-                <!-- 轮次 & 代表团投票状态 -->
-                <div class="flex flex-col items-center gap-4">
-                  <div class="text-xs tracking-[0.1em] text-white/20 uppercase">
-                    {displayData.votingSession.round === 2
-                      ? 'ROUND 2 · SECOND CALL'
-                      : 'ROLL CALL VOTE'}
-                  </div>
-                  <div class="grid grid-cols-5 gap-x-6 gap-y-2">
-                    {#each displayData.votingSession.ballots as entry}
-                      {@const isCurrent =
-                        entry.delegationId === displayData.votingSession.currentDelegationId}
-                      <div
-                        class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors {isCurrent
-                          ? 'bg-[#5B92E5]/10 ring-1 ring-[#5B92E5]/30'
-                          : ''}"
-                      >
-                        <!-- 状态指示器 -->
-                        <div
-                          class="h-2 w-2 flex-shrink-0 rounded-full {entry.vote === 'yes'
-                            ? 'bg-emerald-400'
-                            : entry.vote === 'no'
-                              ? 'bg-red-400'
-                              : entry.vote === 'abstain'
-                                ? 'bg-amber-400'
-                                : entry.vote === 'skip'
-                                  ? 'bg-slate-500'
-                                  : 'border border-white/20 bg-transparent'}"
-                        ></div>
-                        <span
-                          class={entry.vote === null
-                            ? 'text-white/30'
-                            : entry.vote === 'skip'
-                              ? 'text-slate-400'
-                              : 'text-white/70'}
-                        >
-                          {entry.delegationName}
-                        </span>
-                      </div>
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-
-              {#if displayData.votingSession.result}
-                <div
-                  class="rounded-sm px-10 py-3 text-xl font-semibold tracking-[0.06em] {displayData
-                    .votingSession.result === 'passed'
-                    ? 'bg-[#5B92E5]/10 text-[#5B92E5] border border-[#5B92E5]/20'
-                    : 'bg-white/5 text-white/40 border border-white/10'}"
-                >
-                  {displayData.votingSession.result === 'passed'
-                    ? '通过  ADOPTED'
-                    : '未通过  REJECTED'}
-                </div>
-              {/if}
-            </div>
+            <VotingDisplay data={displayData} />
           {:else if effectivePhase === 'pending_speakers_list'}
-            <!-- 等待开启主发言名单 -->
-            <div class="flex flex-col items-center gap-6 text-white/15">
-              <Users size={56} />
-              <div class="text-8xl font-light tracking-[0.06em]">等待开启</div>
-              <div class="text-9xl font-light tracking-[0.06em]">主发言名单</div>
-              <div class="text-lg tracking-wider text-white/10">AWAITING SPEAKERS LIST</div>
-            </div>
+            <PendingSpeakersListDisplay />
           {:else if effectivePhase === 'suspended'}
-            <!-- 休会 -->
-            <div class="flex flex-col items-center gap-6 text-white/15">
-              <Timer size={56} />
-              <div class="text-9xl font-light tracking-[0.06em]">会议休会中</div>
-              <div class="text-lg tracking-wider text-white/10">SUSPENDED</div>
-            </div>
+            <SuspendedDisplay />
           {:else if effectivePhase === 'closed'}
-            <!-- 闭幕 -->
-            <div class="flex flex-col items-center gap-6 text-white/15">
-              <Gavel size={56} />
-              <div class="text-9xl font-light tracking-[0.06em]">会议已闭幕</div>
-              <div class="text-lg tracking-wider text-white/10">CLOSED</div>
-            </div>
+            <ClosedDisplay />
           {:else}
-            <!-- 默认：准备就绪（preamble 或其他未知 phase） -->
-            <div class="flex flex-col items-center gap-6">
-              <div class="text-9xl font-light tracking-[0.06em] text-white/20">准备就绪</div>
-              {#if displayData.speakersList.length > 0}
-                <div class="text-base tracking-wider text-white/10">
-                  发言名单 · {displayData.speakersList.length} 位代表
-                </div>
-              {/if}
-            </div>
+            <ReadyDisplay data={displayData} />
           {/if}
         </div>
       </div>
-
-      <!-- 底部：近期记录 -->
-      {#if !isFullScreen && displayData.recentMinutes.length > 0}
-        <div class="border-t border-white/5 px-16 py-4">
-          <div class="flex items-center gap-8 text-sm">
-            <span class="text-xs font-medium tracking-[0.08em] text-white/15 uppercase"
-              >近期记录</span
-            >
-            {#each displayData.recentMinutes.slice(-5) as m}
-              <span class="flex items-center gap-2 text-white/20">
-                <span class="text-white/25">{MINUTES_EVENT_LABELS[m.eventType] ?? m.eventType}</span
-                >
-                <span class="text-white/8">|</span>
-                <span>{m.description}</span>
-              </span>
-            {/each}
-          </div>
-        </div>
-      {/if}
     {/if}
   {:else}
-    <!-- 等待 / 重连 -->
-    <div class="flex h-full w-full items-center justify-center">
-      <div class="flex flex-col items-center gap-6 text-white/10">
-        <div class="text-9xl font-light tracking-[0.06em]">
-          {connectionStatus === 'connecting'
-            ? '正在连接...'
-            : connectionStatus === 'disconnected'
-              ? '连接断开，重连中...'
-              : '等待主机连接'}
-        </div>
-        {#if connectionStatus === 'disconnected'}
-          <div class="text-lg tracking-wider text-white/5">自动重连中，请稍候</div>
-        {/if}
-      </div>
-    </div>
+    <ConnectionStatusDisplay status={connectionStatus} />
   {/if}
 </div>
