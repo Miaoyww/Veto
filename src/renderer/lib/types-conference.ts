@@ -87,6 +87,19 @@ export interface SpeakerEntry {
   canYield?: boolean
 }
 
+// ---- 问题系统 ------------------------------------------------------------
+
+export type PointType =
+  | 'point_of_order' // 程序性问题
+  | 'point_of_inquiry' // 咨询性问题
+  | 'point_of_personal_privilege' // 个人特权问题
+
+export const POINT_LABELS: Record<PointType, string> = {
+  point_of_order: '程序性问题',
+  point_of_inquiry: '咨询性问题',
+  point_of_personal_privilege: '个人特权问题'
+}
+
 // ---- 动议系统 ------------------------------------------------------------
 
 export type MotionType =
@@ -194,6 +207,14 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   reorder_resolution: '调整投票顺序'
 }
 
+export interface Point {
+  id: string
+  type: PointType
+  /** 问题提出代表团 ID */
+  proposedByDelegationId: string
+  proposedAt: number
+}
+
 // ---- 决议草案 ------------------------------------------------------------
 
 export interface DraftResolution {
@@ -253,6 +274,7 @@ export type MinutesEventType =
   | 'resolution_passed'
   | 'resolution_failed'
   | 'phase_changed'
+  | 'point_proposed'
   | 'conference_created'
 
 export const MINUTES_EVENT_LABELS: Record<MinutesEventType, string> = {
@@ -275,6 +297,7 @@ export const MINUTES_EVENT_LABELS: Record<MinutesEventType, string> = {
   resolution_passed: '决议通过',
   resolution_failed: '决议未通过',
   phase_changed: '阶段变更',
+  point_proposed: '问题提出',
   conference_created: '大会创建'
 }
 
@@ -314,6 +337,8 @@ export interface Conference {
   motions: Motion[]
   /** 已被主席忽略的已决动议 ID（取消对话框后不再展示其结果） */
   dismissedResolvedMotionIds: string[]
+  /** 所有问题（Point） */
+  points: Point[]
   /** 决议草案 */
   draftResolutions: DraftResolution[]
   /** 投票记录 */
@@ -435,6 +460,11 @@ export interface ConferenceDisplayData {
     speakingTimePerPersonSec?: number
     /** 新的发言时间（秒），modify_speaking_time */
     newTimeSec?: number
+  }
+  activePoint?: {
+    type: PointType
+    proposedByName: string
+    pointId: string
   }
   caucusSetup?: {
     topic?: string

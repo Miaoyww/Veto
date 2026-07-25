@@ -6,7 +6,8 @@
   import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
-  import { Gavel, Play, Users, Monitor } from '@lucide/svelte'
+  import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
+  import { Gavel, Play, Users, Monitor, HelpCircle } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -14,6 +15,7 @@
   const conf = $derived($currentConference)
 
   let motionDialogOpen = $state(false)
+  let pointDialogOpen = $state(false)
 
   async function openDisplayWindow(): Promise<void> {
     if (!conf) return
@@ -68,6 +70,7 @@
   const isClosed = $derived(conf?.phase === 'closed')
   const isTimerActive = $derived(conf?.activeSpeaker != null)
   const canProposeMotion = $derived(!isTimerActive)
+  const canProposePoint = $derived(conf?.phase !== 'closed')
 </script>
 
 <div class="flex min-w-0 flex-1 flex-col bg-background">
@@ -92,6 +95,19 @@
           <Monitor size={12} />
           显示窗口
         </Button>
+
+        {#if canProposePoint}
+          <Button
+            size="sm"
+            variant="outline"
+            class="h-8 gap-1.5 text-xs"
+            title="提出问题"
+            onclick={() => (pointDialogOpen = true)}
+          >
+            <HelpCircle size={12} />
+            问题
+          </Button>
+        {/if}
 
         {#if primaryActionLabel}
           <Button
@@ -168,6 +184,9 @@
 
     <!-- Motion Dialog -->
     <MotionDialog bind:open={motionDialogOpen} />
+
+    <!-- Point Dialog -->
+    <PointDialog bind:open={pointDialogOpen} />
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">
       <p>请选择或创建一场大会</p>

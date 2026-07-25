@@ -388,6 +388,16 @@ export function buildDisplayData(
               : undefined
         }
       : undefined,
+    activePoint: (() => {
+      const latestPoint = conf.points.length > 0 ? conf.points[conf.points.length - 1] : undefined
+      if (!latestPoint) return undefined
+      const pointDel = conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
+      return {
+        type: latestPoint.type,
+        proposedByName: pointDel?.name ?? latestPoint.proposedByDelegationId,
+        pointId: latestPoint.id
+      }
+    })(),
     caucusTimer: caucusData,
     caucusSetup: conf.caucusSetup
       ? (() => {

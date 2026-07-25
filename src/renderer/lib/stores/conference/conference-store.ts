@@ -22,7 +22,10 @@ import type {
   VoteBallot,
   MinutesEntry,
   MinutesEventType,
-  ConferencePhase
+  ConferencePhase,
+  type PointType,
+  type Point,
+  POINT_LABELS
 } from '$lib/types-conference'
 import { bootstrapStore, saveToStore } from '../store-bridge'
 
@@ -169,6 +172,7 @@ export function createConference(
     speakersList: [],
     motions: [],
     dismissedResolvedMotionIds: [],
+    points: [],
     draftResolutions: [],
     votingSessions: [],
     minutes: [],
@@ -635,6 +639,39 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
       delegationId: motion.proposedByDelegationId,
       motionId: id
     }
+  )
+
+  return id
+}
+
+// ---- 问题 ----
+
+export function proposePoint(data: {
+  type: PointType
+  proposedByDelegationId: string
+}): string {
+  const id = generateId()
+  const now = Date.now()
+
+  const point: Point = {
+    id,
+    type: data.type,
+    proposedByDelegationId: data.proposedByDelegationId,
+    proposedAt: now
+  }
+
+  updateCurrentConference((c) => ({
+    ...c,
+    points: [...c.points, point]
+  }))
+
+  const conf = get(currentConference)
+  const del = conf?.delegations.find((d) => d.id === point.proposedByDelegationId)
+  const pointLabel = POINT_LABELS[point.type]
+  addMinutesEntry(
+    'point_proposed',
+    `${del?.name ?? point.proposedByDelegationId} 提出${pointLabel}`,
+    { delegationId: point.proposedByDelegationId }
   )
 
   return id
