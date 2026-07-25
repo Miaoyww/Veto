@@ -445,6 +445,8 @@ export interface MotionDraft {
   proposedByName?: string
   /** 动议类型 */
   type?: MotionType
+  /** 是否需要表决（false = 特殊动议，直接生效，不展示表决 UI） */
+  isRequestingVote?: boolean
   /** 主题（moderated_caucus） */
   topic?: string
   /** 总时长秒数 */
@@ -571,6 +573,8 @@ export interface ConferenceDisplayData {
     remainingSec: number
     questionerDelegationName?: string
   }
+  /** 出席状态变更通知（独立于 rollCall，由 changeDelegationAttendance 统一触发） */
+  attendanceChange?: Pick<Delegation, 'id' | 'name' | 'shortName' | 'attendance'>
   /** 点名进度（roll_call 阶段使用） */
   rollCall?: {
     currentIndex: number

@@ -18,7 +18,7 @@
     setExternalWsUrl
   } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
-  import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
+  import type { Delegation } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
 
@@ -95,6 +95,9 @@
     return null
   })
 
+  // 特殊动议（isRequestingVote: false）不应触发 MotionDisplay
+  const isSpecialMotion = $derived(displayData?.motionDraft?.isRequestingVote === false)
+
   // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
   let effectivePhase = $state<string | null>(null)
   let phaseDelayTimer: ReturnType<typeof setTimeout> | null = null
@@ -132,39 +135,53 @@
     if (attendanceTimer) clearTimeout(attendanceTimer)
   })
 
-  // ---- 出席状态变更（来自代表管理页面，全屏展示） ----
-  let attendanceChange = $state<{
-    delegationName: string
-    shortName?: string
-    status: 'present' | 'absent'
-  } | null>(null)
+  // ---- 出席状态变更（全屏展示） ----
+  // 来源：changeDelegationAttendance（attendanceChange 字段）或点名（rollCall.lastMarked）
+  let attendanceChange = $state<Delegation | null>(null)
   let attendanceTimer: ReturnType<typeof setTimeout> | null = null
-  let _lastMarkedId = $state('')
+  let _lastAttendanceId = $state('')
 
   $effect(() => {
-    const lastMarked = displayData?.rollCall?.lastMarked
-    if (!lastMarked) return
+    const change = displayData?.attendanceChange
+    if (change) {
+      const notifId = `${change.id}-${change.attendance}`
+      if (notifId === _lastAttendanceId) return
+      _lastAttendanceId = notifId
 
-    const notifId = `${lastMarked.delegationName}-${lastMarked.status}-${lastMarked.index ?? ''}`
-    if (notifId === _lastMarkedId) return
-    _lastMarkedId = notifId
+      if (attendanceTimer) clearTimeout(attendanceTimer)
+      attendanceChange = { ...change, sortOrder: 0 } as Delegation
 
-    if (attendanceTimer) clearTimeout(attendanceTimer)
-
-    attendanceChange = {
-      delegationName: lastMarked.delegationName,
-      shortName: lastMarked.shortName,
-      status: lastMarked.status
+      attendanceTimer = setTimeout(() => {
+        attendanceChange = null
+      }, ROLL_CALL_MARK_DELAY)
+      return
     }
 
-    attendanceTimer = setTimeout(() => {
-      attendanceChange = null
-    }, ROLL_CALL_MARK_DELAY)
+    // 点名阶段兼容：rollCall.lastMarked
+    const lastMarked = displayData?.rollCall?.lastMarked
+    if (lastMarked) {
+      const notifId = `${lastMarked.delegationName}-${lastMarked.status}`
+      if (notifId === _lastAttendanceId) return
+      _lastAttendanceId = notifId
+
+      if (attendanceTimer) clearTimeout(attendanceTimer)
+      attendanceChange = {
+        id: '',
+        name: lastMarked.delegationName,
+        shortName: lastMarked.shortName,
+        attendance: lastMarked.status,
+        sortOrder: 0
+      } as Delegation
+
+      attendanceTimer = setTimeout(() => {
+        attendanceChange = null
+      }, ROLL_CALL_MARK_DELAY)
+    }
   })
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 模拟大会 · 显示</title>
+  <title>{VETO_NAME} - 模拟大会</title>
   <style>
     :global(body) {
       background: #0a0e14;
@@ -198,9 +215,9 @@
     <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
     {#if attendanceChange}
       <AttendanceChangeDisplay
-        delegationName={attendanceChange.delegationName}
+        delegationName={attendanceChange.name}
         shortName={attendanceChange.shortName}
-        status={attendanceChange.status}
+        status={attendanceChange.attendance}
       />
     {:else}
       <!-- 中部：主展示区（phase 动态切换） -->
@@ -208,7 +225,7 @@
         <div class="flex w-full max-w-5xl flex-col items-center">
           {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
             <QuestionDisplay data={displayData} />
-          {:else if effectivePhase === 'motion'}
+          {:else if effectivePhase === 'motion' && !isSpecialMotion}
             <MotionDisplay data={displayData} />
           {:else if effectivePhase === 'roll_call'}
             <RollCallDisplay data={displayData} />

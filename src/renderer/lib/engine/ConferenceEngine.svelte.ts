@@ -26,6 +26,7 @@ import type {
   PointType
 } from '$lib/types-conference'
 import { POINT_LABELS } from '$lib/types-conference'
+import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 import {
   Timer,
   calculateMajorityThresholds,
@@ -772,17 +773,34 @@ export class ConferenceEngine {
     )
   }
 
-  private executeChangeAttendance(motion: Motion): void {
-    if (motion.type !== 'change_attendance') return
-    const { proposedByDelegationId, newAttendance } = motion as any
-    this.setAttendance(proposedByDelegationId, newAttendance)
-    const del = this.delegations.find((d) => d.id === proposedByDelegationId)
+  /** 更改代表团出席状态（统一入口：动议 & 直接管理均通过此方法） */
+  changeDelegationAttendance(delegationId: string, newAttendance: 'present' | 'absent'): void {
+    this.setAttendance(delegationId, newAttendance)
+    const del = this.delegations.find((d) => d.id === delegationId)
     const label = newAttendance === 'present' ? '出席' : '缺席'
     this.addMinutesEntry(
       'phase_changed',
-      `${del?.name ?? proposedByDelegationId} 出席状态变更为 ${label}`,
-      { delegationId: proposedByDelegationId }
+      `${del?.name ?? delegationId} 出席状态变更为 ${label}`,
+      { delegationId }
     )
+    this.touch()
+    // 推送出席变更通知到 Display
+    getDisplayBridge().sendUpdate(
+      buildDisplayData(this, {
+        attendanceChange: {
+          id: del?.id ?? delegationId,
+          name: del?.name ?? delegationId,
+          shortName: del?.shortName,
+          attendance: newAttendance
+        }
+      })
+    )
+  }
+
+  private executeChangeAttendance(motion: Motion): void {
+    if (motion.type !== 'change_attendance') return
+    const { proposedByDelegationId, newAttendance } = motion as any
+    this.changeDelegationAttendance(proposedByDelegationId, newAttendance)
   }
 
   // ================================================================

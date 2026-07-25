@@ -244,6 +244,7 @@ export function buildDisplayData(
     rollCall?: ConferenceDisplayData['rollCall']
     motionDraft?: ConferenceDisplayData['motionDraft']
     pointDraft?: ConferenceDisplayData['pointDraft']
+    attendanceChange?: ConferenceDisplayData['attendanceChange']
     speakerTransition?: 'timeout' | 'ended'
   }
 ): ConferenceDisplayData {
@@ -337,12 +338,15 @@ export function buildDisplayData(
   // 最近被处理的动议（通过/否决），用于 Display 展示表决结果
   // 仅在动议阶段已结束（非 editing / voting）时才回退到已处理的动议，
   // 避免进入新一轮 editing 时错误展示上一次的表决结果
+  // 特殊动议（isRequestingVote: false）不触发动议阶段，避免 Display 展示表决 UI
   const hasActiveMotionPhase =
-    extra?.motionDraft?.proposedByName || conf.motions.some((m) => m.status === 'pending')
+    extra?.motionDraft?.isRequestingVote === true ||
+    conf.motions.some((m) => m.status === 'pending')
   const resolvedMotions = conf.motions.filter(
     (m) =>
       (m.status === 'approved' || m.status === 'rejected') &&
-      !conf.dismissedResolvedMotionIds.includes(m.id)
+      !conf.dismissedResolvedMotionIds.includes(m.id) &&
+      m.type !== 'change_attendance'
   )
   const lastResolvedMotion =
     resolvedMotions.length > 0 ? resolvedMotions[resolvedMotions.length - 1] : undefined
@@ -508,6 +512,7 @@ export function buildDisplayData(
         }
       : undefined,
     rollCall: extra?.rollCall,
+    attendanceChange: extra?.attendanceChange,
     motionDraft: extra?.motionDraft,
     pointDraft: extra?.pointDraft
   }

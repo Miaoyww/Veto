@@ -23,6 +23,7 @@ import type {
 import type { PointType } from '$lib/types-conference'
 import { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
 import { tallyVotesEngine } from '$lib/engine/conference-engine'
+import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 import { bootstrapStore, saveToStore } from '../store-bridge'
 
 const STORAGE_KEY = 'veto_conferences'
@@ -266,13 +267,14 @@ export function getConferenceById(id: string): Conference | null {
 
 // ---- 点名 -----------------------------------------------------------------
 
-export function setAttendance(
+/** 更改代表团出席状态（含会议记录 + Display 通知，动议 & 直接管理统一入口） */
+export function changeDelegationAttendance(
   delegationId: string,
-  attendance: 'present' | 'absent'
+  newAttendance: 'present' | 'absent'
 ): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.setAttendance(delegationId, attendance)
+  engine.changeDelegationAttendance(delegationId, newAttendance)
   syncEngine(engine)
 }
 
@@ -424,6 +426,8 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
   if (!engine) return ''
   const id = engine.proposeMotion(motionData)
   syncEngine(engine)
+  // 推送动议状态到 Display（activeMotion 自动包含 pending/recently-resolved 动议）
+
   return id
 }
 
@@ -436,6 +440,8 @@ export function proposePoint(data: {
   // Engine 方法名是 raisePoint
   const id = engine.raisePoint(data.type, data.proposedByDelegationId)
   syncEngine(engine)
+  // 推送问题到 Display
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
   return id
 }
 
@@ -444,6 +450,7 @@ export function dismissLatestPoint(): void {
   if (!engine) return
   engine.dismissLatestPoint()
   syncEngine(engine)
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
 }
 
 export function approveMotion(motionId: string): void {
@@ -451,6 +458,7 @@ export function approveMotion(motionId: string): void {
   if (!engine) return
   engine.approveMotion(motionId)
   syncEngine(engine)
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
 }
 
 export function rejectMotion(motionId: string): void {
@@ -458,6 +466,7 @@ export function rejectMotion(motionId: string): void {
   if (!engine) return
   engine.rejectMotion(motionId)
   syncEngine(engine)
+  getDisplayBridge().sendUpdate(buildDisplayData(engine))
 }
 
 export function dismissLastResolvedMotion(): void {

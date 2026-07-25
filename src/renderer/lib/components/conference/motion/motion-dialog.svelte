@@ -15,6 +15,7 @@
   import { Label } from '$lib/components/ui/label/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
+  import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js'
   import {
     currentConference,
     motionDraft,
@@ -49,7 +50,13 @@
 
     if (conf?.phase === 'voting') {
       // 结束辩论后：可进行实质性投票、开启主发言名单（退出投票阶段）、休会/闭幕
-      return ['change_attendance', 'substantive_vote', 'open_speakers_list', 'suspend_meeting', 'close_meeting']
+      return [
+        'change_attendance',
+        'substantive_vote',
+        'open_speakers_list',
+        'suspend_meeting',
+        'close_meeting'
+      ]
     }
     // 等待开启主发言名单：首要动议为开启主发言名单
     if (conf?.phase === 'pending_speakers_list') {
@@ -93,6 +100,13 @@
 
   // ---- Form state ----
   let selectedType = $state<MotionType | null>(null)
+  // ToggleGroup 需要 string 类型的 value 绑定
+  let toggleValue = $state('')
+  $effect(() => {
+    if (toggleValue) {
+      selectedType = toggleValue as MotionType
+    }
+  })
   // Moderated Caucus（无预设值，必须手动填写）
   let mcTopic = $state('')
   let committedTopic = $state('')
@@ -115,6 +129,7 @@
   function resetForm(): void {
     selectedProposerId = ''
     selectedType = null
+    toggleValue = ''
     mcTopic = ''
     committedTopic = ''
     mcTotalSec = null
@@ -177,25 +192,21 @@
 
     proposeMotion(motionData)
 
-    // 判断是否需要表决
+    // 判断是否需要表决：需表决 → 导航到动议表决页；否则直接通过执行
     const resolution = resolveMotion(selectedType)
-    if (resolution.autoApprove) {
-      // 找到刚创建的动议并自动通过
+    if (!resolution.requiresVoting || resolution.autoApprove) {
       const updatedConf = $currentConference
       const newMotion = updatedConf?.motions[updatedConf.motions.length - 1]
       if (newMotion) {
         approveMotion(newMotion.id)
 
-        // 对于自动通过的磋商动议，可直接开始磋商
         if (selectedType === 'moderated_caucus' || selectedType === 'unmoderated_caucus') {
-          // 延迟导入避免循环依赖
           import('$lib/stores/conference/conference-store').then(({ startCaucus }) => {
             startCaucus(newMotion.id)
           })
         }
       }
     } else {
-      // 需要表决 → 打开动议表决页
       navigate(`/conference/${conf.id}/motion`)
     }
 
@@ -256,6 +267,7 @@
     motionDraft.set({
       proposedByName: proposerDel?.name,
       type: selectedType ?? undefined,
+      isRequestingVote: selectedType ? resolveMotion(selectedType).requiresVoting : undefined,
       topic: selectedType === 'moderated_caucus' ? committedTopic.trim() || undefined : undefined,
       totalTimeSec:
         selectedType === 'moderated_caucus'
@@ -291,10 +303,7 @@
         {#if conf}
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">动议提出方</Label>
-            <DelegationSelector
-              delegations={conf.delegations}
-              bind:value={selectedProposerId}
-            />
+            <DelegationSelector delegations={conf.delegations} bind:value={selectedProposerId} />
           </div>
         {/if}
 
@@ -303,22 +312,15 @@
           <Separator />
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
-            <div class="grid grid-cols-2 gap-2">
-              {#each motionTypes as mt}
+            <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-2 gap-2">
+              {#each motionTypes as mt (mt)}
                 {@const Icon = MOTION_ICONS[mt] ?? Presentation}
-                <button
-                  type="button"
-                  class="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all {selectedType ===
-                  mt
-                    ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400'
-                    : 'hover:bg-muted'}"
-                  onclick={() => (selectedType = mt)}
-                >
+                <ToggleGroup.Item value={mt}>
                   <Icon size={14} />
                   <span class="text-xs font-medium">{MOTION_LABELS[mt]}</span>
-                </button>
+                </ToggleGroup.Item>
               {/each}
-            </div>
+            </ToggleGroup.Root>
           </div>
         {/if}
 
@@ -424,7 +426,8 @@
             <div class="flex gap-2">
               <button
                 type="button"
-                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance === 'present'
+                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance ===
+                'present'
                   ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
                   : 'hover:bg-muted'}"
                 onclick={() => (newAttendance = 'present')}
@@ -433,7 +436,8 @@
               </button>
               <button
                 type="button"
-                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance === 'absent'
+                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance ===
+                'absent'
                   ? 'border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400'
                   : 'hover:bg-muted'}"
                 onclick={() => (newAttendance = 'absent')}

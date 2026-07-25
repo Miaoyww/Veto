@@ -3,7 +3,7 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import {
     currentConference,
-    setAttendance,
+    changeDelegationAttendance,
     completeRollCall
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
@@ -32,13 +32,13 @@
 
   function markPresent(): void {
     if (!currentDelegation) return
-    setAttendance(currentDelegation.id, 'present')
+    changeDelegationAttendance(currentDelegation.id, 'present')
     currentIndex++
   }
 
   function markAbsent(): void {
     if (!currentDelegation) return
-    setAttendance(currentDelegation.id, 'absent')
+    changeDelegationAttendance(currentDelegation.id, 'absent')
     currentIndex++
   }
 

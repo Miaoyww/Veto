@@ -7,7 +7,7 @@
     currentConference,
     currentConferenceId,
     loadConference,
-    setAttendance,
+    changeDelegationAttendance,
     completeRollCall
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
@@ -104,7 +104,7 @@
 
   function markPresent(): void {
     if (!currentDelegation || isTransitioning) return
-    setAttendance(currentDelegation.id, 'present')
+    changeDelegationAttendance(currentDelegation.id, 'present')
     lastRollCallMarked = {
       delegationName: currentDelegation.name,
       shortName: currentDelegation.shortName,
@@ -121,7 +121,7 @@
 
   function markAbsent(): void {
     if (!currentDelegation || isTransitioning) return
-    setAttendance(currentDelegation.id, 'absent')
+    changeDelegationAttendance(currentDelegation.id, 'absent')
     lastRollCallMarked = {
       delegationName: currentDelegation.name,
       shortName: currentDelegation.shortName,
@@ -140,7 +140,7 @@
     if (!conf || isTransitioning) return
     const remaining = sortedDelegations.slice(currentIndex)
     for (const d of remaining) {
-      setAttendance(d.id, 'present')
+      changeDelegationAttendance(d.id, 'present')
     }
     currentIndex = sortedDelegations.length
   }
@@ -149,7 +149,7 @@
     if (!conf || isTransitioning) return
     const remaining = sortedDelegations.slice(currentIndex)
     for (const d of remaining) {
-      setAttendance(d.id, 'absent')
+      changeDelegationAttendance(d.id, 'absent')
     }
     currentIndex = sortedDelegations.length
   }

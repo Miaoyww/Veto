@@ -24,14 +24,13 @@
     currentConference,
     currentConferenceId,
     loadConference,
-    setAttendance,
+    changeDelegationAttendance,
     addDelegation,
     removeDelegation,
     resetRollCall,
     saveConferencesNow
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds, destroyAllTimers } from '$lib/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import { VETO_NAME } from '$lib/const'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
@@ -80,34 +79,7 @@
   }
 
   function handleAttendanceChange(delegationId: string, value: string): void {
-    setAttendance(delegationId, value as 'present' | 'absent')
-    // 同步更新到 Display 窗口
-    const c = $currentConference
-    if (c) {
-      const del = c.delegations.find((d) => d.id === delegationId)
-      const isPresent = value === 'present'
-      const freshThresholds = calculateMajorityThresholds(c.delegations)
-      const idx = [...c.delegations].sort((a, b) => a.sortOrder - b.sortOrder).findIndex((d) => d.id === delegationId)
-      getDisplayBridge().sendUpdate(
-        buildDisplayData(c, {
-          rollCall: {
-            currentIndex: 0,
-            totalCount: c.delegations.length,
-            currentDelegationName: del?.name,
-            currentDelegationShortName: del?.shortName,
-            presentCount: freshThresholds.presentCount,
-            simpleMajorityThreshold: freshThresholds.simpleMajorityThreshold,
-            twoThirdsThreshold: freshThresholds.twoThirdsThreshold,
-            lastMarked: {
-              delegationName: del?.name ?? '',
-              shortName: del?.shortName,
-              status: isPresent ? 'present' : 'absent',
-              index: idx >= 0 ? idx : 0
-            }
-          }
-        })
-      )
-    }
+    changeDelegationAttendance(delegationId, value as 'present' | 'absent')
   }
 
   function handleBack(): void {
