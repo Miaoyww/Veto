@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute, navigate } from '$lib/router.svelte'
-  import { ArrowLeft, Users, Plus, Trash2, Flag, UserRoundCheck, RotateCcw } from '@lucide/svelte'
+  import { ArrowLeft, Users, Plus, Trash2, UserRoundCheck, RotateCcw } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
@@ -137,7 +137,7 @@
           <Button
             size="sm"
             variant="outline"
-            class="h-8 gap-1.5 text-xs text-amber-600 hover:text-amber-700 border-amber-300 hover:border-amber-400 dark:text-amber-400 dark:border-amber-700 dark:hover:text-amber-300 dark:hover:border-amber-600"
+            class="h-8 gap-1.5 text-xs"
             disabled={!conf || sortedDelegations.length === 0}
           >
             <RotateCcw size={12} />
@@ -153,9 +153,7 @@
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              class="bg-amber-600 hover:bg-amber-700"
-              onclick={() => {
+            <AlertDialogAction onclick={() => {
                 resetRollCall()
                 showResetConfirm = false
                 navigate(`/conference/${conferenceId}/roll-call`)
@@ -184,30 +182,21 @@
       {#if conf && thresholds}
         <!-- 统计卡片 -->
         <div class="mb-8 grid grid-cols-3 gap-4">
-          <Card class="border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20">
+          <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
-              <div class="flex items-center gap-2">
-                <Users size={16} class="text-emerald-600 dark:text-emerald-400" />
-                <span class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{thresholds.presentCount}</span>
-              </div>
+              <span class="text-2xl font-bold text-foreground">{thresholds.presentCount}</span>
               <span class="text-sm text-muted-foreground">出席 / {thresholds.totalCount}</span>
             </CardContent>
           </Card>
-          <Card class="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+          <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
-              <div class="flex items-center gap-2">
-                <Flag size={16} class="text-amber-600 dark:text-amber-400" />
-                <span class="text-2xl font-bold text-amber-700 dark:text-amber-400">{thresholds.simpleMajorityThreshold}</span>
-              </div>
+              <span class="text-2xl font-bold text-foreground">{thresholds.simpleMajorityThreshold}</span>
               <span class="text-sm text-muted-foreground">简单多数</span>
             </CardContent>
           </Card>
-          <Card class="border-rose-200 bg-rose-50/50 dark:border-rose-800 dark:bg-rose-950/20">
+          <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
-              <div class="flex items-center gap-2">
-                <Flag size={16} class="text-rose-600 dark:text-rose-400" />
-                <span class="text-2xl font-bold text-rose-700 dark:text-rose-400">{thresholds.twoThirdsThreshold}</span>
-              </div>
+              <span class="text-2xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</span>
               <span class="text-sm text-muted-foreground">2/3 多数</span>
             </CardContent>
           </Card>
