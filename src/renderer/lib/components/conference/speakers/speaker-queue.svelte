@@ -363,93 +363,79 @@
           </Button>
         </div>
       </div>
+    {:else}
+      <!-- ═══ 有主持磋商 / 一般性辩论 ═══ -->
 
-    {:else if isCaucus && isModerated && activeSpeaker && activeSpeaker.status === 'ready'}
-      <!-- ═══ Caucus ready speaker ═══ -->
-      <ReadySpeakerCard
-        delegationName={activeSpeaker.delegationName}
-        allocatedTimeSec={activeSpeaker.allocatedTimeSec}
-        onstart={startCaucusSpeakerHandler}
-        oncancel={cancelReadySpeaker}
-      />
-
-      {#if waitingSpeakers.length > 0}
-        <WaitingSpeakerList title="剩余发言" speakers={waitingSpeakers} />
-      {/if}
-
-    {:else if activeSpeaker && isSpeakerActive && conf.activeSpeaker}
-      <!-- ═══ Active speaker (caucus / general debate) ═══ -->
-      <ActiveSpeakerCard
-        delegationName={activeSpeaker.delegationName}
-        remainingSec={displayRemaining}
-        elapsedSec={displayElapsed}
-        totalSec={displayTotal}
-        {isPaused}
-        positionLabel={isCaucus ? `${speakers.length} 人中第 ${currentIdx + 1} 位` : undefined}
-        onpause={pauseSpeaking}
-        onresume={resumeSpeaking}
-        onend={() => finishSpeaker()}
-        onyield={(type: YieldType) => finishSpeaker(type)}
-      />
-
-      {#if isCaucus}
-        {#if nextSpeaker}
-          <NextSpeakerCard label="下一位" delegationName={nextSpeaker.delegationName} />
-        {:else if currentIdx + 1 >= speakers.length}
-          <div class="text-sm text-muted-foreground">最后一位发言人</div>
-        {/if}
-
-        {#if waitingSpeakers.length > 0}
-          <WaitingSpeakerList title="剩余发言" speakers={waitingSpeakers} />
-        {/if}
-      {/if}
-
-    {:else if isCaucus && isModerated}
-      <!-- ═══ Caucus：等待发言 ═══ -->
-      <div class="flex flex-col items-center gap-4 text-muted-foreground">
-        <Timer size={48} class="opacity-30" />
-        <p class="text-lg font-medium">等待发言...</p>
-      </div>
-
-    {:else if !isCaucus && readyEntry}
-      <!-- ═══ General Debate ready speaker ═══ -->
-      <ReadySpeakerCard
-        delegationName={readyEntry.delegationName}
-        allocatedTimeSec={readyEntry.allocatedTimeSec}
-        onstart={() => beginSpeaking(readyEntry.id)}
-        oncancel={() => removeFromSpeakersList(readyEntry.id)}
-      />
-
-    {:else if !isCaucus}
-      <!-- ═══ General Debate：添加发言人 + 队列 ═══ -->
-      <div class="rounded-lg border bg-card p-4">
-        <DelegationSelector
-          delegations={conf.delegations}
-          placeholder="搜索代表团名称..."
-          onselect={addSpeaker}
-          resetOnSelect={true}
-          excludeIds={listedDelegationIds}
+      <!-- 状态链：各状态特有的 UI -->
+      {#if isCaucus && isModerated && activeSpeaker?.status === 'ready'}
+        <ReadySpeakerCard
+          delegationName={activeSpeaker.delegationName}
+          allocatedTimeSec={activeSpeaker.allocatedTimeSec}
+          onstart={startCaucusSpeakerHandler}
+          oncancel={cancelReadySpeaker}
         />
-      </div>
+      {:else if isSpeakerActive && conf.activeSpeaker}
+        <ActiveSpeakerCard
+          delegationName={activeSpeaker.delegationName}
+          remainingSec={displayRemaining}
+          elapsedSec={displayElapsed}
+          totalSec={displayTotal}
+          {isPaused}
+          positionLabel={isCaucus ? `${speakers.length} 人中第 ${currentIdx + 1} 位` : undefined}
+          onpause={pauseSpeaking}
+          onresume={resumeSpeaking}
+          onend={() => finishSpeaker()}
+          onyield={(type: YieldType) => finishSpeaker(type)}
+        />
+      {:else if isCaucus && isModerated}
+        <div class="flex flex-col items-center gap-4 text-muted-foreground">
+          <Timer size={48} class="opacity-30" />
+          <p class="text-lg font-medium">等待发言...</p>
+        </div>
+      {:else if !isCaucus && readyEntry}
+        <ReadySpeakerCard
+          delegationName={readyEntry.delegationName}
+          allocatedTimeSec={readyEntry.allocatedTimeSec}
+          onstart={() => beginSpeaking(readyEntry.id)}
+          oncancel={() => removeFromSpeakersList(readyEntry.id)}
+        />
+      {/if}
 
+      <!-- ── DelegationSelector（仅辩论空闲态） ── -->
+      {#if !isCaucus && !isSpeakerActive && !readyEntry}
+        <div class="rounded-lg border bg-card p-4">
+          <DelegationSelector
+            delegations={conf.delegations}
+            placeholder="搜索代表团名称..."
+            onselect={addSpeaker}
+            resetOnSelect={true}
+            excludeIds={listedDelegationIds}
+          />
+        </div>
+      {/if}
+
+      <!-- ── 下一位发言人 ── -->
       {#if nextSpeaker}
         <NextSpeakerCard
-          label="下一个发言"
+          label="下一位"
           delegationName={nextSpeaker.delegationName}
           allocatedTimeSec={nextSpeaker.allocatedTimeSec}
-          showPrepareButton
-          onprepare={() => prepareSpeaker(nextSpeaker.id)}
+          showPrepareButton={!isCaucus}
+          onprepare={!isCaucus ? () => prepareSpeaker(nextSpeaker.id) : undefined}
         />
+      {:else if isCaucus && isSpeakerActive && currentIdx + 1 >= speakers.length}
+        <div class="text-sm text-muted-foreground">最后一位发言人</div>
       {/if}
 
+      <!-- ── 等待发言列表 ── -->
       <WaitingSpeakerList
         title="发言队列"
         speakers={waitingSpeakers}
-        showIndex
-        showDelete
-        emptyMessage="主发言名单为空，请添加代表团"
-        disabled={isSpeakerActive}
-        ondelete={(id: string) => removeFromSpeakersList(id)}
+        showIndex={!isCaucus}
+        showDelete={!isCaucus}
+        emptyMessage={!isCaucus ? '主发言名单为空，请添加代表团' : undefined}
+        disabled={!isCaucus && isSpeakerActive}
+        ondelete={!isCaucus ? (id: string) => removeFromSpeakersList(id) : undefined}
       />
     {/if}
 
