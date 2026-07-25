@@ -2,9 +2,8 @@
   import { navigate } from '$lib/router.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
-  import SpeakersListPanel from '$lib/components/conference/speakers/speakers-list-panel.svelte'
+  import SpeakerQueue from '$lib/components/conference/speakers/speaker-queue.svelte'
   import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
-  import CaucusTimer from '$lib/components/conference/caucus/caucus-timer.svelte'
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import { Gavel, Play, Users, Monitor } from '@lucide/svelte'
@@ -141,11 +140,11 @@
           </Button>
         </div>
       {:else if conf.phase === 'general_debate'}
-        <SpeakersListPanel />
+        <SpeakerQueue mode="general_debate" />
       {:else if conf.phase === 'caucus_setup'}
         <CaucusSetupPanel />
       {:else if conf.phase === 'caucus'}
-        <CaucusTimer />
+        <SpeakerQueue mode="caucus" />
       {:else if conf.phase === 'voting'}
         <VotingPanel />
       {:else if isSuspended}

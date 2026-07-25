@@ -14,15 +14,14 @@
     setCaucusProposerPosition,
     addToCaucusSpeakers,
     removeFromCaucusSpeakers,
-    startCaucusWithSetup
+    startCaucusWithSetup,
+    endCaucus
   } from '$lib/stores/conference/conference-store'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   const conf = $derived($currentConference)
   const setup = $derived(conf?.caucusSetup ?? null)
-  const motion = $derived(
-    setup ? conf?.motions.find((m) => m.id === setup.motionId) : null
-  )
+  const motion = $derived(setup ? conf?.motions.find((m) => m.id === setup.motionId) : null)
   const proposerDel = $derived(
     motion ? conf?.delegations.find((d) => d.id === (motion as any).proposedByDelegationId) : null
   )
@@ -51,7 +50,9 @@
 <div class="flex w-full max-w-2xl flex-col gap-6">
   {#if conf && setup && motion}
     <!-- 动议信息摘要 -->
-    <div class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-5 text-center dark:border-indigo-700 dark:bg-indigo-950/30">
+    <div
+      class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-5 text-center dark:border-indigo-700 dark:bg-indigo-950/30"
+    >
       {#if setup.remainingSec != null}
         <div class="text-sm font-medium text-amber-700 dark:text-amber-400">
           名单已走完 · 继续添加发言人
@@ -166,10 +167,14 @@
     <Separator />
 
     <!-- 开始磋商 -->
-    <div class="flex justify-center">
+    <div class="flex justify-center gap-4">
       <Button size="lg" class="gap-2 min-w-[200px]" onclick={handleStart}>
         <Play size={18} />
         开始磋商
+      </Button>
+      <Button size="lg" variant="destructive" class="gap-2 min-w-[200px]" onclick={endCaucus}>
+        <Play size={18} />
+        结束磋商
       </Button>
     </div>
   {:else}
