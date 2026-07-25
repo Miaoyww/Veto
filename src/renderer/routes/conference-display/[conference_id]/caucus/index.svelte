@@ -66,7 +66,7 @@
         </div>
 
         <div class="text-center">
-          <div class="text-8xl font-semibold tracking-wide text-white">
+          <div class="text-9xl font-semibold tracking-wide text-white">
             {currentSpeaker.delegationName}
           </div>
         </div>
