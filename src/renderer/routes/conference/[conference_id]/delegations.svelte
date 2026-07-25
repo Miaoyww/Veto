@@ -5,6 +5,9 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
+  import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+  import * as Select from '$lib/components/ui/select'
+  import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '$lib/components/ui/empty'
   import {
     AlertDialog,
     AlertDialogAction,
@@ -22,7 +25,6 @@
     currentConferenceId,
     loadConference,
     setAttendance,
-    updateDelegation,
     addDelegation,
     removeDelegation,
     resetRollCall,
@@ -59,6 +61,7 @@
   // ---- 添加代表团表单 ----
   let showAddForm = $state(false)
   let newName = $state('')
+  let newShortName = $state('')
 
   // ---- 重新点名确认 ----
   let showResetConfirm = $state(false)
@@ -66,8 +69,9 @@
   function handleAdd(): void {
     const name = newName.trim()
     if (!name) return
-    addDelegation(name)
+    addDelegation(name, newShortName.trim() || undefined)
     newName = ''
+    newShortName = ''
     showAddForm = false
   }
 
@@ -180,148 +184,183 @@
       {#if conf && thresholds}
         <!-- 统计卡片 -->
         <div class="mb-8 grid grid-cols-3 gap-4">
-          <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-5 text-center dark:border-emerald-800 dark:bg-emerald-950/30">
-            <div class="flex items-center justify-center gap-2">
-              <Users size={16} class="text-emerald-600 dark:text-emerald-400" />
-              <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{thresholds.presentCount}</div>
-            </div>
-            <div class="mt-1 text-sm text-muted-foreground">出席 / {thresholds.totalCount}</div>
-          </div>
-          <div class="rounded-xl border-2 border-amber-200 bg-amber-50 p-5 text-center dark:border-amber-800 dark:bg-amber-950/30">
-            <div class="flex items-center justify-center gap-2">
-              <Flag size={16} class="text-amber-600 dark:text-amber-400" />
-              <div class="text-2xl font-bold text-amber-700 dark:text-amber-400">{thresholds.simpleMajorityThreshold}</div>
-            </div>
-            <div class="mt-1 text-sm text-muted-foreground">简单多数</div>
-          </div>
-          <div class="rounded-xl border-2 border-rose-200 bg-rose-50 p-5 text-center dark:border-rose-800 dark:bg-rose-950/30">
-            <div class="flex items-center justify-center gap-2">
-              <Flag size={16} class="text-rose-600 dark:text-rose-400" />
-              <div class="text-2xl font-bold text-rose-700 dark:text-rose-400">{thresholds.twoThirdsThreshold}</div>
-            </div>
-            <div class="mt-1 text-sm text-muted-foreground">2/3 多数</div>
-          </div>
+          <Card class="border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20">
+            <CardContent class="flex flex-col items-center gap-1 p-5">
+              <div class="flex items-center gap-2">
+                <Users size={16} class="text-emerald-600 dark:text-emerald-400" />
+                <span class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{thresholds.presentCount}</span>
+              </div>
+              <span class="text-sm text-muted-foreground">出席 / {thresholds.totalCount}</span>
+            </CardContent>
+          </Card>
+          <Card class="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+            <CardContent class="flex flex-col items-center gap-1 p-5">
+              <div class="flex items-center gap-2">
+                <Flag size={16} class="text-amber-600 dark:text-amber-400" />
+                <span class="text-2xl font-bold text-amber-700 dark:text-amber-400">{thresholds.simpleMajorityThreshold}</span>
+              </div>
+              <span class="text-sm text-muted-foreground">简单多数</span>
+            </CardContent>
+          </Card>
+          <Card class="border-rose-200 bg-rose-50/50 dark:border-rose-800 dark:bg-rose-950/20">
+            <CardContent class="flex flex-col items-center gap-1 p-5">
+              <div class="flex items-center gap-2">
+                <Flag size={16} class="text-rose-600 dark:text-rose-400" />
+                <span class="text-2xl font-bold text-rose-700 dark:text-rose-400">{thresholds.twoThirdsThreshold}</span>
+              </div>
+              <span class="text-sm text-muted-foreground">2/3 多数</span>
+            </CardContent>
+          </Card>
         </div>
 
         <!-- 添加代表团表单 -->
         {#if showAddForm}
-          <div class="mb-6 rounded-xl border-2 border-indigo-200 bg-card p-5 dark:border-indigo-800">
-            <h3 class="mb-4 text-sm font-semibold text-foreground">添加代表团</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-1.5">
-                <Label for="new-name" class="text-xs">名称</Label>
-                <Input
-                  id="new-name"
-                  bind:value={newName}
-                  placeholder="国家/组织全名"
-                  class="h-9 text-sm"
-                  onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAdd() }}
-                />
+          <Card class="mb-6 border-indigo-200 dark:border-indigo-800">
+            <CardHeader class="pb-3">
+              <CardTitle class="text-sm">添加代表团</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="grid grid-cols-[1fr_1fr_auto] gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <Label for="new-name" class="text-xs">名称</Label>
+                  <Input
+                    id="new-name"
+                    bind:value={newName}
+                    placeholder="国家/组织全名"
+                    class="h-9 text-sm"
+                    onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAdd() }}
+                  />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label for="new-short-name" class="text-xs">简称 <span class="text-muted-foreground/60">（可选）</span></Label>
+                  <Input
+                    id="new-short-name"
+                    bind:value={newShortName}
+                    placeholder="如：中国"
+                    class="h-9 text-sm"
+                    onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAdd() }}
+                  />
+                </div>
+                <div class="flex items-end justify-end gap-2">
+                  <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => (showAddForm = false)}>
+                    取消
+                  </Button>
+                  <Button size="sm" class="h-8 text-xs" onclick={handleAdd} disabled={!newName.trim()}>
+                    <Plus size={12} />
+                    添加
+                  </Button>
+                </div>
               </div>
-              <div class="flex items-end justify-end gap-2">
-                <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => (showAddForm = false)}>
-                  取消
-                </Button>
-                <Button size="sm" class="h-8 text-xs" onclick={handleAdd} disabled={!newName.trim()}>
-                  <Plus size={12} />
-                  添加
-                </Button>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         {/if}
 
         <!-- 代表团列表 -->
-        <div class="rounded-xl border bg-card">
-          <!-- 表头 -->
-          <div class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground">
-            <div class="flex-1">代表团</div>
-            <div class="w-36 text-center">出席状态</div>
-            <div class="w-12"></div>
-          </div>
-
-          <div class="divide-y">
-            {#each sortedDelegations as delegation (delegation.id)}
-              {@const isPresent = delegation.attendance === 'present'}
-              <div class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30">
-                <!-- 名称 -->
-                <div class="flex min-w-0 flex-1 flex-col">
-                  <span
-                    class={cn(
-                      'truncate text-sm font-medium',
-                      !isPresent && 'text-muted-foreground/50 line-through'
-                    )}
-                  >
-                    {delegation.name}
-                  </span>
-                  {#if delegation.shortName}
-                    <span class="truncate text-xs text-muted-foreground">{delegation.shortName}</span>
-                  {/if}
-                </div>
-
-                <!-- 出席状态选择 -->
-                <div class="w-36">
-                  <select
-                    class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    value={delegation.attendance}
-                    onchange={(e: Event) => {
-                      const target = e.target as HTMLSelectElement
-                      handleAttendanceChange(delegation.id, target.value)
-                    }}
-                  >
-                    <option value="present">出席</option>
-
-                    <option value="absent">缺席</option>
-                  </select>
-                </div>
-
-                <!-- 删除 -->
-                <div class="w-12 text-center">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button
-                        class="rounded p-1 text-muted-foreground/40 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                        title="删除代表团"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>删除代表团</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          确定要删除 <span class="font-semibold text-foreground">{delegation.name}</span> 吗？此操作不可撤销。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction
-                          class="bg-red-600 hover:bg-red-700"
-                          onclick={() => handleRemove(delegation.id)}
-                        >
-                          删除
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            {/each}
-          </div>
-
-          {#if sortedDelegations.length === 0}
-            <div class="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-              <Users size={40} class="opacity-30" />
-              <p class="text-lg font-medium">暂无代表团</p>
-              <p class="text-sm opacity-70">点击"添加代表团"按钮添加</p>
+        <Card>
+          <CardContent class="p-0">
+            <!-- 表头 -->
+            <div class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground">
+              <div class="flex-1">代表团</div>
+              <div class="w-36 text-center">出席状态</div>
+              <div class="w-12"></div>
             </div>
-          {/if}
-        </div>
+
+            <div class="divide-y">
+              {#each sortedDelegations as delegation (delegation.id)}
+                {@const isPresent = delegation.attendance === 'present'}
+                <div class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30">
+                  <!-- 名称 -->
+                  <div class="flex min-w-0 flex-1 flex-col">
+                    <span
+                      class={cn(
+                        'truncate text-sm font-medium',
+                        !isPresent && 'text-muted-foreground/50 line-through'
+                      )}
+                    >
+                      {delegation.name}
+                    </span>
+                    {#if delegation.shortName}
+                      <span class="truncate text-xs text-muted-foreground">{delegation.shortName}</span>
+                    {/if}
+                  </div>
+
+                  <!-- 出席状态选择 -->
+                  <div class="w-36">
+                    <Select.Root
+                      type="single"
+                      value={delegation.attendance}
+                      onValueChange={(v: string) => handleAttendanceChange(delegation.id, v)}
+                    >
+                      <Select.Trigger class="h-8 w-full text-xs">
+                        {delegation.attendance === 'present' ? '出席' : '缺席'}
+                      </Select.Trigger>
+                      <Select.Content>
+                        <Select.Item value="present" label="出席" />
+                        <Select.Item value="absent" label="缺席" />
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+
+                  <!-- 删除 -->
+                  <div class="w-12 text-center">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          class="rounded p-1 text-muted-foreground/40 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                          title="删除代表团"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>删除代表团</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            确定要删除 <span class="font-semibold text-foreground">{delegation.name}</span> 吗？此操作不可撤销。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction
+                            class="bg-red-600 hover:bg-red-700"
+                            onclick={() => handleRemove(delegation.id)}
+                          >
+                            删除
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              {/each}
+            </div>
+
+            {#if sortedDelegations.length === 0}
+              <div class="py-12">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Users size={24} />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无代表团</EmptyTitle>
+                    <EmptyDescription>点击"添加代表团"按钮添加</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              </div>
+            {/if}
+          </CardContent>
+        </Card>
       {:else}
-        <div class="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-          <Users size={40} class="opacity-30" />
-          <p class="text-lg font-medium">未找到大会</p>
-          <p class="text-sm opacity-70">请先创建大会</p>
+        <div class="py-12">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Users size={24} />
+              </EmptyMedia>
+              <EmptyTitle>未找到大会</EmptyTitle>
+              <EmptyDescription>请先创建大会</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </div>
       {/if}
     </div>

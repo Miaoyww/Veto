@@ -266,7 +266,7 @@ export function resetRollCall(): void {
 
 // ---- 代表团管理 ----
 
-export function addDelegation(name: string): string {
+export function addDelegation(name: string, shortName?: string): string {
   const id = generateId()
   const conf = get(currentConference)
   const sortOrder = conf?.delegations.length ?? 0
@@ -278,6 +278,7 @@ export function addDelegation(name: string): string {
       {
         id,
         name,
+        shortName: shortName || undefined,
         attendance: 'absent',
         sortOrder
       }
