@@ -4,55 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Thin.ttf') format('truetype');
-	font-weight: 100;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Light.ttf') format('truetype');
-	font-weight: 300;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Regular.ttf') format('truetype');
-	font-weight: 400;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Medium.ttf') format('truetype');
-	font-weight: 500;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Semibold.ttf') format('truetype');
-	font-weight: 600;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Bold.ttf') format('truetype');
-	font-weight: 700;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'HarmonyOS SansSC';
-	src: url('$lib/assets/fonts/HarmonyOS_SansSC_Black.ttf') format('truetype');
-	font-weight: 900;
-	font-style: normal;
-}
-
 html,
 body {
 	padding-top: calc(var(--safe-area-inset-top) + 1rem);
