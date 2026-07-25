@@ -206,9 +206,12 @@ export class Timer {
     const initialTotal = totalSec
     this._remainingSec = totalSec
 
+
     this._intervalId = setInterval(() => {
-      const elapsedSec = (Date.now() - startedAt) / 1000
+      const now = Date.now()
+      const elapsedSec = (now - startedAt) / 1000
       this._remainingSec = Math.max(0, initialTotal - elapsedSec)
+
 
       onTick({
         remainingSec: this._remainingSec,
@@ -234,7 +237,9 @@ export class Timer {
 
   /** 从暂停处恢复计时 */
   resume(onTick: (data: TimerTickData) => void, onExpire: () => void): void {
-    if (this._remainingSec <= 0) return
+    if (this._remainingSec <= 0) {
+      return
+    }
     this.start(this._remainingSec, onTick, onExpire)
   }
 

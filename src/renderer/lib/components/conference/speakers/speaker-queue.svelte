@@ -140,12 +140,15 @@
     const speaker = conf?.activeSpeaker
     if (isCaucus && !isModerated) return // 自由磋商走另一个 effect
     if (!speaker) return
-    if (speaker.pausedAt != null) return // 暂停中不启动
+    if (speaker.pausedAt != null) {
+      return // 暂停中不启动
+    }
 
     const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
     displayTotal = allocSec
     const now = Date.now()
     const remaining = Math.max(0, (speaker.endAt - now) / 1000)
+
 
     if (remaining > 0) {
       const timerId = mode === 'general_debate' ? 'speakers-list' : 'caucus'
@@ -154,7 +157,9 @@
         remaining,
         (data) => {
           displayRemaining = data.remainingSec
-          displayElapsed = data.elapsedSec
+          // 用 displayTotal - remaining 计算真实已用时间，
+          // 避免 Timer 内部 elapsedSec 在 resume 后从 0 开始
+          displayElapsed = displayTotal - data.remainingSec
           syncDisplay()
         },
         () => {
@@ -189,9 +194,13 @@
     if (!speaker || speaker.pausedAt == null) return
     if (isCaucus && !isModerated) return
 
+    // 剩余时间用 endAt - pausedAt（始终准确，不受 startedAt 被重置影响）
+    // 已用时间 = 原始分配总时长 - 剩余时间
+    // displayTotal 保持原始分配时长（整数），不随 resume 改变
+    const remaining = Math.max(0, (speaker.endAt - speaker.pausedAt) / 1000)
     const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
-    const elapsed = (speaker.pausedAt - speaker.startedAt) / 1000
-    const remaining = Math.max(0, allocSec - elapsed)
+    const elapsed = allocSec - remaining
+
 
     displayRemaining = remaining
     displayElapsed = elapsed
@@ -202,19 +211,28 @@
   // ── 自由磋商：总倒计时 $effect ─────────────────────────────────
   $effect(() => {
     if (!isCaucus || !activeCaucus || isModerated) return
-    if (activeCaucus.pausedAt != null) return
+    if (activeCaucus.pausedAt != null) {
+      return
+    }
 
     const now = Date.now()
     const remaining = Math.max(0, (activeCaucus.endAt - now) / 1000)
-    const total = (activeCaucus.endAt - activeCaucus.startedAt) / 1000
+
+    // 从 motion 中取原始总时长，避免 pause/resume 后 total 膨胀
+    const motion = conf?.motions.find((m: any) => m.id === activeCaucus.motionId) as any
+    const originalTotal = activeCaucus.type === 'moderated'
+      ? (motion?.totalTimeSec ?? 0)
+      : (motion?.durationSec ?? 0)
+
 
     if (remaining > 0) {
       createTimer('caucus', 1000).start(
         remaining,
         (data) => {
           totalRemainingSec = data.remainingSec
-          totalElapsedSec = data.elapsedSec
-          totalSec = total
+          // 用原始总时长 - 剩余时间 = 真实已过时间，避免 resume 后从 0 开始
+          totalElapsedSec = originalTotal - data.remainingSec
+          totalSec = originalTotal
           syncDisplay()
         },
         () => {

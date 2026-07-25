@@ -331,6 +331,8 @@ export function readySpeaker(entryId: string): void {
 
 export function startSpeaker(entryId: string): void {
   const now = Date.now()
+  const allocatedSec = get(currentConference)?.speakersList.find((s) => s.id === entryId)?.allocatedTimeSec ?? 120
+  const endAt = now + allocatedSec * 1000
   updateCurrentConference((c) => ({
     ...c,
     speakersList: c.speakersList.map((s) =>
@@ -339,7 +341,7 @@ export function startSpeaker(entryId: string): void {
     activeSpeaker: {
       entryId,
       startedAt: now,
-      endAt: now + (c.speakersList.find((s) => s.id === entryId)?.allocatedTimeSec ?? 120) * 1000
+      endAt
     }
   }))
 
@@ -353,25 +355,30 @@ export function startSpeaker(entryId: string): void {
 }
 
 export function pauseSpeaker(): void {
+  const now = Date.now()
   updateCurrentConference((c) => {
     if (!c.activeSpeaker) return c
+    const remainingBefore = (c.activeSpeaker.endAt - now) / 1000
     return {
       ...c,
-      activeSpeaker: { ...c.activeSpeaker, pausedAt: Date.now() }
+      activeSpeaker: { ...c.activeSpeaker, pausedAt: now }
     }
   })
 }
 
 export function resumeSpeaker(remainingSec: number): void {
   const now = Date.now()
+  const newEndAt = now + remainingSec * 1000
   updateCurrentConference((c) => {
     if (!c.activeSpeaker) return c
+    const oldEndAt = c.activeSpeaker.endAt
+    const oldStartedAt = c.activeSpeaker.startedAt
     return {
       ...c,
       activeSpeaker: {
         ...c.activeSpeaker,
         startedAt: now,
-        endAt: now + remainingSec * 1000,
+        endAt: newEndAt,
         pausedAt: undefined
       },
       // 清理让渡待处理状态：计时器已恢复，让渡解析完成
@@ -783,6 +790,7 @@ function startCaucusImpl(motionId: string, conf: Conference): void {
     endAt = now + (motion as any).durationSec * 1000
   }
 
+  const totalSec = caucusType === 'moderated' ? (motion as any).totalTimeSec : (motion as any).durationSec
   updateCurrentConference((c) => ({
     ...c,
     phase: 'caucus',
@@ -819,6 +827,7 @@ export function startCaucus(motionId: string): void {
     endAt = now + (motion as any).durationSec * 1000
   }
 
+  const totalSec = caucusType === 'moderated' ? (motion as any).totalTimeSec : (motion as any).durationSec
   updateCurrentConference((c) => ({
     ...c,
     phase: 'caucus',
@@ -835,8 +844,6 @@ export function startCaucus(motionId: string): void {
   addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
   addMinutesEntry('phase_changed', `进入阶段: 磋商`)
 }
-
-// ---- 磋商发言名单设置 ----
 
 export function setCaucusProposerPosition(position: 'first' | 'last'): void {
   updateCurrentConference((c) => {
@@ -1095,24 +1102,29 @@ export function appendCaucusSpeaker(delegationId: string): void {
 }
 
 export function pauseCaucus(): void {
+  const now = Date.now()
   updateCurrentConference((c) => {
     if (!c.activeCaucus) return c
+    const remainingBefore = (c.activeCaucus.endAt - now) / 1000
     return {
       ...c,
-      activeCaucus: { ...c.activeCaucus, pausedAt: Date.now() }
+      activeCaucus: { ...c.activeCaucus, pausedAt: now }
     }
   })
 }
 
 export function resumeCaucus(remainingSec: number): void {
   const now = Date.now()
+  const newEndAt = now + remainingSec * 1000
   updateCurrentConference((c) => {
     if (!c.activeCaucus) return c
+    const oldEndAt = c.activeCaucus.endAt
+    const oldStartedAt = c.activeCaucus.startedAt
     return {
       ...c,
       activeCaucus: {
         ...c.activeCaucus,
-        endAt: now + remainingSec * 1000,
+        endAt: newEndAt,
         pausedAt: undefined
       }
     }

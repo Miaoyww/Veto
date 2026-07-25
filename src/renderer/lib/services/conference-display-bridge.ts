@@ -306,11 +306,14 @@ export function buildDisplayData(
   let caucusData: ConferenceDisplayData['caucusTimer'] | undefined
   if (conf.activeCaucus) {
     const now = Date.now()
+    const remainingSec = Math.max(0, (conf.activeCaucus.endAt - now) / 1000)
+    const totalSec = (conf.activeCaucus.endAt - conf.activeCaucus.startedAt) / 1000
+    const status = (conf.activeCaucus?.pausedAt != null || conf.activeSpeaker?.pausedAt != null) ? 'paused' as const : 'running' as const
     caucusData = {
-      remainingSec: Math.max(0, (conf.activeCaucus.endAt - now) / 1000),
-      totalSec: (conf.activeCaucus.endAt - conf.activeCaucus.startedAt) / 1000,
+      remainingSec,
+      totalSec,
       type: conf.activeCaucus.type,
-      status: (conf.activeCaucus?.pausedAt != null || conf.activeSpeaker?.pausedAt != null) ? 'paused' : 'running',
+      status,
       topic: conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
         ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
         : undefined,
@@ -333,16 +336,20 @@ export function buildDisplayData(
     phase: effectivePhase,
     venue: conf.venue,
     name: conf.name,
-    currentSpeaker: currentSpeakerName
-      ? {
-          delegationName: currentSpeakerName,
-          remainingSec: conf.activeSpeaker
-            ? Math.max(0, (conf.activeSpeaker.endAt - Date.now()) / 1000)
-            : 0,
-          allocatedSec: currentSpeakerAllocatedSec,
-          status: conf.activeSpeaker?.pausedAt != null ? 'paused' : 'playing'
-        }
-      : undefined,
+    currentSpeaker: (() => {
+      if (!currentSpeakerName) return undefined
+      const now = Date.now()
+      const remainingSec = conf.activeSpeaker
+        ? Math.max(0, (conf.activeSpeaker.endAt - now) / 1000)
+        : 0
+      const status = conf.activeSpeaker?.pausedAt != null ? 'paused' as const : 'playing' as const
+      return {
+        delegationName: currentSpeakerName,
+        remainingSec,
+        allocatedSec: currentSpeakerAllocatedSec,
+        status
+      }
+    })(),
     readySpeaker: (() => {
       const ready = conf.speakersList.find((s) => s.status === 'ready')
       if (!ready) return undefined
