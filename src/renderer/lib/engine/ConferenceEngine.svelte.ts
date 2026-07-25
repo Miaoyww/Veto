@@ -204,6 +204,8 @@ export class ConferenceEngine {
   activeCaucus: Conference['activeCaucus'] = $state(null)
   yieldPending: YieldPendingState | null = $state(null)
   caucusSetup: Conference['caucusSetup'] = $state(null)
+  /** 主发言名单是否曾被填充过（用于判断清空后是否需要重新动议） */
+  speakersListHasBeenPopulated: boolean = $state(false)
 
   // ── 会议记录 ──
   motions: Motion[] = $state([])
@@ -364,6 +366,7 @@ export class ConferenceEngine {
     const list = this.speakerList
     const entryId = list.add(del, timeSec)
 
+    this.speakersListHasBeenPopulated = true
     this.addMinutesEntry('speaker_started', `${del.name} 加入主发言名单`)
     this.touch()
     return entryId
@@ -437,6 +440,16 @@ export class ConferenceEngine {
     list.finishCurrent()
     this.activeSpeaker = null
     this.yieldPending = null
+
+    // 主发言名单曾被填充且现已清空 → 回到等待动议状态
+    if (
+      this.phase === 'general_debate' &&
+      this.speakersListHasBeenPopulated &&
+      this.speakerList.entries.length === 0
+    ) {
+      this.phase = 'pending_speakers_list'
+      this.addMinutesEntry('phase_changed', '主发言名单已清空，需重新动议开启')
+    }
 
     const del = entry?.delegation
     let logMsg = `${del?.name ?? entry?.delegationId} 发言结束`
@@ -697,6 +710,7 @@ export class ConferenceEngine {
       !s.endedAt ? { ...s, endedAt: now } : s
     )
     this.phase = 'general_debate'
+    this.speakersListHasBeenPopulated = false
     this.addMinutesEntry('phase_changed', '进入阶段: 一般性辩论（主发言名单已开启）')
     this.touch()
   }
