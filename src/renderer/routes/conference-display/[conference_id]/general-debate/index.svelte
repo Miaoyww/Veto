@@ -21,7 +21,10 @@
   <div class="flex flex-col items-center gap-10">
     <div class="flex items-center gap-3 text-white/40">
       <div class="h-px w-12 bg-white/10"></div>
-      <Mic size={20} class={data.currentSpeaker.status === 'paused' ? 'text-[#C9A84C]' : 'text-[#5B92E5]'} />
+      <Mic
+        size={20}
+        class={data.currentSpeaker.status === 'paused' ? 'text-[#C9A84C]' : 'text-[#5B92E5]'}
+      />
       <span class="text-lg tracking-[0.08em] uppercase">
         {data.currentSpeaker.status === 'paused' ? '计时已暂停' : '正在发言'}
       </span>
@@ -40,11 +43,15 @@
     </div>
 
     <!-- 倒计时 -->
-    <div class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data.currentSpeaker.status === 'paused' ? 'text-[#C9A84C]' : 'text-[#5B92E5]'}">
+    <div
+      class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data
+        .currentSpeaker.status === 'paused'
+        ? 'text-[#C9A84C]'
+        : 'text-[#5B92E5]'}"
+    >
       {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
     </div>
   </div>
-
 {:else if data.readySpeaker}
   <!-- 预发言（即将发言） -->
   <div class="flex flex-col items-center gap-10">
@@ -63,7 +70,6 @@
 
     <div class="text-lg tracking-wider text-white/15">等待主席开始计时</div>
   </div>
-
 {:else}
   <!-- 主发言名单（无当前发言人，无 ready） -->
   {@const waiting = data.speakersList.filter((s: { status: string }) => s.status === 'waiting')}

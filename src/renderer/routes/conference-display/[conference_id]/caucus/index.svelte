@@ -23,12 +23,6 @@
       <div class="h-px w-12 bg-white/10"></div>
     </div>
 
-    {#if data.caucusTimer.topic}
-      <div class="text-9xl font-medium tracking-wide text-[#5B92E5]/80">
-        {data.caucusTimer.topic}
-      </div>
-    {/if}
-
     {#if currentSpeaker && currentSpeaker.status === 'speaking' && data.currentSpeaker}
       <!-- 当前发言人 -->
       <div class="flex items-center gap-3 text-white/40">
@@ -44,20 +38,15 @@
       </div>
 
       <div class="text-center">
-        <div class="text-8xl font-semibold tracking-wide text-white">
+        <div class="text-9xl font-semibold tracking-wide text-white">
           {data.currentSpeaker.delegationName}
         </div>
-        {#if data.currentSpeaker.shortName}
-          <div class="mt-1 text-4xl font-light tracking-[0.06em] text-white/30">
-            {data.currentSpeaker.shortName}
-          </div>
-        {/if}
       </div>
 
       {@const isTimeout = data.caucusTimer.speakerTransition === 'timeout'}
       <!-- 倒计时 -->
       <div
-        class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data
+        class="font-mono text-9xl font-light tabular-nums leading-none tracking-tight {data
           .currentSpeaker.status === 'paused'
           ? 'text-[#C9A84C]'
           : isTimeout
@@ -108,12 +97,6 @@
       </span>
       <div class="h-px w-12 bg-white/10"></div>
     </div>
-
-    {#if data.caucusTimer.topic}
-      <div class="text-9xl font-medium tracking-wide text-[#5B92E5]/80">
-        {data.caucusTimer.topic}
-      </div>
-    {/if}
 
     <div
       class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {isPaused

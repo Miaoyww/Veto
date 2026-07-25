@@ -60,7 +60,7 @@
 <div class="flex h-screen w-screen flex-col bg-[#0a0e14] text-[#c8ccd4]">
   {#if displayData}
     <!-- 顶部横幅：大会信息 -->
-    <div class="flex items-center gap-8 border-b border-white/10 px-16 py-7">
+    <div class="relative flex items-center gap-8 border-b border-white/10 px-16 py-7">
       <div class="flex items-center gap-5">
         <div>
           <h1 class="text-[28px] font-semibold tracking-[0.04em] text-white">
@@ -71,6 +71,13 @@
           </p>
         </div>
       </div>
+
+      <!-- 磋商主题 -->
+      {#if displayData.caucusTimer?.topic}
+        <div class="absolute left-1/2 -translate-x-1/2 text-8xl font-medium tracking-wide">
+          {displayData.caucusTimer.topic}
+        </div>
+      {/if}
 
       <!-- 阶段指示器 -->
       <div class="ml-auto">
