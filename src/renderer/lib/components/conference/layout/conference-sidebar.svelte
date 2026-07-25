@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Users, Gavel, Building2, ArrowLeft } from '@lucide/svelte'
+  import { Users, Gavel, Building2, ArrowLeft, Calculator } from '@lucide/svelte'
   import { navigate } from '$lib/router.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
@@ -11,6 +11,9 @@
   const presentCount = $derived(
     conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0
   )
+  const totalCount = $derived(conf?.delegations.length ?? 0)
+  const simpleMajority = $derived(Math.floor(presentCount / 2) + 1)
+  const twoThirds = $derived(Math.ceil((presentCount * 2) / 3))
 </script>
 
 <aside class="flex h-full w-[260px] shrink-0 flex-col border-r bg-muted/30">
@@ -29,12 +32,30 @@
     </div>
 
     <!-- 会场信息 -->
-    <div class="px-5 pt-2 pb-3">
+    <div class="px-5 pt-2 pb-2">
       <h1 class="text-base font-bold leading-tight text-foreground">{conf.name}</h1>
       <div class="mt-2 flex flex-wrap items-center gap-1.5">
         <span class="inline-flex items-center gap-1 py-0.5 text-[11px] font-medium">
           {conf.venue}
         </span>
+      </div>
+    </div>
+
+    <!-- 表决信息 -->
+    <div class="px-5 pb-3">
+      <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <Calculator size={12} />
+        <span>表决信息</span>
+      </div>
+      <div class="mt-1.5 grid grid-cols-2 gap-2">
+        <div class="rounded-md bg-muted px-2.5 py-1.5">
+          <div class="text-[10px] text-muted-foreground">简单多数</div>
+          <div class="text-sm font-bold text-foreground">{simpleMajority}</div>
+        </div>
+        <div class="rounded-md bg-muted px-2.5 py-1.5">
+          <div class="text-[10px] text-muted-foreground">2/3 多数</div>
+          <div class="text-sm font-bold text-foreground">{twoThirds}</div>
+        </div>
       </div>
     </div>
 
