@@ -117,7 +117,8 @@ function registerIpcHandlers(): void {
       injects: p.manifest.injects,
       hasDefinitions: !!p.path.definitions,
       hasI18n: !!p.path.i18n,
-      hasAssets: !!p.path.assets
+      hasAssets: !!p.path.assets,
+      hasDelegations: !!p.path.delegations
     }))
   })
 
@@ -188,12 +189,23 @@ function registerIpcHandlers(): void {
       }
     }
 
+    // 读取代表团预设文件
+    let delegations: string | null = null
+    if (plugin.path.delegations && fs.existsSync(plugin.path.delegations)) {
+      try {
+        delegations = fs.readFileSync(plugin.path.delegations, 'utf-8')
+      } catch {
+        /* ignore */
+      }
+    }
+
     return {
       ...plugin,
       definitions,
       i18n,
       manifest: plugin.manifest,
-      campaignFiles
+      campaignFiles,
+      delegations
     }
   })
 
@@ -287,6 +299,7 @@ function registerIpcHandlers(): void {
         definitions: string | null
         i18n: Record<string, string>
         assets: Array<{ path: string; data: string; mimeType: string }>
+        delegations?: string | null
       }
     ) => {
       const pluginId = payload.manifest.id as string
@@ -312,6 +325,11 @@ function registerIpcHandlers(): void {
         // 写入 definitions.json
         if (payload.definitions) {
           fs.writeFileSync(join(pluginDir, 'definitions.json'), payload.definitions, 'utf-8')
+        }
+
+        // 写入 delegations.json
+        if (payload.delegations) {
+          fs.writeFileSync(join(pluginDir, 'delegations.json'), payload.delegations, 'utf-8')
         }
 
         // 写入 i18n 文件

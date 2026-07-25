@@ -28,6 +28,7 @@ const veto = {
         hasDefinitions: boolean
         hasI18n: boolean
         hasAssets: boolean
+        hasDelegations: boolean
       }>
     > => ipcRenderer.invoke('veto:plugins:list'),
 
@@ -49,6 +50,7 @@ const veto = {
       definitions: string | null
       i18n: Record<string, string>
       assets: Array<{ path: string; data: string; mimeType: string }>
+      delegations?: string | null
     }): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('veto:plugins:install', payload),
 

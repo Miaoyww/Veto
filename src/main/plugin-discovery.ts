@@ -44,6 +44,8 @@ export interface PluginManifest {
   facilities?: string
   /** 战役：事件配置文件路径 */
   events?: string
+  /** 会议：代表团预设文件路径 */
+  delegations?: string
 }
 
 /** 插件实例（扫描发现后的内存表示） */
@@ -68,6 +70,8 @@ export interface PluginInstance {
     facilities?: string
     /** 战役：events.json 绝对路径 */
     events?: string
+    /** 会议：delegations.json 绝对路径 */
+    delegations?: string
   }
   /** 是否被用户禁用 */
   disabled: boolean
@@ -168,7 +172,8 @@ export function scanPluginDirectory(): PluginInstance[] {
         mapConfig: getCampaignPath(manifest.mapConfig, 'map.json'),
         deployments: getCampaignPath(manifest.deployments, 'deployments.json'),
         facilities: getCampaignPath(manifest.facilities, 'facilities.json'),
-        events: getCampaignPath(manifest.events, 'events.json')
+        events: getCampaignPath(manifest.events, 'events.json'),
+        delegations: getCampaignPath(manifest.delegations, 'delegations.json')
       }
 
       plugins.push({

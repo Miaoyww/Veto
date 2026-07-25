@@ -179,29 +179,47 @@ export async function processModPackage(
 		}
 	}
 
-	// 3. 提取图片资源
+	// 3. 读取代表团预设（如果存在）
+	let delegations: string | null = null
+	if (manifest.delegations) {
+		const delPath = typeof manifest.delegations === 'string' ? manifest.delegations : 'delegations.json'
+		const delFile = zip.file(delPath)
+		if (delFile) {
+			try { delegations = await delFile.async('string') } catch { /* ignore */ }
+		}
+	}
+	if (!delegations) {
+		const delFile = zip.file('delegations.json') ?? zip.file('assets/delegations.json')
+		if (delFile) {
+			try { delegations = await delFile.async('string') } catch { /* ignore */ }
+		}
+	}
+
+	// 4. 提取图片资源
 	const assets = await extractAssetsForIpc(zip);
 
-	// 4. 发送到主进程写入文件系统
+	// 5. 发送到主进程写入文件系统
 	const result = await window.veto.plugins.install({
 		manifest: JSON.parse(JSON.stringify(manifest)),
 		definitions,
 		i18n: i18nRecord,
-		assets
+		assets,
+		delegations
 	});
 
 	if (!result.success) {
 		throw new Error(result.error ?? '安装插件失败');
 	}
 
-	// 5. 构建记录并注入运行时 ModRegistry
+	// 6. 构建记录并注入运行时 ModRegistry
 	const record: InstalledPlugin = {
 		id: manifest.id,
 		manifest: JSON.parse(JSON.stringify(manifest)),
 		definitions,
 		i18n: i18nRecord,
 		assetKeys: assets.map((a) => `${manifest.id}/${a.path}`),
-		installedAt: Date.now()
+		installedAt: Date.now(),
+		delegations
 	};
 	injectToRegistry(record);
 

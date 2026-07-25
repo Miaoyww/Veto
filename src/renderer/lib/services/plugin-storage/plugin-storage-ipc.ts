@@ -47,7 +47,8 @@ export class IpcPluginStorage implements PluginStorage {
       i18n: data.i18n ?? {},
       assetKeys: [],
       installedAt: 0, // 主进程不追踪此字段
-      campaignFiles: data.campaignFiles as Record<string, string> | undefined
+      campaignFiles: data.campaignFiles as Record<string, string> | undefined,
+      delegations: (data as Record<string, unknown>).delegations as string | null | undefined
     }
   }
 
@@ -56,19 +57,25 @@ export class IpcPluginStorage implements PluginStorage {
     const plugins: InstalledPlugin[] = []
 
     for (const item of list) {
-      if (!item.disabled && item.hasDefinitions) {
-        const detail = await window.veto.plugins.get(item.id)
-        if (detail?.definitions) {
-          plugins.push({
-            id: item.id,
-            manifest: detail.manifest as InstalledPlugin['manifest'],
-            definitions: detail.definitions,
-            i18n: detail.i18n ?? {},
-            assetKeys: [],
-            installedAt: 0,
-            campaignFiles: detail.campaignFiles as Record<string, string> | undefined
-          })
-        }
+      if (item.disabled) continue
+      // 需要 definitions、delegations 或 i18n 中至少有一项
+      if (!(item as any).hasDefinitions && !(item as any).hasDelegations && !(item as any).hasI18n) continue
+
+      const detail = await window.veto.plugins.get(item.id)
+      // 有 definitions 或 delegations 即视为有效
+      const hasContent = detail?.definitions || (detail as any)?.delegations
+
+      if (hasContent) {
+        plugins.push({
+          id: item.id,
+          manifest: detail.manifest as InstalledPlugin['manifest'],
+          definitions: detail.definitions,
+          i18n: detail.i18n ?? {},
+          assetKeys: [],
+          installedAt: 0,
+          campaignFiles: detail.campaignFiles as Record<string, string> | undefined,
+          delegations: (detail as Record<string, unknown>).delegations as string | null | undefined
+        })
       }
     }
 

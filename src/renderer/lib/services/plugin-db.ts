@@ -88,6 +88,8 @@ export interface InstalledPlugin {
   installedAt: number
   /** 战役资源文件内容（type='campaign' 时有效） */
   campaignFiles?: Record<string, string>
+  /** 代表团预设 JSON 字符串 */
+  delegations?: string | null
 }
 
 /** dist/registry.json 中每个条目的结构（manifest 字段 + 注册中心元数据） */
@@ -113,6 +115,8 @@ export interface PluginManifest {
   license?: string
   /** 战役 / 剧本头图 URL 或资源路径 */
   banner?: string
+  /** 会议：代表团预设文件路径 */
+  delegations?: string
 }
 
 /** Blob 资源条目（图片、地图底图等） */

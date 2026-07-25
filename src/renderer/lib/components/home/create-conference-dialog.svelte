@@ -1,8 +1,19 @@
 <script lang="ts">
   import PlusIcon from '@lucide/svelte/icons/plus'
   import UsersIcon from '@lucide/svelte/icons/users'
+  import PuzzleIcon from '@lucide/svelte/icons/puzzle'
   import { navigate } from '$lib/router.svelte'
   import { createConference } from '$lib/stores/conference/conference-store'
+  import {
+    delegationPresets,
+    presetsLoading,
+    presetsLoaded,
+    loadDelegationPresets,
+    startAutoRefresh,
+    stopAutoRefresh,
+    formatPresetAsText,
+    type DelegationPreset
+  } from '$lib/stores/conference/delegation-preset-store'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -95,6 +106,29 @@
 
   const parsedDelegationsCount = $derived(parseDelegations().length)
   const canCreate = $derived(name.trim().length > 0 && parsedDelegationsCount > 0)
+
+  // ---- 插件预设 ----
+  let presetLoaded = $state(false)
+
+  $effect(() => {
+    if (open && !presetLoaded) {
+      presetLoaded = true
+      startAutoRefresh()
+      loadDelegationPresets()
+    }
+    if (!open) {
+      presetLoaded = false
+    }
+  })
+
+  function insertPreset(preset: DelegationPreset): void {
+    const text = formatPresetAsText(preset)
+    if (delegationsText.trim()) {
+      delegationsText = delegationsText.trim() + '\n' + text
+    } else {
+      delegationsText = text
+    }
+  }
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
@@ -145,11 +179,39 @@
                 <Badge variant="outline" class="ml-2 text-[10px]">{parsedDelegationsCount} 个</Badge>
               {/if}
             </span>
-            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" onclick={insertP5}>
-              <PlusIcon size={12} />
-              快速添加五常
-            </Button>
           </div>
+
+          <!-- 插件预设按钮 -->
+          {#if $presetsLoaded && $delegationPresets.length > 0}
+            <div class="mb-2 flex flex-wrap gap-1.5">
+              {#each $delegationPresets as preset (preset.pluginId + '/' + preset.presetId)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="h-7 gap-1 text-xs"
+                  onclick={() => insertPreset(preset)}
+                  title={`${preset.description ?? preset.presetName} — 来源: ${preset.pluginName}`}
+                >
+                  <PuzzleIcon size={12} />
+                  {preset.presetName}
+                  <span class="text-[10px] text-muted-foreground">({preset.delegations.length})</span>
+                </Button>
+              {/each}
+              <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" onclick={insertP5}>
+                <PlusIcon size={12} />
+                快速添加五常
+              </Button>
+            </div>
+          {:else if $presetsLoading}
+            <p class="mb-2 text-[10px] text-muted-foreground">正在加载插件预设…</p>
+          {:else}
+            <div class="mb-2">
+              <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" onclick={insertP5}>
+                <PlusIcon size={12} />
+                快速添加五常
+              </Button>
+            </div>
+          {/if}
 
           <Textarea
             bind:value={delegationsText}
