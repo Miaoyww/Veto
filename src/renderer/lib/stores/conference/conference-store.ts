@@ -730,7 +730,12 @@ function executeMotionAction(motion: Motion): void {
     case 'modify_speaking_time':
       updateCurrentConference((c) => ({
         ...c,
-        defaultSpeakingTimeSec: (motion as any).newTimeSec
+        defaultSpeakingTimeSec: (motion as any).newTimeSec,
+        speakersList: c.speakersList.map((s) =>
+          s.status === 'waiting' || s.status === 'ready'
+            ? { ...s, allocatedTimeSec: (motion as any).newTimeSec }
+            : s
+        )
       }))
       break
     case 'closure_debate':
@@ -1207,6 +1212,8 @@ export function closeVotingSession(sessionId: string): void {
     let newPhase = c.phase
     let newActiveSpeaker = c.activeSpeaker
     let newActiveCaucus = c.activeCaucus
+    let newDefaultSpeakingTimeSec = c.defaultSpeakingTimeSec
+    let newSpeakersList = c.speakersList
 
     if (session.targetType === 'motion') {
       const motion = c.motions.find((m) => m.id === session.targetId)
@@ -1289,6 +1296,14 @@ export function closeVotingSession(sessionId: string): void {
                 description: '进入阶段: 磋商'
               }
             )
+          } else if (motion.type === 'modify_speaking_time') {
+            const newTime = (motion as any).newTimeSec as number
+            newDefaultSpeakingTimeSec = newTime
+            newSpeakersList = c.speakersList.map((s) =>
+              s.status === 'waiting' || s.status === 'ready'
+                ? { ...s, allocatedTimeSec: newTime }
+                : s
+            )
           }
         }
       }
@@ -1299,6 +1314,8 @@ export function closeVotingSession(sessionId: string): void {
       phase: newPhase,
       activeSpeaker: newActiveSpeaker,
       activeCaucus: newActiveCaucus,
+      defaultSpeakingTimeSec: newDefaultSpeakingTimeSec,
+      speakersList: newSpeakersList,
       votingSessions: c.votingSessions.map((s) =>
         s.id === sessionId ? { ...s, endedAt: now, result } : s
       ),
