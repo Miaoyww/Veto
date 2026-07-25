@@ -1,7 +1,13 @@
 <script lang="ts">
   import {
-    Presentation, Timer, MessageSquare, Pencil,
-    FileDown, FileUp, X, Gavel, Coffee, ListOrdered, LogOut, Vote, FileText
+    Presentation,
+    Timer,
+    MessageSquare,
+    Pencil,
+    Gavel,
+    Coffee,
+    LogOut,
+    Vote
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -15,10 +21,7 @@
     approveMotion,
     dismissLastResolvedMotion
   } from '$lib/stores/conference/conference-store'
-  import {
-    resolveMotion,
-    calcMaxSpeakers
-  } from '$lib/engine/conference-engine'
+  import { resolveMotion, calcMaxSpeakers } from '$lib/engine/conference-engine'
   import { navigate } from '$lib/router.svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
@@ -38,6 +41,17 @@
       // 等待开启主发言名单：首要动议为开启主发言名单
       return [
         'open_speakers_list',
+        'moderated_caucus',
+        'unmoderated_caucus',
+        'modify_speaking_time',
+        'closure_debate',
+        'suspend_meeting',
+        'close_meeting'
+      ]
+    }
+    // 主发言名单已开启时不可再次动议开启
+    if (conf?.phase === 'general_debate') {
+      return [
         'moderated_caucus',
         'unmoderated_caucus',
         'modify_speaking_time',
@@ -187,7 +201,11 @@
   const isDirty = $derived.by(() => {
     switch (selectedType) {
       case 'moderated_caucus':
-        return mcTopic !== committedTopic || mcTotalSec !== committedMcTotalSec || mcSpeakerSec !== committedMcSpeakerSec
+        return (
+          mcTopic !== committedTopic ||
+          mcTotalSec !== committedMcTotalSec ||
+          mcSpeakerSec !== committedMcSpeakerSec
+        )
       case 'unmoderated_caucus':
         return ucDurationMin !== committedUcDurationMin
       case 'modify_speaking_time':
@@ -201,13 +219,14 @@
 
   const canPropose = $derived(
     selectedType !== null &&
-    selectedProposerId !== '' &&
-    !isDirty &&
-    (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
-    (selectedType !== 'moderated_caucus' || (
-      committedMcTotalSec != null && committedMcTotalSec > 0 &&
-      committedMcSpeakerSec != null && committedMcSpeakerSec > 0
-    ))
+      selectedProposerId !== '' &&
+      !isDirty &&
+      (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
+      (selectedType !== 'moderated_caucus' ||
+        (committedMcTotalSec != null &&
+          committedMcTotalSec > 0 &&
+          committedMcSpeakerSec != null &&
+          committedMcSpeakerSec > 0))
   )
 
   // 实时同步动议草稿到 Display
@@ -222,15 +241,18 @@
     motionDraft.set({
       proposedByName: proposerDel?.name,
       type: selectedType ?? undefined,
-      topic: selectedType === 'moderated_caucus' ? (committedTopic.trim() || undefined) : undefined,
-      totalTimeSec: selectedType === 'moderated_caucus'
-        ? committedMcTotalSec
-        : selectedType === 'unmoderated_caucus'
-          ? committedUcDurationMin * 60
-          : undefined,
-      speakingTimePerPersonSec: selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
+      topic: selectedType === 'moderated_caucus' ? committedTopic.trim() || undefined : undefined,
+      totalTimeSec:
+        selectedType === 'moderated_caucus'
+          ? committedMcTotalSec
+          : selectedType === 'unmoderated_caucus'
+            ? committedUcDurationMin * 60
+            : undefined,
+      speakingTimePerPersonSec:
+        selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
       newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined,
-      documentName: selectedType === 'substantive_vote' ? (committedDocumentName.trim() || undefined) : undefined
+      documentName:
+        selectedType === 'substantive_vote' ? committedDocumentName.trim() || undefined : undefined
     })
   })
 </script>
@@ -272,7 +294,8 @@
                 {@const Icon = MOTION_ICONS[mt] ?? Presentation}
                 <button
                   type="button"
-                  class="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all {selectedType === mt
+                  class="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all {selectedType ===
+                  mt
                     ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400'
                     : 'hover:bg-muted'}"
                   onclick={() => (selectedType = mt)}
@@ -291,7 +314,11 @@
           <div class="space-y-3">
             <div>
               <Label class="mb-1.5 block text-xs text-muted-foreground">主题</Label>
-              <Input bind:value={mcTopic} class="h-9 text-sm" onblur={() => (committedTopic = mcTopic)} />
+              <Input
+                bind:value={mcTopic}
+                class="h-9 text-sm"
+                onblur={() => (committedTopic = mcTopic)}
+              />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -322,21 +349,39 @@
               </div>
             </div>
             {#if committedMcTotalSec != null && committedMcSpeakerSec != null && committedMcTotalSec > 0 && committedMcSpeakerSec > 0}
-              <div class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground">
-                {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多 <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
+              <div
+                class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground"
+              >
+                {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多
+                <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
               </div>
             {/if}
           </div>
         {:else if selectedType === 'unmoderated_caucus'}
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
-            <Input type="number" min="1" max="120" bind:value={ucDurationMin} class="h-9 text-sm w-32" onblur={() => (committedUcDurationMin = ucDurationMin)} />
+            <Input
+              type="number"
+              min="1"
+              max="120"
+              bind:value={ucDurationMin}
+              class="h-9 text-sm w-32"
+              onblur={() => (committedUcDurationMin = ucDurationMin)}
+            />
             <p class="mt-1 text-[10px] text-muted-foreground">开始后将进行倒计时</p>
           </div>
         {:else if selectedType === 'modify_speaking_time'}
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">新的默认发言时间（秒）</Label>
-            <Input type="number" min="30" max="600" step="15" bind:value={newTimeSec} class="h-9 text-sm w-32" onblur={() => (committedNewTimeSec = newTimeSec)} />
+            <Input
+              type="number"
+              min="30"
+              max="600"
+              step="15"
+              bind:value={newTimeSec}
+              class="h-9 text-sm w-32"
+              onblur={() => (committedNewTimeSec = newTimeSec)}
+            />
           </div>
         {:else if selectedType === 'substantive_vote'}
           <Separator />
@@ -356,14 +401,10 @@
                 {/each}
               </datalist>
             {/if}
-            <p class="mt-1 text-[10px] text-muted-foreground">
-              此文件将进入唱名表决（2/3多数）
-            </p>
+            <p class="mt-1 text-[10px] text-muted-foreground">此文件将进入唱名表决（2/3多数）</p>
           </div>
         {:else if selectedType}
-          <div class="text-xs text-muted-foreground">
-            此动议将进入举牌表决
-          </div>
+          <div class="text-xs text-muted-foreground">此动议将进入举牌表决</div>
         {/if}
       </div>
 
