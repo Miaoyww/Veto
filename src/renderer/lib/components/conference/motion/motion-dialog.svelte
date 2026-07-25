@@ -39,15 +39,7 @@
     }
     if (conf?.phase === 'pending_speakers_list') {
       // 等待开启主发言名单：首要动议为开启主发言名单
-      return [
-        'open_speakers_list',
-        'moderated_caucus',
-        'unmoderated_caucus',
-        'modify_speaking_time',
-        'closure_debate',
-        'suspend_meeting',
-        'close_meeting'
-      ]
+      return ['open_speakers_list']
     }
     // 主发言名单已开启时不可再次动议开启
     if (conf?.phase === 'general_debate') {
