@@ -10,7 +10,7 @@
    * 3. 根据 phase 动态切换内容组件
    * 4. 底部近期记录
    */
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { Gavel, Vote, Coffee, Timer } from '@lucide/svelte'
   import { getDisplayBridge, onConnectionStatus, setExternalWsUrl } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
@@ -55,6 +55,42 @@
   })
 
   const phase = $derived(displayData?.phase ?? null)
+
+  // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
+  let effectivePhase = $state<string | null>(null)
+  let phaseDelayTimer: ReturnType<typeof setTimeout> | null = null
+
+  $effect(() => {
+    const newPhase = displayData?.phase ?? null
+    const motionStatus = displayData?.activeMotion?.status
+
+    // 延迟计时器激活期间不干涉
+    if (phaseDelayTimer) return
+
+    // 相同则跳过
+    if (newPhase === effectivePhase) return
+
+    // 从 motion 结果阶段切换到其他阶段 → 延迟 1 秒
+    if (
+      effectivePhase === 'motion' &&
+      motionStatus != null &&
+      motionStatus !== 'pending' &&
+      newPhase !== 'motion'
+    ) {
+      phaseDelayTimer = setTimeout(() => {
+        // 取最新的 phase（避免延迟期间 phase 再次变更）
+        effectivePhase = displayData?.phase ?? null
+        phaseDelayTimer = null
+      }, 3000)
+      return
+    }
+
+    effectivePhase = newPhase
+  })
+
+  onDestroy(() => {
+    if (phaseDelayTimer) clearTimeout(phaseDelayTimer)
+  })
 </script>
 
 <svelte:head>
@@ -97,7 +133,7 @@
         >
           <div class="h-2 w-2 rounded-full bg-[#5B92E5]"></div>
           <span class="text-base font-medium tracking-[0.05em] text-white/70 uppercase">
-            {PHASE_LABELS[displayData.phase] ?? displayData.phase}
+            {PHASE_LABELS[effectivePhase] ?? effectivePhase}
           </span>
         </div>
       </div>
@@ -106,17 +142,17 @@
     <!-- 中部：主展示区（phase 动态切换） -->
     <div class="flex flex-1 items-center justify-center overflow-hidden px-16">
       <div class="flex w-full max-w-5xl flex-col items-center">
-        {#if phase === 'motion'}
+        {#if effectivePhase === 'motion'}
           <MotionDisplay data={displayData} />
-        {:else if phase === 'roll_call'}
+        {:else if effectivePhase === 'roll_call'}
           <RollCallDisplay data={displayData} />
-        {:else if phase === 'general_debate'}
+        {:else if effectivePhase === 'general_debate'}
           <GeneralDebateDisplay data={displayData} />
-        {:else if phase === 'caucus_setup'}
+        {:else if effectivePhase === 'caucus_setup'}
           <CaucusSetupDisplay data={displayData} />
-        {:else if displayData.caucusTimer && phase === 'caucus'}
+        {:else if displayData.caucusTimer && effectivePhase === 'caucus'}
           <CaucusDisplay data={displayData} />
-        {:else if displayData.votingSession && phase === 'voting'}
+        {:else if displayData.votingSession && effectivePhase === 'voting'}
           <!-- 投票 -->
           <div class="flex flex-col items-center gap-10">
             <div class="flex items-center gap-3 text-white/40">
@@ -172,14 +208,14 @@
               </div>
             {/if}
           </div>
-        {:else if phase === 'suspended'}
+        {:else if effectivePhase === 'suspended'}
           <!-- 休会 -->
           <div class="flex flex-col items-center gap-6 text-white/15">
             <Timer size={56} />
             <div class="text-9xl font-light tracking-[0.06em]">会议休会中</div>
             <div class="text-lg tracking-wider text-white/10">SUSPENDED</div>
           </div>
-        {:else if phase === 'closed'}
+        {:else if effectivePhase === 'closed'}
           <!-- 闭幕 -->
           <div class="flex flex-col items-center gap-6 text-white/15">
             <Gavel size={56} />

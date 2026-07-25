@@ -284,6 +284,22 @@ export function buildDisplayData(
     ? conf.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId)
     : null
 
+  // 最近被处理的动议（通过/否决），用于 Display 展示表决结果
+  // 仅在动议阶段已结束（非 editing / voting）时才回退到已处理的动议，
+  // 避免进入新一轮 editing 时错误展示上一次的表决结果
+  const hasActiveMotionPhase =
+    extra?.motionDraft?.proposedByName || conf.motions.some((m) => m.status === 'pending')
+  const resolvedMotions = conf.motions.filter(
+    (m) => m.status === 'approved' || m.status === 'rejected'
+  )
+  const lastResolvedMotion =
+    resolvedMotions.length > 0 ? resolvedMotions[resolvedMotions.length - 1] : undefined
+  const displayMotion = pendingMotion ?? (!hasActiveMotionPhase ? lastResolvedMotion : undefined)
+  const displayMotionDel =
+    displayMotion && displayMotion !== pendingMotion
+      ? conf.delegations.find((d) => d.id === displayMotion.proposedByDelegationId)
+      : pendingMotionDel
+
   // 磋商计时
   let caucusData: ConferenceDisplayData['caucusTimer'] | undefined
   if (conf.activeCaucus) {
@@ -308,9 +324,7 @@ export function buildDisplayData(
 
   // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
   const effectivePhase: Conference['phase'] | 'motion' =
-    extra?.motionDraft?.proposedByName || conf.motions.some((m) => m.status === 'pending')
-      ? 'motion'
-      : conf.phase
+    hasActiveMotionPhase ? 'motion' : conf.phase
 
   return {
     conferenceId: conf.id,
@@ -342,22 +356,22 @@ export function buildDisplayData(
       }
     }),
     votingSession: votingData,
-    activeMotion: pendingMotion
+    activeMotion: displayMotion
       ? {
-          type: pendingMotion.type,
-          topic: pendingMotion.type === 'moderated_caucus' ? (pendingMotion as any).topic : undefined,
-          status: pendingMotion.status,
-          proposedByName: pendingMotionDel?.name ?? pendingMotion.proposedByDelegationId,
-          motionId: pendingMotion.id,
+          type: displayMotion.type,
+          topic: displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
+          status: displayMotion.status,
+          proposedByName: displayMotionDel?.name ?? displayMotion.proposedByDelegationId,
+          motionId: displayMotion.id,
           totalTimeSec:
-            pendingMotion.type === 'moderated_caucus'
-              ? (pendingMotion as any).totalTimeSec
-              : pendingMotion.type === 'unmoderated_caucus'
-                ? (pendingMotion as any).durationSec
+            displayMotion.type === 'moderated_caucus'
+              ? (displayMotion as any).totalTimeSec
+              : displayMotion.type === 'unmoderated_caucus'
+                ? (displayMotion as any).durationSec
                 : undefined,
           speakingTimePerPersonSec:
-            pendingMotion.type === 'moderated_caucus'
-              ? (pendingMotion as any).speakingTimePerPersonSec
+            displayMotion.type === 'moderated_caucus'
+              ? (displayMotion as any).speakingTimePerPersonSec
               : undefined
         }
       : undefined,

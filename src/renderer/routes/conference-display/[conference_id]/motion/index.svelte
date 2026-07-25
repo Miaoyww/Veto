@@ -189,11 +189,19 @@
               ? 'text-emerald-400'
               : 'text-red-400'}"
           >
-            {isApproved ? '动议通过' : '动议未通过'}
+            {isApproved ? '表决通过' : '表决否决'}
           </span>
         </div>
 
-        <div class="mt-4 text-6xl font-semibold tracking-wide text-white">
+        <div
+          class="mt-5 text-8xl font-bold tracking-wide {isApproved
+            ? 'text-emerald-400'
+            : 'text-red-400'}"
+        >
+          {isApproved ? '通过' : '否决'}
+        </div>
+
+        <div class="mt-4 text-5xl font-semibold tracking-wide text-white">
           {MOTION_LABELS[activeMotion.type] ?? activeMotion.type}
         </div>
         <div class="mt-3 text-3xl tracking-wider text-white/40">
