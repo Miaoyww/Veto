@@ -76,7 +76,7 @@
   const canProposePoint = $derived(conf?.phase !== 'closed')
 </script>
 
-<div class="flex min-w-0 flex-1 flex-col bg-background">
+<div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
   {#if conf}
     <!-- 顶部横幅：阶段 + 控制 -->
     <div class="flex items-center gap-3 border-b px-6 py-3">
@@ -146,46 +146,54 @@
     </div>
 
     <!-- 阶段对应内容 -->
-    <div class="flex flex-1 min-h-0 p-6">
+    <div class="flex flex-1 min-h-0 overflow-hidden p-6">
       {#if conf.phase === 'preamble'}
         <div class="flex flex-1 items-center justify-center">
-        <div class="flex flex-col items-center gap-6 text-center">
-          <div class="flex flex-col items-center gap-2">
-            <Users size={48} class="opacity-30" />
-            <h2 class="text-xl font-bold text-foreground">会前准备</h2>
-            <p class="text-sm text-muted-foreground">所有代表团已就位，准备开始点名</p>
+          <div class="flex flex-col items-center gap-6 text-center">
+            <div class="flex flex-col items-center gap-2">
+              <Users size={48} class="opacity-30" />
+              <h2 class="text-xl font-bold text-foreground">会前准备</h2>
+              <p class="text-sm text-muted-foreground">所有代表团已就位，准备开始点名</p>
+            </div>
+            <Button
+              size="lg"
+              class="gap-2 bg-indigo-600 hover:bg-indigo-700"
+              onclick={startRollCall}
+            >
+              <Play size={18} />
+              开始点名
+            </Button>
           </div>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            开始点名
-          </Button>
-        </div>
         </div>
       {:else if conf.phase === 'roll_call'}
         <div class="flex flex-1 items-center justify-center">
-        <div class="flex flex-col items-center gap-6 text-center">
-          <div class="flex flex-col items-center gap-2">
-            <Users size={48} class="opacity-30" />
-            <h2 class="text-xl font-bold text-foreground">点名进行中</h2>
-            <p class="text-sm text-muted-foreground">点名页面已在独立窗口中打开</p>
+          <div class="flex flex-col items-center gap-6 text-center">
+            <div class="flex flex-col items-center gap-2">
+              <Users size={48} class="opacity-30" />
+              <h2 class="text-xl font-bold text-foreground">点名进行中</h2>
+              <p class="text-sm text-muted-foreground">点名页面已在独立窗口中打开</p>
+            </div>
+            <Button
+              size="lg"
+              class="gap-2 bg-indigo-600 hover:bg-indigo-700"
+              onclick={startRollCall}
+            >
+              <Play size={18} />
+              进入点名页面
+            </Button>
           </div>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            进入点名页面
-          </Button>
-        </div>
         </div>
       {:else if conf.phase === 'pending_speakers_list'}
         <div class="flex flex-1 items-center justify-center">
-        <div class="flex flex-col items-center gap-6 text-center">
-          <div class="flex flex-col items-center gap-2">
-            <Users size={48} class="opacity-30" />
-            <h2 class="text-xl font-bold text-foreground">等待开启主发言名单</h2>
-            <p class="text-sm text-muted-foreground">
-              点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论
-            </p>
+          <div class="flex flex-col items-center gap-6 text-center">
+            <div class="flex flex-col items-center gap-2">
+              <Users size={48} class="opacity-30" />
+              <h2 class="text-xl font-bold text-foreground">等待开启主发言名单</h2>
+              <p class="text-sm text-muted-foreground">
+                点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论
+              </p>
+            </div>
           </div>
-        </div>
         </div>
       {:else if conf.phase === 'general_debate'}
         <ScrollArea class="flex-1">
@@ -205,22 +213,20 @@
         </ScrollArea>
       {:else if isSuspended}
         <div class="flex flex-1 items-center justify-center">
-        <div class="flex flex-col items-center gap-4 text-muted-foreground">
-          <Gavel size={48} class="opacity-30" />
-          <p class="text-lg font-medium">会议休会中</p>
-          <p class="text-sm opacity-70">点击"恢复会议"继续</p>
-        </div>
+          <div class="flex flex-col items-center gap-4 text-muted-foreground">
+            <Gavel size={48} class="opacity-30" />
+            <p class="text-lg font-medium">会议休会中</p>
+            <p class="text-sm opacity-70">点击"恢复会议"继续</p>
+          </div>
         </div>
       {:else if isClosed}
         <div class="flex flex-1 items-center justify-center">
-        <div class="flex flex-col items-center gap-4 text-muted-foreground">
-          <Gavel size={48} class="opacity-30" />
-          <p class="text-lg font-medium">会议已闭幕</p>
-          <p class="text-sm opacity-70">感谢各位代表的参与</p>
+          <div class="flex flex-col items-center gap-4 text-muted-foreground">
+            <Gavel size={48} class="opacity-30" />
+            <p class="text-lg font-medium">会议已闭幕</p>
+            <p class="text-sm opacity-70">感谢各位代表的参与</p>
+          </div>
         </div>
-        </div>
-      {:else}
-        <div class="flex flex-1 items-center justify-center text-muted-foreground">当前阶段: {conf.phase}</div>
       {/if}
     </div>
 
