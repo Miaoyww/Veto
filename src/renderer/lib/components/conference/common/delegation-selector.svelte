@@ -3,13 +3,15 @@
    * delegation-selector.svelte
    * ────────────────────────────
    * 可复用的代表团模糊搜索选择器。
-   * 支持中文全称、简称、拼音全拼/首字母、fuse.js 容错匹配。
+   * 基于 shadcn Command + ScrollArea，支持中文全称、简称、拼音全拼/首字母、fuse.js 容错匹配。
    */
-  import { Input } from '$lib/components/ui/input/index.js'
+  import { Command as CommandPrimitive } from 'bits-ui'
   import { cn } from '$lib/utils.js'
   import type { Delegation } from '$lib/types-conference'
   import Fuse from 'fuse.js'
   import PinyinMatch from 'pinyin-match'
+  import SearchIcon from '@lucide/svelte/icons/search'
+  import XIcon from '@lucide/svelte/icons/x'
 
   interface Props {
     delegations: Delegation[]
@@ -38,34 +40,31 @@
   }: Props = $props()
 
   let query = $state('')
-  let focused = $state(false)
-  let selectedIndex = $state(0)
+  let open = $state(false)
 
-  // Fuse.js 实例（delegations 变化时重建）
-  const fuse = $derived.by(() => {
-    const excludeSet = new Set(excludeIds)
-    const pool = (presentOnly
-      ? delegations.filter((d) => d.attendance === 'present')
-      : delegations).filter((d) => !excludeSet.has(d.id))
-    return new Fuse(pool, {
-      keys: ['name', 'shortName'],
-      threshold: 0.4,
-      includeScore: true
-    })
-  })
+  // ---- search logic (kept from original) ----
 
-  // 被搜索的代表团池
   const excludeSet = $derived(new Set(excludeIds))
   const searchPool = $derived(
     (presentOnly
       ? delegations.filter((d) => d.attendance === 'present')
-      : delegations).filter((d) => !excludeSet.has(d.id))
+      : delegations
+    ).filter((d) => !excludeSet.has(d.id))
+  )
+
+  // Fuse.js instance（复用 searchPool）
+  const fuse = $derived(
+    new Fuse(searchPool, {
+      keys: ['name', 'shortName'],
+      threshold: 0.4,
+      includeScore: true
+    })
   )
 
   // 3-tier 搜索：子串 → 拼音 → fuse.js
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return searchPool.slice(0, 6)
+    if (!q) return searchPool
 
     const results: Array<{ delegation: Delegation; _score: number }> = []
     const seen = new Set<string>()
@@ -98,43 +97,27 @@
       addResult(r.item, (r.score ?? 0.5) + 0.2)
     }
 
-    return results.sort((a, b) => a._score - b._score).slice(0, 6).map((r) => r.delegation)
+    return results.sort((a, b) => a._score - b._score).map((r) => r.delegation)
   })
+
+  // ---- selection ----
 
   function select(delegationId: string): void {
     if (resetOnSelect) {
       query = ''
-      focused = false
+      open = false
       onselect?.(delegationId)
     } else {
       value = delegationId
       query = ''
-      focused = false
+      open = false
       onselect?.(delegationId)
     }
   }
 
-  function handleKeydown(e: KeyboardEvent): void {
-    if (!focused || filtered.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      selectedIndex = Math.max(selectedIndex - 1, 0)
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      if (filtered[selectedIndex]) {
-        select(filtered[selectedIndex].id)
-      }
-    } else if (e.key === 'Escape') {
-      focused = false
-    }
+  function clear(): void {
+    value = null
   }
-
-  $effect(() => {
-    if (focused) selectedIndex = 0
-  })
 
   const selectedDelegation = $derived(
     value ? delegations.find((d) => d.id === value) : null
@@ -142,42 +125,60 @@
 </script>
 
 <div class={cn('relative', className)}>
-  {#if selectedDelegation && !focused}
-    <div class="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2">
-      <span class="text-sm">{selectedDelegation.name}</span>
-      <button
-        class="ml-auto text-xs text-muted-foreground hover:text-foreground"
-        onclick={() => (value = null)}
+  <CommandPrimitive.Root shouldFilter={false}>
+    {#if selectedDelegation && !open}
+      <!-- 已选中状态 -->
+      <div
+        class="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2"
       >
-        ✕
-      </button>
-    </div>
-  {:else}
-    <Input
-      bind:value={query}
-      {placeholder}
-      class="h-9 text-sm"
-      onfocus={() => (focused = true)}
-      onblur={() => setTimeout(() => (focused = false), 200)}
-      onkeydown={handleKeydown}
-    />
-    {#if focused && filtered.length > 0}
-      <div class="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border bg-card shadow-lg">
-        {#each filtered as d, i}
-          <button
-            class={cn(
-              'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-              i === selectedIndex ? 'bg-muted' : 'hover:bg-muted/50'
-            )}
-            onmousedown={() => select(d.id)}
-          >
-            <span class="text-foreground">{d.name}</span>
-            {#if d.shortName}
-              <span class="text-xs text-muted-foreground">({d.shortName})</span>
-            {/if}
-          </button>
-        {/each}
+        <span class="text-sm">{selectedDelegation.name}</span>
+        {#if selectedDelegation.shortName}
+          <span class="text-xs text-muted-foreground">({selectedDelegation.shortName})</span>
+        {/if}
+        <button
+          type="button"
+          class="ml-auto rounded-sm text-muted-foreground hover:text-foreground focus:outline-none"
+          onclick={clear}
+        >
+          <XIcon class="size-4" />
+        </button>
       </div>
+    {:else}
+      <!-- 搜索输入 -->
+      <div
+        class="flex items-center gap-2 rounded-md border border-input bg-background px-3"
+        class:ring-2={open}
+        class:ring-ring={open}
+      >
+        <SearchIcon class="size-4 shrink-0 opacity-50" />
+        <CommandPrimitive.Input
+          bind:value={query}
+          {placeholder}
+          class="placeholder:text-muted-foreground flex h-9 w-full bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          onfocus={() => (open = true)}
+          onblur={() => setTimeout(() => (open = false), 200)}
+        />
+      </div>
+
+      <!-- 下拉列表 -->
+      {#if open && filtered.length > 0}
+        <CommandPrimitive.List
+          class="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border bg-popover text-popover-foreground shadow-lg p-0 max-h-[130px] overflow-y-auto"
+        >
+          {#each filtered as d (d.id)}
+            <CommandPrimitive.Item
+              value={d.id}
+              onSelect={() => select(d.id)}
+              class="aria-selected:bg-accent aria-selected:text-accent-foreground outline-hidden relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            >
+              <span class="text-foreground">{d.name}</span>
+              {#if d.shortName}
+                <span class="text-xs text-muted-foreground">({d.shortName})</span>
+              {/if}
+            </CommandPrimitive.Item>
+          {/each}
+        </CommandPrimitive.List>
+      {/if}
     {/if}
-  {/if}
+  </CommandPrimitive.Root>
 </div>
