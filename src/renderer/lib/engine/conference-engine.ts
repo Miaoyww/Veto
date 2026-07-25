@@ -128,6 +128,10 @@ export interface MotionResolution {
  */
 export function resolveMotion(motionType: MotionType): MotionResolution {
   switch (motionType) {
+    // 无需表决，直接生效
+    case 'change_attendance':
+      return { requiresVoting: false, votingMajority: 'simple_majority', autoApprove: true }
+
     // 需要简单多数表决
     case 'open_speakers_list':
     case 'moderated_caucus':

@@ -701,6 +701,9 @@ export class ConferenceEngine {
       case 'substantive_vote':
         this.executeSubstantiveVote(motion)
         break
+      case 'change_attendance':
+        this.executeChangeAttendance(motion)
+        break
     }
   }
 
@@ -766,6 +769,19 @@ export class ConferenceEngine {
     this.addMinutesEntry(
       'voting_started',
       `对「${docName || '未命名文件'}」开始实质性投票 (2/3多数)`
+    )
+  }
+
+  private executeChangeAttendance(motion: Motion): void {
+    if (motion.type !== 'change_attendance') return
+    const { proposedByDelegationId, newAttendance } = motion as any
+    this.setAttendance(proposedByDelegationId, newAttendance)
+    const del = this.delegations.find((d) => d.id === proposedByDelegationId)
+    const label = newAttendance === 'present' ? '出席' : '缺席'
+    this.addMinutesEntry(
+      'phase_changed',
+      `${del?.name ?? proposedByDelegationId} 出席状态变更为 ${label}`,
+      { delegationId: proposedByDelegationId }
     )
   }
 

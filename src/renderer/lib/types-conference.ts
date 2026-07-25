@@ -125,6 +125,7 @@ export type MotionType =
   | 'close_meeting' // 闭幕
   | 'reorder_resolution' // 调整投票顺序
   | 'substantive_vote' // 实质性投票
+  | 'change_attendance' // 更改出席状态
 
 export interface AbstractMotion {
   id: string
@@ -201,6 +202,13 @@ export interface SubstantiveVoteMotion extends AbstractMotion {
   documentName: string
 }
 
+/** 更改出席状态 */
+export interface ChangeAttendanceMotion extends AbstractMotion {
+  type: 'change_attendance'
+  /** 新的出席状态 */
+  newAttendance: 'present' | 'absent'
+}
+
 export type Motion =
   | ModeratedCaucusMotion
   | UnmoderatedCaucusMotion
@@ -212,6 +220,7 @@ export type Motion =
   | CloseMeetingMotion
   | ReorderResolutionMotion
   | SubstantiveVoteMotion
+  | ChangeAttendanceMotion
 
 /** 动议类型的中文标签 */
 export const MOTION_LABELS: Record<MotionType, string> = {
@@ -225,7 +234,8 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   suspend_meeting: '暂时休会',
   close_meeting: '闭幕',
   reorder_resolution: '调整投票顺序',
-  substantive_vote: '实质性投票'
+  substantive_vote: '实质性投票',
+  change_attendance: '更改出席状态'
 }
 
 export interface Point {

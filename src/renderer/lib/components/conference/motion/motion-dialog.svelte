@@ -7,7 +7,8 @@
     Gavel,
     Coffee,
     LogOut,
-    Vote
+    Vote,
+    UserRoundCheck
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -31,19 +32,33 @@
 
   const conf = $derived($currentConference)
 
-  // 常用动议列表——根据当前阶段动态调整
+  // Proposer
+  let selectedProposerId = $state('')
+
+  // 获取选中代表团的出席状态
+  const selectedDelegation = $derived(
+    selectedProposerId ? conf?.delegations.find((d) => d.id === selectedProposerId) : null
+  )
+
+  // 常用动议列表——根据当前阶段和选中代表团的出席状态动态调整
   const motionTypes = $derived.by((): MotionType[] => {
+    // 缺席的代表团只能提出"更改出席状态"动议
+    if (selectedDelegation && selectedDelegation.attendance === 'absent') {
+      return ['change_attendance']
+    }
+
     if (conf?.phase === 'voting') {
       // 结束辩论后：可进行实质性投票、开启主发言名单（退出投票阶段）、休会/闭幕
-      return ['substantive_vote', 'open_speakers_list', 'suspend_meeting', 'close_meeting']
+      return ['change_attendance', 'substantive_vote', 'open_speakers_list', 'suspend_meeting', 'close_meeting']
     }
+    // 等待开启主发言名单：首要动议为开启主发言名单
     if (conf?.phase === 'pending_speakers_list') {
-      // 等待开启主发言名单：首要动议为开启主发言名单
-      return ['open_speakers_list']
+      return ['change_attendance', 'open_speakers_list']
     }
     // 主发言名单已开启时不可再次动议开启
     if (conf?.phase === 'general_debate') {
       return [
+        'change_attendance',
         'moderated_caucus',
         'unmoderated_caucus',
         'modify_speaking_time',
@@ -53,6 +68,7 @@
       ]
     }
     return [
+      'change_attendance',
       'open_speakers_list',
       'moderated_caucus',
       'unmoderated_caucus',
@@ -71,7 +87,8 @@
     closure_debate: Gavel,
     suspend_meeting: Timer,
     close_meeting: LogOut,
-    substantive_vote: Vote
+    substantive_vote: Vote,
+    change_attendance: UserRoundCheck
   }
 
   // ---- Form state ----
@@ -92,8 +109,8 @@
   // Substantive Vote
   let documentName = $state('')
   let committedDocumentName = $state('')
-  // Proposer
-  let selectedProposerId = $state('')
+  // Change Attendance
+  let newAttendance = $state<'present' | 'absent'>('present')
 
   function resetForm(): void {
     selectedProposerId = ''
@@ -110,6 +127,7 @@
     committedNewTimeSec = 90
     documentName = ''
     committedDocumentName = ''
+    newAttendance = 'present'
   }
 
   function handleOpenChange(value: boolean): void {
@@ -151,6 +169,9 @@
         break
       case 'substantive_vote':
         motionData.documentName = committedDocumentName.trim() || '未命名文件'
+        break
+      case 'change_attendance':
+        motionData.newAttendance = newAttendance
         break
     }
 
@@ -204,6 +225,8 @@
         return newTimeSec !== committedNewTimeSec
       case 'substantive_vote':
         return documentName !== committedDocumentName
+      case 'change_attendance':
+        return false // no debounce needed for delegation selector
       default:
         return false
     }
@@ -271,7 +294,6 @@
             <DelegationSelector
               delegations={conf.delegations}
               bind:value={selectedProposerId}
-              presentOnly={true}
             />
           </div>
         {/if}
@@ -394,6 +416,31 @@
               </datalist>
             {/if}
             <p class="mt-1 text-[10px] text-muted-foreground">此文件将进入唱名表决（2/3多数）</p>
+          </div>
+        {:else if selectedType === 'change_attendance'}
+          <Separator />
+          <div>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">新出席状态</Label>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance === 'present'
+                  ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'hover:bg-muted'}"
+                onclick={() => (newAttendance = 'present')}
+              >
+                出席
+              </button>
+              <button
+                type="button"
+                class="flex-1 rounded-lg border px-3 py-2 text-sm transition-all {newAttendance === 'absent'
+                  ? 'border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400'
+                  : 'hover:bg-muted'}"
+                onclick={() => (newAttendance = 'absent')}
+              >
+                缺席
+              </button>
+            </div>
           </div>
         {:else if selectedType}
           <div class="text-xs text-muted-foreground">此动议将进入举牌表决</div>

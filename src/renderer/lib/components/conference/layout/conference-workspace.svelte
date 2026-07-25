@@ -231,7 +231,9 @@
     </div>
 
     <!-- Motion Dialog -->
-    <MotionDialog bind:open={motionDialogOpen} />
+    {#key motionDialogOpen}
+      <MotionDialog bind:open={motionDialogOpen} />
+    {/key}
 
     <!-- Point Dialog -->
     <PointDialog bind:open={pointDialogOpen} />
