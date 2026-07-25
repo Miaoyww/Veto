@@ -2,7 +2,7 @@
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
-  import { Mic } from '@lucide/svelte'
+  import { Mic, Coffee } from '@lucide/svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>
@@ -29,7 +29,7 @@
       </div>
     {/if}
 
-    {#if currentSpeaker}
+    {#if currentSpeaker && currentSpeaker.status === 'speaking' && data.currentSpeaker}
       <!-- 当前发言人 -->
       <div class="flex items-center gap-3 text-white/40">
         <div class="h-px w-12 bg-white/10"></div>
@@ -54,14 +54,35 @@
         {/if}
       </div>
 
+      {@const isTimeout = data.caucusTimer.speakerTransition === 'timeout'}
       <!-- 倒计时 -->
       <div
         class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {data
           .currentSpeaker.status === 'paused'
           ? 'text-[#C9A84C]'
-          : 'text-[#5B92E5]'}"
+          : isTimeout
+            ? 'text-red-500 animate-pulse'
+            : 'text-[#5B92E5]'}"
       >
         {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
+      </div>
+    {:else if currentSpeaker && currentSpeaker.status === 'ready'}
+      <!-- 发言人就绪（等待主席开始计时） -->
+      <div class="flex flex-col items-center gap-10">
+        <div class="flex items-center gap-3 text-white/40">
+          <div class="h-px w-12 bg-white/10"></div>
+          <Mic size={20} class="text-[#C9A84C]" />
+          <span class="text-lg tracking-[0.08em] uppercase">即将发言</span>
+          <div class="h-px w-12 bg-white/10"></div>
+        </div>
+
+        <div class="text-center">
+          <div class="text-8xl font-semibold tracking-wide text-white">
+            {currentSpeaker.delegationName}
+          </div>
+        </div>
+
+        <div class="text-lg tracking-wider text-white/15">等待主席开始计时</div>
       </div>
     {/if}
 
@@ -77,11 +98,14 @@
   </div>
 {:else}
   <!-- 自由磋商：总倒计时 -->
+  {@const isPaused = data.caucusTimer.status === 'paused'}
   <div class="flex flex-col items-center gap-10">
     <div class="flex items-center gap-3 text-white/40">
       <div class="h-px w-12 bg-white/10"></div>
-      <Coffee size={20} class="text-[#C9A84C]" />
-      <span class="text-lg tracking-[0.08em] uppercase">自由磋商</span>
+      <Coffee size={20} class={isPaused ? 'text-[#C9A84C]/50' : 'text-[#C9A84C]'} />
+      <span class="text-lg tracking-[0.08em] uppercase">
+        {isPaused ? '计时已暂停' : '自由磋商'}
+      </span>
       <div class="h-px w-12 bg-white/10"></div>
     </div>
 
@@ -92,7 +116,9 @@
     {/if}
 
     <div
-      class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight text-[#C9A84C]"
+      class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {isPaused
+        ? 'text-[#C9A84C]/50'
+        : 'text-[#C9A84C]'}"
     >
       {formatTime(Math.max(0, data.caucusTimer.remainingSec))}
     </div>

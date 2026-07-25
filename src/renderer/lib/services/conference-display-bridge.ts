@@ -213,6 +213,7 @@ export function buildDisplayData(
   extra?: {
     rollCall?: ConferenceDisplayData['rollCall']
     motionDraft?: ConferenceDisplayData['motionDraft']
+    speakerTransition?: 'timeout' | 'ended'
   }
 ): ConferenceDisplayData {
   // 当前发言人
@@ -266,7 +267,7 @@ export function buildDisplayData(
       remainingSec: Math.max(0, (conf.activeCaucus.endAt - now) / 1000),
       totalSec: (conf.activeCaucus.endAt - conf.activeCaucus.startedAt) / 1000,
       type: conf.activeCaucus.type,
-      status: conf.activeSpeaker?.pausedAt != null ? 'paused' : 'running',
+      status: (conf.activeCaucus?.pausedAt != null || conf.activeSpeaker?.pausedAt != null) ? 'paused' : 'running',
       topic: conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
         ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
         : undefined,
@@ -275,7 +276,8 @@ export function buildDisplayData(
         status: s.status,
         allocatedTimeSec: s.allocatedTimeSec
       })),
-      currentSpeakerIndex: conf.activeCaucus.currentSpeakerIndex
+      currentSpeakerIndex: conf.activeCaucus.currentSpeakerIndex,
+      speakerTransition: extra?.speakerTransition
     }
   }
 

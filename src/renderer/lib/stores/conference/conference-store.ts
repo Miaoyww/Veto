@@ -814,6 +814,31 @@ export function appendCaucusSpeaker(delegationId: string): void {
   }
 }
 
+export function pauseCaucus(): void {
+  updateCurrentConference((c) => {
+    if (!c.activeCaucus) return c
+    return {
+      ...c,
+      activeCaucus: { ...c.activeCaucus, pausedAt: Date.now() }
+    }
+  })
+}
+
+export function resumeCaucus(remainingSec: number): void {
+  const now = Date.now()
+  updateCurrentConference((c) => {
+    if (!c.activeCaucus) return c
+    return {
+      ...c,
+      activeCaucus: {
+        ...c.activeCaucus,
+        endAt: now + remainingSec * 1000,
+        pausedAt: undefined
+      }
+    }
+  })
+}
+
 export function endCaucus(): void {
   updateCurrentConference((c) => ({
     ...c,

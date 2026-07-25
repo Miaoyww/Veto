@@ -326,6 +326,8 @@ export interface Conference {
     endAt: number
     /** 已过总秒数 */
     elapsedSec: number
+    /** 暂停时间戳（非空 = 已暂停，用于自由磋商暂停） */
+    pausedAt?: number
     /** 有主持磋商发言顺序（按发言列表顺序） */
     caucusSpeakers?: Array<{
       delegationId: string
@@ -428,6 +430,8 @@ export interface ConferenceDisplayData {
       allocatedTimeSec: number
     }>
     currentSpeakerIndex?: number
+    /** 发言人切换原因：timeout=计时器自然到期，ended=主席手动结束 */
+    speakerTransition?: 'timeout' | 'ended'
   }
   recentMinutes: Array<{
     timestamp: number

@@ -4,6 +4,7 @@
   import { Timer, Coffee, MessageSquare, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
+  import { Separator } from '$lib/components/ui/separator/index.js'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import {
@@ -12,7 +13,9 @@
     advanceCaucusSpeaker,
     startCaucusSpeaker,
     pauseSpeaker,
-    resumeSpeaker as resumeSpeakerStore
+    resumeSpeaker as resumeSpeakerStore,
+    pauseCaucus,
+    resumeCaucus
   } from '$lib/stores/conference/conference-store'
   import {
     createTimer,
@@ -66,7 +69,7 @@
     isPaused = false
     advanceCaucusSpeaker()
     const c = get(currentConference)
-    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c, { speakerTransition: 'ended' }))
   }
 
   function handleYield(type: 'chair' | 'delegate' | 'question' | 'comment'): void {
@@ -74,7 +77,7 @@
     isPaused = false
     advanceCaucusSpeaker()
     const c = get(currentConference)
-    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c, { speakerTransition: 'ended' }))
   }
 
   function handleStartSpeaker(): void {
@@ -120,7 +123,7 @@
           // Speaker time expired → advance to next
           advanceCaucusSpeaker()
           const c = get(currentConference)
-          if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
+          if (c) getDisplayBridge().sendUpdate(buildDisplayData(c, { speakerTransition: 'timeout' }))
         }
       )
     }
@@ -133,6 +136,8 @@
   // Total countdown for unmoderated
   $effect(() => {
     if (!activeCaucus || isModerated) return
+    // 暂停状态下不启动计时器（由 handleResumeCaucus 恢复）
+    if (activeCaucus.pausedAt != null) return
 
     const now = Date.now()
     const remaining = Math.max(0, (activeCaucus.endAt - now) / 1000)
@@ -170,6 +175,23 @@
 
   function handleEndCurrentSpeaker(): void {
     advanceCaucusSpeaker()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
+  }
+
+  let isCaucusPaused = $state(false)
+
+  function handlePauseCaucus(): void {
+    getTimer('caucus')?.stop()
+    isCaucusPaused = true
+    pauseCaucus()
+    const c = get(currentConference)
+    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
+  }
+
+  function handleResumeCaucus(): void {
+    isCaucusPaused = false
+    resumeCaucus(totalRemainingSec)
     const c = get(currentConference)
     if (c) getDisplayBridge().sendUpdate(buildDisplayData(c))
   }
@@ -284,10 +306,14 @@
     {:else if !isModerated}
       <!-- 自由磋商：总倒计时 -->
       <div class="text-center">
+        {#if isCaucusPaused}
+          <div class="text-sm font-medium text-amber-500 mb-2 tracking-wider uppercase">计时已暂停</div>
+        {/if}
         <div
           class="font-mono text-7xl font-bold tabular-nums transition-colors"
-          class:text-red-500={totalRemainingSec <= 30}
-          class:text-foreground={totalRemainingSec > 30}
+          class:text-amber-500={isCaucusPaused}
+          class:text-red-500={!isCaucusPaused && totalRemainingSec <= 30}
+          class:text-foreground={!isCaucusPaused && totalRemainingSec > 30}
         >
           {formatTime(totalRemainingSec)}
         </div>
@@ -299,7 +325,7 @@
       <!-- 进度条 -->
       <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
-          class="h-full rounded-full transition-all duration-1000 {totalRemainingSec <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
+          class="h-full rounded-full transition-all duration-1000 {isCaucusPaused ? 'bg-amber-500' : totalRemainingSec <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
           style="width: {progressPercent}%"
         ></div>
       </div>
@@ -307,6 +333,24 @@
       <Separator />
 
       <div class="flex gap-4">
+        {#if isCaucusPaused}
+          <Button
+            variant="default"
+            onclick={handleResumeCaucus}
+            class="min-w-[140px] gap-2"
+          >
+            <Timer size={14} />
+            恢复计时
+          </Button>
+        {:else}
+          <Button
+            variant="outline"
+            onclick={handlePauseCaucus}
+            class="min-w-[140px] gap-2"
+          >
+            暂停计时
+          </Button>
+        {/if}
         <Button
           variant="destructive"
           onclick={endCaucus}
