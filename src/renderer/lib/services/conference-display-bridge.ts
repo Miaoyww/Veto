@@ -387,6 +387,7 @@ export function buildDisplayData(
     phase: effectivePhase,
     venue: conf.venue,
     name: conf.name,
+    presentCount: conf.delegations.filter((d) => d.attendance === 'present').length,
     currentSpeaker: (() => {
       if (!currentSpeakerName) return undefined
       const now = Date.now()

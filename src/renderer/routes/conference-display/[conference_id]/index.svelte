@@ -85,7 +85,7 @@
   const phase = $derived(displayData?.phase ?? null)
 
   const headerThresholds = $derived.by(() => {
-    const present = displayData?.votingSession?.tally.present
+    const present = displayData?.presentCount
     if (present != null && present > 0) {
       return {
         simpleMajority: Math.floor(present / 2) + 1,

@@ -481,6 +481,8 @@ export interface ConferenceDisplayData {
   phase: ConferencePhase
   venue: string
   name: string
+  /** 当前出席的代表团数量（点名结束后持久可用） */
+  presentCount: number
   /** 动议编辑草稿（编辑中实时同步） */
   motionDraft?: MotionDraft
   /** 问题编辑草稿（编辑中实时同步） */

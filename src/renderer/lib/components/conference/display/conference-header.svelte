@@ -38,16 +38,18 @@
   {/if}
 
   <div class="ml-auto flex items-center gap-6">
-    <div class="flex items-center gap-3">
-      <div class="rounded-md px-5 py-1.5 text-center">
-        <div class="text-base tracking-wider text-white/25">简单多数</div>
-        <div class="text-4xl font-semibold tabular-nums text-white/70">{simpleMajority}</div>
+    {#if phase && phase !== 'preamble' && phase !== 'roll_call'}
+      <div class="flex items-center gap-3">
+        <div class="rounded-md px-5 py-1.5 text-center">
+          <div class="text-base tracking-wider text-white/25">简单多数</div>
+          <div class="text-4xl font-semibold tabular-nums text-white/70">{simpleMajority}</div>
+        </div>
+        <div class="rounded-md px-5 py-1.5 text-center">
+          <div class="text-base tracking-wider text-white/25">2/3 多数</div>
+          <div class="text-4xl font-semibold tabular-nums text-white/70">{twoThirds}</div>
+        </div>
       </div>
-      <div class="rounded-md px-5 py-1.5 text-center">
-        <div class="text-base tracking-wider text-white/25">2/3 多数</div>
-        <div class="text-4xl font-semibold tabular-nums text-white/70">{twoThirds}</div>
-      </div>
-    </div>
+    {/if}
     <div class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-2.5">
       <div class="h-2 w-2 rounded-full bg-[#5B92E5]"></div>
       <span class="text-base font-medium tracking-[0.05em] text-white/70 uppercase">
