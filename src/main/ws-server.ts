@@ -19,9 +19,13 @@ const WS_BASE_PORT = 19527
 const WS_MAX_RETRY = 99
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
+const HEARTBEAT_INTERVAL = 5_000   // 每 5 秒发送一次 ping
+const HEARTBEAT_TIMEOUT = 10_000  // 超过 10 秒无 pong 视为断连
+
 interface WsClient {
   socket: Duplex
   isHost: boolean
+  lastPong: number
 }
 
 const clients = new Set<WsClient>()
@@ -53,6 +57,12 @@ function encodeFrame(payload: string): Buffer {
   return Buffer.concat(frames)
 }
 
+// ---- WebSocket ping 帧编码（opcode 0x9） ----
+function encodePingFrame(): Buffer {
+  // FIN + opcode 0x9 (ping)，payload 为空
+  return Buffer.from([0x89, 0x00])
+}
+
 // ---- WebSocket 帧解码 ----
 function decodeFrame(data: Buffer): string | null {
   if (data.length < 2) return null
@@ -82,8 +92,9 @@ function decodeFrame(data: Buffer): string | null {
     }
   }
 
-  // 只处理 text (opcode 1) 和 close (opcode 8)
+  // 只处理 text (opcode 1)、close (opcode 8)、pong (opcode 0xA)
   if (opcode === 0x8) return '__CLOSE__'
+  if (opcode === 0xA) return '__PONG__'
   if (opcode === 0x1) return payload.toString('utf-8')
   return null
 }
@@ -129,7 +140,7 @@ export function startWsServer(): Promise<number> {
         '\r\n'
     )
 
-    const client: WsClient = { socket, isHost: false }
+    const client: WsClient = { socket, isHost: false, lastPong: Date.now() }
     clients.add(client)
 
     console.log(`[WS] Client connected (total: ${clients.size})`)
@@ -169,6 +180,11 @@ export function startWsServer(): Promise<number> {
           return
         }
 
+        if (msg === '__PONG__') {
+          client.lastPong = Date.now()
+          continue
+        }
+
         if (msg) {
           try {
             const parsed = JSON.parse(msg)
@@ -192,6 +208,34 @@ export function startWsServer(): Promise<number> {
     socket.on('error', () => {
       clients.delete(client)
     })
+  })
+
+  // ---- 心跳检测 ----
+  const heartbeatTimer = setInterval(() => {
+    const now = Date.now()
+    const pingFrame = encodePingFrame()
+
+    for (const client of clients) {
+      // 超时未响应 pong，视为断连
+      if (now - client.lastPong > HEARTBEAT_TIMEOUT) {
+        clients.delete(client)
+        try { client.socket.destroy() } catch { /* ignore */ }
+        console.log(`[WS] Client heartbeat timeout (total: ${clients.size})`)
+        continue
+      }
+
+      // 发送 ping
+      try {
+        client.socket.write(pingFrame)
+      } catch {
+        clients.delete(client)
+      }
+    }
+  }, HEARTBEAT_INTERVAL)
+
+  // 服务器关闭时清理定时器
+  server.on('close', () => {
+    clearInterval(heartbeatTimer)
   })
 
   return new Promise((resolve, reject) => {
