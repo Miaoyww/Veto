@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { bootstrapStore, saveToStore, deleteFromStore } from '../store-bridge';
+import { syncAcrossWindows } from '../cross-window-sync';
 
 export interface GlobalSettings {
 	/** 新建战局时的默认图标风格 */
@@ -23,24 +24,16 @@ const DEFAULTS: GlobalSettings = {
 };
 
 function createGlobalSettings() {
-	const { subscribe, set, update } = writable<GlobalSettings>({ ...DEFAULTS });
+	const store = writable<GlobalSettings>({ ...DEFAULTS });
+	const { subscribe, set, update } = store
 
 	// 异步启动：从文件加载（文件是权威来源，同步到 localStorage）
 	bootstrapStore<GlobalSettings>('settings', DEFAULTS).then((data) => {
 		set(data);
 	});
 
-	// 跨窗口同步：监听其他窗口对 localStorage 的修改
-	if (typeof window !== 'undefined') {
-		window.addEventListener('storage', (e) => {
-			if (e.key === 'veto_global_settings' && e.newValue) {
-				try {
-					const parsed = JSON.parse(e.newValue) as GlobalSettings
-					set(parsed)
-				} catch { /* 忽略无效 JSON */ }
-			}
-		})
-	}
+	// 跨窗口同步：其他窗口修改设置后自动更新本地 store
+	syncAcrossWindows(store, 'veto_global_settings')
 
 	return {
 		subscribe,
