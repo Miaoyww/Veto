@@ -13,8 +13,10 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: veto
+  executableName: Veto
 nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
