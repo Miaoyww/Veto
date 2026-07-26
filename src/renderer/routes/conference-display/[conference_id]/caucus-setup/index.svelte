@@ -6,6 +6,7 @@
    */
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
+  import AutoFitText from '$lib/components/conference/display/auto-fit-text.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()
@@ -21,9 +22,13 @@
   <div class="flex w-full max-w-5xl flex-col items-center gap-10">
     <!-- Topic 大字 -->
     {#if setup.topic}
-      <div class="text-9xl font-semibold tracking-wide">
-        {setup.topic}
-      </div>
+      <AutoFitText
+        text={setup.topic}
+        maxRem={8}
+        minRem={2.5}
+        maxLines={3}
+        class="font-semibold tracking-wide text-white"
+      />
     {/if}
 
     <!-- 磋商准备 标题 -->

@@ -20,6 +20,7 @@
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData, MotionDraft } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
+  import AutoFitText from '$lib/components/conference/display/auto-fit-text.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
@@ -123,74 +124,75 @@
         >
           <!-- 描述大字（focus 模式：居中） -->
           {#if isFocused && displayTitle}
-            <div class="flex flex-1 flex-col items-center justify-center gap-4">
-              <div
-                class="font-semibold tracking-wide text-white"
-                style="animation: fadeUp 0.7s ease both; font-size: 7rem"
-              >
-                {displayTitle}
+            <div class="flex flex-col items-center justify-center gap-6">
+              <div style="animation: fadeUp 0.7s ease both">
+                <AutoFitText
+                  text={displayTitle}
+                  maxRem={7}
+                  minRem={2.5}
+                  maxLines={4}
+                  maxHeightVh={45}
+                  class="font-semibold tracking-wide text-white max-w-[85vw] text-balance break-words"
+                />
               </div>
               {#if displaySubtitle}
                 <div
-                  class="tracking-wide text-white/60"
-                  style="animation: fadeUp 0.7s ease both; font-size: 4rem"
+                  class="tracking-wide text-white/60 text-3xl"
+                  style="animation: fadeUp 0.7s ease both"
                 >
                   {displaySubtitle}
                 </div>
               {/if}
+              <div class="mt-6 text-3xl tracking-wider text-white/40">
+                {#if draft?.totalTimeSec}
+                  <div class="text-3xl tracking-wider text-white/25">
+                    时长：<span class="text-white/45">{draft.totalTimeSec} 秒</span>
+                    {#if draft?.speakingTimePerPersonSec}
+                      <span class="mx-3 text-white/10">|</span>
+                      每人发言
+                      <span class="text-white/45">{draft.speakingTimePerPersonSec} 秒</span>
+                    {/if}
+                  </div>
+                {/if}
+                {#if draft?.newTimeSec != null}
+                  <div class="text-3xl tracking-wider text-white/25">
+                    发言时间：<span class="text-white/45">{draft.newTimeSec} 秒</span>
+                  </div>
+                {/if}
+              </div>
             </div>
           {/if}
 
-          <!-- 头部信息（focus 时移到底部） -->
-          <div class="flex flex-col items-center gap-4">
-            <!-- 动议 标签 -->
-            <div class="flex items-center justify-center gap-3">
-              <Icon size={24} class="text-[#5B92E5]" />
-              <span class="text-3xl font-semibold tracking-[0.08em] text-[#5B92E5] uppercase"
-                >动议</span
-              >
-            </div>
-
-            {#if draft?.type}
-              <div class="text-4xl tracking-wide text-white/40">
-                {MOTION_LABELS[draft.type] ?? draft.type}
+          <!-- 头部信息（收到 topic 后自动隐去） -->
+          {#if !isFocused}
+            <div class="flex flex-col items-center gap-4">
+              <!-- 动议 标签 -->
+              <div class="flex items-center justify-center gap-3">
+                <Icon size={24} class="text-[#5B92E5]" />
+                <span class="text-3xl font-semibold tracking-[0.08em] text-[#5B92E5] uppercase"
+                  >动议</span
+                >
               </div>
-            {/if}
 
-            {#if draft?.proposedByName}
-              <div
-                class="font-semibold tracking-wide text-white"
-                style="transition: font-size 0.7s ease"
-                class:text-9xl={!isFocused}
-                class:text-5xl={isFocused}
-              >
-                {draft.proposedByName}
-              </div>
-              <div
-                class="tracking-wide text-white/30"
-                style="transition: font-size 0.7s ease"
-                class:text-7xl={!isFocused}
-                class:text-2xl={isFocused}
-              >
-                发起动议
-              </div>
-            {/if}
-
-            {#if draft?.totalTimeSec}
-              <div class="text-3xl tracking-wider text-white/25">
-                时长：<span class="text-white/45">{draft.totalTimeSec} 秒</span>
-                {#if draft?.speakingTimePerPersonSec}
-                  <span class="mx-3 text-white/10">|</span>
-                  每人发言 <span class="text-white/45">{draft.speakingTimePerPersonSec} 秒</span>
+              {#if draft?.proposedByName}
+                <div style="animation: expandTracking 0.8s ease-out both">
+                  <AutoFitText
+                    text={draft.proposedByName}
+                    maxRem={8}
+                    minRem={2.5}
+                    maxLines={1}
+                    class="font-semibold text-white"
+                  />
+                </div>
+                <div class="tracking-wide text-white/30 text-4xl">动议</div>
+                {#if draft?.type}
+                  <div class="text-4xl tracking-wide text-white/40">
+                    {MOTION_LABELS[draft.type] ?? draft.type}
+                  </div>
                 {/if}
-              </div>
-            {/if}
-            {#if draft?.newTimeSec != null}
-              <div class="text-3xl tracking-wider text-white/25">
-                发言时间：<span class="text-white/45">{draft.newTimeSec} 秒</span>
-              </div>
-            {/if}
-          </div>
+              {/if}
+            </div>
+          {/if}
         </div>
       {:else if motionStage === 'voting' && activeMotion}
         <!-- 表决阶段 -->
@@ -201,18 +203,16 @@
           >
         </div>
 
-        <div class="mt-4 flex flex-col items-center gap-2">
+        <div class="mt-5 flex flex-col items-center gap-2">
           <span class="text-7xl font-semibold tracking-wide text-white">{displayTitle}</span>
-          {#if displaySubtitle}
-            <span class="text-4xl tracking-wide text-white/60">{displaySubtitle}</span>
-          {/if}
         </div>
+
         <div class="mt-3 text-3xl tracking-wider text-white/40">
           由 <span class="text-white/70">{activeMotion.proposedByName}</span> 提出
         </div>
 
         {#if activeMotion.type === 'moderated_caucus'}
-          <div class="mt-5 space-y-2 text-2xl tracking-wider text-white/25">
+          <div class="mt-15 space-y-2 text-2xl tracking-wider text-white/25">
             {#if activeMotion.totalTimeSec}
               <p>总时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span></p>
             {/if}
@@ -233,14 +233,6 @@
             修改发言时间为 <span class="text-white/45">{activeMotion.newTimeSec} 秒</span>
           </div>
         {/if}
-
-        <!-- 举牌表决提示 -->
-        <div class="mt-8 border-t border-white/10 pt-6">
-          <div class="text-4xl font-semibold tracking-[0.06em] text-white/50">
-            请同意该动议的国家高举国家牌
-          </div>
-          <div class="mt-3 text-xl tracking-wider text-white/15">主席团正在观察举牌情况</div>
-        </div>
       {:else if motionStage === 'result' && activeMotion}
         <!-- 结果 -->
         {@const isApproved = activeMotion.status === 'approved'}
@@ -264,7 +256,7 @@
         </div>
 
         <div class="mt-4 text-5xl font-semibold tracking-wide text-white">
-          {MOTION_LABELS[activeMotion.type] ?? activeMotion.type}
+          {displayTitle}
         </div>
         <div class="mt-3 text-3xl tracking-wider text-white/40">
           由 <span class="text-white/70">{activeMotion.proposedByName}</span> 提出
@@ -279,17 +271,37 @@
     0% {
       opacity: 0;
       transform: scale(0.5) translateY(40px);
+      letter-spacing: 0;
     }
     60% {
       opacity: 1;
       transform: scale(1.05) translateY(-8px);
+      letter-spacing: 0.08em;
     }
     80% {
       transform: scale(0.97) translateY(3px);
+      letter-spacing: 0.12em;
     }
     100% {
       opacity: 1;
       transform: scale(1) translateY(0);
+      letter-spacing: 0.15em;
+    }
+  }
+
+  @keyframes expandTracking {
+    0% {
+      opacity: 0;
+      letter-spacing: 0;
+      transform: scale(0.8);
+    }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+      letter-spacing: 0.3em;
+      transform: scale(1);
     }
   }
 </style>

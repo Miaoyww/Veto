@@ -331,9 +331,13 @@
           <Separator />
           <div class="space-y-3">
             <div>
-              <Label class="mb-1.5 block text-xs text-muted-foreground">主题</Label>
+              <div class="mb-1.5 flex items-center justify-between">
+                <Label class="text-xs text-muted-foreground">主题</Label>
+                <span class="text-[10px] text-muted-foreground/60">{mcTopic.length}/100</span>
+              </div>
               <Input
                 bind:value={mcTopic}
+                maxlength={100}
                 class="h-9 text-sm"
                 onblur={() => (committedTopic = mcTopic)}
               />

@@ -243,7 +243,7 @@
     {:else}
       <!-- 主展示区（phase 动态切换） -->
       <div class="flex items-start justify-center overflow-hidden px-16" style={contentStyle}>
-        <div class="flex w-full max-w-5xl flex-col items-center">
+        <div class="flex w-full flex-col items-center">
           {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
             <QuestionDisplay data={displayData} />
           {:else if effectivePhase === 'motion' && !isSpecialMotion}
