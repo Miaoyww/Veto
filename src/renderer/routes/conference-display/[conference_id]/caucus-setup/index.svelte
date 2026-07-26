@@ -5,6 +5,8 @@
    * 磋商发言名单设置阶段 —— Display 组件。
    */
   import type { ConferenceDisplayData } from '$lib/types-conference'
+  import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
+  import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
@@ -42,21 +44,11 @@
     </div>
 
     <!-- 发言名单 -->
-    {#if setup.speakerNames.length > 0}
-      <div class="flex flex-col gap-3">
-        {#each setup.speakerNames as name, i (i)}
-          <div class="flex items-center gap-4">
-            <span class="w-10 text-right font-mono text-2xl tabular-nums text-white/20">
-              {i + 1}
-            </span>
-            <span class="text-3xl tracking-wide text-white/50">
-              {name}
-            </span>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div class="text-2xl tracking-wider text-white/15">等待主席团添加发言代表团</div>
-    {/if}
+    <SpeakerQueueDisplay
+      speakers={setup.speakerNames.map((d) => ({ delegation: d }))}
+      max={DISPLAY_MAX_SPEAKERS}
+      onlyList={true}
+      emptyText="等待主席团添加发言代表团"
+    />
   </div>
 {/if}

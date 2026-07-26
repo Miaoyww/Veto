@@ -14,6 +14,7 @@
   import { formatTime } from '$lib/utils'
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
+  import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
@@ -136,7 +137,7 @@
   {@const displaySubtitle = data.readySpeaker ? '等待主席开始计时' : ''}
   <SpeakerQueueDisplay
     speakers={allSpeakers}
-    max={data.readySpeaker ? 5 : 4}
+    max={DISPLAY_MAX_SPEAKERS}
     title={displayTitle}
     subtitle={displaySubtitle}
   />

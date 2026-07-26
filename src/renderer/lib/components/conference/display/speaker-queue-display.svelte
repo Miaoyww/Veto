@@ -17,7 +17,8 @@
     max = Infinity,
     emptyText = '等待主席添加发言人',
     title = '主发言名单',
-    subtitle = ''
+    subtitle = '',
+    onlyList = false
   }: {
     speakers: Speaker[]
     max?: number
@@ -25,21 +26,28 @@
     title?: string
     /** 显示在下一个发言名称下方的状态文字，如"等待主席开始计时" */
     subtitle?: string
+    /**
+     * 仅显示发言名单（无标题栏、无"下一个发言"高亮大字体）。
+     * 此时 title / subtitle / emptyText 不需要填写。
+     */
+    onlyList?: boolean
   } = $props()
 
-  const nextSpeaker = $derived(speakers[0] ?? null)
-  const visibleQueue = $derived(speakers.slice(1, max))
-  const hasMore = $derived(speakers.length > max)
-  const remaining = $derived(speakers.length - max)
+  const nextSpeaker = $derived(onlyList ? null : (speakers[0] ?? null))
+  const visibleQueue = $derived(onlyList ? speakers.slice(0, max) : speakers.slice(1, max))
+  const hasMore = $derived(speakers.length > (onlyList ? max : max + 1))
+  const remaining = $derived(speakers.length - (onlyList ? max : max + 1))
 </script>
 
 <div class="flex w-full flex-col items-center gap-8">
-  <div class="flex items-center gap-3 text-white/40">
-    <div class="h-px w-12 bg-white/10"></div>
-    <Mic size={20} class="text-[#5B92E5]" />
-    <span class="text-lg tracking-[0.08em] uppercase">{title}</span>
-    <div class="h-px w-12 bg-white/10"></div>
-  </div>
+  {#if !onlyList}
+    <div class="flex items-center gap-3 text-white/40">
+      <div class="h-px w-12 bg-white/10"></div>
+      <Mic size={20} class="text-[#5B92E5]" />
+      <span class="text-lg tracking-[0.08em] uppercase">{title}</span>
+      <div class="h-px w-12 bg-white/10"></div>
+    </div>
+  {/if}
 
   {#if nextSpeaker}
     <!-- 下一个发言 -->
@@ -65,7 +73,7 @@
       {#each visibleQueue as speaker, i (speaker.delegation.name)}
         <div class="flex items-center justify-center gap-4 px-6 py-2.5">
           <span class="text-sm tabular-nums text-white/25">
-            {i + 2}
+            {onlyList ? i + 1 : i + 2}
           </span>
           <span class="text-xl font-medium text-white/50">
             {speaker.delegation.name}

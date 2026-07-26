@@ -527,9 +527,9 @@ export function buildDisplayData(
             speakerDelegationIds: conf.caucusSetup!.speakerDelegationIds,
             speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
               (id) =>
-                engine?.getDelegation(id)?.name ??
-                conf.delegations.find((d) => d.id === id)?.name ??
-                id
+                engine?.getDelegation(id) ??
+                conf.delegations.find((d) => d.id === id) ??
+                { id, name: id }
             )
           }
         })()

@@ -4,6 +4,7 @@
   import { formatTime } from '$lib/utils'
   import { Mic, Coffee } from '@lucide/svelte'
   import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
+  import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>
@@ -48,7 +49,7 @@
         {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
       </div>
     {:else}
-      <SpeakerQueueDisplay {speakers} max={4} title="有主持的核心磋商" />
+      <SpeakerQueueDisplay {speakers} max={DISPLAY_MAX_SPEAKERS} title="有主持的核心磋商" />
     {/if}
   </div>
 {:else}

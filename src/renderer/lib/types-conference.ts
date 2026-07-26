@@ -535,7 +535,7 @@ export interface ConferenceDisplayData {
     proposerName?: string
     proposerPosition: 'first' | 'last'
     speakerDelegationIds: string[]
-    speakerNames: string[]
+    speakerNames: Delegation[]
   }
   caucusTimer?: {
     remainingSec: number
