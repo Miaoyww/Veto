@@ -250,7 +250,8 @@
       !isDirty &&
       (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
       (selectedType !== 'moderated_caucus' ||
-        (committedMcTotalSec != null &&
+        (committedTopic.trim() !== '' &&
+          committedMcTotalSec != null &&
           committedMcTotalSec > 0 &&
           committedMcSpeakerSec != null &&
           committedMcSpeakerSec > 0))
@@ -350,19 +351,43 @@
                   class="h-9 text-sm"
                   onblur={() => (committedMcTotalSec = mcTotalSec)}
                 />
+                <div class="mt-1.5 flex gap-1">
+                  {#each [180, 360, 600] as sec (sec)}
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onclick={() => ((mcTotalSec = sec), (committedMcTotalSec = sec))}
+                    >
+                      {sec}s
+                    </Button>
+                  {/each}
+                </div>
               </div>
               <div>
                 <Label class="mb-1.5 block text-xs text-muted-foreground">每人发言（秒）</Label>
                 <Input
                   type="number"
                   min="15"
-                  max="600"
+                  max={mcTotalSec ?? 600}
                   step="15"
-                  placeholder="必填"
+                  placeholder="先填总时长"
+                  disabled={mcTotalSec == null}
                   bind:value={mcSpeakerSec}
                   class="h-9 text-sm"
                   onblur={() => (committedMcSpeakerSec = mcSpeakerSec)}
                 />
+                <div class="mt-1.5 flex gap-1">
+                  {#each [60, 120, 180] as sec (sec)}
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      disabled={mcTotalSec == null}
+                      onclick={() => ((mcSpeakerSec = sec), (committedMcSpeakerSec = sec))}
+                    >
+                      {sec}s
+                    </Button>
+                  {/each}
+                </div>
               </div>
             </div>
             {#if committedMcTotalSec != null && committedMcSpeakerSec != null && committedMcTotalSec > 0 && committedMcSpeakerSec > 0}

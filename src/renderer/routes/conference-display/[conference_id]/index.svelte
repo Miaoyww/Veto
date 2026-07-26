@@ -93,8 +93,6 @@
     }
   })
 
-  const phase = $derived(displayData?.phase ?? null)
-
   const headerThresholds = $derived.by(() => {
     const voting = displayData?.votingCount
     if (voting != null && voting > 0) {
@@ -149,7 +147,7 @@
       hasActiveMotion: displayData?.activeMotion != null,
       hasCurrentSpeaker: displayData?.currentSpeaker != null,
       hasCaucusTimer: displayData?.caucusTimer != null,
-      hasVotingSession: displayData?.votingSession != null,
+      hasVotingSession: displayData?.votingSession != null
     })
   })
 
