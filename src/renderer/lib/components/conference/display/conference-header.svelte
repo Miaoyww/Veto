@@ -23,7 +23,7 @@
   } = $props()
 </script>
 
-<div class="relative flex items-center gap-6 border-b border-white/10 px-10 py-4">
+<div class="relative flex items-center gap-6 border-b border-white/10 px-10 py-2">
   <div class="flex items-center gap-4">
     <div>
       <h1 class="text-xl font-semibold tracking-[0.04em] text-white">{venue}</h1>

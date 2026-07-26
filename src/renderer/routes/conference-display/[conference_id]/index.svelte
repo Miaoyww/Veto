@@ -232,8 +232,8 @@
         status={attendanceChange.attendance}
       />
     {:else}
-      <!-- 中部：主展示区（phase 动态切换） -->
-      <div class="flex flex-1 items-center justify-center overflow-hidden px-16">
+      <!-- 主展示区（phase 动态切换） -->
+      <div class="flex items-start justify-center overflow-hidden px-16">
         <div class="flex w-full max-w-5xl flex-col items-center">
           {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
             <QuestionDisplay data={displayData} />

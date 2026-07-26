@@ -6,7 +6,17 @@
    *
    * 阶段流转：editing（编辑中） → voting（表决中） → result（结果）
    */
-  import { Presentation, MessageSquare, Coffee, Pencil, Gavel, Timer, LogOut, Vote, UserRoundCheck } from '@lucide/svelte'
+  import {
+    Presentation,
+    MessageSquare,
+    Coffee,
+    Pencil,
+    Gavel,
+    Timer,
+    LogOut,
+    Vote,
+    UserRoundCheck
+  } from '@lucide/svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData, MotionDraft } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
