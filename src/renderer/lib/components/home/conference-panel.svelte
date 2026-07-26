@@ -12,11 +12,10 @@
   import { fly } from 'svelte/transition'
 
   interface Props {
-    mode: string | null
     class?: string
   }
 
-  let { mode, class: className }: Props = $props()
+  let { class: className }: Props = $props()
 
   let query = $state('')
   let dialogOpen = $state(false)
@@ -57,11 +56,7 @@
 
     <!-- 右侧：操作 -->
     <div class="flex justify-end gap-2">
-      <Button
-        variant="outline"
-        onclick={() => (displayOnlyDialogOpen = true)}
-        class="gap-2"
-      >
+      <Button variant="outline" onclick={() => (displayOnlyDialogOpen = true)} class="gap-2">
         <Monitor size={16} />
         仅展示
       </Button>

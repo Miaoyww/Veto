@@ -76,6 +76,20 @@ function parseRoute(url: URL): ParsedRoute {
     routeId = '/conference/[conference_id]'
   }
 
+  // /tools/<id>
+  const toolsIdMatch = actualPath.match(/^\/tools\/([\w-]+)$/)
+  if (toolsIdMatch) {
+    params.tool_id = toolsIdMatch[1]!
+    routeId = '/tools/[tool_id]'
+    return { url, pathname, params, routeId }
+  }
+
+  // /tools
+  if (actualPath === '/tools') {
+    routeId = '/tools'
+    return { url, pathname, params, routeId }
+  }
+
   // /settings
   if (actualPath === '/settings') {
     routeId = '/settings'

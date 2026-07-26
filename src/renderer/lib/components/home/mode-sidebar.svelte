@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Swords, Users } from '@lucide/svelte'
+  import { Swords, Users, Wrench } from '@lucide/svelte'
   import { VETO_NAME } from '$lib/const'
   import ModeCard from './mode-card.svelte'
   import { fly } from 'svelte/transition'
@@ -38,6 +38,14 @@
         description="会议模拟 · 规则斗争与妥协谈判"
         selected={selectedMode === 'conference'}
         onclick={() => onSelectMode('conference')}
+      />
+
+      <ModeCard
+        icon={Wrench}
+        label="工具"
+        description="时间线模拟 · 辅助工具"
+        selected={selectedMode === 'tools'}
+        onclick={() => onSelectMode('tools')}
       />
     </div>
 
