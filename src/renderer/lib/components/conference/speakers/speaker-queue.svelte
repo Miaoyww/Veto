@@ -67,8 +67,7 @@
     rawSpeakers.map((s: any) => ({
       id: s.id ?? s.delegationId,
       delegationId: s.delegationId,
-      delegationName:
-        s.delegationName ?? conf?.delegations.find((d: any) => d.id === s.delegationId)?.name ?? '',
+      delegationName: conf?.delegations.find((d: any) => d.id === s.delegationId)?.name ?? '',
       status: s.status as 'waiting' | 'ready' | 'speaking',
       allocatedTimeSec: s.allocatedTimeSec ?? 120
     }))
@@ -85,8 +84,10 @@
   const activeSpeaker = $derived.by(() => {
     const eng = conf?.activeSpeaker
     if (!eng) return null
+
     const entry = speakers.find((s) => s.id === eng.entryId || s.delegationId === eng.entryId)
     if (!entry) return null
+
     return { ...entry, status: 'speaking' as const }
   })
 

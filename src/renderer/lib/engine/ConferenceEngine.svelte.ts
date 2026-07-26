@@ -92,10 +92,8 @@ export class SpeakerList {
     const entry: SpeakerEntry = {
       id,
       delegationId: delegation.id,
-      addedAt: Date.now(),
       allocatedTimeSec: allocatedTimeSec ?? 120,
-      status: 'waiting',
-      delegation
+      status: 'waiting'
     }
     this.entries = [...this.entries, entry]
     return id
@@ -106,9 +104,7 @@ export class SpeakerList {
   }
 
   readySpeaker(entryId: string): void {
-    this.entries = this.entries.map((s) =>
-      s.id === entryId ? { ...s, status: 'ready' } : s
-    )
+    this.entries = this.entries.map((s) => (s.id === entryId ? { ...s, status: 'ready' } : s))
   }
 
   startSpeaking(entryId: string): SpeakerEntry | null {
@@ -155,22 +151,12 @@ export class SpeakerList {
     return {
       id: this.id,
       name: this.name,
-      entries: this.entries.map((s) => {
-        // 剥离 runtime delegation 引用，保持 JSON 兼容
-        const { delegation, ...rest } = s
-        return rest
-      })
+      entries: this.entries
     }
   }
 
-  static fromJSON(
-    json: SpeakerListData,
-    delegations: Delegation[]
-  ): SpeakerList {
-    const entries: SpeakerEntry[] = json.entries.map((e) => {
-      const del = delegations.find((d) => d.id === e.delegationId)
-      return { ...e, delegation: del }
-    })
+  static fromJSON(json: SpeakerListData, delegations: Delegation[]): SpeakerList {
+    const entries: SpeakerEntry[] = json.entries
     return new SpeakerList(json.id, json.name, entries)
   }
 }
@@ -228,13 +214,14 @@ export class ConferenceEngine {
     }
   }
 
-  /** 从 Conference 数据还原状态（含 delegation 引用还原） */
+  /** 从 Conference 数据还原状态 */
   private restoreFromConference(data: Partial<Conference>): void {
     if (data.name != null) this.name = data.name
     if (data.venue != null) this.venue = data.venue
     if (data.createdAt != null) this.createdAt = data.createdAt
     if (data.updatedAt != null) this.updatedAt = data.updatedAt
-    if (data.defaultSpeakingTimeSec != null) this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
+    if (data.defaultSpeakingTimeSec != null)
+      this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
     if (data.delegations != null) {
       // 向后兼容：旧数据可能没有 vetoPower 字段，默认为 true
       this.delegations = data.delegations.map((d) => ({
@@ -245,7 +232,8 @@ export class ConferenceEngine {
     if (data.agenda != null) this.agenda = data.agenda
     if (data.phase != null) this.phase = data.phase
     if (data.motions != null) this.motions = data.motions
-    if (data.dismissedResolvedMotionIds != null) this.dismissedResolvedMotionIds = data.dismissedResolvedMotionIds
+    if (data.dismissedResolvedMotionIds != null)
+      this.dismissedResolvedMotionIds = data.dismissedResolvedMotionIds
     if (data.points != null) this.points = data.points
     if (data.dismissedPointIds != null) this.dismissedPointIds = data.dismissedPointIds
     if (data.draftResolutions != null) this.draftResolutions = data.draftResolutions
@@ -258,14 +246,10 @@ export class ConferenceEngine {
       this.speakerList = SpeakerList.fromJSON(data.speakerLists, this.delegations)
     }
 
-    // 恢复 activeCaucus 中 caucusSpeakers 的 delegation 引用
     if (data.activeCaucus?.caucusSpeakers) {
       this.activeCaucus = {
         ...data.activeCaucus,
-        caucusSpeakers: data.activeCaucus.caucusSpeakers.map((s: SpeakerEntry) => {
-          const del = this.delegations.find((d) => d.id === s.delegationId)
-          return { ...s, delegation: del }
-        })
+        caucusSpeakers: data.activeCaucus.caucusSpeakers
       }
     } else if (data.activeCaucus != null) {
       this.activeCaucus = data.activeCaucus as Conference['activeCaucus']
@@ -310,14 +294,17 @@ export class ConferenceEngine {
 
   completeRollCall(): void {
     const presentCount = this.delegations.filter((d) => d.attendance === 'present').length
-    const votingCount = this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
+    const votingCount = this.delegations.filter(
+      (d) => d.attendance === 'present' && d.vetoPower !== false
+    ).length
     const simpleMajority = Math.floor(votingCount / 2) + 1
     const twoThirds = Math.ceil((votingCount * 2) / 3)
 
     const observerCount = presentCount - votingCount
-    const detail = observerCount > 0
-      ? `点名完成: 实到 ${presentCount}/${this.delegations.length}（含观察员 ${observerCount}），可投票 ${votingCount}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
-      : `点名完成: 实到 ${presentCount}/${this.delegations.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
+    const detail =
+      observerCount > 0
+        ? `点名完成: 实到 ${presentCount}/${this.delegations.length}（含观察员 ${observerCount}），可投票 ${votingCount}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
+        : `点名完成: 实到 ${presentCount}/${this.delegations.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
     this.addMinutesEntry('roll_call_completed', detail)
     this.addMinutesEntry('phase_changed', '进入阶段: 等待开启主发言名单')
     this.phase = 'pending_speakers_list'
@@ -341,7 +328,14 @@ export class ConferenceEngine {
     const sortOrder = this.delegations.length
     this.delegations = [
       ...this.delegations,
-      { id, name, shortName: shortName || undefined, attendance: 'absent', vetoPower: true, sortOrder }
+      {
+        id,
+        name,
+        shortName: shortName || undefined,
+        attendance: 'absent',
+        vetoPower: true,
+        sortOrder
+      }
     ]
     this.touch()
     return id
@@ -353,9 +347,7 @@ export class ConferenceEngine {
   }
 
   updateDelegation(id: string, updates: Partial<Delegation>): void {
-    this.delegations = this.delegations.map((d) =>
-      d.id === id ? { ...d, ...updates } : d
-    )
+    this.delegations = this.delegations.map((d) => (d.id === id ? { ...d, ...updates } : d))
     this.touch()
   }
 
@@ -389,8 +381,7 @@ export class ConferenceEngine {
   readySpeakerEntry(entryId: string): void {
     this.speakerList.readySpeaker(entryId)
     const entry = this.speakerList.entries.find((s) => s.id === entryId)
-    const del = entry?.delegation
-    this.addMinutesEntry('phase_changed', `${del?.name ?? entry?.delegationId} 准备发言`)
+    this.addMinutesEntry('phase_changed', `${this.getSpeakerDelegationName(entry)} 准备发言`)
     this.touch()
   }
 
@@ -409,10 +400,9 @@ export class ConferenceEngine {
       endAt: now + allocSec * 1000
     }
 
-    const del = entry.delegation
     this.addMinutesEntry(
       'speaker_started',
-      `${del?.name ?? entry.delegationId} 开始发言 (${allocSec}秒)`
+      `${this.getSpeakerDelegationName(entry)} 开始发言 (${allocSec}秒)`
     )
     this.touch()
   }
@@ -460,8 +450,8 @@ export class ConferenceEngine {
       this.addMinutesEntry('phase_changed', '主发言名单已清空，需重新动议开启')
     }
 
-    const del = entry?.delegation
-    let logMsg = `${del?.name ?? entry?.delegationId} 发言结束`
+    const speakerName = entry ? this.getSpeakerDelegationName(entry) : speaker.entryId
+    let logMsg = `${speakerName} 发言结束`
     if (yieldChoice) {
       const yieldLabels: Record<string, string> = {
         chair: '让渡给主席团',
@@ -491,12 +481,8 @@ export class ConferenceEngine {
 
     const elapsed = (Date.now() - speaker.startedAt) / 1000
     const remaining = Math.max(0, (entry.allocatedTimeSec ?? 120) - elapsed)
-    const del = entry.delegation
-
     // 记录让渡选择到 speaker entry
-    list.entries = list.entries.map((s) =>
-      s.id === entry.id ? { ...s, yield: yieldChoice } : s
-    )
+    list.entries = list.entries.map((s) => (s.id === entry.id ? { ...s, yield: yieldChoice } : s))
 
     const yieldLabels: Record<string, string> = {
       chair: '让渡给主席团',
@@ -504,7 +490,7 @@ export class ConferenceEngine {
       question: '让渡给提问',
       comment: '让渡给评论'
     }
-    const logMsg = `${del?.name ?? entry.delegationId} ${yieldLabels[yieldChoice.type] ?? yieldChoice.type}（剩余 ${Math.round(remaining)} 秒）`
+    const logMsg = `${this.getSpeakerDelegationName(entry)} ${yieldLabels[yieldChoice.type] ?? yieldChoice.type}（剩余 ${Math.round(remaining)} 秒）`
     this.addMinutesEntry('yield', logMsg, { delegationId: entry.delegationId })
 
     if (yieldChoice.type === 'chair') {
@@ -513,7 +499,7 @@ export class ConferenceEngine {
     }
 
     // delegate / question / comment → 暂停计时器，设置 yieldPending
-    const delegationName = del?.name ?? entry.delegationId
+    const delegationName = this.getSpeakerDelegationName(entry)
     this.activeSpeaker = speaker.pausedAt != null ? speaker : { ...speaker, pausedAt: Date.now() }
     this.yieldPending = {
       originalEntryId: entry.id,
@@ -537,9 +523,11 @@ export class ConferenceEngine {
     this.yieldPending = null
 
     if (yp) {
-      this.addMinutesEntry('speaker_finished',
+      this.addMinutesEntry(
+        'speaker_finished',
         `${yp.originalDelegationName} 让渡给主席团，剩余时间作废`,
-        { delegationId: yp.originalDelegationId })
+        { delegationId: yp.originalDelegationId }
+      )
     }
     this.touch()
   }
@@ -555,20 +543,20 @@ export class ConferenceEngine {
     const newEntry: SpeakerEntry = {
       id: generateId(),
       delegationId: targetDelegationId,
-      addedAt: Date.now(),
       allocatedTimeSec: Math.round(yp.remainingSec),
       status: 'ready',
-      canYield: false,
-      delegation: targetDel
+      canYield: false
     }
 
     list.entries = [newEntry, ...list.entries.filter((s) => s.id !== yp.originalEntryId)]
     this.activeSpeaker = null
     this.yieldPending = null
 
-    this.addMinutesEntry('speaker_finished',
+    this.addMinutesEntry(
+      'speaker_finished',
       `${yp.originalDelegationName} 让渡给 ${targetDel.name}（剩余 ${Math.round(yp.remainingSec)} 秒）`,
-      { delegationId: yp.originalDelegationId })
+      { delegationId: yp.originalDelegationId }
+    )
     this.touch()
   }
 
@@ -592,9 +580,11 @@ export class ConferenceEngine {
       questionerDelegationName: questionerDel.name
     }
 
-    this.addMinutesEntry('yield',
+    this.addMinutesEntry(
+      'yield',
       `${questionerDel.name} 向 ${yp.originalDelegationName} 提问（剩余 ${Math.round(yp.remainingSec)} 秒回答）`,
-      { delegationId: questionerDel.id })
+      { delegationId: questionerDel.id }
+    )
     this.touch()
   }
 
@@ -609,20 +599,20 @@ export class ConferenceEngine {
     const newEntry: SpeakerEntry = {
       id: generateId(),
       delegationId: commenterDelegationId,
-      addedAt: Date.now(),
       allocatedTimeSec: Math.round(yp.remainingSec),
       status: 'ready',
-      canYield: false,
-      delegation: commenterDel
+      canYield: false
     }
 
     list.entries = [newEntry, ...list.entries.filter((s) => s.id !== yp.originalEntryId)]
     this.activeSpeaker = null
     this.yieldPending = null
 
-    this.addMinutesEntry('yield',
+    this.addMinutesEntry(
+      'yield',
       `${commenterDel.name} 获得 ${Math.round(yp.remainingSec)} 秒评论时间（来自 ${yp.originalDelegationName} 的让渡）`,
-      { delegationId: commenterDel.id })
+      { delegationId: commenterDel.id }
+    )
     this.touch()
   }
 
@@ -718,9 +708,7 @@ export class ConferenceEngine {
 
   private executeOpenSpeakersList(): void {
     const now = Date.now()
-    this.votingSessions = this.votingSessions.map((s) =>
-      !s.endedAt ? { ...s, endedAt: now } : s
-    )
+    this.votingSessions = this.votingSessions.map((s) => (!s.endedAt ? { ...s, endedAt: now } : s))
     this.phase = 'general_debate'
     this.speakersListHasBeenPopulated = false
     this.addMinutesEntry('phase_changed', '进入阶段: 一般性辩论（主发言名单已开启）')
@@ -749,9 +737,7 @@ export class ConferenceEngine {
     this.defaultSpeakingTimeSec = newTime
     const list = this.speakerList
     list.entries = list.entries.map((s) =>
-      s.status === 'waiting' || s.status === 'ready'
-        ? { ...s, allocatedTimeSec: newTime }
-        : s
+      s.status === 'waiting' || s.status === 'ready' ? { ...s, allocatedTimeSec: newTime } : s
     )
     this.touch()
   }
@@ -786,11 +772,9 @@ export class ConferenceEngine {
     this.setAttendance(delegationId, newAttendance)
     const del = this.delegations.find((d) => d.id === delegationId)
     const label = newAttendance === 'present' ? '出席' : '缺席'
-    this.addMinutesEntry(
-      'phase_changed',
-      `${del?.name ?? delegationId} 出席状态变更为 ${label}`,
-      { delegationId }
-    )
+    this.addMinutesEntry('phase_changed', `${del?.name ?? delegationId} 出席状态变更为 ${label}`, {
+      delegationId
+    })
     this.touch()
     // 推送出席变更通知到 Display
     getDisplayBridge().sendUpdate(
@@ -824,11 +808,9 @@ export class ConferenceEngine {
 
     const del = this.delegations.find((d) => d.id === delegationId)
     const pointLabel = POINT_LABELS[point.type]
-    this.addMinutesEntry(
-      'point_proposed',
-      `${del?.name ?? delegationId} 提出${pointLabel}`,
-      { delegationId }
-    )
+    this.addMinutesEntry('point_proposed', `${del?.name ?? delegationId} 提出${pointLabel}`, {
+      delegationId
+    })
     this.touch()
     return id
   }
@@ -889,7 +871,11 @@ export class ConferenceEngine {
 
     const ids = this.caucusSetup.speakerDelegationIds.filter((id) => id !== proposerId)
     const reordered = position === 'first' ? [proposerId, ...ids] : [...ids, proposerId]
-    this.caucusSetup = { ...this.caucusSetup, proposerPosition: position, speakerDelegationIds: reordered }
+    this.caucusSetup = {
+      ...this.caucusSetup,
+      proposerPosition: position,
+      speakerDelegationIds: reordered
+    }
   }
 
   addToCaucusSpeakersSetup(delegationId: string): void {
@@ -917,7 +903,9 @@ export class ConferenceEngine {
     if (!this.caucusSetup) return
     this.caucusSetup = {
       ...this.caucusSetup,
-      speakerDelegationIds: this.caucusSetup.speakerDelegationIds.filter((id) => id !== delegationId)
+      speakerDelegationIds: this.caucusSetup.speakerDelegationIds.filter(
+        (id) => id !== delegationId
+      )
     }
   }
 
@@ -941,10 +929,8 @@ export class ConferenceEngine {
       return {
         id: generateId(),
         delegationId: delId,
-        addedAt: now,
         allocatedTimeSec: perSpeakerSec,
-        status: 'waiting' as const,
-        delegation: del
+        status: 'waiting' as const
       }
     })
 
@@ -965,7 +951,7 @@ export class ConferenceEngine {
     }
     this.activeSpeaker = null
 
-    const firstName = caucusSpeakers[0]?.delegation?.name ?? ''
+    const firstName = caucusSpeakers[0] ? this.getSpeakerDelegationName(caucusSpeakers[0]) : ''
     this.addMinutesEntry(
       'caucus_started',
       `有主持核心磋商开始${topic ? ': ' + topic : ''}，首位发言人（就绪）: ${firstName}`,
@@ -990,7 +976,7 @@ export class ConferenceEngine {
 
     if (nextIdx < updatedSpeakers.length && totalRemaining >= perSpeakerSec) {
       updatedSpeakers[nextIdx] = { ...updatedSpeakers[nextIdx], status: 'ready' }
-      const nextName = updatedSpeakers[nextIdx].delegation?.name ?? updatedSpeakers[nextIdx].delegationId
+      const nextName = this.getSpeakerDelegationName(updatedSpeakers[nextIdx])
 
       this.activeCaucus = {
         ...this.activeCaucus!,
@@ -1045,7 +1031,7 @@ export class ConferenceEngine {
       endAt: now + perSpeakerSec * 1000
     }
 
-    const speakerName = readySpeaker.delegation?.name ?? readySpeaker.delegationId
+    const speakerName = this.getSpeakerDelegationName(readySpeaker)
     this.addMinutesEntry('speaker_started', `${speakerName} 开始发言 (${perSpeakerSec}秒)`)
     this.touch()
   }
@@ -1067,10 +1053,8 @@ export class ConferenceEngine {
     const newSpeaker: SpeakerEntry = {
       id: generateId(),
       delegationId,
-      addedAt: Date.now(),
       allocatedTimeSec: perSpeakerSec,
-      status: 'waiting' as const,
-      delegation: del
+      status: 'waiting' as const
     }
 
     const hasActiveSpeaker = this.activeSpeaker != null
@@ -1086,7 +1070,10 @@ export class ConferenceEngine {
         caucusSpeakers: [...currentSpeakers, { ...newSpeaker, status: 'ready' }],
         currentSpeakerIndex: this.activeCaucus.caucusSpeakers.length
       }
-      this.addMinutesEntry('speaker_ready', `${del?.name ?? delegationId} 准备发言（等待主席开始计时）`)
+      this.addMinutesEntry(
+        'speaker_ready',
+        `${del?.name ?? delegationId} 准备发言（等待主席开始计时）`
+      )
     }
     this.touch()
   }
@@ -1157,17 +1144,15 @@ export class ConferenceEngine {
     return id
   }
 
-  castVote(
-    sessionId: string,
-    delegationId: string,
-    vote: 'yes' | 'no' | 'abstain' | 'skip'
-  ): void {
+  castVote(sessionId: string, delegationId: string, vote: 'yes' | 'no' | 'abstain' | 'skip'): void {
     const sessionIdx = this.votingSessions.findIndex((s) => s.id === sessionId)
     if (sessionIdx < 0) return
 
     const session = this.votingSessions[sessionIdx]
     if (session.currentDelegationId !== delegationId) {
-      console.warn(`castVote: delegation ${delegationId} is not the current voter (current=${session.currentDelegationId})`)
+      console.warn(
+        `castVote: delegation ${delegationId} is not the current voter (current=${session.currentDelegationId})`
+      )
       return
     }
 
@@ -1217,7 +1202,9 @@ export class ConferenceEngine {
       if (nextDelegation) {
         return { nextDelegationId: nextDelegation.id, nextRound: 1 }
       }
-      const skippedIds = new Set(ballots.filter((b) => b.vote === 'skip').map((b) => b.delegationId))
+      const skippedIds = new Set(
+        ballots.filter((b) => b.vote === 'skip').map((b) => b.delegationId)
+      )
       if (skippedIds.size > 0) {
         const firstSkipped = presentDelegations.find((d) => skippedIds.has(d.id))
         return { nextDelegationId: firstSkipped?.id ?? null, nextRound: 2 }
@@ -1249,7 +1236,9 @@ export class ConferenceEngine {
 
     const { yes, no, abstain } = tallyVotesEngine(session.ballots)
     // 仅统计拥有投票权的出席代表（排除观察员）
-    const presentCount = this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
+    const presentCount = this.delegations.filter(
+      (d) => d.attendance === 'present' && d.vetoPower !== false
+    ).length
     const threshold =
       session.majorityRule === 'simple_majority'
         ? Math.floor(presentCount / 2) + 1
@@ -1273,7 +1262,8 @@ export class ConferenceEngine {
           newSpeakersList = []
           this.addMinutesEntry('phase_changed', '主发言名单已结束')
         } else {
-          const motionStatus: 'approved' | 'rejected' = result === 'passed' ? 'approved' : 'rejected'
+          const motionStatus: 'approved' | 'rejected' =
+            result === 'passed' ? 'approved' : 'rejected'
           newMotions = this.motions.map((m) =>
             m.id === session.targetId ? { ...m, status: motionStatus } : m
           )
@@ -1446,7 +1436,8 @@ export class ConferenceEngine {
 
   /** 拥有投票权的出席代表人数（排除观察员） */
   getVotingCount(): number {
-    return this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
+    return this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false)
+      .length
   }
 
   getSimpleMajorityThreshold(): number {
@@ -1489,10 +1480,7 @@ export class ConferenceEngine {
       activeCaucus: this.activeCaucus
         ? {
             ...this.activeCaucus,
-            caucusSpeakers: this.activeCaucus.caucusSpeakers?.map((s) => {
-              const { delegation, ...rest } = s
-              return rest
-            })
+            caucusSpeakers: this.activeCaucus.caucusSpeakers
           }
         : null,
       activeSpeaker: this.activeSpeaker,
@@ -1524,6 +1512,13 @@ export class ConferenceEngine {
   // ================================================================
   //  工具
   // ================================================================
+
+  /**
+   * 通过 delegationId 查表获取代表团名称。
+   */
+  getSpeakerDelegationName(entry: { delegationId: string }): string {
+    return this.delegations.find((d) => d.id === entry.delegationId)?.name ?? entry.delegationId
+  }
 
   /** 更新时间戳（每次变更时调用） */
   private touch(): void {

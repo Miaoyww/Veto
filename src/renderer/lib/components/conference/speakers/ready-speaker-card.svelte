@@ -15,15 +15,12 @@
     oncancel?: () => void
   }
 
-  let {
-    delegationName,
-    allocatedTimeSec,
-    onstart,
-    oncancel
-  }: Props = $props()
+  let { delegationName, allocatedTimeSec, onstart, oncancel }: Props = $props()
 </script>
 
-<div class="rounded-lg border-2 border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-700 dark:bg-amber-950/30">
+<div
+  class="rounded-lg border-2 border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-700 dark:bg-amber-950/30"
+>
   <div class="text-sm font-medium text-amber-700 dark:text-amber-400">即将发言</div>
   <div class="mt-1 text-2xl font-bold text-foreground">
     {delegationName}

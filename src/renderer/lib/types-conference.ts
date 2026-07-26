@@ -74,7 +74,6 @@ export interface YieldPendingState {
 export interface SpeakerEntry {
   id: string
   delegationId: string
-  addedAt: number
   /** 分配的发言时间（秒），默认 120 */
   allocatedTimeSec: number
   /** 暂停/中断时剩余时间 */
@@ -84,13 +83,6 @@ export interface SpeakerEntry {
   yield?: YieldChoice
   /** 是否允许让渡（通过让渡获得时间的发言人不可再次让渡），默认 true */
   canYield?: boolean
-  /** 运行时引用 —— 不参与序列化，由引擎在反序列化时还原 */
-  delegation?: Delegation
-  /**
-   * @deprecated 过渡字段：使用 delegation.name 替代。
-   * 仅在未配置引擎的旧代码路径中使用。
-   */
-  delegationName?: string
 }
 
 /** 发言名单的 JSON 序列化格式 */
