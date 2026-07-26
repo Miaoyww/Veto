@@ -228,9 +228,10 @@ let currentBridge: ConferenceDisplayBridge | null = null
 export function getDisplayBridge(): ConferenceDisplayBridge {
   if (!currentBridge) {
     // 根据 URL 判断是 Host 还是 Display
-    const isDisplay = typeof window !== 'undefined' &&
+    const isDisplay =
+      typeof window !== 'undefined' &&
       (window.location.hash.includes('conference-display') ||
-       window.location.pathname.includes('conference-display'))
+        window.location.pathname.includes('conference-display'))
     currentBridge = isDisplay ? createDisplayBridge() : createHostBridge()
   }
   return currentBridge
@@ -278,8 +279,8 @@ export function buildDisplayData(
       (s) => s.id === conf.activeSpeaker!.entryId
     )
     if (engineEntry) {
-      currentSpeakerDelegation = engineEntry.delegation ??
-        conf.delegations.find((d) => d.id === engineEntry.delegationId)
+      currentSpeakerDelegation =
+        engineEntry.delegation ?? conf.delegations.find((d) => d.id === engineEntry.delegationId)
       currentSpeakerAllocatedSec = engineEntry.allocatedTimeSec
     } else {
       // 回退：从 conf 数据查找
@@ -344,7 +345,7 @@ export function buildDisplayData(
   const pendingMotion = conf.motions.find((m) => m.status === 'pending')
   const pendingMotionDel = pendingMotion
     ? (engine?.getDelegation(pendingMotion.proposedByDelegationId) ??
-       conf.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId))
+      conf.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId))
     : null
 
   // 最近被处理的动议（通过/否决），用于 Display 展示表决结果
@@ -366,7 +367,7 @@ export function buildDisplayData(
   const displayMotionDel =
     displayMotion && displayMotion !== pendingMotion
       ? (engine?.getDelegation(displayMotion.proposedByDelegationId) ??
-         conf.delegations.find((d) => d.id === displayMotion.proposedByDelegationId))
+        conf.delegations.find((d) => d.id === displayMotion.proposedByDelegationId))
       : pendingMotionDel
 
   // 磋商计时
@@ -375,28 +376,41 @@ export function buildDisplayData(
     const now = Date.now()
     const remainingSec = Math.max(0, (conf.activeCaucus.endAt - now) / 1000)
     const totalSec = (conf.activeCaucus.endAt - conf.activeCaucus.startedAt) / 1000
-    const status = (conf.activeCaucus?.pausedAt != null || conf.activeSpeaker?.pausedAt != null) ? 'paused' as const : 'running' as const
+    const status =
+      conf.activeCaucus?.pausedAt != null || conf.activeSpeaker?.pausedAt != null
+        ? ('paused' as const)
+        : ('running' as const)
     caucusData = {
       remainingSec,
       totalSec,
       type: conf.activeCaucus.type,
       status,
-      topic: conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
-        ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
-        : undefined,
-      caucusSpeakers: conf.activeCaucus.caucusSpeakers?.map((s) => ({
-        delegationName: s.delegationName,
-        status: s.status,
-        allocatedTimeSec: s.allocatedTimeSec
-      })),
+      topic:
+        conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
+          ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
+          : undefined,
+      caucusSpeakers: conf.activeCaucus.caucusSpeakers
+        ?.map((s) => {
+          const delegation = conf.delegations.find((d) => d.id === s.delegationId)
+          return delegation
+            ? {
+                delegationName: s.delegationName,
+                delegation,
+                status: s.status,
+                allocatedTimeSec: s.allocatedTimeSec
+              }
+            : null
+        })
+        .filter(Boolean),
       currentSpeakerIndex: conf.activeCaucus.currentSpeakerIndex,
       speakerTransition: extra?.speakerTransition
     }
   }
 
   // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
-  const effectivePhase: Conference['phase'] | 'motion' =
-    hasActiveMotionPhase ? 'motion' : conf.phase
+  const effectivePhase: Conference['phase'] | 'motion' = hasActiveMotionPhase
+    ? 'motion'
+    : conf.phase
 
   return {
     conferenceId: conf.id,
@@ -404,16 +418,16 @@ export function buildDisplayData(
     venue: conf.venue,
     name: conf.name,
     presentCount: conf.delegations.filter((d) => d.attendance === 'present').length,
-    votingCount: conf.delegations.filter(
-      (d) => d.attendance === 'present' && d.vetoPower !== false
-    ).length,
+    votingCount: conf.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false)
+      .length,
     currentSpeaker: (() => {
       if (!currentSpeakerDelegation) return undefined
       const now = Date.now()
       const remainingSec = conf.activeSpeaker
         ? Math.max(0, (conf.activeSpeaker.endAt - now) / 1000)
         : 0
-      const status = conf.activeSpeaker?.pausedAt != null ? 'paused' as const : 'playing' as const
+      const status =
+        conf.activeSpeaker?.pausedAt != null ? ('paused' as const) : ('playing' as const)
       return {
         delegation: currentSpeakerDelegation,
         remainingSec,
@@ -426,7 +440,8 @@ export function buildDisplayData(
       const engineReady = engine?.readySpeaker
       if (engineReady) {
         return {
-          delegation: engineReady.delegation ??
+          delegation:
+            engineReady.delegation ??
             conf.delegations.find((d) => d.id === engineReady.delegationId)
         }
       }
@@ -440,8 +455,7 @@ export function buildDisplayData(
       // 优先从引擎获取
       if (engine) {
         return engine.speakerList.entries.map((s) => ({
-          delegation: s.delegation ??
-            conf.delegations.find((d) => d.id === s.delegationId),
+          delegation: s.delegation ?? conf.delegations.find((d) => d.id === s.delegationId),
           status: s.status
         }))
       }
@@ -458,7 +472,8 @@ export function buildDisplayData(
     activeMotion: displayMotion
       ? {
           type: displayMotion.type,
-          topic: displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
+          topic:
+            displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
           status: displayMotion.status,
           proposedByName: displayMotionDel?.name ?? displayMotion.proposedByDelegationId,
           motionId: displayMotion.id,
@@ -487,7 +502,8 @@ export function buildDisplayData(
       if (!latestPoint) return undefined
       if (conf.dismissedPointIds?.includes(latestPoint.id)) return undefined
       if (Date.now() - latestPoint.proposedAt > 8000) return undefined
-      const pointDel = engine?.getDelegation(latestPoint.proposedByDelegationId) ??
+      const pointDel =
+        engine?.getDelegation(latestPoint.proposedByDelegationId) ??
         conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
       return {
         type: latestPoint.type,
@@ -501,18 +517,22 @@ export function buildDisplayData(
           const csMotion = conf.motions.find((m) => m.id === conf.caucusSetup!.motionId) as any
           const proposerId = csMotion?.proposedByDelegationId
           const proposerDel = proposerId
-            ? (engine?.getDelegation(proposerId) ?? conf.delegations.find((d) => d.id === proposerId))
+            ? (engine?.getDelegation(proposerId) ??
+              conf.delegations.find((d) => d.id === proposerId))
             : null
           return {
-          topic: csMotion?.topic,
-          proposerName: proposerDel?.name,
-          proposerPosition: conf.caucusSetup!.proposerPosition,
-          speakerDelegationIds: conf.caucusSetup!.speakerDelegationIds,
-          speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
-            (id) => engine?.getDelegation(id)?.name ?? conf.delegations.find((d) => d.id === id)?.name ?? id
-          )
-        }
-      })()
+            topic: csMotion?.topic,
+            proposerName: proposerDel?.name,
+            proposerPosition: conf.caucusSetup!.proposerPosition,
+            speakerDelegationIds: conf.caucusSetup!.speakerDelegationIds,
+            speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
+              (id) =>
+                engine?.getDelegation(id)?.name ??
+                conf.delegations.find((d) => d.id === id)?.name ??
+                id
+            )
+          }
+        })()
       : undefined,
     recentMinutes: conf.minutes.slice(-10).map((m) => ({
       timestamp: m.timestamp,

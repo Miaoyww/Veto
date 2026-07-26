@@ -555,6 +555,8 @@ export interface ConferenceDisplayData {
     /** 有主持磋商发言顺序 */
     caucusSpeakers?: Array<{
       delegationName: string
+      /** Display 组件用的 delegation 快照 */
+      delegation: Delegation
       status: 'waiting' | 'ready' | 'speaking'
       allocatedTimeSec: number
     }>

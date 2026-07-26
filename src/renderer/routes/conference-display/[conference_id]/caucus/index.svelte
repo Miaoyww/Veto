@@ -3,6 +3,7 @@
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
   import { Mic, Coffee } from '@lucide/svelte'
+  import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>
@@ -11,18 +12,9 @@
   {@const speakers = data.caucusTimer.caucusSpeakers}
   {@const currentIdx = data.caucusTimer.currentSpeakerIndex ?? -1}
   {@const currentSpeaker = currentIdx >= 0 ? speakers[currentIdx] : null}
-  {@const restQueue = data.caucusTimer.caucusSpeakers.slice(currentIdx + 2)}
 
-  {@const nextSpeaker =
-    currentIdx >= 0 && currentIdx + 1 < speakers.length ? speakers[currentIdx + 1] : null}
   <!-- 有主持磋商：逐人发言 -->
   <div class="flex flex-col items-center gap-10">
-    <div class="flex items-center gap-3 text-white/40">
-      <div class="h-px w-12 bg-white/10"></div>
-      <span class="text-lg tracking-[0.08em] uppercase">有主持核心磋商</span>
-      <div class="h-px w-12 bg-white/10"></div>
-    </div>
-
     {#if currentSpeaker && currentSpeaker.status === 'speaking' && data.currentSpeaker}
       <!-- 当前发言人 -->
       <div class="flex items-center gap-3 text-white/40">
@@ -55,34 +47,8 @@
       >
         {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
       </div>
-    {:else if currentSpeaker && currentSpeaker.status === 'ready'}
-      <!-- 发言人就绪（等待主席开始计时） -->
-      <div class="flex flex-col items-center gap-10">
-        <div class="flex items-center gap-3 text-white/40">
-          <div class="h-px w-12 bg-white/10"></div>
-          <Mic size={20} class="text-[#C9A84C]" />
-          <span class="text-lg tracking-[0.08em] uppercase">即将发言</span>
-          <div class="h-px w-12 bg-white/10"></div>
-        </div>
-
-        <div class="text-center">
-          <div class="text-9xl font-semibold tracking-wide text-white">
-            {currentSpeaker.delegationName}
-          </div>
-        </div>
-
-        <div class="text-lg tracking-wider text-white/15">等待主席开始计时</div>
-      </div>
-    {/if}
-
-    <!-- 下一位 -->
-    {#if nextSpeaker}
-      <div class="flex items-center gap-4 text-white/15">
-        <span class="text-sm tracking-wider uppercase">下一位</span>
-        <span class="text-2xl text-white/30">{nextSpeaker.delegationName}</span>
-      </div>
-    {:else if currentIdx + 1 >= speakers.length}
-      <div class="text-lg tracking-wider text-white/15">最后一位发言人</div>
+    {:else}
+      <SpeakerQueueDisplay {speakers} max={4} title="有主持的核心磋商" />
     {/if}
   </div>
 {:else}
