@@ -6,17 +6,24 @@
   import { globalSettings } from '$lib/stores/app/global-settings.store'
   import { fly } from 'svelte/transition'
 
+  let offsetX = $state($globalSettings.displayOffsetX)
+  let offsetY = $state($globalSettings.displayOffsetY)
+
+  $effect(() => {
+    offsetX = $globalSettings.displayOffsetX
+    offsetY = $globalSettings.displayOffsetY
+  })
+
   function saveIconStyle(style: 'nato' | 'simple') {
     globalSettings.patch({ defaultIconStyle: style })
   }
 
-  function setOffsetX(v: number) {
-    globalSettings.patch({ displayOffsetX: v })
-  }
-  function setOffsetY(v: number) {
-    globalSettings.patch({ displayOffsetY: v })
+  function persistOffset() {
+    globalSettings.patch({ displayOffsetX: offsetX, displayOffsetY: offsetY })
   }
   function resetOffset() {
+    offsetX = 0
+    offsetY = 0
     globalSettings.patch({ displayOffsetX: 0, displayOffsetY: 0 })
   }
 </script>
@@ -50,8 +57,8 @@
             <label class="text-xs text-muted-foreground">X 偏移</label>
             <Input
               type="number"
-              value={$globalSettings.displayOffsetX}
-              oninput={(e) => setOffsetX(Number(e.currentTarget.value))}
+              bind:value={offsetX}
+              oninput={persistOffset}
               class="w-28"
             />
           </div>
@@ -59,8 +66,8 @@
             <label class="text-xs text-muted-foreground">Y 偏移</label>
             <Input
               type="number"
-              value={$globalSettings.displayOffsetY}
-              oninput={(e) => setOffsetY(Number(e.currentTarget.value))}
+              bind:value={offsetY}
+              oninput={persistOffset}
               class="w-28"
             />
           </div>

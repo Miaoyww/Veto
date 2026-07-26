@@ -19,7 +19,7 @@ const DEFAULTS: GlobalSettings = {
 	language: 'zh-cn',
 	theme: 'system',
 	displayOffsetX: 0,
-	displayOffsetY: 0
+	displayOffsetY: 260
 };
 
 function createGlobalSettings() {
@@ -29,6 +29,18 @@ function createGlobalSettings() {
 	bootstrapStore<GlobalSettings>('settings', DEFAULTS).then((data) => {
 		set(data);
 	});
+
+	// 跨窗口同步：监听其他窗口对 localStorage 的修改
+	if (typeof window !== 'undefined') {
+		window.addEventListener('storage', (e) => {
+			if (e.key === 'veto_global_settings' && e.newValue) {
+				try {
+					const parsed = JSON.parse(e.newValue) as GlobalSettings
+					set(parsed)
+				} catch { /* 忽略无效 JSON */ }
+			}
+		})
+	}
 
 	return {
 		subscribe,
