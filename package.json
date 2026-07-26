@@ -1,6 +1,6 @@
 {
   "name": "Veto",
-  "version": "0.34.0",
+  "version": "0.52.0",
   "description": "Veto —— A modern, cross-platform, and extensible Model United Nations Conference platform.",
   "main": "./out/main/index.js",
   "author": "Miaoyww",
