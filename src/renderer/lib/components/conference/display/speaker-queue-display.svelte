@@ -52,8 +52,7 @@
   {#if nextSpeaker}
     <!-- 下一个发言 -->
     <div class="w-full px-8 py-6 text-center">
-      <div class="text-lg font-medium tracking-[0.12em] text-white/30 uppercase">下一个发言</div>
-      <div class="mt-3 text-9xl font-semibold tracking-wide text-white">
+      <div class="text-9xl font-semibold tracking-wide text-white">
         {nextSpeaker.delegation.name}
       </div>
       {#if nextSpeaker.delegation.shortName}

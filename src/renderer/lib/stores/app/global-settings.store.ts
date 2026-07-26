@@ -8,12 +8,18 @@ export interface GlobalSettings {
 	language: 'zh-cn' | 'en';
 	/** 主题模式 */
 	theme: 'light' | 'dark' | 'system';
+	/** Display 窗口主展示区 X 偏移（px） */
+	displayOffsetX: number;
+	/** Display 窗口主展示区 Y 偏移（px） */
+	displayOffsetY: number;
 }
 
 const DEFAULTS: GlobalSettings = {
 	defaultIconStyle: 'nato',
 	language: 'zh-cn',
-	theme: 'system'
+	theme: 'system',
+	displayOffsetX: 0,
+	displayOffsetY: 0
 };
 
 function createGlobalSettings() {

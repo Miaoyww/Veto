@@ -11,6 +11,7 @@
    * 4. 底部近期记录
    */
   import { onMount, onDestroy } from 'svelte'
+  import { get } from 'svelte/store'
   import TitleBar from '$lib/components/titlebar.svelte'
   import {
     getDisplayBridge,
@@ -21,6 +22,7 @@
   import type { Delegation } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
+  import { globalSettings } from '$lib/stores/app/global-settings.store'
 
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
@@ -40,6 +42,18 @@
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
   let isFullScreen = $state(false)
+
+  // 主展示区位置偏移（从全局设置加载，Alt+方向键微调后自动持久化）
+  const NUDGE_STEP = 10
+  let displayOffsetX = $state(0)
+  let displayOffsetY = $state(0)
+
+  $effect(() => {
+    displayOffsetX = $globalSettings.displayOffsetX
+    displayOffsetY = $globalSettings.displayOffsetY
+  })
+
+  const contentStyle = $derived(`transform: translate(${displayOffsetX}px, ${displayOffsetY}px)`)
 
   function toggleFullscreen(): void {
     window.veto?.conference?.toggleFullscreen?.()
@@ -70,6 +84,32 @@
     function onKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape' && isFullScreen) {
         toggleFullscreen()
+      }
+      // Alt+方向键 微调主展示区位置（自动持久化）
+      if (e.altKey) {
+        const gs = get(globalSettings)
+        switch (e.key) {
+          case 'ArrowUp':
+            e.preventDefault()
+            globalSettings.patch({ displayOffsetY: gs.displayOffsetY - NUDGE_STEP })
+            break
+          case 'ArrowDown':
+            e.preventDefault()
+            globalSettings.patch({ displayOffsetY: gs.displayOffsetY + NUDGE_STEP })
+            break
+          case 'ArrowLeft':
+            e.preventDefault()
+            globalSettings.patch({ displayOffsetX: gs.displayOffsetX - NUDGE_STEP })
+            break
+          case 'ArrowRight':
+            e.preventDefault()
+            globalSettings.patch({ displayOffsetX: gs.displayOffsetX + NUDGE_STEP })
+            break
+          case '0':
+            e.preventDefault()
+            globalSettings.patch({ displayOffsetX: 0, displayOffsetY: 0 })
+            break
+        }
       }
     }
     window.addEventListener('keydown', onKeydown)
@@ -233,7 +273,7 @@
       />
     {:else}
       <!-- 主展示区（phase 动态切换） -->
-      <div class="flex items-start justify-center overflow-hidden px-16">
+      <div class="flex items-start justify-center overflow-hidden px-16" style={contentStyle}>
         <div class="flex w-full max-w-5xl flex-col items-center">
           {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
             <QuestionDisplay data={displayData} />

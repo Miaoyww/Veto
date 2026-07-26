@@ -1,12 +1,23 @@
 <script lang="ts">
   import SettingCard from '../../settings-card.svelte'
   import { Button } from '$lib/components/ui/button'
+  import { Input } from '$lib/components/ui/input'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { globalSettings } from '$lib/stores/app/global-settings.store'
   import { fly } from 'svelte/transition'
 
   function saveIconStyle(style: 'nato' | 'simple') {
     globalSettings.patch({ defaultIconStyle: style })
+  }
+
+  function setOffsetX(v: number) {
+    globalSettings.patch({ displayOffsetX: v })
+  }
+  function setOffsetY(v: number) {
+    globalSettings.patch({ displayOffsetY: v })
+  }
+  function resetOffset() {
+    globalSettings.patch({ displayOffsetX: 0, displayOffsetY: 0 })
   }
 </script>
 
@@ -27,6 +38,33 @@
             size="sm"
             onclick={() => saveIconStyle('simple')}>简单图标</Button
           >
+        </div>
+      </SettingCard>
+
+      <SettingCard
+        title="Display 主展示区位置"
+        description="调整 Display 窗口中主内容的水平/垂直偏移（px）。也可在 Display 窗口用 Alt+方向键 微调。"
+      >
+        <div class="flex items-end gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs text-muted-foreground">X 偏移</label>
+            <Input
+              type="number"
+              value={$globalSettings.displayOffsetX}
+              oninput={(e) => setOffsetX(Number(e.currentTarget.value))}
+              class="w-28"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs text-muted-foreground">Y 偏移</label>
+            <Input
+              type="number"
+              value={$globalSettings.displayOffsetY}
+              oninput={(e) => setOffsetY(Number(e.currentTarget.value))}
+              class="w-28"
+            />
+          </div>
+          <Button size="sm" variant="ghost" onclick={resetOffset}>重置</Button>
         </div>
       </SettingCard>
     </div>
