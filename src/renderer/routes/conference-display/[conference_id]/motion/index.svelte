@@ -128,11 +128,7 @@
               <div style="animation: fadeUp 0.7s ease both">
                 <AutoFitText
                   text={displayTitle}
-                  maxRem={7}
-                  minRem={2.5}
-                  maxLines={4}
-                  maxHeightVh={45}
-                  class="font-semibold tracking-wide text-white max-w-[85vw] text-balance break-words"
+                  class="font-semibold tracking-wide text-white text-balance wrap-break-word"
                 />
               </div>
               {#if displaySubtitle}
@@ -179,8 +175,6 @@
                   <AutoFitText
                     text={draft.proposedByName}
                     maxRem={8}
-                    minRem={2.5}
-                    maxLines={1}
                     class="font-semibold text-white"
                   />
                 </div>
@@ -204,7 +198,10 @@
         </div>
 
         <div class="mt-5 flex flex-col items-center gap-2">
-          <span class="text-7xl font-semibold tracking-wide text-white">{displayTitle}</span>
+          <AutoFitText
+            text={displayTitle}
+            class="font-semibold tracking-wide text-white text-balance wrap-break-word"
+          />
         </div>
 
         <div class="mt-3 text-3xl tracking-wider text-white/40">
@@ -255,8 +252,11 @@
           {isApproved ? '通过' : '否决'}
         </div>
 
-        <div class="mt-4 text-5xl font-semibold tracking-wide text-white">
-          {displayTitle}
+        <div class="mt-4 font-semibold tracking-wide text-white">
+          <AutoFitText
+            text={displayTitle}
+            class="font-semibold tracking-wide text-white text-balance"
+          />
         </div>
         <div class="mt-3 text-3xl tracking-wider text-white/40">
           由 <span class="text-white/70">{activeMotion.proposedByName}</span> 提出

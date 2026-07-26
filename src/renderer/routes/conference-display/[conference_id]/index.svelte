@@ -228,7 +228,6 @@
       venue={displayData.venue}
       name={displayData.name}
       phase={effectivePhase}
-      caucusTopic={displayData.caucusTimer?.topic}
       simpleMajority={headerThresholds?.simpleMajority}
       twoThirds={headerThresholds?.twoThirds}
     />

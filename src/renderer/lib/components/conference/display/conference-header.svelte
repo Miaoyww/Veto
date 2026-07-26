@@ -10,7 +10,6 @@
     venue,
     name,
     phase,
-    caucusTopic,
     simpleMajority,
     twoThirds
   }: {
@@ -31,12 +30,6 @@
     </div>
   </div>
 
-  {#if caucusTopic}
-    <div class="absolute left-1/2 -translate-x-1/2 text-4xl font-medium tracking-wide">
-      {caucusTopic}
-    </div>
-  {/if}
-
   <div class="ml-auto flex items-center gap-4">
     {#if phase && phase !== 'preamble' && phase !== 'roll_call'}
       <div class="flex items-center gap-2">
@@ -50,7 +43,9 @@
         </div>
       </div>
     {/if}
-    <div class="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-5 py-1.5">
+    <div
+      class="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-5 py-1.5"
+    >
       <div class="h-1.5 w-1.5 rounded-full bg-[#5B92E5]"></div>
       <span class="text-sm font-medium tracking-[0.05em] text-white/70 uppercase">
         {PHASE_LABELS[phase ?? ''] ?? phase}

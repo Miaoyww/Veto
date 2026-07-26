@@ -5,19 +5,22 @@
    * Display 端大字组件：自动缩小字号使文本不超出指定行数或最大高度。
    * 使用 DOM scrollHeight 实测 + 二分查找，CSS 换行行为完全一致。
    */
+  const MAX_LINES = 3
+
   let {
     text = '',
-    maxRem = 7,
-    minRem = 2,
-    maxLines = 4,
-    maxHeightVh = 100,
+    maxRem = 8,
+    minRem = 1,
+    maxWidthVw = 85,
+    maxHeightVh = 45,
     class: className = ''
   }: {
     text: string
     maxRem?: number
     minRem?: number
-    maxLines?: number
-    /** 文本总高度上限（视口高度百分比），默认 100 即不限 */
+    /** 文本最大宽度（视口宽度百分比），默认 85 */
+    maxWidthVw?: number
+    /** 文本总高度上限（视口高度百分比），默认 45 */
     maxHeightVh?: number
     class?: string
   } = $props()
@@ -39,7 +42,7 @@
         target.style.fontSize = `${mid}rem`
         void target.offsetHeight
         const lh = parseFloat(getComputedStyle(target).lineHeight) || mid * 16 * 1.3
-        const heightOk = target.scrollHeight <= lh * maxLines + 2
+        const heightOk = target.scrollHeight <= lh * MAX_LINES + 2
           && target.scrollHeight <= maxHeightPx
         if (heightOk) {
           lo = mid
@@ -52,6 +55,6 @@
   })
 </script>
 
-<div bind:this={el} class={className} style="font-size: {size}rem">
+<div bind:this={el} class={className} style="font-size: {size}rem; max-width: {maxWidthVw}vw">
   {text}
 </div>

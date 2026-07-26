@@ -19,16 +19,10 @@
 </script>
 
 {#if setup}
-  <div class="flex w-full max-w-5xl flex-col items-center gap-10">
+  <div class="flex w-full flex-col items-center gap-10">
     <!-- Topic 大字 -->
     {#if setup.topic}
-      <AutoFitText
-        text={setup.topic}
-        maxRem={8}
-        minRem={2.5}
-        maxLines={3}
-        class="font-semibold tracking-wide text-white"
-      />
+      <AutoFitText text={setup.topic} class="font-semibold tracking-wide text-white" />
     {/if}
 
     <!-- 磋商准备 标题 -->
