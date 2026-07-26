@@ -795,12 +795,7 @@ export class ConferenceEngine {
     // 推送出席变更通知到 Display
     getDisplayBridge().sendUpdate(
       buildDisplayData(this, {
-        attendanceChange: {
-          id: del?.id ?? delegationId,
-          name: del?.name ?? delegationId,
-          shortName: del?.shortName,
-          attendance: newAttendance
-        }
+        attendanceChange: del
       })
     )
   }
@@ -1008,10 +1003,11 @@ export class ConferenceEngine {
       this.endCaucus()
     } else if (totalRemaining >= perSpeakerSec) {
       this.phase = 'caucus_setup'
+      const previousMotionId = this.activeCaucus!.motionId
       this.activeCaucus = null
       this.activeSpeaker = null
       this.caucusSetup = {
-        motionId: this.activeCaucus!.motionId,
+        motionId: previousMotionId,
         proposerPosition: 'first',
         speakerDelegationIds: [],
         remainingSec: totalRemaining
@@ -1509,6 +1505,14 @@ export class ConferenceEngine {
     const now = Date.now()
     const cleanJson = { ...json }
     if (cleanJson.activeSpeaker && cleanJson.activeSpeaker.endAt <= now) {
+      // 同步清理发言名单中的对应条目
+      const expiredEntryId = cleanJson.activeSpeaker.entryId
+      if (cleanJson.speakerLists?.entries) {
+        cleanJson.speakerLists = {
+          ...cleanJson.speakerLists,
+          entries: cleanJson.speakerLists.entries.filter((s) => s.id !== expiredEntryId)
+        }
+      }
       cleanJson.activeSpeaker = null
     }
     if (cleanJson.activeCaucus && cleanJson.activeCaucus.endAt <= now) {

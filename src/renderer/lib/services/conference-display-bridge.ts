@@ -267,10 +267,6 @@ export function buildDisplayData(
 
   // 如果传入的是引擎，则使用引擎方法获取 delegation 信息以优化查找
   const engine: ConferenceEngine | null = 'toJSON' in source ? source : null
-  // 辅助：按 delegationId 获取代表团名称
-  const getDelName = (delegationId: string): string | undefined =>
-    engine?.getDelegation(delegationId)?.name ??
-    conf.delegations.find((d) => d.id === delegationId)?.name
 
   // 当前发言人
   let currentSpeakerDelegation: Delegation | undefined
@@ -282,33 +278,22 @@ export function buildDisplayData(
       (s) => s.id === conf.activeSpeaker!.entryId
     )
     if (engineEntry) {
-      currentSpeakerDelegation = {
-        id: engineEntry.delegationId,
-        name: engineEntry.delegation?.name ?? engineEntry.delegationId,
-        shortName: engineEntry.delegation?.shortName
-      }
+      currentSpeakerDelegation = engineEntry.delegation ??
+        conf.delegations.find((d) => d.id === engineEntry.delegationId)
       currentSpeakerAllocatedSec = engineEntry.allocatedTimeSec
     } else {
       // 回退：从 conf 数据查找
       const entry = conf.speakerLists?.entries.find((s) => s.id === conf.activeSpeaker!.entryId)
       if (entry) {
         const del = conf.delegations.find((d) => d.id === entry.delegationId)
-        currentSpeakerDelegation = {
-          id: entry.delegationId,
-          name: del?.name ?? entry.delegationId,
-          shortName: del?.shortName
-        }
+        currentSpeakerDelegation = del
         currentSpeakerAllocatedSec = entry.allocatedTimeSec
       } else if (conf.activeCaucus?.caucusSpeakers) {
         const cs = conf.activeCaucus.caucusSpeakers.find(
           (s) => s.delegationId === conf.activeSpeaker!.entryId && s.status === 'speaking'
         )
         if (cs) {
-          currentSpeakerDelegation = {
-            id: cs.delegationId,
-            name: (cs as any).delegationName ?? getDelName(cs.delegationId) ?? cs.delegationId,
-            shortName: undefined
-          }
+          currentSpeakerDelegation = conf.delegations.find((d) => d.id === cs.delegationId)
           currentSpeakerAllocatedSec = cs.allocatedTimeSec
         }
       }
@@ -441,30 +426,22 @@ export function buildDisplayData(
       const engineReady = engine?.readySpeaker
       if (engineReady) {
         return {
-          delegation: {
-            id: engineReady.delegationId,
-            name: engineReady.delegation?.name ?? engineReady.delegationId,
-            shortName: engineReady.delegation?.shortName
-          }
+          delegation: engineReady.delegation ??
+            conf.delegations.find((d) => d.id === engineReady.delegationId)
         }
       }
       // 回退：从 conf 数据查找
       const ready = conf.speakerLists?.entries.find((s) => s.status === 'ready')
       if (!ready) return undefined
       const d = conf.delegations.find((del) => del.id === ready.delegationId)
-      return d
-        ? { delegation: { id: d.id, name: d.name, shortName: d.shortName } }
-        : undefined
+      return d ? { delegation: d } : undefined
     })(),
     speakersList: (() => {
       // 优先从引擎获取
       if (engine) {
         return engine.speakerList.entries.map((s) => ({
-          delegation: {
-            id: s.delegationId,
-            name: s.delegation?.name ?? s.delegationId,
-            shortName: s.delegation?.shortName
-          },
+          delegation: s.delegation ??
+            conf.delegations.find((d) => d.id === s.delegationId),
           status: s.status
         }))
       }
@@ -472,11 +449,7 @@ export function buildDisplayData(
       return (conf.speakerLists?.entries ?? []).map((s) => {
         const d = conf.delegations.find((del) => del.id === s.delegationId)
         return {
-          delegation: {
-            id: s.delegationId,
-            name: d?.name ?? s.delegationId,
-            shortName: d?.shortName
-          },
+          delegation: d,
           status: s.status
         }
       })

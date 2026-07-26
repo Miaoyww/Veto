@@ -575,7 +575,7 @@ export interface ConferenceDisplayData {
     questionerDelegationName?: string
   }
   /** 出席状态变更通知（独立于 rollCall，由 changeDelegationAttendance 统一触发） */
-  attendanceChange?: Pick<Delegation, 'id' | 'name' | 'shortName' | 'attendance'>
+  attendanceChange?: Delegation
   /** 点名进度（roll_call 阶段使用） */
   rollCall?: {
     currentIndex: number

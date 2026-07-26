@@ -74,13 +74,7 @@ function loadConferencesFromStorage(): Conference[] {
     // 清理过期状态 & 注册引擎
     const now = Date.now()
     for (const conf of list) {
-      if (conf.activeSpeaker && conf.activeSpeaker.endAt <= now) {
-        conf.activeSpeaker = null
-      }
-      if (conf.activeCaucus && conf.activeCaucus.endAt <= now) {
-        conf.activeCaucus = null
-      }
-      // 注册引擎
+      // 过期清理统一由 ConferenceEngine.fromJSON() 处理
       const engine = ConferenceEngine.fromJSON(conf)
       registerEngine(engine)
     }
@@ -124,14 +118,8 @@ conferences.subscribe(saveConferencesToStorage)
 /** 启动完成 Promise：文件数据已加载并同步到 localStorage */
 export const conferencesReady: Promise<void> = bootstrapStore<Conference[]>(STORE_DOMAIN, []).then(
   (data) => {
-    const now = Date.now()
     for (const conf of data) {
-      if (conf.activeSpeaker && conf.activeSpeaker.endAt <= now) {
-        conf.activeSpeaker = null
-      }
-      if (conf.activeCaucus && conf.activeCaucus.endAt <= now) {
-        conf.activeCaucus = null
-      }
+      // 过期清理统一由 ConferenceEngine.fromJSON() 处理
       const engine = ConferenceEngine.fromJSON(conf)
       registerEngine(engine)
     }

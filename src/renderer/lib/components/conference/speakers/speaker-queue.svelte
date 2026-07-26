@@ -44,14 +44,22 @@
 
   let { mode }: { mode: 'general_debate' | 'caucus' } = $props()
 
+  /** 当前会议对象 */
   const conf = $derived($currentConference)
+  /** 当前是否为磋商模式（否则为一般性辩论） */
   const isCaucus = $derived(mode === 'caucus')
+
+  /** 当前正在进行的磋商（有主持或自由磋商），无磋商时为 null */
   const activeCaucus = $derived(conf?.activeCaucus ?? null)
+
+  /** 是否为有主持核心磋商 */
   const isModerated = $derived(activeCaucus?.type === 'moderated')
 
   // ── 发言队列数据（按 mode 取不同数据源）──────────────────────────
   const rawSpeakers = $derived(
-    mode === 'general_debate' ? (conf?.speakerLists?.entries ?? []) : (activeCaucus?.caucusSpeakers ?? [])
+    mode === 'general_debate'
+      ? (conf?.speakerLists?.entries ?? [])
+      : (activeCaucus?.caucusSpeakers ?? [])
   )
 
   // 统一格式：id, delegationName, status, allocatedTimeSec
@@ -65,15 +73,29 @@
     }))
   )
 
-  const activeEntry = $derived(speakers.find((s: any) => s.status === 'speaking') ?? null)
   const readyEntry = $derived(speakers.find((s: any) => s.status === 'ready') ?? null)
   const waitingSpeakers = $derived(speakers.filter((s: any) => s.status === 'waiting'))
   const currentIdx = $derived(activeCaucus?.currentSpeakerIndex ?? -1)
-  const caucusCurrentSpeaker = $derived(isCaucus && currentIdx >= 0 ? speakers[currentIdx] : null)
 
-  // 当前活跃的发言人（有主持/一般性辩论）
-  const activeSpeaker = $derived(isCaucus ? caucusCurrentSpeaker : activeEntry)
+  /**
+   * 当前活跃的发言人——以引擎 conf.activeSpeaker 为唯一数据源，
+   * 用 entryId 从 speakers 名单中查找显示信息。
+   */
+  const activeSpeaker = $derived.by(() => {
+    const eng = conf?.activeSpeaker
+    if (!eng) return null
+    const entry = speakers.find((s) => s.id === eng.entryId)
+    if (!entry) return null
+    return { ...entry, status: 'speaking' as const }
+  })
 
+  $effect(() => {
+    console.log('[speaker-queue]', {
+      isCaucus,
+      activeSpeaker: activeSpeaker?.delegationName,
+      engineEntryId: conf?.activeSpeaker?.entryId
+    })
+  })
   // ── 计时器状态 ─────────────────────────────────────────────────
   let displayRemaining = $state(0)
   let displayElapsed = $state(0)
@@ -86,8 +108,7 @@
   let totalSec = $state(0)
   let isCaucusPaused = $state(false)
 
-  const isSpeakerActive = $derived(activeSpeaker !== null && activeSpeaker?.status === 'speaking')
-
+  const isSpeakerActive = $derived(activeSpeaker !== null)
   // ── 让渡相关状态 ─────────────────────────────────────────────────
   const yieldPending = $derived(conf?.yieldPending ?? null)
 
@@ -126,7 +147,9 @@
 
   // ── DelegationSelector 相关（general_debate only）───────────────
   const listedDelegationIds = $derived(
-    mode === 'general_debate' ? (conf?.speakerLists?.entries.map((s: any) => s.delegationId) ?? []) : []
+    mode === 'general_debate'
+      ? (conf?.speakerLists?.entries.map((s: any) => s.delegationId) ?? [])
+      : []
   )
 
   // ── 统一 sync helper ───────────────────────────────────────────
@@ -148,7 +171,6 @@
     displayTotal = allocSec
     const now = Date.now()
     const remaining = Math.max(0, (speaker.endAt - now) / 1000)
-
 
     if (remaining > 0) {
       const timerId = mode === 'general_debate' ? 'speakers-list' : 'caucus'
@@ -201,7 +223,6 @@
     const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
     const elapsed = allocSec - remaining
 
-
     displayRemaining = remaining
     displayElapsed = elapsed
     displayTotal = allocSec
@@ -220,10 +241,8 @@
 
     // 从 motion 中取原始总时长，避免 pause/resume 后 total 膨胀
     const motion = conf?.motions.find((m: any) => m.id === activeCaucus.motionId) as any
-    const originalTotal = activeCaucus.type === 'moderated'
-      ? (motion?.totalTimeSec ?? 0)
-      : (motion?.durationSec ?? 0)
-
+    const originalTotal =
+      activeCaucus.type === 'moderated' ? (motion?.totalTimeSec ?? 0) : (motion?.durationSec ?? 0)
 
     if (remaining > 0) {
       createTimer('caucus', 1000).start(
@@ -246,7 +265,6 @@
       getTimer('caucus')?.stop()
     }
   })
-
   // ── 进度条 ─────────────────────────────────────────────────────
   const progressPercent = $derived(
     totalSec > 0 ? ((totalSec - totalRemainingSec) / totalSec) * 100 : 0
@@ -340,7 +358,6 @@
     }
     return null
   })
-
   // ── Cleanup ────────────────────────────────────────────────────
   onDestroy(() => {
     // 离开组件前立即保存，确保计时器状态持久化
@@ -378,7 +395,7 @@
       </div>
 
       <!-- 容量指示：尚可容纳代表数 -->
-      {@const perTime = activeEntry?.allocatedTimeSec ?? 60}
+      {@const perTime = activeSpeaker?.allocatedTimeSec ?? 60}
       {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
       <div
         class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}"
@@ -455,17 +472,17 @@
       <!-- ═══ 有主持磋商 / 一般性辩论 ═══ -->
 
       <!-- 状态链：各状态特有的 UI -->
-      {#if isCaucus && isModerated && activeSpeaker?.status === 'ready'}
+      {#if isCaucus && isModerated && !activeSpeaker && readyEntry}
         <ReadySpeakerCard
-          delegationName={activeSpeaker.delegationName}
-          allocatedTimeSec={activeSpeaker.allocatedTimeSec}
+          delegationName={readyEntry.delegationName}
+          allocatedTimeSec={readyEntry.allocatedTimeSec}
           onstart={startCaucusSpeakerHandler}
           oncancel={cancelReadySpeaker}
         />
 
-      <!-- 让渡解析面板：发言人做出非 chair 让渡后显示 -->
+        <!-- 让渡解析面板：发言人做出非 chair 让渡后显示 -->
       {:else if yieldPending && !isCaucus}
-        <YieldResolutionPanel conference={conf} yieldPending={yieldPending} />
+        <YieldResolutionPanel conference={conf} {yieldPending} />
 
         <!-- 让渡给问题的回答阶段：显示原发言人（不可让渡） -->
         {#if isYieldAnswering}
@@ -484,7 +501,6 @@
             />
           </div>
         {/if}
-
       {:else if isSpeakerActive && conf.activeSpeaker}
         <ActiveSpeakerCard
           delegationName={activeSpeaker.delegationName}

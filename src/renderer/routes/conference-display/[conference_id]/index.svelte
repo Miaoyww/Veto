@@ -161,7 +161,7 @@
       _lastAttendanceId = notifId
 
       if (attendanceTimer) clearTimeout(attendanceTimer)
-      attendanceChange = { ...change, sortOrder: 0 } as Delegation
+      attendanceChange = change
 
       attendanceTimer = setTimeout(() => {
         attendanceChange = null
