@@ -1055,7 +1055,7 @@ export class ConferenceEngine {
     if (totalRemaining >= perSpeakerSec) {
       console.log('advance to next caucus speaker')
 
-      const nextSpeaker = {
+      const nextSpeaker: SpeakerEntry = {
         ...updatedSpeakers[0],
         status: 'ready'
       }
