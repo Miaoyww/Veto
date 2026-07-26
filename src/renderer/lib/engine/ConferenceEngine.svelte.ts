@@ -395,14 +395,14 @@ export class ConferenceEngine {
     const entry = list.entries.find((s) => s.id === entryId)
     if (!entry) return
 
-    const now = Date.now()
     const allocSec = entry.allocatedTimeSec
     list.startSpeaking(entryId)
 
     this.activeSpeaker = {
       entryId,
-      startedAt: now,
-      endAt: now + allocSec * 1000
+      totalSec: allocSec,
+      elapsedSec: 0,
+      paused: false
     }
 
     this.addMinutesEntry(
@@ -414,20 +414,13 @@ export class ConferenceEngine {
 
   pauseSpeaking(): void {
     if (!this.activeSpeaker) return
-    const now = Date.now()
-    this.activeSpeaker = { ...this.activeSpeaker, pausedAt: now }
+    this.activeSpeaker = { ...this.activeSpeaker, paused: true }
     this.touch()
   }
 
-  resumeSpeaking(remainingSec: number): void {
+  resumeSpeaking(_remainingSec?: number): void {
     if (!this.activeSpeaker) return
-    const now = Date.now()
-    this.activeSpeaker = {
-      ...this.activeSpeaker,
-      startedAt: now,
-      endAt: now + remainingSec * 1000,
-      pausedAt: undefined
-    }
+    this.activeSpeaker = { ...this.activeSpeaker, paused: false }
     this.yieldPending = null
     this.touch()
   }
@@ -438,8 +431,8 @@ export class ConferenceEngine {
 
     const list = this.speakerList
     const entry = list.entries.find((s) => s.id === speaker.entryId)
-    const elapsed = (Date.now() - speaker.startedAt) / 1000
-    const remaining = Math.max(0, (entry?.allocatedTimeSec ?? 120) - elapsed)
+    const elapsed = speaker.elapsedSec
+    const remaining = Math.max(0, speaker.totalSec - elapsed)
 
     list.finishCurrent()
     this.activeSpeaker = null
@@ -484,8 +477,8 @@ export class ConferenceEngine {
     const entry = list.entries.find((s) => s.id === speaker.entryId)
     if (!entry) return
 
-    const elapsed = (Date.now() - speaker.startedAt) / 1000
-    const remaining = Math.max(0, (entry.allocatedTimeSec ?? 120) - elapsed)
+    const elapsed = speaker.elapsedSec
+    const remaining = Math.max(0, speaker.totalSec - elapsed)
     // 记录让渡选择到 speaker entry
     list.entries = list.entries.map((s) => (s.id === entry.id ? { ...s, yield: yieldChoice } : s))
 
@@ -505,7 +498,7 @@ export class ConferenceEngine {
 
     // delegate / question / comment → 暂停计时器，设置 yieldPending
     const delegation = this.delegations.find((d) => d.id === entry.delegationId)
-    this.activeSpeaker = speaker.pausedAt != null ? speaker : { ...speaker, pausedAt: Date.now() }
+    this.activeSpeaker = speaker.paused ? speaker : { ...speaker, paused: true }
     this.yieldPending = {
       originalEntryId: entry.id,
       originalDelegationId: entry.delegationId,
@@ -574,7 +567,7 @@ export class ConferenceEngine {
 
     const list = this.speakerList
     this.activeSpeaker = this.activeSpeaker
-      ? { ...this.activeSpeaker, pausedAt: this.activeSpeaker.pausedAt ?? Date.now() }
+      ? { ...this.activeSpeaker, paused: true }
       : null
     list.entries = list.entries.map((s) =>
       s.id === yp.originalEntryId ? { ...s, canYield: false } : s
@@ -806,7 +799,7 @@ export class ConferenceEngine {
     this.points = [...this.points, point]
 
     // 程序性问题：若有活跃发言人且未暂停，则自动暂停计时器
-    if (type === 'point_of_order' && this.activeSpeaker && this.activeSpeaker.pausedAt == null) {
+    if (type === 'point_of_order' && this.activeSpeaker && !this.activeSpeaker.paused) {
       this.pauseSpeaking()
     }
 
@@ -841,22 +834,21 @@ export class ConferenceEngine {
     const motion = this.motions.find((m) => m.id === motionId)
     if (!motion) return
 
-    const now = Date.now()
-    let endAt = now
+    let totalSec = 0
     let caucusType: CaucusType = 'unmoderated'
     let topic: string | undefined
 
     if (motion.type === 'moderated_caucus') {
       caucusType = 'moderated'
-      endAt = now + (motion as any).totalTimeSec * 1000
+      totalSec = (motion as any).totalTimeSec
       topic = (motion as any).topic
     } else if (motion.type === 'unmoderated_caucus') {
       caucusType = 'unmoderated'
-      endAt = now + (motion as any).durationSec * 1000
+      totalSec = (motion as any).durationSec
     }
 
     this.phase = 'caucus'
-    this.activeCaucus = { motionId, type: caucusType, startedAt: now, endAt, elapsedSec: 0 }
+    this.activeCaucus = { motionId, type: caucusType, totalSec, elapsedSec: 0, paused: false }
 
     const label = caucusType === 'moderated' ? '有主持核心磋商' : '自由磋商'
     this.addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
@@ -920,7 +912,6 @@ export class ConferenceEngine {
     const motion = this.motions.find((m) => m.id === motionId)
     if (!motion) return
 
-    const now = Date.now()
     const perSpeakerSec = ((motion as any).speakingTimePerPersonSec as number) ?? 60
     const totalSec = remainingSec ?? ((motion as any).totalTimeSec as number)
     const topic = (motion as any).topic
@@ -947,9 +938,9 @@ export class ConferenceEngine {
     this.activeCaucus = {
       motionId,
       type: 'moderated',
-      startedAt: now,
-      endAt: now + totalSec * 1000,
+      totalSec,
       elapsedSec: 0,
+      paused: false,
       caucusSpeakers,
       currentSpeakerIndex: caucusSpeakers.length > 0 ? 0 : undefined
     }
@@ -968,12 +959,21 @@ export class ConferenceEngine {
   advanceCaucusSpeaker(): void {
     if (!this.activeCaucus?.caucusSpeakers) return
 
+    // 将当前发言人的已用时间累加到 caucus 总耗时
+    // （确保切换到下一位发言人时，totalBudgetRemaining 不会重置）
+    if (this.activeSpeaker && this.activeCaucus) {
+      this.activeCaucus = {
+        ...this.activeCaucus,
+        elapsedSec: this.activeCaucus.elapsedSec + this.activeSpeaker.elapsedSec
+      }
+    }
+
     const speakers = this.activeCaucus.caucusSpeakers
     const currentIdx = this.activeCaucus.currentSpeakerIndex ?? -1
 
     const updatedSpeakers = speakers.filter((_, i) => i !== currentIdx)
 
-    const totalRemaining = (this.activeCaucus.endAt - Date.now()) / 1000
+    const totalRemaining = this.activeCaucus.totalSec - this.activeCaucus.elapsedSec
     const motion = this.motions.find((m) => m.id === this.activeCaucus!.motionId) as any
     const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
     const nextIdx = currentIdx
@@ -1018,7 +1018,6 @@ export class ConferenceEngine {
 
     const readySpeaker = speakers[readyIdx]
     const perSpeakerSec = readySpeaker.allocatedTimeSec
-    const now = Date.now()
 
     const updatedSpeakers = speakers.map((s, i) =>
       i === readyIdx ? { ...s, status: 'speaking' as const } : s
@@ -1031,8 +1030,9 @@ export class ConferenceEngine {
     }
     this.activeSpeaker = {
       entryId: readySpeaker.delegationId,
-      startedAt: now,
-      endAt: now + perSpeakerSec * 1000
+      totalSec: perSpeakerSec,
+      elapsedSec: 0,
+      paused: false
     }
 
     const speakerName = this.getSpeakerDelegationName(readySpeaker)
@@ -1050,7 +1050,7 @@ export class ConferenceEngine {
     const motion = this.motions.find((m) => m.id === this.activeCaucus!.motionId) as any
     const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
 
-    const totalRemaining = (this.activeCaucus.endAt - Date.now()) / 1000
+    const totalRemaining = this.activeCaucus.totalSec - this.activeCaucus.elapsedSec
     const futureCount = currentSpeakers.length + 1
     if (futureCount * perSpeakerSec > totalRemaining) return
 
@@ -1084,19 +1084,13 @@ export class ConferenceEngine {
 
   pauseCaucus(): void {
     if (!this.activeCaucus) return
-    const now = Date.now()
-    this.activeCaucus = { ...this.activeCaucus, pausedAt: now }
+    this.activeCaucus = { ...this.activeCaucus, paused: true }
     this.touch()
   }
 
-  resumeCaucus(remainingSec: number): void {
+  resumeCaucus(_remainingSec?: number): void {
     if (!this.activeCaucus) return
-    const now = Date.now()
-    this.activeCaucus = {
-      ...this.activeCaucus,
-      endAt: now + remainingSec * 1000,
-      pausedAt: undefined
-    }
+    this.activeCaucus = { ...this.activeCaucus, paused: false }
     this.touch()
   }
 
@@ -1297,9 +1291,9 @@ export class ConferenceEngine {
               newActiveCaucus = {
                 motionId: motion.id,
                 type: 'unmoderated',
-                startedAt: now,
-                endAt: now + durationSec * 1000,
-                elapsedSec: 0
+                totalSec: durationSec,
+                elapsedSec: 0,
+                paused: false
               }
               this.addMinutesEntry('caucus_started', '自由磋商开始')
               this.addMinutesEntry('phase_changed', '进入阶段: 磋商')
@@ -1493,11 +1487,10 @@ export class ConferenceEngine {
   }
 
   static fromJSON(json: Conference): ConferenceEngine {
-    // 清理已过期的计时器状态
-    const now = Date.now()
     const cleanJson = { ...json }
-    if (cleanJson.activeSpeaker && cleanJson.activeSpeaker.endAt <= now) {
-      // 同步清理发言名单中的对应条目
+
+    // 清理已过期的计时器状态
+    if (cleanJson.activeSpeaker && cleanJson.activeSpeaker.elapsedSec >= cleanJson.activeSpeaker.totalSec) {
       const expiredEntryId = cleanJson.activeSpeaker.entryId
       if (cleanJson.speakerLists?.entries) {
         cleanJson.speakerLists = {
@@ -1507,9 +1500,10 @@ export class ConferenceEngine {
       }
       cleanJson.activeSpeaker = null
     }
-    if (cleanJson.activeCaucus && cleanJson.activeCaucus.endAt <= now) {
+    if (cleanJson.activeCaucus && cleanJson.activeCaucus.elapsedSec >= cleanJson.activeCaucus.totalSec) {
       cleanJson.activeCaucus = null
     }
+
     return new ConferenceEngine(cleanJson)
   }
 

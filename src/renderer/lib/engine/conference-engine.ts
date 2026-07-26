@@ -179,14 +179,19 @@ export class Timer {
   readonly tickMs: number
 
   private _intervalId: ReturnType<typeof setInterval> | null = null
-  private _remainingSec = 0
+  private _totalSec = 0
+  private _elapsedSec = 0
 
   get isRunning(): boolean {
     return this._intervalId !== null
   }
 
   get remainingSec(): number {
-    return this._remainingSec
+    return Math.max(0, this._totalSec - this._elapsedSec)
+  }
+
+  get elapsedSec(): number {
+    return this._elapsedSec
   }
 
   constructor(id: string, tickMs = 100) {
@@ -194,37 +199,53 @@ export class Timer {
     this.tickMs = tickMs
   }
 
+  /** 统一的 tick 逻辑，由 setInterval 驱动 */
+  private _tick(onTick: (data: TimerTickData) => void, onExpire: () => void): void {
+    this._elapsedSec += this.tickMs / 1000
+    const remaining = Math.max(0, this._totalSec - this._elapsedSec)
+
+    onTick({
+      remainingSec: remaining,
+      elapsedSec: Math.min(this._totalSec, this._elapsedSec),
+      totalSec: this._totalSec
+    })
+
+    if (remaining <= 0) {
+      this.stop()
+      onExpire()
+    }
+  }
+
   /**
-   * 启动倒计时。先停止已有计时，再启动新的。
+   * 启动倒计时（累计时间模型，不依赖 Date.now()）。
+   * 先停止已有计时，再启动新的。
    * @param totalSec 倒计时总时长（秒）
    * @param onTick 每次 tick 回调
    * @param onExpire 时间耗尽回调
+   * @param initialElapsed 初始已过秒数（默认 0，用于从已有进度启动）
    */
-  start(totalSec: number, onTick: (data: TimerTickData) => void, onExpire: () => void): void {
+  start(
+    totalSec: number,
+    onTick: (data: TimerTickData) => void,
+    onExpire: () => void,
+    initialElapsed = 0
+  ): void {
     this.stop()
+    this._totalSec = totalSec
+    this._elapsedSec = initialElapsed
 
-    const startedAt = Date.now()
-    const initialTotal = totalSec
-    this._remainingSec = totalSec
-
-
-    this._intervalId = setInterval(() => {
-      const now = Date.now()
-      const elapsedSec = (now - startedAt) / 1000
-      this._remainingSec = Math.max(0, initialTotal - elapsedSec)
-
-
+    // 如果初始已过时间已耗尽，立即触发过期
+    if (this._elapsedSec >= this._totalSec) {
       onTick({
-        remainingSec: this._remainingSec,
-        elapsedSec: Math.min(initialTotal, elapsedSec),
-        totalSec: initialTotal
+        remainingSec: 0,
+        elapsedSec: this._totalSec,
+        totalSec: this._totalSec
       })
+      onExpire()
+      return
+    }
 
-      if (this._remainingSec <= 0) {
-        this.stop()
-        onExpire()
-      }
-    }, this.tickMs)
+    this._intervalId = setInterval(() => this._tick(onTick, onExpire), this.tickMs)
   }
 
   /** 暂停计时，返回剩余秒数（不清零，供 resume 使用） */
@@ -233,24 +254,26 @@ export class Timer {
       clearInterval(this._intervalId)
       this._intervalId = null
     }
-    return this._remainingSec
+    return this.remainingSec
   }
 
-  /** 从暂停处恢复计时 */
+  /** 从暂停处恢复计时（保持 _totalSec 和 _elapsedSec 不变） */
   resume(onTick: (data: TimerTickData) => void, onExpire: () => void): void {
-    if (this._remainingSec <= 0) {
-      return
-    }
-    this.start(this._remainingSec, onTick, onExpire)
+    if (this._intervalId !== null) return // 已在运行
+    const remaining = this._totalSec - this._elapsedSec
+    if (remaining <= 0) return
+
+    this._intervalId = setInterval(() => this._tick(onTick, onExpire), this.tickMs)
   }
 
-  /** 停止计时并清零剩余时间 */
+  /** 停止计时并清零 */
   stop(): void {
     if (this._intervalId !== null) {
       clearInterval(this._intervalId)
       this._intervalId = null
     }
-    this._remainingSec = 0
+    this._elapsedSec = 0
+    this._totalSec = 0
   }
 }
 

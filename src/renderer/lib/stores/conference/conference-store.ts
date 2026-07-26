@@ -75,8 +75,7 @@ function loadConferencesFromStorage(): Conference[] {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const list: Conference[] = JSON.parse(raw)
-    // 清理过期状态 & 注册引擎
-    const now = Date.now()
+    // 清理过期状态 & 注册引擎（由 ConferenceEngine.fromJSON() 统一处理）
     for (const conf of list) {
       // 过期清理统一由 ConferenceEngine.fromJSON() 处理
       const engine = ConferenceEngine.fromJSON(conf)
@@ -356,10 +355,10 @@ export function pauseSpeaker(): void {
   syncEngine(engine)
 }
 
-export function resumeSpeaker(remainingSec: number): void {
+export function resumeSpeaker(_remainingSec?: number): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.resumeSpeaking(remainingSec)
+  engine.resumeSpeaking()
   syncEngine(engine)
 }
 
@@ -531,10 +530,10 @@ export function pauseCaucus(): void {
   syncEngine(engine)
 }
 
-export function resumeCaucus(remainingSec: number): void {
+export function resumeCaucus(_remainingSec?: number): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.resumeCaucus(remainingSec)
+  engine.resumeCaucus()
   syncEngine(engine)
 }
 

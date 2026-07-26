@@ -369,11 +369,10 @@ export function buildDisplayData(
   // 磋商计时
   let caucusData: ConferenceDisplayData['caucusTimer'] | undefined
   if (conf.activeCaucus) {
-    const now = Date.now()
-    const remainingSec = Math.max(0, (conf.activeCaucus.endAt - now) / 1000)
-    const totalSec = (conf.activeCaucus.endAt - conf.activeCaucus.startedAt) / 1000
+    const remainingSec = Math.max(0, conf.activeCaucus.totalSec - conf.activeCaucus.elapsedSec)
+    const totalSec = conf.activeCaucus.totalSec
     const status =
-      conf.activeCaucus?.pausedAt != null || conf.activeSpeaker?.pausedAt != null
+      conf.activeCaucus.paused || (conf.activeSpeaker?.paused ?? false)
         ? ('paused' as const)
         : ('running' as const)
     caucusData = {
@@ -418,12 +417,11 @@ export function buildDisplayData(
       .length,
     currentSpeaker: (() => {
       if (!currentSpeakerDelegation) return undefined
-      const now = Date.now()
       const remainingSec = conf.activeSpeaker
-        ? Math.max(0, (conf.activeSpeaker.endAt - now) / 1000)
+        ? Math.max(0, conf.activeSpeaker.totalSec - conf.activeSpeaker.elapsedSec)
         : 0
       const status =
-        conf.activeSpeaker?.pausedAt != null ? ('paused' as const) : ('playing' as const)
+        conf.activeSpeaker?.paused ? ('paused' as const) : ('playing' as const)
       return {
         delegation: currentSpeakerDelegation,
         remainingSec,

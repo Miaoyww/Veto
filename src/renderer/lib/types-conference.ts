@@ -433,33 +433,38 @@ export interface Conference {
     remainingSec?: number
   } | null
 
-  /** 当前磋商计时器状态 */
+  /** 当前磋商计时器状态（累计时间模型） */
   activeCaucus?: {
     motionId: string
     type: CaucusType
-    /** 真实世界开始时间戳（总计时） */
-    startedAt: number
-    /** 真实世界结束时间戳（总计时） */
-    endAt: number
-    /** 已过总秒数 */
+
+    /** 总分配时间（秒） */
+    totalSec: number
+
+    /** 已消耗时间（秒） */
     elapsedSec: number
-    /** 暂停时间戳（非空 = 已暂停，用于自由磋商暂停） */
-    pausedAt?: number
+
+    /** 是否暂停 */
+    paused: boolean
+
+    /** 用于同步和恢复 */
+    updatedAt?: number
+
     /** 有主持磋商发言顺序（复用 SpeakerEntry，运行时 delegation 引用由引擎还原） */
     caucusSpeakers?: SpeakerEntry[]
     /** 当前发言人在 caucusSpeakers 中的索引 */
     currentSpeakerIndex?: number
   } | null
 
-  /** 当前发言计时器状态 */
+  /** 当前发言计时器状态（累计时间模型） */
   activeSpeaker?: {
     entryId: string
-    /** 真实世界开始时间戳 */
-    startedAt: number
-    /** 真实世界结束时间戳 */
-    endAt: number
-    /** 暂停时间戳（非空 = 已暂停） */
-    pausedAt?: number
+    /** 总分配时间（秒） */
+    totalSec: number
+    /** 已消耗时间（秒） */
+    elapsedSec: number
+    /** 是否暂停 */
+    paused: boolean
   } | null
 
   /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */

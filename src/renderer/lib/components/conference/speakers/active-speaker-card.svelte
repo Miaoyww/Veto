@@ -40,7 +40,9 @@
   }: Props = $props()
 </script>
 
-<div class="rounded-lg border-2 border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-700 dark:bg-emerald-950/30">
+<div
+  class="rounded-lg border-2 border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-700 dark:bg-emerald-950/30"
+>
   <div class="text-sm font-medium text-emerald-700 dark:text-emerald-400">
     {isPaused ? '计时已暂停' : '正在发言'}
   </div>
@@ -50,7 +52,11 @@
   {#if positionLabel}
     <div class="mt-0.5 text-xs text-muted-foreground">{positionLabel}</div>
   {/if}
-  <div class="mt-3 font-mono text-5xl font-bold tabular-nums {isPaused ? 'text-muted-foreground' : 'text-foreground'}">
+  <div
+    class="mt-3 font-mono text-5xl font-bold tabular-nums {isPaused
+      ? 'text-muted-foreground'
+      : 'text-foreground'}"
+  >
     {formatTime(remainingSec)}
   </div>
   <div class="mt-1 text-xs text-muted-foreground">

@@ -20,6 +20,7 @@
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
   import {
     currentConference,
+    currentEngine,
     // general_debate
     addToSpeakersList,
     removeFromSpeakersList,
@@ -40,7 +41,12 @@
   import { createTimer, getTimer, destroyTimer } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import type { Delegation, YieldType, CaucusSpeakerStatus, SpeakerTransitionReason } from '$lib/types-conference'
+  import type {
+    Delegation,
+    YieldType,
+    CaucusSpeakerStatus,
+    SpeakerTransitionReason
+  } from '$lib/types-conference'
 
   let { mode }: { mode: 'general_debate' | 'caucus' } = $props()
 
@@ -135,12 +141,27 @@
   })
 
   // ── 总时间预算（caucus only）───────────────────────────────────
+  // 使用 caucus 累积已用时间，而非 per-speaker 的 displayElapsed
+  // activeCaucus.elapsedSec：之前发言人的累计耗时（通过 syncEngine 持久化）
+  // displayElapsed：当前发言人的已用时间
   const totalBudgetRemaining = $derived(
-    activeCaucus ? Math.max(0, (activeCaucus.endAt - Date.now()) / 1000) : 0
+    activeCaucus
+      ? Math.max(0, activeCaucus.totalSec - ((activeCaucus.elapsedSec ?? 0) + displayElapsed))
+      : 0
   )
-  const totalBudgetSec = $derived(
-    activeCaucus ? (activeCaucus.endAt - activeCaucus.startedAt) / 1000 : 0
-  )
+  let a: number = 0
+  $effect(() => {
+    a++
+    console.log('')
+    console.log('')
+    console.log(a)
+    console.log('[speaker-queue] totalBudgetRemaining:', totalBudgetRemaining)
+    console.log('[speaker-queue] totalBudgetRemaining:', totalBudgetRemaining)
+    console.log('[speaker-queue] displayElapsed:', displayElapsed)
+    console.log('[speaker-queue]  activeCaucus.elapsedSec:', activeCaucus?.elapsedSec)
+    console.log('[speaker-queue]  activeCaucus.totalSec:', activeCaucus?.totalSec)
+  })
+  const totalBudgetSec = $derived(activeCaucus ? activeCaucus.totalSec : 0)
 
   // 名单耗尽相关
   const isListExhausted = $derived(
@@ -156,8 +177,8 @@
 
   // ── 统一 sync helper ───────────────────────────────────────────
   function syncDisplay(extra?: { speakerTransition?: SpeakerTransitionReason }): void {
-    const c = get(currentConference)
-    if (c) getDisplayBridge().sendUpdate(buildDisplayData(c, extra))
+    const engine = get(currentEngine)
+    if (engine) getDisplayBridge().sendUpdate(buildDisplayData(engine, extra))
   }
 
   // ── 有主持 / 一般性辩论：逐人计时 $effect ─────────────────────
@@ -165,25 +186,31 @@
     const speaker = conf?.activeSpeaker
     if (isCaucus && !isModerated) return // 自由磋商走另一个 effect
     if (!speaker) return
-    if (speaker.pausedAt != null) {
+    if (speaker.paused) {
       return // 暂停中不启动
     }
 
-    const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
-    displayTotal = allocSec
-    const now = Date.now()
-    const remaining = Math.max(0, (speaker.endAt - now) / 1000)
+    const totalSec = speaker.totalSec
+    displayTotal = totalSec
+    displayElapsed = speaker.elapsedSec
+    const remaining = Math.max(0, totalSec - speaker.elapsedSec)
+    displayRemaining = remaining
+    const engine = get(currentEngine)
 
     if (remaining > 0) {
       const timerId = mode === 'general_debate' ? 'speakers-list' : 'caucus'
       const tickMs = mode === 'general_debate' ? 100 : 1000
       createTimer(timerId, tickMs).start(
-        remaining,
+        totalSec,
         (data) => {
           displayRemaining = data.remainingSec
-          // 用 displayTotal - remaining 计算真实已用时间，
-          // 避免 Timer 内部 elapsedSec 在 resume 后从 0 开始
-          displayElapsed = displayTotal - data.remainingSec
+          displayElapsed = data.elapsedSec
+
+          // 同步 elapsedSec 到引擎，供 Display 窗口读取
+          if (engine?.activeSpeaker) {
+            engine.activeSpeaker = { ...engine.activeSpeaker, elapsedSec: data.elapsedSec }
+          }
+
           syncDisplay()
         },
         () => {
@@ -194,7 +221,8 @@
             advanceCaucusSpeaker()
           }
           syncDisplay({ speakerTransition: 'timeout' })
-        }
+        },
+        speaker.elapsedSec
       )
     } else {
       // 发言时间已过期（如从 localStorage 恢复的脏数据），立刻清理
@@ -215,51 +243,47 @@
   // ── 暂停状态恢复：组件挂载时若发言人处于暂停，恢复本地显示状态 ──
   $effect(() => {
     const speaker = conf?.activeSpeaker
-    if (!speaker || speaker.pausedAt == null) return
+    if (!speaker || !speaker.paused) return
     if (isCaucus && !isModerated) return
 
-    // 剩余时间用 endAt - pausedAt（始终准确，不受 startedAt 被重置影响）
-    // 已用时间 = 原始分配总时长 - 剩余时间
-    // displayTotal 保持原始分配时长（整数），不随 resume 改变
-    const remaining = Math.max(0, (speaker.endAt - speaker.pausedAt) / 1000)
-    const allocSec = activeSpeaker?.allocatedTimeSec ?? 120
-    const elapsed = allocSec - remaining
+    const totalSec = speaker.totalSec
+    const remaining = Math.max(0, totalSec - speaker.elapsedSec)
 
     displayRemaining = remaining
-    displayElapsed = elapsed
-    displayTotal = allocSec
+    displayElapsed = speaker.elapsedSec
+    displayTotal = totalSec
     isPaused = true
   })
 
   // ── 自由磋商：总倒计时 $effect ─────────────────────────────────
   $effect(() => {
     if (!isCaucus || !activeCaucus || isModerated) return
-    if (activeCaucus.pausedAt != null) {
+    if (activeCaucus.paused) {
       return
     }
 
-    const now = Date.now()
-    const remaining = Math.max(0, (activeCaucus.endAt - now) / 1000)
-
-    // 从 motion 中取原始总时长，避免 pause/resume 后 total 膨胀
-    const motion = conf?.motions.find((m: any) => m.id === activeCaucus.motionId) as any
-    const originalTotal =
-      activeCaucus.type === 'moderated' ? (motion?.totalTimeSec ?? 0) : (motion?.durationSec ?? 0)
+    const caucusTotalSec = activeCaucus.totalSec
+    const remaining = Math.max(0, caucusTotalSec - activeCaucus.elapsedSec)
+    const engine = get(currentEngine)
 
     if (remaining > 0) {
       createTimer('caucus', 1000).start(
-        remaining,
+        caucusTotalSec,
         (data) => {
           totalRemainingSec = data.remainingSec
-          // 用原始总时长 - 剩余时间 = 真实已过时间，避免 resume 后从 0 开始
-          totalElapsedSec = originalTotal - data.remainingSec
-          totalSec = originalTotal
+          totalElapsedSec = data.elapsedSec
+          totalSec = data.totalSec
+          // 同步 elapsedSec 到引擎，供 Display 窗口读取
+          if (engine?.activeCaucus) {
+            engine.activeCaucus = { ...engine.activeCaucus, elapsedSec: data.elapsedSec }
+          }
           syncDisplay()
         },
         () => {
           endCaucus()
           syncDisplay()
-        }
+        },
+        activeCaucus.elapsedSec
       )
     }
 
@@ -291,6 +315,7 @@
   }
 
   function pauseSpeaking(): void {
+    displayElapsed = 0
     getTimer(mode === 'general_debate' ? 'speakers-list' : 'caucus')?.stop()
     isPaused = true
     pauseSpeaker()
@@ -299,12 +324,13 @@
 
   function resumeSpeaking(): void {
     isPaused = false
-    resumeSpeaker(displayRemaining)
+    resumeSpeaker()
     // 计时器由 $effect 自动启动
     syncDisplay()
   }
 
   function finishSpeaker(yieldType?: YieldType): void {
+    displayElapsed = 0
     getTimer(mode === 'general_debate' ? 'speakers-list' : 'caucus')?.stop()
     isPaused = false
     if (mode === 'general_debate') {
@@ -346,7 +372,7 @@
 
   function resumeCaucusHandler(): void {
     isCaucusPaused = false
-    resumeCaucus(totalRemainingSec)
+    resumeCaucus()
     syncDisplay()
   }
 
