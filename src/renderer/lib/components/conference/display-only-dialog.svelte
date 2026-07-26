@@ -4,15 +4,16 @@
   import { Input } from '$lib/components/ui/input/index.js'
   import { Label } from '$lib/components/ui/label/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
+  import { getWsUrl } from '$lib/services/conference-display-bridge'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
-  let wsUrl = $state('ws://localhost:19527')
+  let wsUrl = $state(getWsUrl())
   let label = $state('')
 
   function handleOpenChange(value: boolean): void {
     if (!value) {
-      wsUrl = 'ws://localhost:19527'
+      wsUrl = getWsUrl()
       label = ''
     }
     open = value
@@ -29,7 +30,7 @@
       })
       if (result.success) {
         open = false
-        wsUrl = 'ws://localhost:19527'
+        wsUrl = getWsUrl()
         label = ''
       }
     } catch (err) {

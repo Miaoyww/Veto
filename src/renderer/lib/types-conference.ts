@@ -471,11 +471,8 @@ export interface PointDraft {
 
 // ---- Display 窗口用的命名类型（避免内联类型导致 Svelte 模板推断为 any）----
 
-/** Display 端代表团信息子集 */
-export type DelegationDisplay = Pick<Delegation, 'id' | 'name' | 'shortName'>
-
 export interface ConferenceDisplaySpeaker {
-  delegation: DelegationDisplay
+  delegation: Delegation
   remainingSec: number
   allocatedSec: number
   /** 计时状态 */
@@ -496,10 +493,10 @@ export interface ConferenceDisplayData {
   currentSpeaker?: ConferenceDisplaySpeaker
   /** 预发言状态（ready 阶段，即将发言的代表团） */
   readySpeaker?: {
-    delegation: DelegationDisplay
+    delegation: Delegation
   }
   speakersList: Array<{
-    delegation: DelegationDisplay
+    delegation: Delegation
     status: string
   }>
   votingSession?: {

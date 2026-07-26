@@ -16,6 +16,10 @@ import type { PluginConfig } from './plugin-store'
 
 let pluginInstances: PluginInstance[] = []
 
+// ── WebSocket 服务器端口（自动分配） ──────────────────────────────────
+
+let wsServerPort = 19527
+
 // ── 窗口引用 ──────────────────────────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null
@@ -101,6 +105,9 @@ function registerIpcHandlers(): void {
   ipcMain.on('window:close', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close()
   })
+
+  // ── WebSocket 端口查询 ────────────────────────────────────────────
+  ipcMain.handle('veto:ws:get-port', () => wsServerPort)
 
   // ── 插件列表 ──────────────────────────────────────────────────────
   ipcMain.handle('veto:plugins:list', () => {
@@ -672,7 +679,7 @@ protocol.registerSchemesAsPrivileged([
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -688,7 +695,7 @@ app.whenReady().then(() => {
   refreshPlugins()
 
   // 初始化 WebSocket 服务器（模拟大会 Display 通信）
-  startWsServer()
+  wsServerPort = await startWsServer()
 
   // 初始化自动更新
   setupAutoUpdater()

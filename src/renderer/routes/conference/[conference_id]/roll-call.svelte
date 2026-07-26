@@ -11,10 +11,12 @@
     completeRollCall
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
+  import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/services/conference-display-bridge'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
+
+  let wsPort = $state<number | null>(null)
 
   onMount(() => {
     if (conferenceId) {
@@ -23,6 +25,7 @@
         loadConference(conferenceId)
       }
     }
+    initWsPort().then((p) => (wsPort = p))
   })
 
   onDestroy(() => {
@@ -200,7 +203,16 @@
     <span class="text-sm font-semibold text-foreground">点名</span>
     <span class="text-xs text-muted-foreground">{conf?.name}</span>
 
-    <div class="ml-auto">
+    <div class="ml-auto flex items-center gap-2">
+      {#if wsPort !== null}
+        <span
+          class="select-none text-[11px] text-muted-foreground/70"
+          title="WebSocket 端口：{wsPort}"
+        >
+          WS :{wsPort}
+        </span>
+      {/if}
+
       <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={openDisplayWindow}>
         <Monitor size={12} />
         显示窗口

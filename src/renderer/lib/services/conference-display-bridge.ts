@@ -3,22 +3,46 @@
  * ──────────────────────────────────────────────
  * Display 窗口通信抽象层。
  *
- * 使用 WebSocket 协议：主进程运行 WS server (ws://localhost:19527)，
- * Host 和 Display 窗口都通过浏览器原生 WebSocket 连接。
+ * 使用 WebSocket 协议：主进程运行 WS server，Host 和 Display 窗口
+ * 都通过浏览器原生 WebSocket 连接。端口由主进程自动分配。
  *
  * Host 端：连接后发送 { type: "host", data } → 服务器广播给所有 Display
  * Display 端：连接后接收服务器广播的消息
  */
 
-import type { ConferenceDisplayData, DelegationDisplay } from '$lib/types-conference'
+import type { ConferenceDisplayData, Delegation } from '$lib/types-conference'
 
-const DEFAULT_WS_URL = 'ws://localhost:19527'
+const DEFAULT_WS_PORT = 19527
+
+/** 从主进程查询到的实际 WS 端口（初始化后可用） */
+let _wsPort: number | null = null
+
+/** 初始化 WS 端口（从主进程查询，应在应用启动时调用一次） */
+export async function initWsPort(): Promise<number> {
+  if (_wsPort !== null) return _wsPort
+  if (typeof window !== 'undefined' && window.veto?.ws) {
+    _wsPort = await window.veto.ws.getPort()
+    console.log('[DisplayBridge] WS port from main:', _wsPort)
+    return _wsPort
+  }
+  _wsPort = DEFAULT_WS_PORT
+  return _wsPort
+}
+
+/** 获取当前 WS 端口 */
+export function getWsPort(): number {
+  return _wsPort ?? DEFAULT_WS_PORT
+}
+
+function buildDefaultWsUrl(): string {
+  return `ws://localhost:${_wsPort ?? DEFAULT_WS_PORT}`
+}
 
 /** 当前 WS 连接地址（可由外部 IPC 消息更新） */
 let _currentWsUrl: string | null = null
 
 export function getWsUrl(): string {
-  return _currentWsUrl || DEFAULT_WS_URL
+  return _currentWsUrl || buildDefaultWsUrl()
 }
 
 /** 更新 WS 地址并重连（仅展示模式由 IPC 触发） */
@@ -249,7 +273,7 @@ export function buildDisplayData(
     conf.delegations.find((d) => d.id === delegationId)?.name
 
   // 当前发言人
-  let currentSpeakerDelegation: DelegationDisplay | undefined
+  let currentSpeakerDelegation: Delegation | undefined
   let currentSpeakerAllocatedSec = 120
 
   if (conf.activeSpeaker) {

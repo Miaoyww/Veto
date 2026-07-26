@@ -6,10 +6,10 @@
    */
   import { Mic } from '@lucide/svelte'
 
-  import type { DelegationDisplay } from '$lib/types-conference'
+  import type { Delegation } from '$lib/types-conference'
 
   interface Speaker {
-    delegation: DelegationDisplay
+    delegation: Delegation
   }
 
   let {

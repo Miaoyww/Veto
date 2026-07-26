@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { navigate } from '$lib/router.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
@@ -11,12 +12,17 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
+  import { getDisplayBridge, buildDisplayData, initWsPort, getWsPort } from '$lib/services/conference-display-bridge'
 
   const conf = $derived($currentConference)
 
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
+  let wsPort = $state<number | null>(null)
+
+  onMount(async () => {
+    wsPort = await initWsPort()
+  })
 
   async function openDisplayWindow(): Promise<void> {
     if (!conf) return
@@ -88,6 +94,15 @@
       </div>
 
       <div class="ml-auto flex items-center gap-2">
+        {#if wsPort !== null}
+          <span
+            class="select-none text-[11px] text-muted-foreground/70"
+            title="WebSocket 端口：{wsPort}"
+          >
+            WS :{wsPort}
+          </span>
+        {/if}
+
         <Button
           size="sm"
           variant="outline"

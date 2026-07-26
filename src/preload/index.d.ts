@@ -76,6 +76,9 @@ export interface VetoAPI {
     sendToDisplay: (data: unknown) => Promise<{ success: boolean }>
     onDisplayUpdate: (callback: (data: unknown) => void) => () => void
   }
+  ws: {
+    getPort: () => Promise<number>
+  }
   store: {
     load: (domain: string) => Promise<unknown>
     save: (domain: string, data: unknown) => Promise<{ success: boolean }>

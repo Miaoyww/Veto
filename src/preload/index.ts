@@ -181,6 +181,11 @@ const veto = {
         ipcRenderer.removeListener('veto:conference:display-update', listener)
       }
     }
+  },
+
+  ws: {
+    /** 获取 WebSocket 服务器当前监听端口 */
+    getPort: (): Promise<number> => ipcRenderer.invoke('veto:ws:get-port')
   }
 }
 

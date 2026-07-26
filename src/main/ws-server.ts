@@ -4,7 +4,7 @@
  * 在主进程中运行，不需要额外依赖。
  * 基于 Node.js http + crypto（WebSocket 握手 + 帧协议）。
  *
- * 端口：固定 19527（VETO）
+ * 端口：从 19527 开始尝试，如遇冲突则递增寻找可用端口
  *
  * 消息协议（JSON）：
  *   { type: "host", data: ConferenceDisplayData }   // 主机 → 服务器
@@ -15,7 +15,8 @@ import * as http from 'http'
 import * as crypto from 'crypto'
 import type { Duplex } from 'stream'
 
-const WS_PORT = 19527
+const WS_BASE_PORT = 19527
+const WS_MAX_RETRY = 99
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 interface WsClient {
@@ -101,7 +102,7 @@ function broadcast(data: unknown, excludeHost: boolean = false): void {
 }
 
 // ---- 启动服务器 ----
-export function startWsServer(): number {
+export function startWsServer(): Promise<number> {
   const server = http.createServer((_req, res) => {
     res.writeHead(426, { 'Content-Type': 'text/plain' })
     res.end('WebSocket only')
@@ -193,9 +194,25 @@ export function startWsServer(): number {
     })
   })
 
-  server.listen(WS_PORT, () => {
-    console.log(`[WS] WebSocket server listening on ws://localhost:${WS_PORT}`)
-  })
+  return new Promise((resolve, reject) => {
+    let attemptPort = WS_BASE_PORT
 
-  return WS_PORT
+    function tryListen(): void {
+      server.once('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE' && attemptPort < WS_BASE_PORT + WS_MAX_RETRY) {
+          attemptPort++
+          tryListen()
+        } else {
+          reject(err)
+        }
+      })
+
+      server.listen(attemptPort, () => {
+        console.log(`[WS] WebSocket server listening on ws://localhost:${attemptPort}`)
+        resolve(attemptPort)
+      })
+    }
+
+    tryListen()
+  })
 }
