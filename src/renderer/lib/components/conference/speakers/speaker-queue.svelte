@@ -7,7 +7,7 @@
    * mode='general_debate' → 主发言名单（添加/删除/让渡/逐人计时）
    * mode='caucus'         → 磋商（有主持逐人计时 + 总时间预算 + 自由磋商倒计时）
    */
-  import { onDestroy } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { Timer, Coffee, MessageSquare } from '@lucide/svelte'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
@@ -48,6 +48,9 @@
     SpeakerTransitionReason
   } from '$lib/types-conference'
 
+  onMount(() => {
+    advanceCaucusSpeaker()
+  })
   let { mode }: { mode: 'general_debate' | 'caucus' } = $props()
 
   /** 当前会议对象 */
@@ -101,7 +104,9 @@
     console.log('[speaker-queue]', {
       isCaucus,
       activeSpeaker: activeSpeaker?.delegationName,
-      engineEntryId: conf?.activeSpeaker?.entryId
+      engineEntryId: conf?.activeSpeaker?.entryId,
+      isModerated,
+      readyEntry
     })
   })
   // ── 计时器状态 ─────────────────────────────────────────────────
@@ -149,18 +154,6 @@
       ? Math.max(0, activeCaucus.totalSec - ((activeCaucus.elapsedSec ?? 0) + displayElapsed))
       : 0
   )
-  let a: number = 0
-  $effect(() => {
-    a++
-    console.log('')
-    console.log('')
-    console.log(a)
-    console.log('[speaker-queue] totalBudgetRemaining:', totalBudgetRemaining)
-    console.log('[speaker-queue] totalBudgetRemaining:', totalBudgetRemaining)
-    console.log('[speaker-queue] displayElapsed:', displayElapsed)
-    console.log('[speaker-queue]  activeCaucus.elapsedSec:', activeCaucus?.elapsedSec)
-    console.log('[speaker-queue]  activeCaucus.totalSec:', activeCaucus?.totalSec)
-  })
   const totalBudgetSec = $derived(activeCaucus ? activeCaucus.totalSec : 0)
 
   // 名单耗尽相关
@@ -180,6 +173,12 @@
     const engine = get(currentEngine)
     if (engine) getDisplayBridge().sendUpdate(buildDisplayData(engine, extra))
   }
+
+  // ── 挂载时立即同步（避免 Display 窗口在空闲态 / 就绪态缺数据）───
+  $effect(() => {
+    void conf
+    syncDisplay()
+  })
 
   // ── 有主持 / 一般性辩论：逐人计时 $effect ─────────────────────
   $effect(() => {

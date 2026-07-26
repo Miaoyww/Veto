@@ -12,7 +12,11 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
-  import { getDisplayBridge, buildDisplayData, initWsPort, getWsPort } from '$lib/services/conference-display-bridge'
+  import {
+    getDisplayBridge,
+    buildDisplayData,
+    initWsPort
+  } from '$lib/services/conference-display-bridge'
 
   const conf = $derived($currentConference)
 
@@ -24,6 +28,13 @@
     wsPort = await initWsPort()
   })
 
+  $effect(() => {
+    console.log('当前会议状态更新:', {
+      phase: conf?.phase,
+      activeSpeaker: conf?.activeSpeaker,
+      caucusSetup: conf?.caucusSetup
+    })
+  })
   async function openDisplayWindow(): Promise<void> {
     if (!conf) return
     const bridge = getDisplayBridge()

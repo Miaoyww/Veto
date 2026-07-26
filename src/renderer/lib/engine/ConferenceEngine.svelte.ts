@@ -566,9 +566,7 @@ export class ConferenceEngine {
     if (!questionerDel) return
 
     const list = this.speakerList
-    this.activeSpeaker = this.activeSpeaker
-      ? { ...this.activeSpeaker, paused: true }
-      : null
+    this.activeSpeaker = this.activeSpeaker ? { ...this.activeSpeaker, paused: true } : null
     list.entries = list.entries.map((s) =>
       s.id === yp.originalEntryId ? { ...s, canYield: false } : s
     )
@@ -632,11 +630,10 @@ export class ConferenceEngine {
 
     const motionLabel =
       motion.type === 'moderated_caucus' ? `有主持核心磋商: ${(motion as any).topic}` : motion.type
-    this.addMinutesEntry(
-      'motion_proposed',
-      `${motion.proposedBy.name} 提出动议: ${motionLabel}`,
-      { delegationId: motion.proposedBy.id, motionId: id }
-    )
+    this.addMinutesEntry('motion_proposed', `${motion.proposedBy.name} 提出动议: ${motionLabel}`, {
+      delegationId: motion.proposedBy.id,
+      motionId: id
+    })
     this.touch()
     return id
   }
@@ -957,55 +954,134 @@ export class ConferenceEngine {
   }
 
   advanceCaucusSpeaker(): void {
-    if (!this.activeCaucus?.caucusSpeakers) return
+    console.log('advanceCaucusSpeaker:', this)
 
-    // 将当前发言人的已用时间累加到 caucus 总耗时
-    // （确保切换到下一位发言人时，totalBudgetRemaining 不会重置）
-    if (this.activeSpeaker && this.activeCaucus) {
+    const caucus = this.activeCaucus
+    if (!caucus) return
+
+    const speakers = caucus.caucusSpeakers ?? []
+    const currentIdx = caucus.currentSpeakerIndex ?? -1
+
+    /**
+     * 先累计当前发言人的时间
+     * 防止切换代表时总磋商时间没有增加
+     */
+    if (this.activeSpeaker) {
       this.activeCaucus = {
-        ...this.activeCaucus,
-        elapsedSec: this.activeCaucus.elapsedSec + this.activeSpeaker.elapsedSec
+        ...caucus,
+        elapsedSec: caucus.elapsedSec + this.activeSpeaker.elapsedSec
       }
     }
 
-    const speakers = this.activeCaucus.caucusSpeakers
-    const currentIdx = this.activeCaucus.currentSpeakerIndex ?? -1
+    const updatedCaucus = this.activeCaucus!
 
-    const updatedSpeakers = speakers.filter((_, i) => i !== currentIdx)
+    const totalRemaining = updatedCaucus.totalSec - updatedCaucus.elapsedSec
 
-    const totalRemaining = this.activeCaucus.totalSec - this.activeCaucus.elapsedSec
-    const motion = this.motions.find((m) => m.id === this.activeCaucus!.motionId) as any
+    const motion = this.motions.find((m) => m.id === updatedCaucus.motionId) as any
+
     const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
-    const nextIdx = currentIdx
 
-    if (nextIdx < updatedSpeakers.length && totalRemaining >= perSpeakerSec) {
-      updatedSpeakers[nextIdx] = { ...updatedSpeakers[nextIdx], status: 'ready' }
-      const nextName = this.getSpeakerDelegationName(updatedSpeakers[nextIdx])
+    /**
+     * 删除当前发言人
+     */
+    const updatedSpeakers =
+      currentIdx >= 0 ? speakers.filter((_, i) => i !== currentIdx) : [...speakers]
+
+    const debug = {
+      phase: 'advanceCaucusSpeaker',
+      currentIdx,
+      speakersLen: speakers.length,
+      updatedSpeakersLen: updatedSpeakers.length,
+      totalRemaining,
+      perSpeakerSec,
+      activeCaucus: {
+        motionId: updatedCaucus.motionId,
+        totalSec: updatedCaucus.totalSec,
+        elapsedSec: updatedCaucus.elapsedSec
+      },
+      activeSpeaker: this.activeSpeaker
+        ? {
+            entryId: this.activeSpeaker.entryId,
+            totalSec: this.activeSpeaker.totalSec,
+            elapsedSec: this.activeSpeaker.elapsedSec,
+            paused: this.activeSpeaker.paused
+          }
+        : null
+    }
+
+    console.log('debug:', debug)
+
+    /**
+     * 情况1：
+     * 没有剩余发言人
+     *
+     * 这是最容易产生僵尸状态的地方
+     */
+    if (updatedSpeakers.length === 0) {
+      console.log('no remaining caucus speakers')
+
+      if (totalRemaining >= perSpeakerSec) {
+        console.log('return to caucus setup for more speakers')
+
+        const previousMotionId = updatedCaucus.motionId
+
+        this.phase = 'caucus_setup'
+
+        this.activeCaucus = null
+        this.activeSpeaker = null
+
+        this.caucusSetup = {
+          motionId: previousMotionId,
+          proposerPosition: 'first',
+          speakerDelegationIds: [],
+          remainingSec: totalRemaining
+        }
+
+        this.addMinutesEntry('caucus_paused', '名单已走完，返回磋商准备以添加更多发言人')
+      } else {
+        console.log('no time remaining, end caucus')
+
+        this.endCaucus()
+      }
+
+      this.touch()
+      return
+    }
+
+    /**
+     * 情况2：
+     * 还有代表，并且剩余时间足够
+     */
+    if (totalRemaining >= perSpeakerSec) {
+      console.log('advance to next caucus speaker')
+
+      const nextSpeaker = {
+        ...updatedSpeakers[0],
+        status: 'ready'
+      }
+
+      const nextName = this.getSpeakerDelegationName(nextSpeaker)
 
       this.activeCaucus = {
-        ...this.activeCaucus!,
-        caucusSpeakers: updatedSpeakers,
-        currentSpeakerIndex: nextIdx
+        ...updatedCaucus,
+        caucusSpeakers: [nextSpeaker, ...updatedSpeakers.slice(1)],
+        currentSpeakerIndex: 0
       }
+
       this.activeSpeaker = null
+
       this.addMinutesEntry('speaker_ready', `${nextName} 准备发言（等待主席开始计时）`)
-    } else if (nextIdx < updatedSpeakers.length && totalRemaining < perSpeakerSec) {
-      this.endCaucus()
-    } else if (totalRemaining >= perSpeakerSec) {
-      this.phase = 'caucus_setup'
-      const previousMotionId = this.activeCaucus!.motionId
-      this.activeCaucus = null
-      this.activeSpeaker = null
-      this.caucusSetup = {
-        motionId: previousMotionId,
-        proposerPosition: 'first',
-        speakerDelegationIds: [],
-        remainingSec: totalRemaining
-      }
-      this.addMinutesEntry('caucus_paused', '名单已走完，返回磋商准备以添加更多发言人')
+
+      /**
+       * 情况3：
+       * 有代表，但是时间不足
+       */
     } else {
+      console.log('not enough time for next speaker, end caucus')
+
       this.endCaucus()
     }
+
     this.touch()
   }
 
@@ -1490,7 +1566,10 @@ export class ConferenceEngine {
     const cleanJson = { ...json }
 
     // 清理已过期的计时器状态
-    if (cleanJson.activeSpeaker && cleanJson.activeSpeaker.elapsedSec >= cleanJson.activeSpeaker.totalSec) {
+    if (
+      cleanJson.activeSpeaker &&
+      cleanJson.activeSpeaker.elapsedSec >= cleanJson.activeSpeaker.totalSec
+    ) {
       const expiredEntryId = cleanJson.activeSpeaker.entryId
       if (cleanJson.speakerLists?.entries) {
         cleanJson.speakerLists = {
@@ -1500,7 +1579,10 @@ export class ConferenceEngine {
       }
       cleanJson.activeSpeaker = null
     }
-    if (cleanJson.activeCaucus && cleanJson.activeCaucus.elapsedSec >= cleanJson.activeCaucus.totalSec) {
+    if (
+      cleanJson.activeCaucus &&
+      cleanJson.activeCaucus.elapsedSec >= cleanJson.activeCaucus.totalSec
+    ) {
       cleanJson.activeCaucus = null
     }
 

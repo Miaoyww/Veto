@@ -319,6 +319,7 @@ export interface VotingSession {
 export type MinutesEventType =
   | 'roll_call_completed'
   | 'roll_call_reset'
+  | 'speaker_ready'
   | 'speaker_started'
   | 'speaker_finished'
   | 'yield'
@@ -329,6 +330,7 @@ export type MinutesEventType =
   | 'voting_started'
   | 'voting_ended'
   | 'caucus_started'
+  | 'caucus_paused'
   | 'caucus_ended'
   | 'meeting_suspended'
   | 'meeting_resumed'
@@ -343,6 +345,7 @@ export type MinutesEventType =
 export const MINUTES_EVENT_LABELS: Record<MinutesEventType, string> = {
   roll_call_completed: '点名完成',
   roll_call_reset: '重新点名',
+  speaker_ready: '准备发言',
   speaker_started: '开始发言',
   speaker_finished: '发言结束',
   yield: '让渡时间',
@@ -353,6 +356,7 @@ export const MINUTES_EVENT_LABELS: Record<MinutesEventType, string> = {
   voting_started: '开始投票',
   voting_ended: '投票结束',
   caucus_started: '磋商开始',
+  caucus_paused: '磋商暂停',
   caucus_ended: '磋商结束',
   meeting_suspended: '暂时休会',
   meeting_resumed: '会议恢复',
