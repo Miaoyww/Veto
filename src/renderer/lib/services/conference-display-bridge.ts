@@ -10,7 +10,12 @@
  * Display 端：连接后接收服务器广播的消息
  */
 
-import type { ConferenceDisplayData, Delegation } from '$lib/types-conference'
+import type {
+  ConferenceDisplayData,
+  Delegation,
+  SpeakerTransitionReason,
+  CaucusSpeakerStatus
+} from '$lib/types-conference'
 
 const DEFAULT_WS_PORT = 19527
 
@@ -260,7 +265,7 @@ export function buildDisplayData(
     motionDraft?: ConferenceDisplayData['motionDraft']
     pointDraft?: ConferenceDisplayData['pointDraft']
     attendanceChange?: ConferenceDisplayData['attendanceChange']
-    speakerTransition?: 'timeout' | 'ended'
+    speakerTransition?: SpeakerTransitionReason
   }
 ): ConferenceDisplayData {
   // 统一为 Conference JSON 格式
@@ -343,10 +348,6 @@ export function buildDisplayData(
 
   // 当前动议
   const pendingMotion = conf.motions.find((m) => m.status === 'pending')
-  const pendingMotionDel = pendingMotion
-    ? (engine?.getDelegation(pendingMotion.proposedByDelegationId) ??
-      conf.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId))
-    : null
 
   // 最近被处理的动议（通过/否决），用于 Display 展示表决结果
   // 仅在动议阶段已结束（非 editing / voting）时才回退到已处理的动议，
@@ -364,11 +365,6 @@ export function buildDisplayData(
   const lastResolvedMotion =
     resolvedMotions.length > 0 ? resolvedMotions[resolvedMotions.length - 1] : undefined
   const displayMotion = pendingMotion ?? (!hasActiveMotionPhase ? lastResolvedMotion : undefined)
-  const displayMotionDel =
-    displayMotion && displayMotion !== pendingMotion
-      ? (engine?.getDelegation(displayMotion.proposedByDelegationId) ??
-        conf.delegations.find((d) => d.id === displayMotion.proposedByDelegationId))
-      : pendingMotionDel
 
   // 磋商计时
   let caucusData: ConferenceDisplayData['caucusTimer'] | undefined
@@ -396,7 +392,7 @@ export function buildDisplayData(
             ? {
                 delegationName: s.delegationName,
                 delegation,
-                status: s.status,
+                status: s.status as CaucusSpeakerStatus,
                 allocatedTimeSec: s.allocatedTimeSec
               }
             : null
@@ -475,15 +471,7 @@ export function buildDisplayData(
           topic:
             displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
           status: displayMotion.status,
-          proposedBy:
-            displayMotionDel ??
-            ({
-              id: displayMotion.proposedByDelegationId,
-              name: displayMotion.proposedByDelegationId,
-              attendance: 'present' as const,
-              vetoPower: false,
-              sortOrder: 0
-            } as Delegation),
+          proposedBy: displayMotion.proposedBy,
           motionId: displayMotion.id,
           totalTimeSec:
             displayMotion.type === 'moderated_caucus'
@@ -531,11 +519,7 @@ export function buildDisplayData(
     caucusSetup: conf.caucusSetup
       ? (() => {
           const csMotion = conf.motions.find((m) => m.id === conf.caucusSetup!.motionId) as any
-          const proposerId = csMotion?.proposedByDelegationId
-          const proposerDel = proposerId
-            ? (engine?.getDelegation(proposerId) ??
-              conf.delegations.find((d) => d.id === proposerId))
-            : null
+          const proposerDel = csMotion?.proposedBy
           return {
             topic: csMotion?.topic,
             proposerName: proposerDel?.name,
@@ -544,8 +528,7 @@ export function buildDisplayData(
             speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
               (id) =>
                 engine?.getDelegation(id) ??
-                conf.delegations.find((d) => d.id === id) ??
-                { id, name: id }
+                conf.delegations.find((d) => d.id === id) ?? { id, name: id }
             )
           }
         })()

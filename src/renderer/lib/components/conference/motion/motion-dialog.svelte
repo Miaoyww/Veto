@@ -26,7 +26,7 @@
   import { resolveMotion, calcMaxSpeakers } from '$lib/engine/conference-engine'
   import { navigate } from '$lib/router.svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
-  import type { MotionType, Attendance } from '$lib/types-conference'
+  import type { MotionType, Attendance, Delegation } from '$lib/types-conference'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
@@ -34,17 +34,12 @@
   const conf = $derived($currentConference)
 
   // Proposer
-  let selectedProposerId = $state('')
-
-  // 获取选中代表团的出席状态
-  const selectedDelegation = $derived(
-    selectedProposerId ? conf?.delegations.find((d) => d.id === selectedProposerId) : null
-  )
+  let selectedProposer: Delegation | null = $state(null)
 
   // 常用动议列表——根据当前阶段和选中代表团的出席状态动态调整
   const motionTypes = $derived.by((): MotionType[] => {
     // 缺席的代表团只能提出"更改出席状态"动议
-    if (selectedDelegation && selectedDelegation.attendance === 'absent') {
+    if (selectedProposer && selectedProposer.attendance === 'absent') {
       return ['change_attendance']
     }
 
@@ -125,11 +120,11 @@
   let committedDocumentName = $state('')
   // Change Attendance —— 由当前出席状态决定，只能选相反状态
   let newAttendance = $derived<Attendance>(
-    selectedDelegation?.attendance === 'present' ? 'absent' : 'present'
+    selectedProposer?.attendance === 'present' ? 'absent' : 'present'
   )
 
   function resetForm(): void {
-    selectedProposerId = ''
+    selectedProposer = null
     selectedType = null
     toggleValue = ''
     mcTopic = ''
@@ -158,13 +153,13 @@
   function handlePropose(): void {
     if (!selectedType || !conf) return
 
-    const proposerId = selectedProposerId || conf.delegations[0]?.id
-    if (!proposerId) return
+    const proposerDel = selectedProposer || conf.delegations[0]
+    if (!proposerDel) return
 
     // 使用 committed 值（onblur 已提交），保证 Display 端动画已完整播放
     let motionData: any = {
       type: selectedType,
-      proposedByDelegationId: proposerId
+      proposedBy: proposerDel
     }
 
     switch (selectedType) {
@@ -246,7 +241,7 @@
 
   const canPropose = $derived(
     selectedType !== null &&
-      selectedProposerId !== '' &&
+      selectedProposer !== null &&
       !isDirty &&
       (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
       (selectedType !== 'moderated_caucus' ||
@@ -263,9 +258,7 @@
       motionDraft.set(null)
       return
     }
-    const proposerDel = selectedProposerId
-      ? conf?.delegations.find((d) => d.id === selectedProposerId)
-      : null
+    const proposerDel = selectedProposer
     motionDraft.set({
       proposedBy: proposerDel ?? undefined,
       type: selectedType ?? undefined,
@@ -305,12 +298,12 @@
         {#if conf}
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">动议提出方</Label>
-            <DelegationSelector delegations={conf.delegations} bind:value={selectedProposerId} />
+            <DelegationSelector delegations={conf.delegations} bind:value={selectedProposer} />
           </div>
         {/if}
 
         <!-- 第二步：动议类型选择（选完提出方后出现） -->
-        {#if selectedProposerId}
+        {#if selectedProposer}
           <Separator />
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
@@ -462,7 +455,9 @@
               {newAttendance === 'present' ? '出席' : '缺席'}
             </div>
             <p class="mt-1 text-[10px] text-muted-foreground">
-              当前为{selectedDelegation?.attendance === 'present' ? '出席' : '缺席'}，只能变更为相反状态
+              当前为{selectedProposer?.attendance === 'present'
+                ? '出席'
+                : '缺席'}，只能变更为相反状态
             </p>
           </div>
         {:else if selectedType}

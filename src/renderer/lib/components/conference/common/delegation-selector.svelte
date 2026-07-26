@@ -15,8 +15,8 @@
 
   interface Props {
     delegations: Delegation[]
-    /** 当前已选中的代表团 ID（双向绑定） */
-    value?: string | null
+    /** 当前已选中的代表团（双向绑定） */
+    value?: Delegation | null
     placeholder?: string
     class?: string
     /** 结果过滤：仅显示出席的代表团 */
@@ -25,7 +25,7 @@
     resetOnSelect?: boolean
     /** 排除这些代表团 ID（如已在列表中） */
     excludeIds?: string[]
-    onselect?: (delegationId: string) => void
+    onselect?: (delegation: Delegation) => void
   }
 
   let {
@@ -102,38 +102,34 @@
 
   // ---- selection ----
 
-  function select(delegationId: string): void {
+  function select(delegation: Delegation): void {
     if (resetOnSelect) {
       query = ''
       open = false
-      onselect?.(delegationId)
+      onselect?.(delegation)
     } else {
-      value = delegationId
+      value = delegation
       query = ''
       open = false
-      onselect?.(delegationId)
+      onselect?.(delegation)
     }
   }
 
   function clear(): void {
     value = null
   }
-
-  const selectedDelegation = $derived(
-    value ? delegations.find((d) => d.id === value) : null
-  )
 </script>
 
 <div class={cn('relative', className)}>
   <CommandPrimitive.Root shouldFilter={false}>
-    {#if selectedDelegation && !open}
+    {#if value && !open}
       <!-- 已选中状态 -->
       <div
         class="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2"
       >
-        <span class="text-sm">{selectedDelegation.name}</span>
-        {#if selectedDelegation.shortName}
-          <span class="text-xs text-muted-foreground">({selectedDelegation.shortName})</span>
+        <span class="text-sm">{value.name}</span>
+        {#if value.shortName}
+          <span class="text-xs text-muted-foreground">({value.shortName})</span>
         {/if}
         <button
           type="button"
@@ -168,7 +164,7 @@
           {#each filtered as d (d.id)}
             <CommandPrimitive.Item
               value={d.id}
-              onSelect={() => select(d.id)}
+              onSelect={() => select(d)}
               class="aria-selected:bg-accent aria-selected:text-accent-foreground outline-hidden relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
             >
               <span class="text-foreground">{d.name}</span>

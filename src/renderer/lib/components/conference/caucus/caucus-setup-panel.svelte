@@ -18,13 +18,12 @@
     endCaucus
   } from '$lib/stores/conference/conference-store'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
+  import type { Delegation } from '$lib/types-conference'
 
   const conf = $derived($currentConference)
   const setup = $derived(conf?.caucusSetup ?? null)
   const motion = $derived(setup ? conf?.motions.find((m) => m.id === setup.motionId) : null)
-  const proposerDel = $derived(
-    motion ? conf?.delegations.find((d) => d.id === (motion as any).proposedByDelegationId) : null
-  )
+  const proposerDel = $derived(motion?.proposedBy ?? null)
 
   // 已在名单中的代表团 ID（用于排除）
   const listedIds = $derived(setup?.speakerDelegationIds ?? [])
@@ -35,8 +34,8 @@
   const maxSpeakers = $derived(Math.max(1, Math.floor(totalSec / perSpeakerSec)))
   const isAtCapacity = $derived(listedIds.length >= maxSpeakers)
 
-  function handleAdd(delegationId: string): void {
-    addToCaucusSpeakers(delegationId)
+  function handleAdd(d: Delegation): void {
+    addToCaucusSpeakers(d.id)
   }
 
   function handleRemove(delegationId: string): void {

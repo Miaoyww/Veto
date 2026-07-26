@@ -49,6 +49,16 @@ export interface AgendaItem {
 
 export type YieldType = 'chair' | 'delegate' | 'question' | 'comment'
 
+export type SpeakerEntryStatus =
+  | 'waiting'
+  | 'ready'
+  | 'speaking'
+  | 'finished'
+  | 'interrupted'
+
+/** 磋商发言人的活跃状态（不包括 finished/interrupted） */
+export type CaucusSpeakerStatus = 'waiting' | 'ready' | 'speaking'
+
 export interface YieldChoice {
   type: YieldType
   /** 当 type='delegate' 时，让渡给的代表团 ID */
@@ -62,7 +72,7 @@ export interface YieldPendingState {
   originalEntryId: string
   originalDelegationId: string
   originalDelegation: Delegation
-  yieldType: 'delegate' | 'question' | 'comment'
+  yieldType: YieldType
   /** 让渡时的剩余秒数 */
   remainingSec: number
   /** 原发言人分配的总时长 */
@@ -80,7 +90,7 @@ export interface SpeakerEntry {
   allocatedTimeSec: number
   /** 暂停/中断时剩余时间 */
   remainingTimeSec?: number
-  status: 'waiting' | 'ready' | 'speaking' | 'finished' | 'interrupted'
+  status: SpeakerEntryStatus
   /** 发言人做出的让渡选择 */
   yield?: YieldChoice
   /** 是否允许让渡（通过让渡获得时间的发言人不可再次让渡），默认 true */
@@ -109,27 +119,42 @@ export const POINT_LABELS: Record<PointType, string> = {
 
 // ---- 动议系统 ------------------------------------------------------------
 
+/** 动议类型，对应模拟联合国会议中的各类动议 */
 export type MotionType =
-  | 'open_speakers_list' // 开启主发言名单
-  | 'moderated_caucus' // 有主持核心磋商
-  | 'unmoderated_caucus' // 自由磋商
-  | 'modify_speaking_time' // 修改发言时间
-  | 'postpone_resolution' // 延置决议草案
-  | 'resume_resolution' // 恢复决议草案
-  | 'closure_debate' // 结束辩论
-  | 'suspend_meeting' // 暂时休会
-  | 'close_meeting' // 闭幕
-  | 'reorder_resolution' // 调整投票顺序
-  | 'substantive_vote' // 实质性投票
-  | 'change_attendance' // 更改出席状态
+  /** 开启主发言名单 */
+  | 'open_speakers_list'
+  /** 有主持核心磋商 */
+  | 'moderated_caucus'
+  /** 自由磋商 */
+  | 'unmoderated_caucus'
+  /** 修改发言时间 */
+  | 'modify_speaking_time'
+  /** 延置决议草案 */
+  | 'postpone_resolution'
+  /** 恢复决议草案 */
+  | 'resume_resolution'
+  /** 结束辩论 */
+  | 'closure_debate'
+  /** 暂时休会 */
+  | 'suspend_meeting'
+  /** 闭幕 */
+  | 'close_meeting'
+  /** 调整投票顺序 */
+  | 'reorder_resolution'
+  /** 实质性投票 */
+  | 'substantive_vote'
+  /** 更改出席状态 */
+  | 'change_attendance'
+
+export type MotionStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
 export interface AbstractMotion {
   id: string
   type: MotionType
-  /** 动议提出代表团 ID */
-  proposedByDelegationId: string
+  /** 动议提出代表团 */
+  proposedBy: Delegation
   proposedAt: number
-  status: 'pending' | 'approved' | 'rejected' | 'expired'
+  status: MotionStatus
 }
 
 /** 有主持核心磋商 */
@@ -262,6 +287,10 @@ export interface DraftResolution {
 
 export type VoteValue = 'yes' | 'no' | 'abstain' | 'skip'
 
+export type MajorityRule = 'simple_majority' | 'two_thirds'
+
+export type VoteTargetType = 'motion' | 'resolution'
+
 export interface VoteBallot {
   delegationId: string
   vote: VoteValue
@@ -270,11 +299,11 @@ export interface VoteBallot {
 export interface VotingSession {
   id: string
   /** 表决对象类型 */
-  targetType: 'motion' | 'resolution'
+  targetType: VoteTargetType
   /** 表决对象 ID */
   targetId: string
   /** 多数规则 */
-  majorityRule: 'simple_majority' | 'two_thirds'
+  majorityRule: MajorityRule
   ballots: VoteBallot[]
   startedAt: number
   endedAt?: number
@@ -352,6 +381,10 @@ export interface MinutesEntry {
 
 // ---- Conference（根实体）--------------------------------------------------
 
+export type ProposerPosition = 'first' | 'last'
+
+export type CaucusType = 'moderated' | 'unmoderated'
+
 export interface Conference {
   id: string
   /** 大会名称，如 "安理会2026年第3次紧急会议" */
@@ -393,7 +426,7 @@ export interface Conference {
   caucusSetup?: {
     motionId: string
     /** 动议国发言位置：标首（第一个）还是标尾（最后一个） */
-    proposerPosition: 'first' | 'last'
+    proposerPosition: ProposerPosition
     /** 已加入的代表团 ID 列表（有序） */
     speakerDelegationIds: string[]
     /** 名单耗尽后重回 setup 时的剩余秒数 */
@@ -403,7 +436,7 @@ export interface Conference {
   /** 当前磋商计时器状态 */
   activeCaucus?: {
     motionId: string
-    type: 'moderated' | 'unmoderated'
+    type: CaucusType
     /** 真实世界开始时间戳（总计时） */
     startedAt: number
     /** 真实世界结束时间戳（总计时） */
@@ -464,6 +497,11 @@ export interface PointDraft {
 }
 
 // ---- Display 窗口用的命名类型（避免内联类型导致 Svelte 模板推断为 any）----
+
+export type TimerStatus = 'running' | 'paused'
+
+/** 发言人切换原因：timeout=计时器自然到期，ended=主席手动结束 */
+export type SpeakerTransitionReason = 'timeout' | 'ended'
 
 export interface ConferenceDisplaySpeaker {
   delegation: Delegation
@@ -535,28 +573,28 @@ export interface ConferenceDisplayData {
   caucusSetup?: {
     topic?: string
     proposerName?: string
-    proposerPosition: 'first' | 'last'
+    proposerPosition: ProposerPosition
     speakerDelegationIds: string[]
     speakerNames: Delegation[]
   }
   caucusTimer?: {
     remainingSec: number
     totalSec: number
-    type: 'moderated' | 'unmoderated'
+    type: CaucusType
     /** 计时状态 */
-    status: 'running' | 'paused'
+    status: TimerStatus
     topic?: string
     /** 有主持磋商发言顺序 */
     caucusSpeakers?: Array<{
       delegationName: string
       /** Display 组件用的 delegation 快照 */
       delegation: Delegation
-      status: 'waiting' | 'ready' | 'speaking'
+      status: CaucusSpeakerStatus
       allocatedTimeSec: number
     }>
     currentSpeakerIndex?: number
     /** 发言人切换原因：timeout=计时器自然到期，ended=主席手动结束 */
-    speakerTransition?: 'timeout' | 'ended'
+    speakerTransition?: SpeakerTransitionReason
   }
   recentMinutes: Array<{
     timestamp: number
@@ -565,7 +603,7 @@ export interface ConferenceDisplayData {
   }>
   /** 让渡处理中状态（Display 端展示让渡流程） */
   yieldPending?: {
-    yieldType: 'delegate' | 'question' | 'comment'
+    yieldType: YieldType
     originalDelegation: Delegation
     questionerDelegation?: Delegation
     remainingSec: number

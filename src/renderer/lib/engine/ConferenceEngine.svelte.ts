@@ -15,6 +15,7 @@ import type {
   SpeakerEntry,
   SpeakerListData,
   YieldChoice,
+  YieldType,
   YieldPendingState,
   Motion,
   DraftResolution,
@@ -23,7 +24,11 @@ import type {
   MinutesEntry,
   MinutesEventType,
   Point,
-  PointType
+  PointType,
+  CaucusType,
+  ProposerPosition,
+  MajorityRule,
+  VoteTargetType
 } from '$lib/types-conference'
 import { POINT_LABELS, type Attendance } from '$lib/types-conference'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -231,7 +236,7 @@ export class ConferenceEngine {
     }
     if (data.agenda != null) this.agenda = data.agenda
     if (data.phase != null) this.phase = data.phase
-    if (data.motions != null) this.motions = data.motions
+    if (data.motions != null) this.motions = data.motions as Motion[]
     if (data.dismissedResolvedMotionIds != null)
       this.dismissedResolvedMotionIds = data.dismissedResolvedMotionIds
     if (data.points != null) this.points = data.points
@@ -505,7 +510,7 @@ export class ConferenceEngine {
       originalEntryId: entry.id,
       originalDelegationId: entry.delegationId,
       originalDelegation: delegation!,
-      yieldType: yieldChoice.type as 'delegate' | 'question' | 'comment',
+      yieldType: yieldChoice.type as YieldType,
       remainingSec: remaining,
       allocatedSec: entry.allocatedTimeSec
     }
@@ -632,13 +637,12 @@ export class ConferenceEngine {
 
     this.motions = [...this.motions, motion]
 
-    const del = this.delegations.find((d) => d.id === motion.proposedByDelegationId)
     const motionLabel =
       motion.type === 'moderated_caucus' ? `有主持核心磋商: ${(motion as any).topic}` : motion.type
     this.addMinutesEntry(
       'motion_proposed',
-      `${del?.name ?? motion.proposedByDelegationId} 提出动议: ${motionLabel}`,
-      { delegationId: motion.proposedByDelegationId, motionId: id }
+      `${motion.proposedBy.name} 提出动议: ${motionLabel}`,
+      { delegationId: motion.proposedBy.id, motionId: id }
     )
     this.touch()
     return id
@@ -722,7 +726,7 @@ export class ConferenceEngine {
       this.activeSpeaker = null
       this.addMinutesEntry('speaker_interrupted', '发言人时间作废（磋商动议通过）')
     }
-    const proposerDelId = (motion as any).proposedByDelegationId as string
+    const proposerDelId = motion.proposedBy.id
     this.phase = 'caucus_setup'
     this.caucusSetup = {
       motionId: motion.id,
@@ -786,8 +790,8 @@ export class ConferenceEngine {
 
   private executeChangeAttendance(motion: Motion): void {
     if (motion.type !== 'change_attendance') return
-    const { proposedByDelegationId, newAttendance } = motion as any
-    this.changeDelegationAttendance(proposedByDelegationId, newAttendance)
+    const { proposedBy, newAttendance } = motion as any
+    this.changeDelegationAttendance(proposedBy.id, newAttendance)
   }
 
   // ================================================================
@@ -839,7 +843,7 @@ export class ConferenceEngine {
 
     const now = Date.now()
     let endAt = now
-    let caucusType: 'moderated' | 'unmoderated' = 'unmoderated'
+    let caucusType: CaucusType = 'unmoderated'
     let topic: string | undefined
 
     if (motion.type === 'moderated_caucus') {
@@ -860,10 +864,10 @@ export class ConferenceEngine {
     this.touch()
   }
 
-  setCaucusProposerPosition(position: 'first' | 'last'): void {
+  setCaucusProposerPosition(position: ProposerPosition): void {
     if (!this.caucusSetup) return
     const motion = this.motions.find((m) => m.id === this.caucusSetup!.motionId)
-    const proposerId = (motion as any)?.proposedByDelegationId as string | undefined
+    const proposerId = motion?.proposedBy?.id
     if (!proposerId) {
       this.caucusSetup = { ...this.caucusSetup, proposerPosition: position }
       return
@@ -883,7 +887,7 @@ export class ConferenceEngine {
     if (this.caucusSetup.speakerDelegationIds.includes(delegationId)) return
 
     const motion = this.motions.find((m) => m.id === this.caucusSetup!.motionId)
-    const proposerId = (motion as any)?.proposedByDelegationId as string | undefined
+    const proposerId = motion?.proposedBy?.id
 
     const ids = this.caucusSetup.speakerDelegationIds
     const newIds =
@@ -1109,9 +1113,9 @@ export class ConferenceEngine {
   // ================================================================
 
   startVotingSession(
-    targetType: 'motion' | 'resolution',
+    targetType: VoteTargetType,
     targetId: string,
-    majorityRule: 'simple_majority' | 'two_thirds'
+    majorityRule: MajorityRule
   ): string {
     const id = generateId()
 

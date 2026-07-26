@@ -109,8 +109,17 @@
   const displayTitle = $derived(displayParts.title)
   const displaySubtitle = $derived(displayParts.subtitle)
 
-  // focus 模式：有标题内容时放大展示
-  const isFocused = $derived(draft?.type != null && displayTitle !== '')
+  // focus 模式：有e标题内容时放大展示
+  const isFocused = $derived(
+    draft?.type != null && draft?.type !== 'open_speakers_list' && displayTitle !== ''
+  )
+
+  $effect(() => {
+    console.log('motion display data updated:', {
+      draft
+    })
+    console.log(isFocused)
+  })
 </script>
 
 <div class="flex w-full flex-col items-center">
@@ -205,7 +214,7 @@
         </div>
 
         <div class="mt-3 text-3xl tracking-wider text-white/40">
-          由 <span class="text-white/70">{activeMotion.proposedBy.name}</span> 提出
+          由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
         </div>
 
         {#if activeMotion.type === 'moderated_caucus'}
@@ -259,7 +268,7 @@
           />
         </div>
         <div class="mt-3 text-3xl tracking-wider text-white/40">
-          由 <span class="text-white/70">{activeMotion.proposedBy.name}</span> 提出
+          由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
         </div>
       {/if}
     </div>

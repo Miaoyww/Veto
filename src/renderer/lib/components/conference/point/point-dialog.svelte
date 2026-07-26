@@ -10,7 +10,7 @@
     proposePoint
   } from '$lib/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/types-conference'
-  import type { PointType } from '$lib/types-conference'
+  import type { Delegation, PointType } from '$lib/types-conference'
   import { navigate } from '$lib/router.svelte'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
@@ -38,13 +38,13 @@
 
   // ---- Form state ----
   let selectedType = $state<PointType | null>(null)
-  let selectedProposerId = $state<string | null>(null)
+  let selectedProposer: Delegation | null = $state(null)
 
   const isTimerActive = $derived(conf?.activeSpeaker != null)
-  const canPropose = $derived(selectedType !== null && selectedProposerId != null)
+  const canPropose = $derived(selectedType !== null && selectedProposer != null)
 
   function resetForm(): void {
-    selectedProposerId = null
+    selectedProposer = null
     selectedType = null
   }
 
@@ -59,12 +59,12 @@
   function handlePropose(): void {
     if (!selectedType || !conf) return
 
-    const proposerId = selectedProposerId || conf.delegations[0]?.id
-    if (!proposerId) return
+    const proposerDel = selectedProposer || conf.delegations[0]
+    if (!proposerDel) return
 
     proposePoint({
       type: selectedType,
-      proposedByDelegationId: proposerId
+      proposedByDelegationId: proposerDel.id
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
@@ -91,9 +91,7 @@
       pointDraft.set(null)
       return
     }
-    const proposerDel = selectedProposerId
-      ? conf?.delegations.find((d) => d.id === selectedProposerId)
-      : null
+    const proposerDel = selectedProposer
     pointDraft.set({
       proposedBy: proposerDel ?? undefined,
       type: selectedType ?? undefined
@@ -122,14 +120,14 @@
             <Label class="mb-2 block text-xs text-muted-foreground">问题提出方</Label>
             <DelegationSelector
               delegations={conf.delegations}
-              bind:value={selectedProposerId}
+              bind:value={selectedProposer}
               presentOnly={true}
             />
           </div>
         {/if}
 
         <!-- 第二步：问题类型选择（选完提出方后出现） -->
-        {#if selectedProposerId}
+        {#if selectedProposer}
           <Separator />
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">问题类型</Label>

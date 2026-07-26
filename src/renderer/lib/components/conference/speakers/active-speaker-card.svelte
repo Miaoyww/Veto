@@ -6,6 +6,7 @@
    */
   import SpeakerControls from '$lib/components/conference/speakers/speaker-controls.svelte'
   import { formatTime } from '$lib/utils'
+  import type { YieldType } from '$lib/types-conference'
 
   interface Props {
     delegationName: string
@@ -20,7 +21,7 @@
     onpause?: () => void
     onresume?: () => void
     onend?: () => void
-    onyield?: (type: 'chair' | 'delegate' | 'question' | 'comment') => void
+    onyield?: (type: YieldType) => void
   }
 
   let {

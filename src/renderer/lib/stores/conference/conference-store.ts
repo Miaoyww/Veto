@@ -20,7 +20,13 @@ import type {
   MinutesEventType,
   ConferencePhase
 } from '$lib/types-conference'
-import type { PointType, Attendance } from '$lib/types-conference'
+import type {
+  PointType,
+  Attendance,
+  ProposerPosition,
+  MajorityRule,
+  VoteTargetType
+} from '$lib/types-conference'
 import { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
 import { tallyVotesEngine } from '$lib/engine/conference-engine'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -58,9 +64,7 @@ function unregisterEngine(id: string): void {
 
 /** 将引擎当前状态同步到 conferences writable store（用于持久化） */
 function syncEngine(engine: ConferenceEngine): void {
-  conferences.update((list) =>
-    list.map((c) => (c.id === engine.id ? engine.toJSON() : c))
-  )
+  conferences.update((list) => list.map((c) => (c.id === engine.id ? engine.toJSON() : c)))
 }
 
 // ---- 文件持久化（双重写入：localStorage + 文件）--------------------------
@@ -137,22 +141,19 @@ export const currentConference = derived(
 )
 
 /** 当前大会引擎（派生，供需要直接访问引擎的组件使用） */
-export const currentEngine = derived(
-  [conferences, currentConferenceId],
-  ([$conferences, $id]) => {
-    if (!$id) return null
-    // 从引擎注册表获取，如果不存在则从 store 数据创建
-    let engine = _engines.get($id)
-    if (!engine) {
-      const conf = $conferences.find((c) => c.id === $id)
-      if (conf) {
-        engine = ConferenceEngine.fromJSON(conf)
-        registerEngine(engine)
-      }
+export const currentEngine = derived([conferences, currentConferenceId], ([$conferences, $id]) => {
+  if (!$id) return null
+  // 从引擎注册表获取，如果不存在则从 store 数据创建
+  let engine = _engines.get($id)
+  if (!engine) {
+    const conf = $conferences.find((c) => c.id === $id)
+    if (conf) {
+      engine = ConferenceEngine.fromJSON(conf)
+      registerEngine(engine)
     }
-    return engine ?? null
   }
-)
+  return engine ?? null
+})
 
 /** 动议编辑草稿（实时同步到 Display） */
 export const motionDraft = writable<ConferenceDisplayData['motionDraft'] | null>(null)
@@ -257,10 +258,7 @@ export function getConferenceById(id: string): Conference | null {
 // ---- 点名 -----------------------------------------------------------------
 
 /** 更改代表团出席状态（含会议记录 + Display 通知，动议 & 直接管理统一入口） */
-export function changeDelegationAttendance(
-  delegationId: string,
-  newAttendance: Attendance
-): void {
+export function changeDelegationAttendance(delegationId: string, newAttendance: Attendance): void {
   const engine = getCurrentEngine()
   if (!engine) return
   engine.changeDelegationAttendance(delegationId, newAttendance)
@@ -428,10 +426,7 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
   return id
 }
 
-export function proposePoint(data: {
-  type: PointType
-  proposedByDelegationId: string
-}): string {
+export function proposePoint(data: { type: PointType; proposedByDelegationId: string }): string {
   const engine = getCurrentEngine()
   if (!engine) return ''
   // Engine 方法名是 raisePoint
@@ -480,7 +475,7 @@ export function startCaucus(motionId: string): void {
   syncEngine(engine)
 }
 
-export function setCaucusProposerPosition(position: 'first' | 'last'): void {
+export function setCaucusProposerPosition(position: ProposerPosition): void {
   const engine = getCurrentEngine()
   if (!engine) return
   engine.setCaucusProposerPosition(position)
@@ -553,9 +548,9 @@ export function endCaucus(): void {
 // ---- 投票 -----------------------------------------------------------------
 
 export function startVotingSession(
-  targetType: 'motion' | 'resolution',
+  targetType: VoteTargetType,
   targetId: string,
-  majorityRule: 'simple_majority' | 'two_thirds'
+  majorityRule: MajorityRule
 ): string {
   const engine = getCurrentEngine()
   if (!engine) return ''
@@ -674,4 +669,3 @@ export function getSimpleMajorityThreshold(presentCount: number): number {
 export function getTwoThirdsThreshold(presentCount: number): number {
   return Math.ceil((presentCount * 2) / 3)
 }
-

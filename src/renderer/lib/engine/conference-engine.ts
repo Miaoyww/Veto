@@ -11,7 +11,8 @@ import type {
   Delegation,
   VoteBallot,
   Motion,
-  MotionType
+  MotionType,
+  MajorityRule
 } from '$lib/types-conference'
 
 // ---- 阶段状态机 ----------------------------------------------------------
@@ -85,7 +86,7 @@ export function calculateMajorityThresholds(delegations: Delegation[]): Majority
 
 export function determinePassFail(
   ballots: VoteBallot[],
-  majorityRule: 'simple_majority' | 'two_thirds',
+  majorityRule: MajorityRule,
   delegations: Delegation[]
 ): 'passed' | 'failed' {
   const { presentCount, simpleMajorityThreshold, twoThirdsThreshold } =
@@ -124,7 +125,7 @@ export function tallyVotesEngine(ballots: VoteBallot[]): {
 
 export interface MotionResolution {
   requiresVoting: boolean
-  votingMajority: 'simple_majority' | 'two_thirds'
+  votingMajority: MajorityRule
   autoApprove: boolean
 }
 

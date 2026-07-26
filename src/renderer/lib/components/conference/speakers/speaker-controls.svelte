@@ -7,6 +7,7 @@
    */
   import { MicOff, Pause, Play, Users, ArrowRight, HelpCircle, MessageCircle } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
+  import type { YieldType } from '$lib/types-conference'
 
   interface Props {
     isPaused?: boolean
@@ -14,7 +15,7 @@
     onpause?: () => void
     onresume?: () => void
     onend?: () => void
-    onyield?: (type: 'chair' | 'delegate' | 'question' | 'comment') => void
+    onyield?: (type: YieldType) => void
   }
 
   let { isPaused = false, canYield = true, onpause, onresume, onend, onyield }: Props = $props()

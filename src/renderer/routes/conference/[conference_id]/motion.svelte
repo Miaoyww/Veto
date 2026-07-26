@@ -58,11 +58,7 @@
     pendingMotion ? resolveMotion(pendingMotion.type) : null
   )
 
-  const proposerDel = $derived(
-    pendingMotion
-      ? conf?.delegations.find((d) => d.id === pendingMotion.proposedByDelegationId)
-      : null
-  )
+  const proposerDel = $derived(pendingMotion?.proposedBy ?? null)
 
   const majorityLabel = $derived(
     resolution?.votingMajority === 'simple_majority' ? '简单多数' : '2/3多数'
@@ -143,7 +139,7 @@
               {MOTION_LABELS[pendingMotion.type]}
             </div>
             <div class="text-base text-muted-foreground">
-              由 <span class="font-semibold text-foreground">{proposerDel?.name ?? pendingMotion.proposedByDelegationId}</span> 提出
+              由 <span class="font-semibold text-foreground">{proposerDel?.name}</span> 提出
             </div>
 
             {#if pendingMotion.type === 'moderated_caucus'}

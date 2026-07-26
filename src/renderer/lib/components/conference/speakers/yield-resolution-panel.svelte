@@ -13,6 +13,7 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
+  import type { Delegation } from '$lib/types-conference'
   import { formatTime } from '$lib/utils'
   import {
     resolveYieldToChair,
@@ -35,16 +36,16 @@
   // 排除原发言人（不能将时间让渡给自己）
   const excludeOriginalId = $derived([yp.originalDelegationId])
 
-  function handleSelectDelegate(id: string): void {
-    resolveYieldToDelegate(id)
+  function handleSelectDelegate(d: Delegation): void {
+    resolveYieldToDelegate(d.id)
   }
 
-  function handleSelectQuestioner(id: string): void {
-    resolveYieldToQuestion(id)
+  function handleSelectQuestioner(d: Delegation): void {
+    resolveYieldToQuestion(d.id)
   }
 
-  function handleSelectCommenter(id: string): void {
-    resolveYieldToComment(id)
+  function handleSelectCommenter(d: Delegation): void {
+    resolveYieldToComment(d.id)
   }
 
   function handleNoResponse(): void {

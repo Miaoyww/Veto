@@ -40,7 +40,7 @@
   import { createTimer, getTimer, destroyTimer } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import type { YieldType } from '$lib/types-conference'
+  import type { Delegation, YieldType, CaucusSpeakerStatus, SpeakerTransitionReason } from '$lib/types-conference'
 
   let { mode }: { mode: 'general_debate' | 'caucus' } = $props()
 
@@ -68,7 +68,7 @@
       id: s.id ?? s.delegationId,
       delegationId: s.delegationId,
       delegationName: conf?.delegations.find((d: any) => d.id === s.delegationId)?.name ?? '',
-      status: s.status as 'waiting' | 'ready' | 'speaking',
+      status: s.status as CaucusSpeakerStatus,
       allocatedTimeSec: s.allocatedTimeSec ?? 120
     }))
   )
@@ -155,7 +155,7 @@
   )
 
   // ── 统一 sync helper ───────────────────────────────────────────
-  function syncDisplay(extra?: { speakerTransition?: 'timeout' | 'ended' }): void {
+  function syncDisplay(extra?: { speakerTransition?: SpeakerTransitionReason }): void {
     const c = get(currentConference)
     if (c) getDisplayBridge().sendUpdate(buildDisplayData(c, extra))
   }
@@ -273,8 +273,8 @@
   )
 
   // ── 操作处理 ───────────────────────────────────────────────────
-  function addSpeaker(delegationId: string): void {
-    addToSpeakersList(delegationId)
+  function addSpeaker(d: Delegation): void {
+    addToSpeakersList(d.id)
   }
 
   function prepareSpeaker(entryId: string): void {
