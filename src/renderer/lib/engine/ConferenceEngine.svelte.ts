@@ -25,7 +25,7 @@ import type {
   Point,
   PointType
 } from '$lib/types-conference'
-import { POINT_LABELS } from '$lib/types-conference'
+import { POINT_LABELS, type Attendance } from '$lib/types-conference'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 import {
   Timer,
@@ -285,7 +285,7 @@ export class ConferenceEngine {
   //  点名
   // ================================================================
 
-  setAttendance(delegationId: string, attendance: 'present' | 'absent'): void {
+  setAttendance(delegationId: string, attendance: Attendance): void {
     this.delegations = this.delegations.map((d) =>
       d.id === delegationId ? { ...d, attendance } : d
     )
@@ -499,12 +499,12 @@ export class ConferenceEngine {
     }
 
     // delegate / question / comment → 暂停计时器，设置 yieldPending
-    const delegationName = this.getSpeakerDelegationName(entry)
+    const delegation = this.delegations.find((d) => d.id === entry.delegationId)
     this.activeSpeaker = speaker.pausedAt != null ? speaker : { ...speaker, pausedAt: Date.now() }
     this.yieldPending = {
       originalEntryId: entry.id,
       originalDelegationId: entry.delegationId,
-      originalDelegationName: delegationName,
+      originalDelegation: delegation!,
       yieldType: yieldChoice.type as 'delegate' | 'question' | 'comment',
       remainingSec: remaining,
       allocatedSec: entry.allocatedTimeSec
@@ -525,7 +525,7 @@ export class ConferenceEngine {
     if (yp) {
       this.addMinutesEntry(
         'speaker_finished',
-        `${yp.originalDelegationName} 让渡给主席团，剩余时间作废`,
+        `${yp.originalDelegation.name} 让渡给主席团，剩余时间作废`,
         { delegationId: yp.originalDelegationId }
       )
     }
@@ -554,7 +554,7 @@ export class ConferenceEngine {
 
     this.addMinutesEntry(
       'speaker_finished',
-      `${yp.originalDelegationName} 让渡给 ${targetDel.name}（剩余 ${Math.round(yp.remainingSec)} 秒）`,
+      `${yp.originalDelegation.name} 让渡给 ${targetDel.name}（剩余 ${Math.round(yp.remainingSec)} 秒）`,
       { delegationId: yp.originalDelegationId }
     )
     this.touch()
@@ -577,12 +577,12 @@ export class ConferenceEngine {
     this.yieldPending = {
       ...yp,
       questionerDelegationId: questionerDel.id,
-      questionerDelegationName: questionerDel.name
+      questionerDelegation: questionerDel
     }
 
     this.addMinutesEntry(
       'yield',
-      `${questionerDel.name} 向 ${yp.originalDelegationName} 提问（剩余 ${Math.round(yp.remainingSec)} 秒回答）`,
+      `${questionerDel.name} 向 ${yp.originalDelegation.name} 提问（剩余 ${Math.round(yp.remainingSec)} 秒回答）`,
       { delegationId: questionerDel.id }
     )
     this.touch()
@@ -610,7 +610,7 @@ export class ConferenceEngine {
 
     this.addMinutesEntry(
       'yield',
-      `${commenterDel.name} 获得 ${Math.round(yp.remainingSec)} 秒评论时间（来自 ${yp.originalDelegationName} 的让渡）`,
+      `${commenterDel.name} 获得 ${Math.round(yp.remainingSec)} 秒评论时间（来自 ${yp.originalDelegation.name} 的让渡）`,
       { delegationId: commenterDel.id }
     )
     this.touch()
@@ -768,7 +768,7 @@ export class ConferenceEngine {
   }
 
   /** 更改代表团出席状态（统一入口：动议 & 直接管理均通过此方法） */
-  changeDelegationAttendance(delegationId: string, newAttendance: 'present' | 'absent'): void {
+  changeDelegationAttendance(delegationId: string, newAttendance: Attendance): void {
     this.setAttendance(delegationId, newAttendance)
     const del = this.delegations.find((d) => d.id === delegationId)
     const label = newAttendance === 'present' ? '出席' : '缺席'

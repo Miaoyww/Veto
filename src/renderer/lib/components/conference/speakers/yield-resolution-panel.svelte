@@ -54,16 +54,21 @@
 
   const yieldLabel = $derived.by(() => {
     switch (yp.yieldType) {
-      case 'delegate': return '让渡给代表'
-      case 'question': return '让渡给提问'
-      case 'comment': return '让渡给评论'
+      case 'delegate':
+        return '让渡给代表'
+      case 'question':
+        return '让渡给提问'
+      case 'comment':
+        return '让渡给评论'
     }
   })
 
   const hasQuestioner = $derived(yp.questionerDelegationId != null)
 </script>
 
-<div class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-5 dark:border-indigo-700 dark:bg-indigo-950/30">
+<div
+  class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-5 dark:border-indigo-700 dark:bg-indigo-950/30"
+>
   <!-- 标题栏 -->
   <div class="mb-3 flex items-center gap-2">
     {#if yp.yieldType === 'delegate'}
@@ -78,7 +83,8 @@
   </div>
 
   <p class="mb-4 text-sm text-muted-foreground">
-    {yp.originalDelegationName} 将剩余 <strong>{remainingFormatted}</strong> {yieldLabel}
+    {yp.originalDelegation.name} 将剩余 <strong>{remainingFormatted}</strong>
+    {yieldLabel}
   </p>
 
   <Separator class="mb-4" />
@@ -95,14 +101,19 @@
         excludeIds={excludeOriginalId}
       />
       <div class="flex gap-2">
-        <Button size="sm" variant="ghost" class="h-8 text-xs text-muted-foreground" onclick={handleNoResponse}>
+        <Button
+          size="sm"
+          variant="ghost"
+          class="h-8 text-xs text-muted-foreground"
+          onclick={handleNoResponse}
+        >
           <SkipForward size={12} class="mr-1" />
           改为让渡给主席
         </Button>
       </div>
     </div>
 
-  <!-- ═══ 让渡给提问 ═══ -->
+    <!-- ═══ 让渡给提问 ═══ -->
   {:else if yp.yieldType === 'question' && !hasQuestioner}
     <div class="space-y-3">
       <p class="text-xs text-muted-foreground">
@@ -121,12 +132,10 @@
       </Button>
     </div>
 
-  <!-- ═══ 让渡给评论 ═══ -->
+    <!-- ═══ 让渡给评论 ═══ -->
   {:else if yp.yieldType === 'comment' && !hasQuestioner}
     <div class="space-y-3">
-      <p class="text-xs text-muted-foreground">
-        主席口头呼吁场下评论后，选择举手评论的代表团：
-      </p>
+      <p class="text-xs text-muted-foreground">主席口头呼吁场下评论后，选择举手评论的代表团：</p>
       <DelegationSelector
         delegations={conference.delegations}
         placeholder="搜索评论代表团..."
@@ -140,15 +149,15 @@
       </Button>
     </div>
 
-  <!-- ═══ 提问已指定：回答阶段 ═══ -->
+    <!-- ═══ 提问已指定：回答阶段 ═══ -->
   {:else if yp.yieldType === 'question' && hasQuestioner}
     <div class="space-y-3 text-center">
       <div class="rounded-md bg-indigo-100 px-4 py-3 dark:bg-indigo-900/30">
         <p class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
-          {yp.questionerDelegationName} 正在提问
+          {yp.questionerDelegation?.name} 正在提问
         </p>
         <p class="mt-1 text-xs text-muted-foreground">
-          提问不占用时间，提问完成后 {yp.originalDelegationName} 将使用剩余 {remainingFormatted} 回答问题
+          提问不占用时间，提问完成后 {yp.originalDelegation.name} 将使用剩余 {remainingFormatted} 回答问题
         </p>
       </div>
       <p class="text-xs text-muted-foreground">

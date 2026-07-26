@@ -475,7 +475,15 @@ export function buildDisplayData(
           topic:
             displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
           status: displayMotion.status,
-          proposedByName: displayMotionDel?.name ?? displayMotion.proposedByDelegationId,
+          proposedBy:
+            displayMotionDel ??
+            ({
+              id: displayMotion.proposedByDelegationId,
+              name: displayMotion.proposedByDelegationId,
+              attendance: 'present' as const,
+              vetoPower: false,
+              sortOrder: 0
+            } as Delegation),
           motionId: displayMotion.id,
           totalTimeSec:
             displayMotion.type === 'moderated_caucus'
@@ -507,7 +515,15 @@ export function buildDisplayData(
         conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
       return {
         type: latestPoint.type,
-        proposedByName: pointDel?.name ?? latestPoint.proposedByDelegationId,
+        proposedBy:
+          pointDel ??
+          ({
+            id: latestPoint.proposedByDelegationId,
+            name: latestPoint.proposedByDelegationId,
+            attendance: 'present' as const,
+            vetoPower: false,
+            sortOrder: 0
+          } as Delegation),
         pointId: latestPoint.id
       }
     })(),
@@ -542,9 +558,9 @@ export function buildDisplayData(
     yieldPending: conf.yieldPending
       ? {
           yieldType: conf.yieldPending.yieldType,
-          originalDelegationName: conf.yieldPending.originalDelegationName,
+          originalDelegation: conf.yieldPending.originalDelegation,
           remainingSec: Math.round(conf.yieldPending.remainingSec),
-          questionerDelegationName: conf.yieldPending.questionerDelegationName
+          questionerDelegation: conf.yieldPending.questionerDelegation
         }
       : undefined,
     rollCall: extra?.rollCall,

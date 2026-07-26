@@ -13,6 +13,7 @@
   import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/services/conference-display-bridge'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
+  import type { Delegation, Attendance } from '$lib/types-conference'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
 
@@ -34,9 +35,8 @@
 
   // 刚标记的代表团（传给 Display 端展示确认动画，发送后即清除）
   let lastRollCallMarked = $state<{
-    delegationName: string
-    shortName?: string
-    status: 'present' | 'absent'
+    delegation: Delegation
+    status: Attendance
     index: number
   } | null>(null)
 
@@ -55,12 +55,7 @@
           presentCount: thresholds.presentCount,
           simpleMajorityThreshold: thresholds.simpleMajorityThreshold,
           twoThirdsThreshold: thresholds.twoThirdsThreshold,
-          ...(currentDelegation
-            ? {
-                currentDelegationName: currentDelegation.name,
-                currentDelegationShortName: currentDelegation.shortName,
-              }
-            : {}),
+          ...(currentDelegation ? { currentDelegation } : {}),
           lastMarked: lastRollCallMarked ?? undefined,
         }
       : undefined
@@ -109,8 +104,7 @@
     if (!currentDelegation || isTransitioning) return
     changeDelegationAttendance(currentDelegation.id, 'present')
     lastRollCallMarked = {
-      delegationName: currentDelegation.name,
-      shortName: currentDelegation.shortName,
+      delegation: currentDelegation,
       status: 'present',
       index: currentIndex,
     }
@@ -126,8 +120,7 @@
     if (!currentDelegation || isTransitioning) return
     changeDelegationAttendance(currentDelegation.id, 'absent')
     lastRollCallMarked = {
-      delegationName: currentDelegation.name,
-      shortName: currentDelegation.shortName,
+      delegation: currentDelegation,
       status: 'absent',
       index: currentIndex,
     }

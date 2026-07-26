@@ -26,7 +26,7 @@
   import { resolveMotion, calcMaxSpeakers } from '$lib/engine/conference-engine'
   import { navigate } from '$lib/router.svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
-  import type { MotionType } from '$lib/types-conference'
+  import type { MotionType, Attendance } from '$lib/types-conference'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
@@ -124,7 +124,7 @@
   let documentName = $state('')
   let committedDocumentName = $state('')
   // Change Attendance —— 由当前出席状态决定，只能选相反状态
-  let newAttendance = $derived<'present' | 'absent'>(
+  let newAttendance = $derived<Attendance>(
     selectedDelegation?.attendance === 'present' ? 'absent' : 'present'
   )
 
@@ -267,7 +267,7 @@
       ? conf?.delegations.find((d) => d.id === selectedProposerId)
       : null
     motionDraft.set({
-      proposedByName: proposerDel?.name,
+      proposedBy: proposerDel ?? undefined,
       type: selectedType ?? undefined,
       isRequestingVote: selectedType ? resolveMotion(selectedType).requiresVoting : undefined,
       topic: selectedType === 'moderated_caucus' ? committedTopic.trim() || undefined : undefined,

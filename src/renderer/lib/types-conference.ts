@@ -18,6 +18,8 @@ export type ConferencePhase =
 
 // ---- 代表团（替代 Faction）-----------------------------------------------
 
+export type Attendance = 'present' | 'absent'
+
 export interface Delegation {
   id: string
   /** 国家/组织全名，如 "中华人民共和国" */
@@ -27,7 +29,7 @@ export interface Delegation {
   /** 国旗 emoji 或图片 URL（可选） */
   flagUrl?: string
   /** 点名出勤状态 */
-  attendance: 'present' | 'absent'
+  attendance: Attendance
   /** 是否拥有投票权（默认 true，false 即为观察员） */
   vetoPower: boolean
   /** 排序权重（越小越靠前） */
@@ -59,7 +61,7 @@ export interface YieldChoice {
 export interface YieldPendingState {
   originalEntryId: string
   originalDelegationId: string
-  originalDelegationName: string
+  originalDelegation: Delegation
   yieldType: 'delegate' | 'question' | 'comment'
   /** 让渡时的剩余秒数 */
   remainingSec: number
@@ -67,8 +69,8 @@ export interface YieldPendingState {
   allocatedSec: number
   /** 提问方代表团 ID（question 类型专用） */
   questionerDelegationId?: string
-  /** 提问方代表团名称（question 类型专用） */
-  questionerDelegationName?: string
+  /** 提问方代表团（question 类型专用） */
+  questionerDelegation?: Delegation
 }
 
 export interface SpeakerEntry {
@@ -200,7 +202,7 @@ export interface SubstantiveVoteMotion extends AbstractMotion {
 export interface ChangeAttendanceMotion extends AbstractMotion {
   type: 'change_attendance'
   /** 新的出席状态 */
-  newAttendance: 'present' | 'absent'
+  newAttendance: Attendance
 }
 
 export type Motion =
@@ -435,8 +437,8 @@ export interface Conference {
 
 /** 动议编辑草稿 —— 实时同步到 Display 窗口 */
 export interface MotionDraft {
-  /** 动议提出方代表团名称 */
-  proposedByName?: string
+  /** 动议提出方代表团 */
+  proposedBy?: Delegation
   /** 动议类型 */
   type?: MotionType
   /** 是否需要表决（false = 特殊动议，直接生效，不展示表决 UI） */
@@ -455,8 +457,8 @@ export interface MotionDraft {
 
 /** 问题编辑草稿 —— 实时同步到 Display 窗口 */
 export interface PointDraft {
-  /** 问题提出方代表团名称 */
-  proposedByName?: string
+  /** 问题提出方代表团 */
+  proposedBy?: Delegation
   /** 问题类型 */
   type?: PointType
 }
@@ -514,7 +516,7 @@ export interface ConferenceDisplayData {
     type: MotionType
     topic?: string
     status: string
-    proposedByName: string
+    proposedBy: Delegation
     motionId: string
     /** 总时长（秒），moderated_caucus / unmoderated_caucus */
     totalTimeSec?: number
@@ -527,7 +529,7 @@ export interface ConferenceDisplayData {
   }
   activePoint?: {
     type: PointType
-    proposedByName: string
+    proposedBy: Delegation
     pointId: string
   }
   caucusSetup?: {
@@ -564,9 +566,9 @@ export interface ConferenceDisplayData {
   /** 让渡处理中状态（Display 端展示让渡流程） */
   yieldPending?: {
     yieldType: 'delegate' | 'question' | 'comment'
-    originalDelegationName: string
+    originalDelegation: Delegation
+    questionerDelegation?: Delegation
     remainingSec: number
-    questionerDelegationName?: string
   }
   /** 出席状态变更通知（独立于 rollCall，由 changeDelegationAttendance 统一触发） */
   attendanceChange?: Delegation
@@ -574,16 +576,14 @@ export interface ConferenceDisplayData {
   rollCall?: {
     currentIndex: number
     totalCount: number
-    currentDelegationName?: string
-    currentDelegationShortName?: string
+    currentDelegation?: Delegation
     presentCount: number
     simpleMajorityThreshold: number
     twoThirdsThreshold: number
     /** 刚刚标记的代表团结果（供 Display 端展示确认动画） */
     lastMarked?: {
-      delegationName: string
-      shortName?: string
-      status: 'present' | 'absent'
+      delegation: Delegation
+      status: Attendance
       index: number
     }
   }

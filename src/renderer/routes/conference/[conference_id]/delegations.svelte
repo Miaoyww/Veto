@@ -33,6 +33,7 @@
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds, destroyAllTimers } from '$lib/engine/conference-engine'
   import { VETO_NAME } from '$lib/const'
+  import type { Attendance } from '$lib/types-conference'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
 
@@ -80,7 +81,7 @@
   }
 
   function handleAttendanceChange(delegationId: string, value: string): void {
-    changeDelegationAttendance(delegationId, value as 'present' | 'absent')
+    changeDelegationAttendance(delegationId, value as Attendance)
   }
 
   function handleVetoPowerToggle(delegationId: string, vetoPower: boolean): void {

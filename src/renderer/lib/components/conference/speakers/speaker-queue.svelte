@@ -129,7 +129,7 @@
 
   // 回答阶段的 yieldNote
   const yieldNote = $derived.by(() => {
-    if (isYieldAnswering) return `正在回答来自 ${yieldPending?.questionerDelegationName} 的提问`
+    if (isYieldAnswering) return `正在回答来自 ${yieldPending?.questionerDelegation?.name} 的提问`
     if (!activeSpeakerCanYield && conf?.activeSpeaker) return '（本次发言不可让渡）'
     return undefined
   })
@@ -490,13 +490,13 @@
         {#if isYieldAnswering}
           <div class="mt-4">
             <ActiveSpeakerCard
-              delegationName={yieldPending.originalDelegationName}
+              delegationName={yieldPending.originalDelegation.name}
               remainingSec={displayRemaining}
               elapsedSec={yieldPending.allocatedSec - displayRemaining}
               totalSec={yieldPending.allocatedSec}
               {isPaused}
               canYield={false}
-              yieldNote={`回答来自 ${yieldPending.questionerDelegationName} 的提问`}
+              yieldNote={`回答来自 ${yieldPending.questionerDelegation?.name} 的提问`}
               onpause={pauseSpeaking}
               onresume={resumeSpeaking}
               onend={() => finishSpeaker()}

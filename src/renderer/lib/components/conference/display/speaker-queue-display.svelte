@@ -5,8 +5,9 @@
    * 可复用的 Display 发言名单组件。展示下一个发言代表 + 后续队列，支持限制显示数量。
    */
   import { Mic } from '@lucide/svelte'
-
   import type { Delegation } from '$lib/types-conference'
+  import DisplaySectionHeader from './display-section-header.svelte'
+  import DelegationNameDisplay from './delegation-name-display.svelte'
 
   interface Speaker {
     delegation: Delegation
@@ -39,27 +40,18 @@
   const remaining = $derived(speakers.length - (onlyList ? max : max + 1))
 </script>
 
-<div class="flex w-full flex-col items-center gap-8">
+<div class="flex w-full flex-col items-center gap-5">
   {#if !onlyList}
-    <div class="flex items-center gap-3 text-white/40">
-      <div class="h-px w-12 bg-white/10"></div>
-      <Mic size={20} class="text-[#5B92E5]" />
-      <span class="text-lg tracking-[0.08em] uppercase">{title}</span>
-      <div class="h-px w-12 bg-white/10"></div>
-    </div>
+    <DisplaySectionHeader Icon={Mic} label={title} colorClass="text-[#5B92E5]" />
   {/if}
 
   {#if nextSpeaker}
     <!-- 下一个发言 -->
     <div class="w-full px-8 py-6 text-center">
-      <div class="text-9xl font-semibold tracking-wide text-white">
-        {nextSpeaker.delegation.name}
-      </div>
-      {#if nextSpeaker.delegation.shortName}
-        <div class="mt-1 text-xl font-light tracking-[0.06em] text-white/20">
-          {nextSpeaker.delegation.shortName}
-        </div>
-      {/if}
+      <DelegationNameDisplay
+        name={nextSpeaker.delegation.name}
+        shortName={nextSpeaker.delegation.shortName}
+      />
       {#if subtitle}
         <div class="mt-4 text-lg tracking-wider text-white/15">{subtitle}</div>
       {/if}

@@ -4,10 +4,12 @@
    * ──────────────────────────
    * Display 端出席状态变更 —— 全屏展示。
    */
+  import type { Attendance } from '$lib/types-conference'
+
   let { delegationName, shortName, status }: {
     delegationName: string
     shortName?: string
-    status: 'present' | 'absent'
+    status: Attendance
   } = $props()
 </script>
 

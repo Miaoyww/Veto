@@ -181,18 +181,15 @@
     // 点名阶段兼容：rollCall.lastMarked
     const lastMarked = displayData?.rollCall?.lastMarked
     if (lastMarked) {
-      const notifId = `${lastMarked.delegationName}-${lastMarked.status}`
+      const notifId = `${lastMarked.delegation.name}-${lastMarked.status}`
       if (notifId === _lastAttendanceId) return
       _lastAttendanceId = notifId
 
       if (attendanceTimer) clearTimeout(attendanceTimer)
       attendanceChange = {
-        id: '',
-        name: lastMarked.delegationName,
-        shortName: lastMarked.shortName,
-        attendance: lastMarked.status,
-        sortOrder: 0
-      } as Delegation
+        ...lastMarked.delegation,
+        attendance: lastMarked.status
+      }
 
       attendanceTimer = setTimeout(() => {
         attendanceChange = null
@@ -243,7 +240,7 @@
       <!-- 主展示区（phase 动态切换） -->
       <div class="flex items-start justify-center overflow-hidden px-16" style={contentStyle}>
         <div class="flex w-full flex-col items-center">
-          {#if displayData.pointDraft?.proposedByName || displayData.activePoint}
+          {#if displayData.pointDraft?.proposedBy || displayData.activePoint}
             <QuestionDisplay data={displayData} />
           {:else if effectivePhase === 'motion' && !isSpecialMotion}
             <MotionDisplay data={displayData} />

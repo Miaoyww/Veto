@@ -20,7 +20,7 @@ import type {
   MinutesEventType,
   ConferencePhase
 } from '$lib/types-conference'
-import type { PointType } from '$lib/types-conference'
+import type { PointType, Attendance } from '$lib/types-conference'
 import { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
 import { tallyVotesEngine } from '$lib/engine/conference-engine'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
@@ -259,7 +259,7 @@ export function getConferenceById(id: string): Conference | null {
 /** 更改代表团出席状态（含会议记录 + Display 通知，动议 & 直接管理统一入口） */
 export function changeDelegationAttendance(
   delegationId: string,
-  newAttendance: 'present' | 'absent'
+  newAttendance: Attendance
 ): void {
   const engine = getCurrentEngine()
   if (!engine) return

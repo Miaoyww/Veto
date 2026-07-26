@@ -95,7 +95,7 @@
       ? conf?.delegations.find((d) => d.id === selectedProposerId)
       : null
     pointDraft.set({
-      proposedByName: proposerDel?.name,
+      proposedBy: proposerDel ?? undefined,
       type: selectedType ?? undefined
     })
   })

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DelegationNameDisplay from '$lib/components/conference/display/delegation-name-display.svelte'
   /**
    * roll-call/index.svelte
    * ──────────────────────
@@ -56,16 +57,12 @@
     {:else}
       <!-- ===== 进行中 ===== -->
       <div class="flex flex-col items-center gap-6">
-        <div class="text-center">
-          <div class="text-9xl font-semibold text-white">
-            {rc.currentDelegationName}
-          </div>
-          {#if rc.currentDelegationShortName}
-            <p class="text-4xl tracking-[0.08em] text-white/25">
-              {rc.currentDelegationShortName}
-            </p>
-          {/if}
-        </div>
+        {#if rc.currentDelegation}
+          <DelegationNameDisplay
+            name={rc.currentDelegation.name}
+            shortName={rc.currentDelegation.shortName ?? ''}
+          />
+        {/if}
       </div>
 
       <div class="flex items-center gap-3 text-white/40">

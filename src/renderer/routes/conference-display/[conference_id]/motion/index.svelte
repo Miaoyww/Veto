@@ -170,10 +170,10 @@
                 >
               </div>
 
-              {#if draft?.proposedByName}
+              {#if draft?.proposedBy}
                 <div style="animation: expandTracking 0.8s ease-out both">
                   <AutoFitText
-                    text={draft.proposedByName}
+                    text={draft.proposedBy.name}
                     maxRem={8}
                     class="font-semibold text-white"
                   />
@@ -205,7 +205,7 @@
         </div>
 
         <div class="mt-3 text-3xl tracking-wider text-white/40">
-          由 <span class="text-white/70">{activeMotion.proposedByName}</span> 提出
+          由 <span class="text-white/70">{activeMotion.proposedBy.name}</span> 提出
         </div>
 
         {#if activeMotion.type === 'moderated_caucus'}
@@ -259,7 +259,7 @@
           />
         </div>
         <div class="mt-3 text-3xl tracking-wider text-white/40">
-          由 <span class="text-white/70">{activeMotion.proposedByName}</span> 提出
+          由 <span class="text-white/70">{activeMotion.proposedBy.name}</span> 提出
         </div>
       {/if}
     </div>

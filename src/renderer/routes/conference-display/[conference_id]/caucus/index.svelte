@@ -5,6 +5,7 @@
   import { Mic, Coffee } from '@lucide/svelte'
   import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
+  import DelegationNameDisplay from '$lib/components/conference/display/delegation-name-display.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>
@@ -31,9 +32,10 @@
       </div>
 
       <div class="text-center">
-        <div class="text-9xl font-semibold tracking-wide text-white">
-          {data.currentSpeaker.delegation.name}
-        </div>
+        <DelegationNameDisplay
+          name={data.currentSpeaker?.delegation?.name ?? ''}
+          shortName={data.currentSpeaker?.delegation?.shortName ?? ''}
+        />
       </div>
 
       {@const isTimeout = data.caucusTimer.speakerTransition === 'timeout'}
