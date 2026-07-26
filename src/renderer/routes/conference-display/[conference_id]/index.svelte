@@ -85,11 +85,11 @@
   const phase = $derived(displayData?.phase ?? null)
 
   const headerThresholds = $derived.by(() => {
-    const present = displayData?.presentCount
-    if (present != null && present > 0) {
+    const voting = displayData?.votingCount
+    if (voting != null && voting > 0) {
       return {
-        simpleMajority: Math.floor(present / 2) + 1,
-        twoThirds: Math.ceil((present * 2) / 3)
+        simpleMajority: Math.floor(voting / 2) + 1,
+        twoThirds: Math.ceil((voting * 2) / 3)
       }
     }
     return null

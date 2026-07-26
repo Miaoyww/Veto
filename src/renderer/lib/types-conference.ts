@@ -486,6 +486,8 @@ export interface ConferenceDisplayData {
   name: string
   /** 当前出席的代表团数量（点名结束后持久可用） */
   presentCount: number
+  /** 拥有投票权的出席代表人数（排除观察员，即 vetoPower === false） */
+  votingCount: number
   /** 动议编辑草稿（编辑中实时同步） */
   motionDraft?: MotionDraft
   /** 问题编辑草稿（编辑中实时同步） */

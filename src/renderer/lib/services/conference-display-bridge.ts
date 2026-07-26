@@ -419,6 +419,9 @@ export function buildDisplayData(
     venue: conf.venue,
     name: conf.name,
     presentCount: conf.delegations.filter((d) => d.attendance === 'present').length,
+    votingCount: conf.delegations.filter(
+      (d) => d.attendance === 'present' && d.vetoPower !== false
+    ).length,
     currentSpeaker: (() => {
       if (!currentSpeakerDelegation) return undefined
       const now = Date.now()
