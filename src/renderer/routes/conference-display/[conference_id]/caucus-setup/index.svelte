@@ -44,7 +44,7 @@
     <!-- 发言名单 -->
     {#if setup.speakerNames.length > 0}
       <div class="flex flex-col gap-3">
-        {#each setup.speakerNames as name, i}
+        {#each setup.speakerNames as name, i (i)}
           <div class="flex items-center gap-4">
             <span class="w-10 text-right font-mono text-2xl tabular-nums text-white/20">
               {i + 1}
@@ -56,9 +56,7 @@
         {/each}
       </div>
     {:else}
-      <div class="text-2xl tracking-wider text-white/15">
-        等待主席团添加发言代表团
-      </div>
+      <div class="text-2xl tracking-wider text-white/15">等待主席团添加发言代表团</div>
     {/if}
   </div>
 {/if}

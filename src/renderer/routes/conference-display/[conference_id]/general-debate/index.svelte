@@ -129,30 +129,15 @@
       {formatTime(Math.max(0, data.currentSpeaker.remainingSec ?? 0))}
     </div>
   </div>
-{:else if data.readySpeaker}
-  <!-- 预发言（即将发言） -->
-  <div class="flex flex-col items-center gap-10">
-    <div class="flex items-center gap-3 text-white/40">
-      <div class="h-px w-12 bg-white/10"></div>
-      <Mic size={20} class="text-[#C9A84C]" />
-      <span class="text-lg tracking-[0.08em] uppercase">即将发言</span>
-      <div class="h-px w-12 bg-white/10"></div>
-    </div>
-
-    <div class="text-center">
-      <div class="text-9xl font-semibold tracking-wide text-white">
-        {data.readySpeaker.delegation.name}
-      </div>
-      <div class="mt-1 text-4xl font-light tracking-[0.06em] text-white/30">
-        {data.readySpeaker.delegation.shortName}
-      </div>
-    </div>
-
-    <div class="text-lg tracking-wider text-white/15">等待主席开始计时</div>
-  </div>
 {:else}
   {@const waiting = data.speakersList.filter((s: { status: string }) => s.status === 'waiting')}
-  {console.log('data.speakersList:', data.speakersList)}
-  {console.log('waiting:', waiting)}
-  <SpeakerQueueDisplay speakers={waiting} max={4} />
+  {@const allSpeakers = data.readySpeaker ? [data.readySpeaker, ...waiting] : waiting}
+  {@const displayTitle = data.readySpeaker ? '即将发言' : '主发言名单'}
+  {@const displaySubtitle = data.readySpeaker ? '等待主席开始计时' : ''}
+  <SpeakerQueueDisplay
+    speakers={allSpeakers}
+    max={data.readySpeaker ? 5 : 4}
+    title={displayTitle}
+    subtitle={displaySubtitle}
+  />
 {/if}

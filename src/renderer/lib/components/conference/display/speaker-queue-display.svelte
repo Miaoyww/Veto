@@ -16,12 +16,15 @@
     speakers,
     max = Infinity,
     emptyText = '等待主席添加发言人',
-    title = '主发言名单'
+    title = '主发言名单',
+    subtitle = ''
   }: {
     speakers: Speaker[]
     max?: number
     emptyText?: string
     title?: string
+    /** 显示在下一个发言名称下方的状态文字，如"等待主席开始计时" */
+    subtitle?: string
   } = $props()
 
   const nextSpeaker = $derived(speakers[0] ?? null)
@@ -49,6 +52,9 @@
         <div class="mt-1 text-xl font-light tracking-[0.06em] text-white/20">
           {nextSpeaker.delegation.shortName}
         </div>
+      {/if}
+      {#if subtitle}
+        <div class="mt-4 text-lg tracking-wider text-white/15">{subtitle}</div>
       {/if}
     </div>
   {/if}
