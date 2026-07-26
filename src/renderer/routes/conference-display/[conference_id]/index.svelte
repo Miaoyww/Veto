@@ -130,6 +130,18 @@
     effectivePhase = newPhase
   })
 
+  $effect(() => {
+    console.log('[display] state:', {
+      effectivePhase,
+      rawPhase: displayData?.phase,
+      hasAttendanceChange: displayData?.attendanceChange != null,
+      hasActiveMotion: displayData?.activeMotion != null,
+      hasCurrentSpeaker: displayData?.currentSpeaker != null,
+      hasCaucusTimer: displayData?.caucusTimer != null,
+      hasVotingSession: displayData?.votingSession != null,
+    })
+  })
+
   onDestroy(() => {
     if (phaseDelayTimer) clearTimeout(phaseDelayTimer)
     if (attendanceTimer) clearTimeout(attendanceTimer)

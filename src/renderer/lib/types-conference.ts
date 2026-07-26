@@ -28,6 +28,8 @@ export interface Delegation {
   flagUrl?: string
   /** 点名出勤状态 */
   attendance: 'present' | 'absent'
+  /** 是否拥有投票权（默认 true，false 即为观察员） */
+  vetoPower: boolean
   /** 排序权重（越小越靠前） */
   sortOrder: number
 }
@@ -469,9 +471,11 @@ export interface PointDraft {
 
 // ---- Display 窗口用的命名类型（避免内联类型导致 Svelte 模板推断为 any）----
 
+/** Display 端代表团信息子集 */
+export type DelegationDisplay = Pick<Delegation, 'id' | 'name' | 'shortName'>
+
 export interface ConferenceDisplaySpeaker {
-  delegationName: string
-  shortName?: string
+  delegation: DelegationDisplay
   remainingSec: number
   allocatedSec: number
   /** 计时状态 */
@@ -492,12 +496,10 @@ export interface ConferenceDisplayData {
   currentSpeaker?: ConferenceDisplaySpeaker
   /** 预发言状态（ready 阶段，即将发言的代表团） */
   readySpeaker?: {
-    delegationName: string
-    shortName?: string
+    delegation: DelegationDisplay
   }
   speakersList: Array<{
-    delegationName: string
-    shortName?: string
+    delegation: DelegationDisplay
     status: string
   }>
   votingSession?: {

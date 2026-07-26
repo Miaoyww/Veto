@@ -178,7 +178,7 @@ export function createConference(
   name: string,
   venue: string,
   agendaItems: { title: string; description?: string }[],
-  delegations: { name: string; shortName?: string }[],
+  delegations: { name: string; shortName?: string; vetoPower?: boolean }[],
   options?: { defaultSpeakingTimeSec?: number }
 ): string {
   const id = crypto.randomUUID()
@@ -188,6 +188,7 @@ export function createConference(
     name: d.name,
     shortName: d.shortName,
     attendance: 'absent' as const,
+    vetoPower: d.vetoPower ?? true,
     sortOrder: i
   }))
 
@@ -275,6 +276,14 @@ export function changeDelegationAttendance(
   const engine = getCurrentEngine()
   if (!engine) return
   engine.changeDelegationAttendance(delegationId, newAttendance)
+  syncEngine(engine)
+}
+
+/** 设置代表团的投票权（vetoPower） */
+export function setDelegationVetoPower(delegationId: string, vetoPower: boolean): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  engine.updateDelegation(delegationId, { vetoPower })
   syncEngine(engine)
 }
 
@@ -663,6 +672,11 @@ export function addMinutesEntry(
 
 export function getPresentCount(delegations: Delegation[]): number {
   return delegations.filter((d) => d.attendance === 'present').length
+}
+
+/** 拥有投票权的出席代表人数（排除观察员） */
+export function getVotingCount(delegations: Delegation[]): number {
+  return delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
 }
 
 export function getSimpleMajorityThreshold(presentCount: number): number {

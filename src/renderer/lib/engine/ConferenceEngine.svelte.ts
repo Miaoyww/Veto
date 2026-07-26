@@ -235,7 +235,13 @@ export class ConferenceEngine {
     if (data.createdAt != null) this.createdAt = data.createdAt
     if (data.updatedAt != null) this.updatedAt = data.updatedAt
     if (data.defaultSpeakingTimeSec != null) this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
-    if (data.delegations != null) this.delegations = data.delegations
+    if (data.delegations != null) {
+      // 向后兼容：旧数据可能没有 vetoPower 字段，默认为 true
+      this.delegations = data.delegations.map((d) => ({
+        ...d,
+        vetoPower: d.vetoPower ?? true
+      }))
+    }
     if (data.agenda != null) this.agenda = data.agenda
     if (data.phase != null) this.phase = data.phase
     if (data.motions != null) this.motions = data.motions
@@ -304,13 +310,15 @@ export class ConferenceEngine {
 
   completeRollCall(): void {
     const presentCount = this.delegations.filter((d) => d.attendance === 'present').length
-    const simpleMajority = Math.floor(presentCount / 2) + 1
-    const twoThirds = Math.ceil((presentCount * 2) / 3)
+    const votingCount = this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
+    const simpleMajority = Math.floor(votingCount / 2) + 1
+    const twoThirds = Math.ceil((votingCount * 2) / 3)
 
-    this.addMinutesEntry(
-      'roll_call_completed',
-      `点名完成: 实到 ${presentCount}/${this.delegations.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
-    )
+    const observerCount = presentCount - votingCount
+    const detail = observerCount > 0
+      ? `点名完成: 实到 ${presentCount}/${this.delegations.length}（含观察员 ${observerCount}），可投票 ${votingCount}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
+      : `点名完成: 实到 ${presentCount}/${this.delegations.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
+    this.addMinutesEntry('roll_call_completed', detail)
     this.addMinutesEntry('phase_changed', '进入阶段: 等待开启主发言名单')
     this.phase = 'pending_speakers_list'
     this.touch()
@@ -333,7 +341,7 @@ export class ConferenceEngine {
     const sortOrder = this.delegations.length
     this.delegations = [
       ...this.delegations,
-      { id, name, shortName: shortName || undefined, attendance: 'absent', sortOrder }
+      { id, name, shortName: shortName || undefined, attendance: 'absent', vetoPower: true, sortOrder }
     ]
     this.touch()
     return id
@@ -1124,8 +1132,9 @@ export class ConferenceEngine {
   ): string {
     const id = generateId()
 
+    // 仅出席且拥有投票权的代表团参与表决（观察员除外）
     const presentDelegations = [...this.delegations]
-      .filter((d) => d.attendance === 'present')
+      .filter((d) => d.attendance === 'present' && d.vetoPower !== false)
       .sort((a, b) => a.sortOrder - b.sortOrder)
     const firstDelegationId = presentDelegations[0]?.id ?? null
 
@@ -1180,8 +1189,9 @@ export class ConferenceEngine {
       ballots = [...session.ballots, newBallot]
     }
 
+    // 仅出席且拥有投票权的代表团参与表决（观察员除外）
     const presentDelegations = [...this.delegations]
-      .filter((d) => d.attendance === 'present')
+      .filter((d) => d.attendance === 'present' && d.vetoPower !== false)
       .sort((a, b) => a.sortOrder - b.sortOrder)
 
     const { nextDelegationId, nextRound } = this.advanceVoting(
@@ -1242,7 +1252,8 @@ export class ConferenceEngine {
     }
 
     const { yes, no, abstain } = tallyVotesEngine(session.ballots)
-    const presentCount = this.delegations.filter((d) => d.attendance === 'present').length
+    // 仅统计拥有投票权的出席代表（排除观察员）
+    const presentCount = this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
     const threshold =
       session.majorityRule === 'simple_majority'
         ? Math.floor(presentCount / 2) + 1
@@ -1437,12 +1448,17 @@ export class ConferenceEngine {
     return this.delegations.filter((d) => d.attendance === 'present').length
   }
 
+  /** 拥有投票权的出席代表人数（排除观察员） */
+  getVotingCount(): number {
+    return this.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
+  }
+
   getSimpleMajorityThreshold(): number {
-    return Math.floor(this.getPresentCount() / 2) + 1
+    return Math.floor(this.getVotingCount() / 2) + 1
   }
 
   getTwoThirdsThreshold(): number {
-    return Math.ceil((this.getPresentCount() * 2) / 3)
+    return Math.ceil((this.getVotingCount() * 2) / 3)
   }
 
   getMajorityThresholds() {

@@ -11,9 +11,12 @@
   const presentCount = $derived(
     conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0
   )
+  const votingCount = $derived(
+    conf?.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length ?? 0
+  )
   const totalCount = $derived(conf?.delegations.length ?? 0)
-  const simpleMajority = $derived(Math.floor(presentCount / 2) + 1)
-  const twoThirds = $derived(Math.ceil((presentCount * 2) / 3))
+  const simpleMajority = $derived(Math.floor(votingCount / 2) + 1)
+  const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
 </script>
 
 <aside class="flex h-full w-[260px] shrink-0 flex-col border-r bg-muted/30">
@@ -63,13 +66,15 @@
       <div class="flex items-center gap-1.5 px-5 pb-2">
         <Users size={12} class="text-muted-foreground" />
         <span class="text-[11px] font-medium text-muted-foreground">
-          代表团 ({presentCount}/{conf.delegations.length} 出席)
+          代表团 ({presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票)
         </span>
       </div>
 
       <div class="overflow-y-auto px-3 pb-3" style="max-height: calc(100% - 24px);">
         {#each conf.delegations as delegation (delegation.id)}
           {@const isPresent = delegation.attendance === 'present'}
+          {@const isObserver = isPresent && delegation.vetoPower === false}
+          {@const isVoter = isPresent && !isObserver}
           <div
             class={cn(
               'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
@@ -82,8 +87,10 @@
             </span>
             <!-- 出席状态 icon -->
             <span class="shrink-0 text-[10px]">
-              {#if isPresent}
+              {#if isVoter}
                 <span class="text-emerald-500">●</span>
+              {:else if isObserver}
+                <span class="text-blue-500">●</span>
               {:else}
                 <span class="text-muted-foreground/40">○</span>
               {/if}

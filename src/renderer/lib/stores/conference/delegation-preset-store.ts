@@ -18,6 +18,8 @@ export interface DelegationPresetEntry {
   name: string
   shortName?: string
   flagUrl?: string
+  /** 是否拥有投票权（默认 true，false 即为观察员） */
+  vetoPower?: boolean
 }
 
 export interface DelegationPreset {
@@ -118,12 +120,14 @@ export async function loadDelegationPresets(): Promise<void> {
 
 // ---- 格式化工具 ----
 
-/** 将预设格式化为 textarea 文本（全称,简称 每行一个） */
+/** 将预设格式化为 textarea 文本（全称,简称[,observer] 每行一个） */
 export function formatPresetAsText(preset: DelegationPreset): string {
   return preset.delegations
     .map((d) => {
-      if (d.shortName) return `${d.name},${d.shortName}`
-      return d.name
+      let line = d.name
+      if (d.shortName) line += `,${d.shortName}`
+      if (d.vetoPower === false) line += ',observer'
+      return line
     })
     .join('\n')
 }

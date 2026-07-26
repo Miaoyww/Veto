@@ -10,7 +10,7 @@
  * Display 端：连接后接收服务器广播的消息
  */
 
-import type { ConferenceDisplayData } from '$lib/types-conference'
+import type { ConferenceDisplayData, DelegationDisplay } from '$lib/types-conference'
 
 const DEFAULT_WS_URL = 'ws://localhost:19527'
 
@@ -98,11 +98,6 @@ function getWs(): WebSocket {
   _ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as ConferenceDisplayData
-      console.log('[DisplayBridge] WS message received:', {
-        phase: data.phase,
-        speaker: data.currentSpeaker?.remainingSec,
-        caucus: data.caucusTimer?.remainingSec
-      })
       for (const cb of _wsListeners) {
         cb(data)
       }
@@ -166,11 +161,6 @@ function createHostBridge(): ConferenceDisplayBridge {
     sendUpdate: (data: ConferenceDisplayData): void => {
       const ws = getWs()
       const payload = JSON.stringify({ type: 'host', data })
-      console.log('[DisplayBridge] sendUpdate →', {
-        phase: data.phase,
-        speaker: data.currentSpeaker?.remainingSec,
-        caucus: data.caucusTimer?.remainingSec
-      })
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(payload)
       } else {
@@ -259,7 +249,7 @@ export function buildDisplayData(
     conf.delegations.find((d) => d.id === delegationId)?.name
 
   // 当前发言人
-  let currentSpeakerName: string | undefined
+  let currentSpeakerDelegation: DelegationDisplay | undefined
   let currentSpeakerAllocatedSec = 120
 
   if (conf.activeSpeaker) {
@@ -268,20 +258,33 @@ export function buildDisplayData(
       (s) => s.id === conf.activeSpeaker!.entryId
     )
     if (engineEntry) {
-      currentSpeakerName = engineEntry.delegation?.name ?? engineEntry.delegationId
+      currentSpeakerDelegation = {
+        id: engineEntry.delegationId,
+        name: engineEntry.delegation?.name ?? engineEntry.delegationId,
+        shortName: engineEntry.delegation?.shortName
+      }
       currentSpeakerAllocatedSec = engineEntry.allocatedTimeSec
     } else {
       // 回退：从 conf 数据查找
       const entry = conf.speakerLists?.entries.find((s) => s.id === conf.activeSpeaker!.entryId)
       if (entry) {
-        currentSpeakerName = getDelName(entry.delegationId) ?? entry.delegationId
+        const del = conf.delegations.find((d) => d.id === entry.delegationId)
+        currentSpeakerDelegation = {
+          id: entry.delegationId,
+          name: del?.name ?? entry.delegationId,
+          shortName: del?.shortName
+        }
         currentSpeakerAllocatedSec = entry.allocatedTimeSec
       } else if (conf.activeCaucus?.caucusSpeakers) {
         const cs = conf.activeCaucus.caucusSpeakers.find(
           (s) => s.delegationId === conf.activeSpeaker!.entryId && s.status === 'speaking'
         )
         if (cs) {
-          currentSpeakerName = (cs as any).delegationName ?? getDelName(cs.delegationId) ?? cs.delegationId
+          currentSpeakerDelegation = {
+            id: cs.delegationId,
+            name: (cs as any).delegationName ?? getDelName(cs.delegationId) ?? cs.delegationId,
+            shortName: undefined
+          }
           currentSpeakerAllocatedSec = cs.allocatedTimeSec
         }
       }
@@ -302,9 +305,9 @@ export function buildDisplayData(
     const tally = tallyVotes(activeVoting.ballots)
     const thresholds = calculateMajorityThresholds(conf.delegations)
 
-    // 构建每个出席代表团的投票状态
+    // 构建每个有投票权的出席代表团的投票状态（排除观察员）
     const presentDelegations = [...conf.delegations]
-      .filter((d) => d.attendance === 'present')
+      .filter((d) => d.attendance === 'present' && d.vetoPower !== false)
       .sort((a, b) => a.sortOrder - b.sortOrder)
 
     const ballotsDisplay = presentDelegations.map((d) => {
@@ -393,14 +396,14 @@ export function buildDisplayData(
     name: conf.name,
     presentCount: conf.delegations.filter((d) => d.attendance === 'present').length,
     currentSpeaker: (() => {
-      if (!currentSpeakerName) return undefined
+      if (!currentSpeakerDelegation) return undefined
       const now = Date.now()
       const remainingSec = conf.activeSpeaker
         ? Math.max(0, (conf.activeSpeaker.endAt - now) / 1000)
         : 0
       const status = conf.activeSpeaker?.pausedAt != null ? 'paused' as const : 'playing' as const
       return {
-        delegationName: currentSpeakerName,
+        delegation: currentSpeakerDelegation,
         remainingSec,
         allocatedSec: currentSpeakerAllocatedSec,
         status
@@ -410,21 +413,31 @@ export function buildDisplayData(
       // 优先从引擎获取（带 delegation 引用）
       const engineReady = engine?.readySpeaker
       if (engineReady) {
-        const name = engineReady.delegation?.name ?? engineReady.delegationId
-        return { delegationName: name, shortName: engineReady.delegation?.shortName }
+        return {
+          delegation: {
+            id: engineReady.delegationId,
+            name: engineReady.delegation?.name ?? engineReady.delegationId,
+            shortName: engineReady.delegation?.shortName
+          }
+        }
       }
       // 回退：从 conf 数据查找
       const ready = conf.speakerLists?.entries.find((s) => s.status === 'ready')
       if (!ready) return undefined
       const d = conf.delegations.find((del) => del.id === ready.delegationId)
-      return d ? { delegationName: d.name, shortName: d.shortName } : undefined
+      return d
+        ? { delegation: { id: d.id, name: d.name, shortName: d.shortName } }
+        : undefined
     })(),
     speakersList: (() => {
       // 优先从引擎获取
       if (engine) {
         return engine.speakerList.entries.map((s) => ({
-          delegationName: s.delegation?.name ?? s.delegationId,
-          shortName: s.delegation?.shortName,
+          delegation: {
+            id: s.delegationId,
+            name: s.delegation?.name ?? s.delegationId,
+            shortName: s.delegation?.shortName
+          },
           status: s.status
         }))
       }
@@ -432,8 +445,11 @@ export function buildDisplayData(
       return (conf.speakerLists?.entries ?? []).map((s) => {
         const d = conf.delegations.find((del) => del.id === s.delegationId)
         return {
-          delegationName: d?.name ?? s.delegationId,
-          shortName: d?.shortName,
+          delegation: {
+            id: s.delegationId,
+            name: d?.name ?? s.delegationId,
+            shortName: d?.shortName
+          },
           status: s.status
         }
       })

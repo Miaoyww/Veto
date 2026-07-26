@@ -39,7 +39,7 @@
 
       <div class="text-center">
         <div class="text-9xl font-semibold tracking-wide text-white">
-          {data.currentSpeaker.delegationName}
+          {data.currentSpeaker.delegation.name}
         </div>
       </div>
 

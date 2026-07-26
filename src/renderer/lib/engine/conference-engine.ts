@@ -60,6 +60,8 @@ export const PHASE_LABELS: Record<ConferencePhase, string> = {
 
 export interface MajorityThresholds {
   presentCount: number
+  /** 拥有投票权的出席代表人数（排除观察员） */
+  votingCount: number
   totalCount: number
   simpleMajorityThreshold: number
   twoThirdsThreshold: number
@@ -69,11 +71,15 @@ export function calculateMajorityThresholds(delegations: Delegation[]): Majority
   const presentCount = delegations.filter(
     (d) => d.attendance === 'present'
   ).length
+  const votingCount = delegations.filter(
+    (d) => d.attendance === 'present' && d.vetoPower !== false
+  ).length
   return {
     presentCount,
+    votingCount,
     totalCount: delegations.length,
-    simpleMajorityThreshold: Math.floor(presentCount / 2) + 1,
-    twoThirdsThreshold: Math.ceil(presentCount * 2 / 3)
+    simpleMajorityThreshold: Math.floor(votingCount / 2) + 1,
+    twoThirdsThreshold: Math.ceil(votingCount * 2 / 3)
   }
 }
 

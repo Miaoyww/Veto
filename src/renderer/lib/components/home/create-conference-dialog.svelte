@@ -50,15 +50,21 @@
   function parseDelegations(): {
     name: string
     shortName?: string
+    vetoPower?: boolean
   }[] {
     return delegationsText
       .split('\n')
       .map((line) => {
         const parts = line.split(',').map((s) => s.trim())
         if (parts.length < 1 || !parts[0]) return null
+        const vetoPower =
+          parts[2]?.toLowerCase() === 'observer' || parts[2]?.toLowerCase() === '观察员'
+            ? false
+            : undefined
         return {
           name: parts[0],
-          shortName: parts[1] || undefined
+          shortName: parts[1] || undefined,
+          ...(vetoPower !== undefined ? { vetoPower } : {})
         }
       })
       .filter((d): d is NonNullable<typeof d> => d !== null)

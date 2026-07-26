@@ -17,9 +17,15 @@
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
+  $effect(() => {
+    console.log('[general-debate] data:', data)
+  })
+
   const yp = $derived(data.yieldPending)
   const isYieldCalling = $derived(
-    yp != null && (yp.yieldType === 'question' || yp.yieldType === 'comment') && !yp.questionerDelegationName
+    yp != null &&
+      (yp.yieldType === 'question' || yp.yieldType === 'comment') &&
+      !yp.questionerDelegationName
   )
   const isYieldQuestioning = $derived(
     yp?.yieldType === 'question' && yp.questionerDelegationName != null
@@ -45,11 +51,13 @@
         {yp.yieldType === 'question' ? '场下有无提问？' : '场下有无评论？'}
       </div>
       <div class="mt-4 text-2xl font-light tracking-[0.06em] text-white/30">
-        {yp.originalDelegationName} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给{yp.yieldType === 'question' ? '提问' : '评论'}
+        {yp.originalDelegationName} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给{yp.yieldType ===
+        'question'
+          ? '提问'
+          : '评论'}
       </div>
     </div>
   </div>
-
 {:else if isYieldQuestioning}
   <!-- 提问方已指定，等待/正在进行提问 -->
   <div class="flex flex-col items-center gap-10">
@@ -64,15 +72,12 @@
       <div class="text-7xl font-semibold tracking-wide text-white">
         {yp.questionerDelegationName}
       </div>
-      <div class="mt-2 text-3xl font-light tracking-[0.06em] text-white/30">
-        正在提问
-      </div>
+      <div class="mt-2 text-3xl font-light tracking-[0.06em] text-white/30">正在提问</div>
       <div class="mt-6 text-xl tracking-wider text-white/20">
         {yp.originalDelegationName} 将使用剩余 {formatTime(Math.round(yp.remainingSec))} 回答
       </div>
     </div>
   </div>
-
 {:else if isYieldDelegate}
   <!-- 让渡给代表：等待主席选择 -->
   <div class="flex flex-col items-center gap-10">
@@ -87,12 +92,9 @@
       <div class="text-5xl font-light tracking-wide text-white/70">
         {yp.originalDelegationName} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给另一位代表
       </div>
-      <div class="mt-4 text-2xl tracking-wider text-white/20">
-        等待主席指定目标代表团
-      </div>
+      <div class="mt-4 text-2xl tracking-wider text-white/20">等待主席指定目标代表团</div>
     </div>
   </div>
-
 {:else if data.currentSpeaker}
   <!-- 正在发言 -->
   <div class="flex flex-col items-center gap-10">
@@ -110,13 +112,11 @@
 
     <div class="text-center">
       <div class="text-9xl font-semibold tracking-wide text-white">
-        {data.currentSpeaker.delegationName}
+        {data.currentSpeaker.delegation.name}
       </div>
-      {#if data.currentSpeaker.shortName}
-        <div class="mt-1 text-4xl font-light tracking-[0.06em] text-white/30">
-          {data.currentSpeaker.shortName}
-        </div>
-      {/if}
+      <div class="mt-1 text-4xl font-light tracking-[0.06em] text-white/30">
+        {data.currentSpeaker.delegation.shortName}
+      </div>
     </div>
 
     <!-- 倒计时 -->
@@ -141,7 +141,10 @@
 
     <div class="text-center">
       <div class="text-9xl font-semibold tracking-wide text-white">
-        {data.readySpeaker.delegationName}
+        {data.readySpeaker.delegation.name}
+      </div>
+      <div class="mt-1 text-4xl font-light tracking-[0.06em] text-white/30">
+        {data.readySpeaker.delegation.shortName}
       </div>
     </div>
 

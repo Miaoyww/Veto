@@ -6,9 +6,10 @@
    */
   import { Mic } from '@lucide/svelte'
 
+  import type { DelegationDisplay } from '$lib/types-conference'
+
   interface Speaker {
-    delegationName: string
-    shortName?: string
+    delegation: DelegationDisplay
   }
 
   let {
@@ -42,11 +43,11 @@
     <div class="w-full px-8 py-6 text-center">
       <div class="text-lg font-medium tracking-[0.12em] text-white/30 uppercase">下一个发言</div>
       <div class="mt-3 text-9xl font-semibold tracking-wide text-white">
-        {nextSpeaker.delegationName}
+        {nextSpeaker.delegation.name}
       </div>
-      {#if nextSpeaker.shortName}
+      {#if nextSpeaker.delegation.shortName}
         <div class="mt-1 text-xl font-light tracking-[0.06em] text-white/20">
-          {nextSpeaker.shortName}
+          {nextSpeaker.delegation.shortName}
         </div>
       {/if}
     </div>
@@ -55,16 +56,16 @@
   {#if visibleQueue.length > 0}
     <!-- 后续队列 -->
     <div class="w-full space-y-px">
-      {#each visibleQueue as speaker, i (speaker.delegationName)}
+      {#each visibleQueue as speaker, i (speaker.delegation.name)}
         <div class="flex items-center justify-center gap-4 px-6 py-2.5">
           <span class="text-sm tabular-nums text-white/25">
             {i + 2}
           </span>
           <span class="text-xl font-medium text-white/50">
-            {speaker.delegationName}
+            {speaker.delegation.name}
           </span>
-          {#if speaker.shortName}
-            <span class="text-sm tracking-wider text-white/25">{speaker.shortName}</span>
+          {#if speaker.delegation.shortName}
+            <span class="text-sm tracking-wider text-white/25">{speaker.delegation.shortName}</span>
           {/if}
         </div>
       {/each}

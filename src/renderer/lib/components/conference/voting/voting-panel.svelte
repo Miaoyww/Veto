@@ -64,7 +64,7 @@
   const presentDelegations = $derived(
     conf
       ? [...conf.delegations]
-          .filter((d) => d.attendance === 'present')
+          .filter((d) => d.attendance === 'present' && d.vetoPower !== false)
           .sort((a, b) => a.sortOrder - b.sortOrder)
       : []
   )

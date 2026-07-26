@@ -25,6 +25,7 @@
     currentConferenceId,
     loadConference,
     changeDelegationAttendance,
+    setDelegationVetoPower,
     addDelegation,
     removeDelegation,
     resetRollCall,
@@ -80,6 +81,10 @@
 
   function handleAttendanceChange(delegationId: string, value: string): void {
     changeDelegationAttendance(delegationId, value as 'present' | 'absent')
+  }
+
+  function handleVetoPowerToggle(delegationId: string, vetoPower: boolean): void {
+    setDelegationVetoPower(delegationId, vetoPower)
   }
 
   function handleBack(): void {
@@ -153,11 +158,17 @@
     <div class="mx-auto max-w-3xl px-6 py-6">
       {#if conf && thresholds}
         <!-- 统计卡片 -->
-        <div class="mb-8 grid grid-cols-3 gap-4">
+        <div class="mb-8 grid grid-cols-4 gap-4">
           <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
               <span class="text-2xl font-bold text-foreground">{thresholds.presentCount}</span>
               <span class="text-sm text-muted-foreground">出席 / {thresholds.totalCount}</span>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent class="flex flex-col items-center gap-1 p-5">
+              <span class="text-2xl font-bold text-foreground">{thresholds.votingCount}</span>
+              <span class="text-sm text-muted-foreground">可投票</span>
             </CardContent>
           </Card>
           <Card>
@@ -222,20 +233,23 @@
             <!-- 表头 -->
             <div class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground">
               <div class="flex-1">代表团</div>
-              <div class="w-36 text-center">出席状态</div>
+              <div class="w-28 text-center">出席状态</div>
+              <div class="w-20 text-center">投票权</div>
               <div class="w-12"></div>
             </div>
 
             <div class="divide-y">
               {#each sortedDelegations as delegation (delegation.id)}
                 {@const isPresent = delegation.attendance === 'present'}
+                {@const isObserver = isPresent && delegation.vetoPower === false}
                 <div class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30">
                   <!-- 名称 -->
                   <div class="flex min-w-0 flex-1 flex-col">
                     <span
                       class={cn(
                         'truncate text-sm font-medium',
-                        !isPresent && 'text-muted-foreground/50 line-through'
+                        !isPresent && 'text-muted-foreground/50 line-through',
+                        isObserver && 'text-blue-600 dark:text-blue-400'
                       )}
                     >
                       {delegation.name}
@@ -246,7 +260,7 @@
                   </div>
 
                   <!-- 出席状态选择 -->
-                  <div class="w-36">
+                  <div class="w-28">
                     <Select.Root
                       type="single"
                       value={delegation.attendance}
@@ -260,6 +274,26 @@
                         <Select.Item value="absent" label="缺席" />
                       </Select.Content>
                     </Select.Root>
+                  </div>
+
+                  <!-- 投票权开关 -->
+                  <div class="w-20 text-center">
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        checked={delegation.vetoPower !== false}
+                        onchange={(e: Event) => {
+                          const target = e.target as HTMLInputElement
+                          handleVetoPowerToggle(delegation.id, target.checked)
+                        }}
+                        disabled={!isPresent}
+                        title={isPresent ? (delegation.vetoPower !== false ? '拥有投票权' : '观察员（无投票权）') : '未出席，不可设置投票权'}
+                      />
+                      <span class="text-[11px] text-muted-foreground">
+                        {delegation.vetoPower !== false ? '有' : '无'}
+                      </span>
+                    </label>
                   </div>
 
                   <!-- 删除 -->
