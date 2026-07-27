@@ -50,8 +50,9 @@ export class VetoClient {
     // 监听来自服务器的 event 推送
     this.#cleanups.push(
       this.#ws.onMessage('event', (msg) => {
-        const payload = msg.data ?? msg
-        this.#dispatch(payload)
+        // msg 已经是 transport 层从 event envelope 中解包出的 ServiceEventPayload
+        // 格式: { type, timestamp, data }，无需再次解包
+        this.#dispatch(msg)
       })
     )
 

@@ -22,21 +22,22 @@ import type { LogFunctions } from 'electron-log'
 
 // ── 公共日志接口 ──────────────────────────────────────────────────────────
 
-export interface Logger extends LogFunctions {
-  debug(...params: unknown[]): void
-  info(...params: unknown[]): void
-  warn(...params: unknown[]): void
-  error(...params: unknown[]): void
-}
+export type Logger = Pick<LogFunctions, 'debug' | 'info' | 'warn' | 'error'>
 
 // ── 工厂函数 ──────────────────────────────────────────────────────────────
 
 /**
  * 创建一个带标签的模块日志器。
- * 标签会出现在每条日志输出中，便于追踪来源。
+ * 使用 log.scope() 在父 logger 基础上添加标签前缀，
+ * transports（console + file）继承父级配置，无需额外设置。
+ *
+ * @example
+ *   const log = createLogger('PluginDiscovery')
+ *   log.info('Found plugins:', count)
+ *   // → 12:05:01.123 (PluginDiscovery) › Found plugins: 5
  */
 export function createLogger(tag: string): Logger {
-  return log.create({ logId: tag }) as Logger
+  return log.scope(tag) as unknown as Logger
 }
 
 // ── 全局初始化 ────────────────────────────────────────────────────────────

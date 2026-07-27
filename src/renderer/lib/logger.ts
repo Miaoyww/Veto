@@ -26,8 +26,9 @@ export interface Logger {
 
 /**
  * 创建一个带标签的模块日志器。
- * 标签会出现在每条日志输出中，便于追踪来源。
+ * 使用 log.scope() 在父 logger 基础上添加标签前缀，
+ * 通过 IPC 将日志发送到主进程写入文件，同时在 DevTools console 显示。
  */
 export function createLogger(tag: string): Logger {
-  return log.create({ logId: tag }) as Logger
+  return log.scope(tag) as unknown as Logger
 }
