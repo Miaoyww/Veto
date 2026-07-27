@@ -8,29 +8,48 @@
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
-  let wsUrl = $state(getWsUrl())
+  function parseDefaultUrl(): { ip: string; port: string } {
+    const url = getWsUrl()
+    try {
+      const u = new URL(url)
+      return { ip: u.hostname, port: u.port || '19527' }
+    } catch {
+      return { ip: '', port: '19527' }
+    }
+  }
+
+  let defaultAddr = $state(parseDefaultUrl())
+  let ip = $state(defaultAddr.ip)
+  let port = $state(defaultAddr.port)
   let label = $state('')
 
   function handleOpenChange(value: boolean): void {
     if (!value) {
-      wsUrl = getWsUrl()
+      defaultAddr = parseDefaultUrl()
+      ip = defaultAddr.ip
+      port = defaultAddr.port
       label = ''
     }
     open = value
   }
 
   async function handleOpenDisplay(): Promise<void> {
-    const url = wsUrl.trim()
-    if (!url) return
+    const trimmedIp = ip.trim()
+    const trimmedPort = port.trim()
+    if (!trimmedIp) return
+
+    const wsUrl = `ws://${trimmedIp}:${trimmedPort}`
 
     try {
       const result = await window.veto.conference.openDisplay({
-        wsUrl: url,
+        wsUrl,
         label: label.trim() || undefined
       })
       if (result.success) {
         open = false
-        wsUrl = getWsUrl()
+        defaultAddr = parseDefaultUrl()
+        ip = defaultAddr.ip
+        port = defaultAddr.port
         label = ''
       }
     } catch (err) {
@@ -38,7 +57,7 @@
     }
   }
 
-  const canSubmit = $derived(wsUrl.trim().length > 0)
+  const canSubmit = $derived(ip.trim().length > 0)
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
@@ -61,11 +80,19 @@
           <Label class="mb-2 block text-xs text-muted-foreground">
             WebSocket 地址 <span class="text-red-400">*</span>
           </Label>
-          <Input
-            bind:value={wsUrl}
-            placeholder="ws://192.168.1.100:19527"
-            class="h-9 text-sm"
-          />
+          <div class="flex items-center gap-2">
+            <Input
+              bind:value={ip}
+              placeholder="192.168.1.100"
+              class="h-9 flex-1 text-sm"
+            />
+            <span class="text-sm font-mono text-muted-foreground">:</span>
+            <Input
+              bind:value={port}
+              placeholder="19527"
+              class="h-9 w-24 text-sm"
+            />
+          </div>
         </div>
 
         <!-- 标签 -->
