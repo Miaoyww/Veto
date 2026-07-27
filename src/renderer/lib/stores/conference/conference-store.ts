@@ -243,6 +243,14 @@ export function renameConference(id: string, name: string): void {
   }
 }
 
+export function bindTimeline(conferenceId: string, timelineId: string | null): void {
+  const engine = getEngine(conferenceId)
+  if (engine) {
+    engine.timelineId = timelineId
+    syncEngine(engine)
+  }
+}
+
 export function loadConference(id: string): void {
   const conf = getConferenceById(id)
   if (conf) {

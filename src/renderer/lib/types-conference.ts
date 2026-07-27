@@ -473,6 +473,9 @@ export interface Conference {
 
   /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
   yieldPending?: YieldPendingState | null
+
+  /** 绑定的时间线 ID */
+  timelineId?: string | null
 }
 
 // ---- 显示窗口同步数据 -----------------------------------------------------

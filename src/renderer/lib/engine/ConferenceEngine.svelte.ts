@@ -177,6 +177,7 @@ export class ConferenceEngine {
   venue: string = $state('')
   createdAt: number = 0
   updatedAt: number = $state(0)
+  timelineId: string | null = $state(null)
 
   // ── 配置 ──
   defaultSpeakingTimeSec: number = $state(120)
@@ -264,6 +265,7 @@ export class ConferenceEngine {
     if (data.activeSpeaker != null) this.activeSpeaker = data.activeSpeaker
     if (data.yieldPending != null) this.yieldPending = data.yieldPending
     if (data.caucusSetup != null) this.caucusSetup = data.caucusSetup
+    if (data.timelineId != null) this.timelineId = data.timelineId
   }
 
   // ================================================================
@@ -1558,7 +1560,8 @@ export class ConferenceEngine {
           }
         : null,
       activeSpeaker: this.activeSpeaker,
-      yieldPending: this.yieldPending
+      yieldPending: this.yieldPending,
+      timelineId: this.timelineId,
     }
   }
 
