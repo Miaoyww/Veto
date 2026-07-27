@@ -8,6 +8,7 @@
   import type { Delegation } from '$lib/types-conference'
   import DisplaySectionHeader from './display-section-header.svelte'
   import DelegationNameDisplay from './delegation-name-display.svelte'
+  import DelegationRoster, { type RosterEntry } from './delegation-roster.svelte'
 
   interface Speaker {
     delegation: Delegation
@@ -35,9 +36,18 @@
   } = $props()
 
   const nextSpeaker = $derived(onlyList ? null : (speakers[0] ?? null))
-  const visibleQueue = $derived(onlyList ? speakers.slice(0, max) : speakers.slice(1, max))
-  const hasMore = $derived(speakers.length > (onlyList ? max : max + 1))
-  const remaining = $derived(speakers.length - (onlyList ? max : max + 1))
+
+  /** 队列条目（list 模式传给 DelegationRoster） */
+  const rosterEntries = $derived<RosterEntry[]>(
+    (onlyList ? speakers : speakers.slice(1)).map((s) => ({
+      id: s.delegation.name,
+      name: s.delegation.name,
+      shortName: s.delegation.shortName
+    }))
+  )
+
+  /** 调整 max：非 onlyList 时 nextSpeaker 占 1 个槽位 */
+  const rosterMax = $derived(onlyList ? max : max - 1)
 </script>
 
 <div class="flex w-full flex-col items-center gap-5">
@@ -58,30 +68,8 @@
     </div>
   {/if}
 
-  {#if visibleQueue.length > 0}
-    <!-- 后续队列 -->
-    <div class="w-full space-y-px">
-      {#each visibleQueue as speaker, i (speaker.delegation.name)}
-        <div class="flex items-center justify-center gap-4 px-6 py-2.5">
-          <span class="text-sm tabular-nums text-white/25">
-            {onlyList ? i + 1 : i + 2}
-          </span>
-          <span class="text-xl font-medium text-white/50">
-            {speaker.delegation.name}
-          </span>
-          {#if speaker.delegation.shortName}
-            <span class="text-sm tracking-wider text-white/25">{speaker.delegation.shortName}</span>
-          {/if}
-        </div>
-      {/each}
-
-      {#if hasMore}
-        <div class="flex items-center justify-center gap-4 px-6 py-2.5">
-          <span class="text-sm text-white/15">...</span>
-          <span class="text-lg text-white/20">还有 {remaining} 位代表</span>
-        </div>
-      {/if}
-    </div>
+  {#if rosterEntries.length > 0}
+    <DelegationRoster entries={rosterEntries} mode="list" max={rosterMax} emptyText="" />
   {/if}
 
   {#if speakers.length === 0}

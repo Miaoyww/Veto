@@ -8,7 +8,7 @@
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
-  import { Gavel, Play, Users, Monitor, HelpCircle, UserRoundCheck } from '@lucide/svelte'
+  import { Gavel, Play, Users, Monitor, HelpCircle, UserRoundCheck, Timer } from '@lucide/svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
@@ -17,11 +17,13 @@
     buildDisplayData,
     initWsPort
   } from '$lib/services/conference-display-bridge'
+  import TimerDialog from '../timer/timer-dialog.svelte'
 
   const conf = $derived($currentConference)
 
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
+  let timerDialogOpen = $state(false)
   let wsPort = $state<number | null>(null)
 
   onMount(async () => {
@@ -123,6 +125,19 @@
         >
           <Monitor size={12} />
           显示窗口
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          class="h-8 gap-1.5 text-xs"
+          title="打开简易计时器"
+          onclick={() => {
+            timerDialogOpen = true
+          }}
+        >
+          <Timer size={12} />
+          计时器
         </Button>
 
         <Button
@@ -262,7 +277,14 @@
     {/key}
 
     <!-- Point Dialog -->
-    <PointDialog bind:open={pointDialogOpen} />
+    {#key pointDialogOpen}
+      <PointDialog bind:open={pointDialogOpen} />
+    {/key}
+
+    <!-- Point Dialog -->
+    {#key timerDialogOpen}
+      <TimerDialog bind:open={timerDialogOpen} />
+    {/key}
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">
       <p>请选择或创建一场大会</p>

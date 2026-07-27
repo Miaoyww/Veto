@@ -8,11 +8,21 @@
    */
   import { Vote } from '@lucide/svelte'
   import type { ConferenceDisplayData } from '$lib/types-conference'
+  import DelegationRoster, { type RosterEntry } from '$lib/components/conference/display/delegation-roster.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
   const vs = $derived(data.votingSession!)
   const docName = $derived(data.activeMotion?.documentName)
+
+  const rosterEntries = $derived<RosterEntry[]>(
+    vs.ballots.map((b) => ({
+      id: b.delegationId,
+      name: b.delegationName,
+      shortName: b.shortName,
+      vote: b.vote
+    }))
+  )
 </script>
 
 <div class="flex flex-col items-center gap-10">
@@ -69,38 +79,12 @@
       <div class="text-xs tracking-[0.1em] text-white/20 uppercase">
         {vs.round === 2 ? 'ROUND 2 · SECOND CALL' : 'ROLL CALL VOTE'}
       </div>
-      <div class="grid grid-cols-5 gap-x-6 gap-y-2">
-        {#each vs.ballots as entry}
-          {@const isCurrent = entry.delegationId === vs.currentDelegationId}
-          <div
-            class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors {isCurrent
-              ? 'bg-[#5B92E5]/10 ring-1 ring-[#5B92E5]/30'
-              : ''}"
-          >
-            <!-- 投票状态圆点 -->
-            <div
-              class="h-2 w-2 shrink-0 rounded-full {entry.vote === 'yes'
-                ? 'bg-emerald-400'
-                : entry.vote === 'no'
-                  ? 'bg-red-400'
-                  : entry.vote === 'abstain'
-                    ? 'bg-amber-400'
-                    : entry.vote === 'skip'
-                      ? 'bg-slate-500'
-                      : 'border border-white/20 bg-transparent'}"
-            ></div>
-            <span
-              class={entry.vote === null
-                ? 'text-white/30'
-                : entry.vote === 'skip'
-                  ? 'text-slate-400'
-                  : 'text-white/70'}
-            >
-              {entry.delegationName}
-            </span>
-          </div>
-        {/each}
-      </div>
+      <DelegationRoster
+        entries={rosterEntries}
+        mode="voting"
+        currentId={vs.currentDelegationId}
+        gridCols={5}
+      />
     </div>
   {/if}
 
