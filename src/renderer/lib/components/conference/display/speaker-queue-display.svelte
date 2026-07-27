@@ -69,7 +69,7 @@
   {/if}
 
   {#if rosterEntries.length > 0}
-    <DelegationRoster entries={rosterEntries} mode="list" max={rosterMax} emptyText="" />
+    <DelegationRoster entries={rosterEntries} mode="list" emptyText="" />
   {/if}
 
   {#if speakers.length === 0}

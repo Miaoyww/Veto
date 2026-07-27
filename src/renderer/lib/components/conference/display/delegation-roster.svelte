@@ -2,11 +2,10 @@
   /**
    * delegation-roster.svelte
    * ──────────────────────────
-   * 可复用的代表团名单组件，支持两种显示模式：
+   * 可复用的代表团名单组件，统一使用网格布局，支持两种显示模式：
    *
-   * - voting : 唱名表决状态网格 —— 彩色圆点（赞成/反对/弃权/跳过/未投）+
-   *            当前代表团高亮
-   * - list   : 顺序名单 —— 序号 + 名称 + 简称，超出上限显示 "还有 N 位代表"
+   * - voting : 彩色圆点（赞成/反对/弃权/跳过/未投）+ 名称 + 当前高亮
+   * - list   : 序号 + 名称，超出上限显示 "还有 N 位代表"
    */
   import { cn } from '$lib/utils.js'
 
@@ -36,15 +35,17 @@
     currentId?: string | null
     /** list 模式最大显示数量，超出显示溢出提示 */
     max?: number
-    /** voting 模式网格列数 */
+    /** 网格列数 */
     gridCols?: number
     /** 空状态文本 */
     emptyText?: string
   } = $props()
 
-  const visibleEntries = $derived(entries.slice(0, max))
-  const hasMore = $derived(entries.length > max)
-  const remaining = $derived(entries.length - max)
+  const visibleEntries = $derived(
+    mode === 'list' ? entries.slice(0, max) : entries
+  )
+  const hasMore = $derived(mode === 'list' && entries.length > max)
+  const remaining = $derived(mode === 'list' ? entries.length - max : 0)
 
   function dotClass(vote: string | null | undefined): string {
     switch (vote) {
@@ -70,13 +71,12 @@
 
 {#if entries.length === 0}
   <div class="text-lg tracking-wider text-white/10">{emptyText}</div>
-{:else if mode === 'voting'}
-  <!-- 投票模式：代表团状态网格 -->
+{:else}
   <div
     class="grid gap-x-6 gap-y-2"
     style="grid-template-columns: repeat({gridCols}, minmax(0, 1fr));"
   >
-    {#each entries as entry (entry.id)}
+    {#each visibleEntries as entry, i (entry.id)}
       {@const isCurrent = entry.id === currentId}
       <div
         class={cn(
@@ -84,27 +84,21 @@
           isCurrent && 'bg-[#5B92E5]/10 ring-1 ring-[#5B92E5]/30'
         )}
       >
-        <!-- 投票状态圆点 -->
-        <div class={cn('h-2 w-2 shrink-0 rounded-full', dotClass(entry.vote))}></div>
-        <span class={nameClass(entry.vote)}>{entry.name}</span>
-      </div>
-    {/each}
-  </div>
-{:else if max > 0}
-  <!-- 列表模式：顺序展示 -->
-  <div class="w-full space-y-px">
-    {#each visibleEntries as entry, i (entry.id)}
-      <div class="flex items-center justify-center gap-4 px-6 py-2.5">
-        <span class="text-sm tabular-nums text-white/25">{i + 1}</span>
-        <span class="text-xl font-medium text-white/50">{entry.name}</span>
-        {#if entry.shortName}
-          <span class="text-sm tracking-wider text-white/25">{entry.shortName}</span>
+        {#if mode === 'voting'}
+          <!-- 投票状态圆点 -->
+          <div class={cn('h-2 w-2 shrink-0 rounded-full', dotClass(entry.vote))}></div>
+        {:else}
+          <!-- 序号 -->
+          <span class="w-2 shrink-0 text-center text-xs tabular-nums text-white/25">{i + 1}</span>
         {/if}
+        <span class={mode === 'voting' ? nameClass(entry.vote) : 'text-white/50'}>
+          {entry.name}
+        </span>
       </div>
     {/each}
 
     {#if hasMore}
-      <div class="flex items-center justify-center gap-4 px-6 py-2.5">
+      <div class="col-span-full flex items-center justify-center gap-4 py-1.5">
         <span class="text-sm text-white/15">...</span>
         <span class="text-lg text-white/20">还有 {remaining} 位代表</span>
       </div>
