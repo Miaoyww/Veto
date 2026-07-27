@@ -48,9 +48,9 @@
     SpeakerTransitionReason
   } from '$lib/types-conference'
 
-  onMount(() => {
-    advanceCaucusSpeaker()
-  })
+  // onMount(() => {
+  //   advanceCaucusSpeaker()
+  // })
   let { mode }: { mode: 'general_debate' | 'caucus' } = $props()
 
   /** 当前会议对象 */
