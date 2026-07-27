@@ -1,475 +1,277 @@
 <script lang="ts">
-  import {
-    Presentation,
-    Timer,
-    MessageSquare,
-    Pencil,
-    Gavel,
-    Coffee,
-    LogOut,
-    Vote,
-    UserRoundCheck
-  } from '@lucide/svelte'
+  import { onDestroy } from 'svelte'
+  import { Timer, Play, Pause, RotateCcw, Clock, Square } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
   import { Label } from '$lib/components/ui/label/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
-  import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js'
+  import { formatTime } from '$lib/utils'
   import {
-    currentConference,
-    motionDraft,
-    proposeMotion,
-    approveMotion,
-    dismissLastResolvedMotion
-  } from '$lib/stores/conference/conference-store'
-  import { resolveMotion, calcMaxSpeakers } from '$lib/engine/conference-engine'
-  import { navigate } from '$lib/router.svelte'
-  import { MOTION_LABELS } from '$lib/types-conference'
-  import type { MotionType, Attendance, Delegation } from '$lib/types-conference'
-  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
+    standaloneTimer,
+    timerDialogOpen,
+    startStandaloneTimer,
+    pauseStandaloneTimer,
+    resetStandaloneTimer
+  } from '$lib/stores/conference/timer-store'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
-  const conf = $derived($currentConference)
-
-  // Proposer
-  let selectedProposer: Delegation | null = $state(null)
-
-  // 常用动议列表——根据当前阶段和选中代表团的出席状态动态调整
-  const motionTypes = $derived.by((): MotionType[] => {
-    // 缺席的代表团只能提出"更改出席状态"动议
-    if (selectedProposer && selectedProposer.attendance === 'absent') {
-      return ['change_attendance']
-    }
-
-    if (conf?.phase === 'voting') {
-      // 结束辩论后：可进行实质性投票、开启主发言名单（退出投票阶段）、休会/闭幕
-      return [
-        'change_attendance',
-        'substantive_vote',
-        'open_speakers_list',
-        'suspend_meeting',
-        'close_meeting'
-      ]
-    }
-    // 等待开启主发言名单：首要动议为开启主发言名单
-    if (conf?.phase === 'pending_speakers_list') {
-      return ['change_attendance', 'open_speakers_list']
-    }
-    // 主发言名单已开启时不可再次动议开启
-    if (conf?.phase === 'general_debate') {
-      return [
-        'change_attendance',
-        'moderated_caucus',
-        'unmoderated_caucus',
-        'modify_speaking_time',
-        'closure_debate',
-        'suspend_meeting',
-        'close_meeting'
-      ]
-    }
-    return [
-      'change_attendance',
-      'open_speakers_list',
-      'moderated_caucus',
-      'unmoderated_caucus',
-      'modify_speaking_time',
-      'closure_debate',
-      'suspend_meeting',
-      'close_meeting'
-    ]
+  // 从 store 同步到 $bindable
+  $effect(() => {
+    const unsub = timerDialogOpen.subscribe((v) => {
+      if (open !== v) open = v
+    })
+    return unsub
+  })
+  $effect(() => {
+    timerDialogOpen.set(open)
   })
 
-  const MOTION_ICONS: Record<string, typeof Presentation> = {
-    open_speakers_list: Presentation,
-    moderated_caucus: MessageSquare,
-    unmoderated_caucus: Coffee,
-    modify_speaking_time: Pencil,
-    closure_debate: Gavel,
-    suspend_meeting: Timer,
-    close_meeting: LogOut,
-    substantive_vote: Vote,
-    change_attendance: UserRoundCheck
+  // ── 预设时长（秒） ──
+  const PRESETS = [
+    { label: '30秒', sec: 30 },
+    { label: '1分', sec: 60 },
+    { label: '2分', sec: 120 },
+    { label: '3分', sec: 180 },
+    { label: '5分', sec: 300 },
+    { label: '10分', sec: 600 },
+    { label: '15分', sec: 900 },
+    { label: '30分', sec: 1800 }
+  ]
+
+  // ── 本地输入状态 ──
+  let inputMin = $state(2)
+  let inputSec = $state(0)
+  let localTotalSec = $state(120)
+
+  // ── 从 store 派生 ──
+  const timerState = $derived($standaloneTimer)
+  const isRunning = $derived(timerState?.isRunning ?? false)
+  const hasStarted = $derived(timerState != null)
+  const remainingSec = $derived(timerState?.remainingSec ?? localTotalSec)
+  const activeTotalSec = $derived(timerState?.totalSec ?? localTotalSec)
+
+  function syncInputFromTotal(): void {
+    inputMin = Math.floor(localTotalSec / 60)
+    inputSec = localTotalSec % 60
   }
 
-  // ---- Form state ----
-  let selectedType = $state<MotionType | null>(null)
-  // ToggleGroup 需要 string 类型的 value 绑定
-  let toggleValue = $state('')
-  $effect(() => {
-    if (toggleValue) {
-      selectedType = toggleValue as MotionType
+  function applyCustomTime(): void {
+    const t = inputMin * 60 + inputSec
+    localTotalSec = Math.max(1, Math.min(3600, t))
+    if (!isRunning && !hasStarted) {
+      // idle: 同步显示
     }
-  })
-  // Moderated Caucus（无预设值，必须手动填写）
-  let mcTopic = $state('')
-  let committedTopic = $state('')
-  let mcTotalSec = $state<number | null>(null)
-  let committedMcTotalSec = $state<number | null>(null)
-  let mcSpeakerSec = $state<number | null>(null)
-  let committedMcSpeakerSec = $state<number | null>(null)
-  // Unmoderated Caucus
-  let ucDurationMin = $state(15)
-  let committedUcDurationMin = $state(15)
-  // Modify Speaking Time
-  let newTimeSec = $state(90)
-  let committedNewTimeSec = $state(90)
-  // Substantive Vote
-  let documentName = $state('')
-  let committedDocumentName = $state('')
-  // Change Attendance —— 由当前出席状态决定，只能选相反状态
-  let newAttendance = $derived<Attendance>(
-    selectedProposer?.attendance === 'present' ? 'absent' : 'present'
-  )
-
-  function resetForm(): void {
-    selectedProposer = null
-    selectedType = null
-    toggleValue = ''
-    mcTopic = ''
-    committedTopic = ''
-    mcTotalSec = null
-    committedMcTotalSec = null
-    mcSpeakerSec = null
-    committedMcSpeakerSec = null
-    ucDurationMin = 15
-    committedUcDurationMin = 15
-    newTimeSec = 90
-    committedNewTimeSec = 90
-    documentName = ''
-    committedDocumentName = ''
   }
 
   function handleOpenChange(value: boolean): void {
+    // 关闭对话框不停止计时器
     if (!value) {
-      resetForm()
-      motionDraft.set(null)
-      dismissLastResolvedMotion()
+      // 如果计时器不在运行，不重置——让 store 保持原样
     }
     open = value
   }
 
-  function handlePropose(): void {
-    if (!selectedType || !conf) return
-
-    const proposerDel = selectedProposer || conf.delegations[0]
-    if (!proposerDel) return
-
-    // 使用 committed 值（onblur 已提交），保证 Display 端动画已完整播放
-    let motionData: any = {
-      type: selectedType,
-      proposedBy: proposerDel
-    }
-
-    switch (selectedType) {
-      case 'moderated_caucus': {
-        const total = committedMcTotalSec ?? 0
-        const perSpeaker = committedMcSpeakerSec ?? 0
-        motionData.topic = committedTopic.trim() || '未指定主题'
-        motionData.totalTimeSec = total
-        motionData.speakingTimePerPersonSec = perSpeaker
-        motionData.maxSpeakers = calcMaxSpeakers(total, perSpeaker)
-        break
-      }
-      case 'unmoderated_caucus':
-        motionData.durationSec = committedUcDurationMin * 60
-        break
-      case 'modify_speaking_time':
-        motionData.newTimeSec = committedNewTimeSec
-        break
-      case 'substantive_vote':
-        motionData.documentName = committedDocumentName.trim() || '未命名文件'
-        break
-      case 'change_attendance':
-        motionData.newAttendance = newAttendance
-        break
-    }
-
-    proposeMotion(motionData)
-
-    // 判断是否需要表决：需表决 → 导航到动议表决页；否则直接通过执行
-    const resolution = resolveMotion(selectedType)
-    if (!resolution.requiresVoting || resolution.autoApprove) {
-      const updatedConf = $currentConference
-      const newMotion = updatedConf?.motions[updatedConf.motions.length - 1]
-      if (newMotion) {
-        approveMotion(newMotion.id)
-
-        if (selectedType === 'moderated_caucus' || selectedType === 'unmoderated_caucus') {
-          import('$lib/stores/conference/conference-store').then(({ startCaucus }) => {
-            startCaucus(newMotion.id)
-          })
-        }
-      }
-    } else {
-      navigate(`/conference/${conf.id}/motion`)
-    }
-
-    open = false
-    resetForm()
-    motionDraft.set(null)
+  // ── 计时器控制 ──
+  function handleStart(): void {
+    startStandaloneTimer(localTotalSec)
   }
 
-  const mcMaxSpeakers = $derived(
-    mcTotalSec != null && mcSpeakerSec != null && mcSpeakerSec > 0
-      ? calcMaxSpeakers(mcTotalSec, mcSpeakerSec)
-      : 0
-  )
+  function handlePause(): void {
+    pauseStandaloneTimer()
+  }
 
-  // 当前表单是否有未失焦的输入（live !== committed），防止动画未完成就提交
-  const isDirty = $derived.by(() => {
-    switch (selectedType) {
-      case 'moderated_caucus':
-        return (
-          mcTopic !== committedTopic ||
-          mcTotalSec !== committedMcTotalSec ||
-          mcSpeakerSec !== committedMcSpeakerSec
-        )
-      case 'unmoderated_caucus':
-        return ucDurationMin !== committedUcDurationMin
-      case 'modify_speaking_time':
-        return newTimeSec !== committedNewTimeSec
-      case 'substantive_vote':
-        return documentName !== committedDocumentName
-      case 'change_attendance':
-        return false // no debounce needed for delegation selector
-      default:
-        return false
+  function handleReset(): void {
+    resetStandaloneTimer()
+  }
+
+  function selectPreset(sec: number): void {
+    if (isRunning) pauseStandaloneTimer()
+    localTotalSec = sec
+    syncInputFromTotal()
+  }
+
+  // ── 派生显示值 ──
+  const displaySec = $derived(hasStarted ? remainingSec : localTotalSec)
+  const displayTotal = $derived(hasStarted ? activeTotalSec : localTotalSec)
+  const progress = $derived(displayTotal > 0 ? displaySec / displayTotal : 0)
+  const isExpired = $derived(!isRunning && hasStarted && remainingSec <= 0)
+
+  // ── 颜色主题 ──
+  const colorTheme = $derived.by(() => {
+    if (isExpired) return 'red'
+    if (isRunning && progress < 0.2) return 'red'
+    if (isRunning && progress < 0.5) return 'amber'
+    if (isRunning) return 'indigo'
+    if (hasStarted) return 'amber' // paused
+    return 'slate'
+  })
+
+  const ringColor = $derived.by(() => {
+    switch (colorTheme) {
+      case 'red': return 'stroke-red-500'
+      case 'amber': return 'stroke-amber-500'
+      case 'indigo': return 'stroke-indigo-500'
+      default: return 'stroke-slate-300 dark:stroke-slate-600'
     }
   })
 
-  const canPropose = $derived(
-    selectedType !== null &&
-      selectedProposer !== null &&
-      !isDirty &&
-      (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
-      (selectedType !== 'moderated_caucus' ||
-        (committedTopic.trim() !== '' &&
-          committedMcTotalSec != null &&
-          committedMcTotalSec > 0 &&
-          committedMcSpeakerSec != null &&
-          committedMcSpeakerSec > 0))
-  )
-
-  // 实时同步动议草稿到 Display
-  $effect(() => {
-    if (!open) {
-      motionDraft.set(null)
-      return
+  const textColor = $derived.by(() => {
+    switch (colorTheme) {
+      case 'red': return 'text-red-600 dark:text-red-400'
+      case 'amber': return 'text-amber-600 dark:text-amber-400'
+      case 'indigo': return 'text-indigo-600 dark:text-indigo-300'
+      default: return 'text-foreground'
     }
-    const proposerDel = selectedProposer
-    motionDraft.set({
-      proposedBy: proposerDel ?? undefined,
-      type: selectedType ?? undefined,
-      isRequestingVote: selectedType ? resolveMotion(selectedType).requiresVoting : undefined,
-      topic: selectedType === 'moderated_caucus' ? committedTopic.trim() || undefined : undefined,
-      totalTimeSec:
-        selectedType === 'moderated_caucus'
-          ? committedMcTotalSec
-          : selectedType === 'unmoderated_caucus'
-            ? committedUcDurationMin * 60
-            : undefined,
-      speakingTimePerPersonSec:
-        selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
-      newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined,
-      documentName:
-        selectedType === 'substantive_vote' ? committedDocumentName.trim() || undefined : undefined
-    })
   })
+
+  const bgGlow = $derived.by(() => {
+    if (isExpired) return 'bg-red-500/10'
+    if (isRunning && progress < 0.2) return 'bg-red-500/5 animate-pulse'
+    return ''
+  })
+
+  // 圆环参数
+  const radius = 96
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = $derived(circumference * (1 - progress))
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
   <Dialog.Portal>
     <Dialog.Overlay />
-    <Dialog.Content class="max-w-lg">
+    <Dialog.Content class="max-w-sm">
       <Dialog.Header class="pb-1">
         <Dialog.Title class="flex items-center gap-2 text-base font-semibold">
-          <Presentation size={18} class="text-indigo-500" />
-          动议与程序
+          <Clock size={18} class="text-indigo-500" />
+          简易计时器
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          选择提出方后选择动议或程序类型
+          独立计时 · {hasStarted ? '后台运行中' : '不影响会议流程'}
         </Dialog.Description>
       </Dialog.Header>
 
-      <div class="flex flex-col gap-4 py-2">
-        <!-- 第一步：动议提出方（始终可见） -->
-        {#if conf}
-          <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">动议提出方</Label>
-            <DelegationSelector delegations={conf.delegations} bind:value={selectedProposer} />
+      <div class="flex flex-col items-center gap-5 py-4">
+        <!-- 圆环计时显示 -->
+        <div class="relative flex items-center justify-center {bgGlow} rounded-full transition-colors duration-500">
+          <svg width="216" height="216" viewBox="0 0 216 216" class="-rotate-90">
+            <circle
+              cx="108" cy="108" r={radius}
+              fill="none"
+              class="stroke-slate-200 dark:stroke-slate-700"
+              stroke-width="6"
+            />
+            <circle
+              cx="108" cy="108" r={radius}
+              fill="none"
+              class={ringColor}
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-dasharray={circumference}
+              stroke-dashoffset={dashOffset}
+              style="transition: stroke-dashoffset 0.25s linear, stroke 0.5s ease"
+            />
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-5xl font-mono font-bold tracking-tight tabular-nums {textColor} transition-colors duration-300">
+              {formatTime(displaySec)}
+            </span>
+            <span class="mt-1 text-[11px] text-muted-foreground">
+              {isExpired ? '⏰ 时间到！' : isRunning ? '计时中…' : hasStarted ? '已暂停' : '就绪'}
+            </span>
           </div>
-        {/if}
+        </div>
 
-        <!-- 第二步：动议类型选择（选完提出方后出现） -->
-        {#if selectedProposer}
-          <Separator />
-          <div>
-            <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
-            <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-2 gap-2">
-              {#each motionTypes as mt (mt)}
-                {@const Icon = MOTION_ICONS[mt] ?? Presentation}
-                <ToggleGroup.Item value={mt}>
-                  <Icon size={14} />
-                  <span class="text-xs font-medium">{MOTION_LABELS[mt]}</span>
-                </ToggleGroup.Item>
-              {/each}
-            </ToggleGroup.Root>
-          </div>
-        {/if}
-
-        <!-- 第三步：动议参数表单 -->
-        {#if selectedType === 'moderated_caucus'}
-          <Separator />
-          <div class="space-y-3">
-            <div>
-              <div class="mb-1.5 flex items-center justify-between">
-                <Label class="text-xs text-muted-foreground">主题</Label>
-                <span class="text-[10px] text-muted-foreground/60">{mcTopic.length}/100</span>
-              </div>
-              <Input
-                bind:value={mcTopic}
-                maxlength={100}
-                class="h-9 text-sm"
-                onblur={() => (committedTopic = mcTopic)}
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">总时长（秒）</Label>
-                <Input
-                  type="number"
-                  min="30"
-                  max="3600"
-                  step="30"
-                  placeholder="必填"
-                  bind:value={mcTotalSec}
-                  class="h-9 text-sm"
-                  onblur={() => (committedMcTotalSec = mcTotalSec)}
-                />
-                <div class="mt-1.5 flex gap-1">
-                  {#each [180, 360, 600] as sec (sec)}
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onclick={() => ((mcTotalSec = sec), (committedMcTotalSec = sec))}
-                    >
-                      {sec}s
-                    </Button>
-                  {/each}
-                </div>
-              </div>
-              <div>
-                <Label class="mb-1.5 block text-xs text-muted-foreground">每人发言（秒）</Label>
-                <Input
-                  type="number"
-                  min="15"
-                  max={mcTotalSec ?? 600}
-                  step="15"
-                  placeholder="先填总时长"
-                  disabled={mcTotalSec == null}
-                  bind:value={mcSpeakerSec}
-                  class="h-9 text-sm"
-                  onblur={() => (committedMcSpeakerSec = mcSpeakerSec)}
-                />
-                <div class="mt-1.5 flex gap-1">
-                  {#each [60, 120, 180] as sec (sec)}
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      disabled={mcTotalSec == null}
-                      onclick={() => ((mcSpeakerSec = sec), (committedMcSpeakerSec = sec))}
-                    >
-                      {sec}s
-                    </Button>
-                  {/each}
-                </div>
-              </div>
-            </div>
-            {#if committedMcTotalSec != null && committedMcSpeakerSec != null && committedMcTotalSec > 0 && committedMcSpeakerSec > 0}
-              <div
-                class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground"
-              >
-                {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多
-                <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
-              </div>
-            {/if}
-          </div>
-        {:else if selectedType === 'unmoderated_caucus'}
-          <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
-            <Input
-              type="number"
-              min="1"
-              max="120"
-              bind:value={ucDurationMin}
-              class="h-9 text-sm w-32"
-              onblur={() => (committedUcDurationMin = ucDurationMin)}
-            />
-            <p class="mt-1 text-[10px] text-muted-foreground">开始后将进行倒计时</p>
-          </div>
-        {:else if selectedType === 'modify_speaking_time'}
-          <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">新的默认发言时间（秒）</Label>
-            <Input
-              type="number"
-              min="30"
-              max="600"
-              step="15"
-              bind:value={newTimeSec}
-              class="h-9 text-sm w-32"
-              onblur={() => (committedNewTimeSec = newTimeSec)}
-            />
-          </div>
-        {:else if selectedType === 'substantive_vote'}
-          <Separator />
-          <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">文件名称</Label>
-            <Input
-              bind:value={documentName}
-              class="h-9 text-sm"
-              placeholder="例如：决议草案 1.1"
-              onblur={() => (committedDocumentName = documentName)}
-              list="document-name-suggestions"
-            />
-            {#if conf?.documentNames?.length}
-              <datalist id="document-name-suggestions">
-                {#each conf.documentNames as name (name)}
-                  <option value={name} />
-                {/each}
-              </datalist>
-            {/if}
-            <p class="mt-1 text-[10px] text-muted-foreground">此文件将进入唱名表决（2/3多数）</p>
-          </div>
-        {:else if selectedType === 'change_attendance'}
-          <Separator />
-          <div>
-            <Label class="mb-1.5 block text-xs text-muted-foreground">新出席状态</Label>
-            <div
-              class="flex-1 rounded-lg border px-3 py-2 text-sm text-center font-medium {newAttendance ===
-              'present'
-                ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                : 'border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400'}"
+        <!-- 控制按钮 -->
+        <div class="flex items-center gap-3">
+          {#if !isRunning}
+            <Button
+              size="lg"
+              class="gap-2 min-w-24"
+              disabled={isExpired}
+              onclick={handleStart}
             >
-              {newAttendance === 'present' ? '出席' : '缺席'}
+              <Play size={16} />
+              {hasStarted && !isExpired ? '继续' : '开始'}
+            </Button>
+          {:else}
+            <Button
+              size="lg"
+              variant="outline"
+              class="gap-2 min-w-24"
+              onclick={handlePause}
+            >
+              <Pause size={16} />
+              暂停
+            </Button>
+          {/if}
+          <Button
+            size="lg"
+            variant="ghost"
+            class="gap-2"
+            disabled={!hasStarted}
+            onclick={handleReset}
+          >
+            <Square size={16} />
+            停止
+          </Button>
+        </div>
+
+        <Separator />
+
+        <!-- 自定义时间输入（仅在 idle 时可用） -->
+        <div class="w-full space-y-2">
+          <Label class="text-xs text-muted-foreground">自定义时长</Label>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                bind:value={inputMin}
+                class="h-9 w-18 text-center text-sm"
+                disabled={isRunning}
+                onchange={() => applyCustomTime()}
+              />
+              <span class="text-xs text-muted-foreground">分</span>
             </div>
-            <p class="mt-1 text-[10px] text-muted-foreground">
-              当前为{selectedProposer?.attendance === 'present'
-                ? '出席'
-                : '缺席'}，只能变更为相反状态
-            </p>
+            <div class="flex items-center gap-1.5">
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                bind:value={inputSec}
+                class="h-9 w-18 text-center text-sm"
+                disabled={isRunning}
+                onchange={() => applyCustomTime()}
+              />
+              <span class="text-xs text-muted-foreground">秒</span>
+            </div>
           </div>
-        {:else if selectedType}
-          <div class="text-xs text-muted-foreground">此动议将进入举牌表决</div>
-        {/if}
+        </div>
+
+        <!-- 预设按钮 -->
+        <div class="w-full space-y-2">
+          <Label class="text-xs text-muted-foreground">快速预设</Label>
+          <div class="grid grid-cols-4 gap-2">
+            {#each PRESETS as preset (preset.sec)}
+              <Button
+                size="xs"
+                variant={localTotalSec === preset.sec && !isRunning ? 'default' : 'outline'}
+                class="h-8 text-xs"
+                disabled={isRunning}
+                onclick={() => selectPreset(preset.sec)}
+              >
+                {preset.label}
+              </Button>
+            {/each}
+          </div>
+        </div>
       </div>
 
       <Dialog.Footer class="pt-1">
-        <Button variant="outline" onclick={() => (open = false)}>取消</Button>
-        <Button onclick={handlePropose} disabled={!canPropose} class="min-w-[120px] gap-2">
-          提交动议
-        </Button>
+        <Button variant="outline" onclick={() => (open = false)}>关闭</Button>
       </Dialog.Footer>
     </Dialog.Content>
   </Dialog.Portal>

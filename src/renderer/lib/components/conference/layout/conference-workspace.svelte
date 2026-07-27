@@ -17,13 +17,12 @@
     buildDisplayData,
     initWsPort
   } from '$lib/services/conference-display-bridge'
-  import TimerDialog from '../timer/timer-dialog.svelte'
+  import { timerDialogOpen } from '$lib/stores/conference/timer-store'
 
   const conf = $derived($currentConference)
 
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
-  let timerDialogOpen = $state(false)
   let wsPort = $state<number | null>(null)
 
   onMount(async () => {
@@ -133,7 +132,7 @@
           class="h-8 gap-1.5 text-xs"
           title="打开简易计时器"
           onclick={() => {
-            timerDialogOpen = true
+            timerDialogOpen.set(true)
           }}
         >
           <Timer size={12} />
@@ -279,11 +278,6 @@
     <!-- Point Dialog -->
     {#key pointDialogOpen}
       <PointDialog bind:open={pointDialogOpen} />
-    {/key}
-
-    <!-- Point Dialog -->
-    {#key timerDialogOpen}
-      <TimerDialog bind:open={timerDialogOpen} />
     {/key}
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">

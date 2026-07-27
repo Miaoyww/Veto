@@ -12,6 +12,8 @@
   import { injectToRegistry } from '$lib/services/plugin-registry'
   import { markPluginsReady } from '$lib/registry/mod-registry.svelte'
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
+  import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
+  import { timerDialogOpen } from '$lib/stores/conference/timer-store'
   import ModeSidebar from '$lib/components/home/mode-sidebar.svelte'
   import BattlePanel from '$lib/components/home/battle-panel.svelte'
   import ConferencePanel from '$lib/components/home/conference-panel.svelte'
@@ -59,6 +61,7 @@
 <ModeWatcher />
 <MyAlertDialog />
 <SettingsDialog />
+<TimerDialog bind:open={$timerDialogOpen} />
 
 <div class={routeId === '/conference-display/[conference_id]' ? '' : 'pt-9'}>
   {#if routeId === '/battle/[battle_id]'}

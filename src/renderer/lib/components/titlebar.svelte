@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { Minus, X, Square, Settings, Maximize } from '@lucide/svelte'
+  import { Minus, X, Square, Settings, Maximize, Timer } from '@lucide/svelte'
   import { VETO_NAME } from '$lib/const'
   import { Button } from '$lib/components/ui/button'
   import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
+  import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
+  import { formatTime } from '$lib/utils'
 
   let {
     variant = 'main',
@@ -36,8 +38,25 @@
     </span>
   </div>
 
-  <!-- 中：拖拽区域占位 -->
-  <div class="drag-region flex-1 h-full"></div>
+  <!-- 中：计时器显示 / 拖拽区域 -->
+  <div class="drag-region flex-1 h-full flex items-center justify-center">
+    {#if $standaloneTimer}
+      {@const st = $standaloneTimer}
+      {@const expired = !st.isRunning && st.remainingSec <= 0}
+      <button
+        class="no-drag flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-mono tabular-nums transition-colors hover:bg-accent/50 {expired
+          ? 'text-red-500'
+          : st.isRunning
+            ? 'text-indigo-500'
+            : 'text-amber-500'}"
+        onclick={() => timerDialogOpen.set(true)}
+        title={expired ? '计时器已到期（点击打开）' : st.isRunning ? '计时器运行中（点击打开）' : '计时器已暂停（点击打开）'}
+      >
+        <Timer size={12} class={expired ? 'animate-pulse' : st.isRunning ? '' : ''} />
+        <span>{formatTime(st.remainingSec)}</span>
+      </button>
+    {/if}
+  </div>
 
   <!-- 右：设置（主窗口）/ 全屏（Display）+ 窗口控制按钮 -->
   <div class="flex shrink-0 items-center h-full">
