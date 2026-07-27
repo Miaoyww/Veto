@@ -81,40 +81,22 @@
             WebSocket 地址 <span class="text-red-400">*</span>
           </Label>
           <div class="flex items-center gap-2">
-            <Input
-              bind:value={ip}
-              placeholder="192.168.1.100"
-              class="h-9 flex-1 text-sm"
-            />
+            <Input bind:value={ip} placeholder="192.168.1.100" class="h-9 flex-1 text-sm" />
             <span class="text-sm font-mono text-muted-foreground">:</span>
-            <Input
-              bind:value={port}
-              placeholder="19527"
-              class="h-9 w-24 text-sm"
-            />
+            <Input bind:value={port} placeholder="19527" class="h-9 w-24 text-sm" />
           </div>
         </div>
 
         <!-- 标签 -->
         <div>
-          <Label class="mb-2 block text-xs text-muted-foreground">
-            窗口标签（可选）
-          </Label>
-          <Input
-            bind:value={label}
-            placeholder="例如：投影屏、第二屏幕"
-            class="h-9 text-sm"
-          />
+          <Label class="mb-2 block text-xs text-muted-foreground">窗口标签（可选）</Label>
+          <Input bind:value={label} placeholder="例如：投影屏、第二屏幕" class="h-9 text-sm" />
         </div>
       </div>
 
       <Dialog.Footer class="pt-1">
         <Button variant="outline" onclick={() => (open = false)}>取消</Button>
-        <Button
-          onclick={handleOpenDisplay}
-          disabled={!canSubmit}
-          class="min-w-[140px] gap-2"
-        >
+        <Button onclick={handleOpenDisplay} disabled={!canSubmit} class="min-w-[140px] gap-2">
           <Monitor size={14} />
           打开展示窗口
         </Button>
