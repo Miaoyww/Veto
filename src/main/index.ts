@@ -3,14 +3,19 @@ import { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
-import log from 'electron-log'
+import { createLogger, initializeLogging, log as baseLog } from './logger'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory, getPluginsDir } from './plugin-discovery'
 import { loadPluginConfig, savePluginConfig, enablePlugin, disablePlugin } from './plugin-store'
 import { loadStore, saveStore, deleteStore, migrateFromLocalStorage } from './veto-store'
 import { startWsServer } from './ws-server'
+import { eventBus } from './event-bus'
+import { PluginServer } from './plugin-host/plugin-server'
+import { PluginManager } from './plugin-host/plugin-manager'
 import type { PluginInstance } from './plugin-discovery'
 import type { PluginConfig } from './plugin-store'
+
+const log = createLogger('Main')
 
 // ── 插件系统状态 ──────────────────────────────────────────────────────
 
@@ -19,6 +24,11 @@ let pluginInstances: PluginInstance[] = []
 // ── WebSocket 服务器端口（自动分配） ──────────────────────────────────
 
 let wsServerPort = 19527
+
+// ── Plugin Host ───────────────────────────────────────────────────────
+
+let pluginServer: PluginServer | null = null
+let pluginManager: PluginManager | null = null
 
 // ── 窗口引用 ──────────────────────────────────────────────────────────
 
@@ -35,8 +45,8 @@ function refreshPlugins(): void {
   }
 
   pluginInstances = scanned
-  console.log(
-    `[Main] Plugin refresh: ${pluginInstances.length} total, ` +
+  log.info(
+    `Plugin refresh: ${pluginInstances.length} total, ` +
       `${pluginInstances.filter((p) => !p.disabled).length} enabled`
   )
 }
@@ -125,7 +135,8 @@ function registerIpcHandlers(): void {
       hasDefinitions: !!p.path.definitions,
       hasI18n: !!p.path.i18n,
       hasAssets: !!p.path.assets,
-      hasDelegations: !!p.path.delegations
+      hasDelegations: !!p.path.delegations,
+      hasService: !!p.path.service
     }))
   })
 
@@ -167,7 +178,7 @@ function registerIpcHandlers(): void {
           definitions = fs.readFileSync(plugin.path.definitions, 'utf-8')
         }
       } catch (err) {
-        console.error(`[Main] Failed to read definitions for ${pluginId}:`, err)
+        log.error(`Failed to read definitions for ${pluginId}:`, err)
       }
     }
 
@@ -219,7 +230,8 @@ function registerIpcHandlers(): void {
       i18n,
       manifest: plugin.manifest,
       campaignFiles,
-      delegations
+      delegations,
+      hasService: !!plugin.path.service
     }
   })
 
@@ -252,7 +264,7 @@ function registerIpcHandlers(): void {
         const fullPath = join(plugin.path.plugin, filePath)
         // 安全检查：确保请求的文件在插件目录内
         if (!fullPath.startsWith(plugin.path.plugin)) {
-          console.warn(`[Main] Path traversal attempt: ${filePath}`)
+          log.warn(`Path traversal attempt: ${filePath}`)
           continue
         }
         if (fs.existsSync(fullPath)) {
@@ -266,22 +278,36 @@ function registerIpcHandlers(): void {
   })
 
   // ── 插件启用/禁用 ───────────────────────────────────────────────
-  ipcMain.handle('veto:plugins:toggle', (_event, pluginId: string, enabled: boolean) => {
+  ipcMain.handle('veto:plugins:toggle', async (_event, pluginId: string, enabled: boolean) => {
     if (enabled) {
       enablePlugin(pluginId)
     } else {
       disablePlugin(pluginId)
     }
     refreshPlugins()
+
+    // 联动 service 插件：toggle 后重新加载
+    const toggled = pluginInstances.find((p) => p.manifest.id === pluginId)
+    if (toggled) {
+      try {
+        await pluginManager?.reload(toggled)
+      } catch (err) {
+        log.error(`Failed to reload service ${pluginId}:`, err)
+      }
+    }
+
     return { success: true }
   })
 
   // ── 插件卸载 ──────────────────────────────────────────────────────
-  ipcMain.handle('veto:plugins:uninstall', (_event, pluginId: string) => {
+  ipcMain.handle('veto:plugins:uninstall', async (_event, pluginId: string) => {
     const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
     if (!plugin) {
       return { success: false, error: 'Plugin not found' }
     }
+
+    // 先停止 service（如果有在运行）
+    await pluginManager?.stop(pluginId)
 
     try {
       // fs already imported at top level
@@ -298,7 +324,7 @@ function registerIpcHandlers(): void {
 
       return { success: true }
     } catch (err) {
-      console.error(`[Main] Failed to uninstall plugin ${pluginId}:`, err)
+      log.error(`Failed to uninstall plugin ${pluginId}:`, err)
       return { success: false, error: String(err) }
     }
   })
@@ -377,15 +403,66 @@ function registerIpcHandlers(): void {
           })
         }
 
-        console.log(`[Main] Plugin installed: ${pluginId}`)
+        // 如果是 service 插件，尝试启动
+        const installed = pluginInstances.find((p) => p.manifest.id === pluginId)
+        if (installed && installed.path.service != null && !installed.disabled) {
+          try {
+            await pluginManager?.reload(installed)
+          } catch (err) {
+            log.error(`Failed to start service after install ${pluginId}:`, err)
+          }
+        }
+
+        log.info(`Plugin installed: ${pluginId}`)
         return { success: true }
       } catch (err) {
-        console.error(`[Main] Failed to install plugin ${pluginId}:`, err)
+        log.error(`Failed to install plugin ${pluginId}:`, err)
         return { success: false, error: String(err) }
       }
     }
   )
 
+  // ── Service 插件管理 ─────────────────────────────────────────────
+  ipcMain.handle('veto:services:list', () => {
+    if (!pluginManager) return []
+    return pluginManager.getRunningPlugins().map((s) => {
+      const plugin = pluginInstances.find((p) => p.manifest.id === s.id)
+      return {
+        id: s.id,
+        name: plugin?.manifest.name ?? s.id,
+        version: plugin?.manifest.version ?? '',
+        type: plugin?.manifest.type ?? 'service',
+        running: s.status === 'running',
+        startedAt: s.startedAt,
+        status: { status: s.status, restartCount: s.restartCount }
+      }
+    })
+  })
+
+  ipcMain.handle('veto:services:reload', async (_event, pluginId: string) => {
+    const plugin = pluginInstances.find((p) => p.manifest.id === pluginId)
+    if (!plugin) {
+      return { success: false, error: 'Plugin not found' }
+    }
+    if (!pluginManager) {
+      return { success: false, error: 'PluginManager not initialized' }
+    }
+    try {
+      await pluginManager.reload(plugin)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
+
+  // 接收 Renderer 进程发送的事件，转发到 PluginServer → 广播给所有插件
+  ipcMain.on('veto:event-bus:emit', (_event, payload: { type: string; data?: Record<string, unknown> }) => {
+    if (pluginServer) {
+      pluginServer.broadcastEvent(payload.type, payload.data ?? {})
+    }
+    // 保留 EventBus 兼容（过渡期，确保所有消费者都能收到事件）
+    eventBus.emit(payload.type, payload.data ?? {})
+  })
   // ── 插件配置读写 ──────────────────────────────────────────────────
   ipcMain.handle('veto:config:get', () => {
     return loadPluginConfig()
@@ -578,7 +655,7 @@ function registerIpcHandlers(): void {
 
       // 安全检查：确保请求的文件在插件 assets 目录内
       if (!fullPath.startsWith(plugin.path.assets)) {
-        console.warn(`[Main] Asset path traversal attempt: ${assetPath}`)
+        log.warn(`Asset path traversal attempt: ${assetPath}`)
         return null
       }
 
@@ -619,8 +696,7 @@ function registerIpcHandlers(): void {
 
 function setupAutoUpdater(): void {
   // 配置日志
-  autoUpdater.logger = log
-  log.transports.file.level = 'debug'
+  autoUpdater.logger = baseLog
 
   // 禁止自动下载，由用户手动触发
   autoUpdater.autoDownload = false
@@ -680,6 +756,9 @@ protocol.registerSchemesAsPrivileged([
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  // 初始化日志系统（必须在任何窗口创建前调用）
+  initializeLogging()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -693,6 +772,16 @@ app.whenReady().then(async () => {
   // 初始化插件系统
   ensurePluginsDir()
   refreshPlugins()
+
+  // 初始化 Plugin Host（WS + HTTP 服务器 + 插件管理器）
+  pluginServer = new PluginServer()
+  const pluginServerPort = await pluginServer.start()
+  log.info(`PluginServer started on port ${pluginServerPort}`)
+
+  pluginManager = new PluginManager(pluginServerPort)
+  pluginManager.startAll(pluginInstances).catch((err) => {
+    log.error('Failed to start plugins:', err)
+  })
 
   // 初始化 WebSocket 服务器（模拟大会 Display 通信）
   wsServerPort = await startWsServer()
@@ -782,4 +871,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// 退出前停止所有 service 插件
+app.on('before-quit', async () => {
+  await pluginManager?.stopAll()
+  await pluginServer?.stop()
 })

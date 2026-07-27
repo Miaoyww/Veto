@@ -14,6 +14,9 @@
 import * as http from 'http'
 import * as crypto from 'crypto'
 import type { Duplex } from 'stream'
+import { createLogger } from './logger'
+
+const log = createLogger('WS')
 
 const WS_BASE_PORT = 19527
 const WS_MAX_RETRY = 99
@@ -143,7 +146,7 @@ export function startWsServer(): Promise<number> {
     const client: WsClient = { socket, isHost: false, lastPong: Date.now() }
     clients.add(client)
 
-    console.log(`[WS] Client connected (total: ${clients.size})`)
+    log.info(`Client connected (total: ${clients.size})`)
 
     let buffer = Buffer.alloc(0)
 
@@ -176,7 +179,7 @@ export function startWsServer(): Promise<number> {
         const msg = decodeFrame(frame)
         if (msg === '__CLOSE__') {
           clients.delete(client)
-          console.log(`[WS] Client disconnected (total: ${clients.size})`)
+          log.info(`Client disconnected (total: ${clients.size})`)
           return
         }
 
@@ -202,7 +205,7 @@ export function startWsServer(): Promise<number> {
 
     socket.on('close', () => {
       clients.delete(client)
-      console.log(`[WS] Client disconnected (total: ${clients.size})`)
+      log.info(`Client disconnected (total: ${clients.size})`)
     })
 
     socket.on('error', () => {
@@ -220,7 +223,7 @@ export function startWsServer(): Promise<number> {
       if (now - client.lastPong > HEARTBEAT_TIMEOUT) {
         clients.delete(client)
         try { client.socket.destroy() } catch { /* ignore */ }
-        console.log(`[WS] Client heartbeat timeout (total: ${clients.size})`)
+        log.warn(`Client heartbeat timeout (total: ${clients.size})`)
         continue
       }
 
@@ -252,7 +255,7 @@ export function startWsServer(): Promise<number> {
       })
 
       server.listen(attemptPort, () => {
-        console.log(`[WS] WebSocket server listening on ws://localhost:${attemptPort}`)
+        log.info(`WebSocket server listening on ws://localhost:${attemptPort}`)
         resolve(attemptPort)
       })
     }

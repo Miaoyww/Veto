@@ -79,6 +79,21 @@ export interface VetoAPI {
   ws: {
     getPort: () => Promise<number>
   }
+  services: {
+    list: () => Promise<
+      Array<{
+        id: string
+        name: string
+        version: string
+        type: string
+        running: boolean
+        startedAt?: number
+        status?: Record<string, unknown>
+      }>
+    >
+    reload: (pluginId: string) => Promise<{ success: boolean; error?: string }>
+    emitEvent: (type: string, data?: Record<string, unknown>) => void
+  }
   store: {
     load: (domain: string) => Promise<unknown>
     save: (domain: string, data: unknown) => Promise<{ success: boolean }>

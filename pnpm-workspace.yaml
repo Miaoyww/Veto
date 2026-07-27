@@ -1,1 +1,3 @@
-nodeLinker: hoisted 
+nodeLinker: hoisted
+packages:
+  - "packages/*"

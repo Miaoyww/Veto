@@ -9,6 +9,9 @@
 import { app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { createLogger } from './logger'
+
+const log = createLogger('PluginStore')
 
 /** 插件配置结构 */
 export interface PluginConfig {
@@ -36,7 +39,7 @@ export function loadPluginConfig(): PluginConfig {
   const configPath = getConfigPath()
 
   if (!fs.existsSync(configPath)) {
-    console.log('[PluginStore] No config file found, using defaults')
+    log.info('No config file found, using defaults')
     return { ...DEFAULT_CONFIG }
   }
 
@@ -48,7 +51,7 @@ export function loadPluginConfig(): PluginConfig {
       order: parsed.order ?? []
     }
   } catch (err) {
-    console.error('[PluginStore] Failed to read config, using defaults:', err)
+    log.error('Failed to read config, using defaults:', err)
     return { ...DEFAULT_CONFIG }
   }
 }
@@ -63,9 +66,9 @@ export function savePluginConfig(config: PluginConfig): void {
       fs.mkdirSync(dir, { recursive: true })
     }
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
-    console.log('[PluginStore] Config saved')
+    log.info('Config saved')
   } catch (err) {
-    console.error('[PluginStore] Failed to save config:', err)
+    log.error('Failed to save config:', err)
     throw err
   }
 }

@@ -13,15 +13,19 @@
 import { app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { createLogger } from './logger'
+
+const log = createLogger('VetoStore')
 
 /** 数据域 */
-export type StoreDomain = 'conferences' | 'battles' | 'settings'
+export type StoreDomain = 'conferences' | 'battles' | 'settings' | 'tools'
 
 /** 数据域 → 文件名映射 */
 const FILES: Record<StoreDomain, string> = {
   conferences: 'conferences.json',
   battles: 'battles.json',
-  settings: 'settings.json'
+  settings: 'settings.json',
+  tools: 'tools.json'
 }
 
 /** 获取存储根目录 */
@@ -46,7 +50,7 @@ export function loadStore<T>(domain: StoreDomain): T | null {
     const raw = fs.readFileSync(filePath, 'utf-8')
     return JSON.parse(raw) as T
   } catch (err) {
-    console.error(`[VetoStore] Failed to read ${domain}:`, err)
+    log.error(`Failed to read ${domain}:`, err)
     return null
   }
 }
@@ -62,7 +66,7 @@ export function saveStore<T>(domain: StoreDomain, data: T): void {
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
   } catch (err) {
-    console.error(`[VetoStore] Failed to save ${domain}:`, err)
+    log.error(`Failed to save ${domain}:`, err)
     throw err
   }
 }
@@ -73,10 +77,10 @@ export function deleteStore(domain: StoreDomain): void {
   try {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath)
-      console.log(`[VetoStore] Deleted ${domain}`)
+      log.info(`Deleted ${domain}`)
     }
   } catch (err) {
-    console.error(`[VetoStore] Failed to delete ${domain}:`, err)
+    log.error(`Failed to delete ${domain}:`, err)
   }
 }
 
@@ -87,15 +91,15 @@ export function deleteStore(domain: StoreDomain): void {
 export function migrateFromLocalStorage(domain: StoreDomain, jsonData: string): void {
   // 如果文件已存在则跳过（不覆盖已有数据）
   if (loadStore(domain) !== null) {
-    console.log(`[VetoStore] ${domain} file exists, skip migration`)
+    log.info(`${domain} file exists, skip migration`)
     return
   }
 
   try {
     JSON.parse(jsonData) // 验证 JSON 合法性
     saveStore(domain, JSON.parse(jsonData))
-    console.log(`[VetoStore] Migrated ${domain} from localStorage`)
+    log.info(`Migrated ${domain} from localStorage`)
   } catch (err) {
-    console.warn(`[VetoStore] Invalid data during ${domain} migration:`, err)
+    log.warn(`Invalid data during ${domain} migration:`, err)
   }
 }

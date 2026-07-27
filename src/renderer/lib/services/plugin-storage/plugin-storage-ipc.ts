@@ -24,6 +24,7 @@ interface PluginListItem {
   hasI18n: boolean
   hasAssets: boolean
   hasDelegations: boolean
+  hasService: boolean
 }
 
 /** 判断给定类型的插件是否需要 definitions */
@@ -36,8 +37,8 @@ function shouldLoadPlugin(item: PluginListItem): boolean {
   if (typeNeedsDefinitions(item.type)) {
     return item.hasDefinitions || item.hasI18n
   }
-  // utility / dependency：有 delegations 即可（会议集成）
-  return item.hasDelegations
+  // utility / dependency：有 delegations 或 service 入口即可
+  return item.hasDelegations || item.hasService
 }
 
 /** 将 IPC 返回的 detail 转换为 InstalledPlugin */
@@ -102,7 +103,7 @@ export class IpcPluginStorage implements PluginStorage {
       const hasContent =
         typeNeedsDefinitions(type)
           ? !!data.definitions
-          : !!data.delegations
+          : (!!data.delegations || !!data.hasService)
 
       if (hasContent) {
         plugins.push(detailToPlugin(data))

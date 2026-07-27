@@ -13,6 +13,9 @@
 
 import type { StatusDefinition, StatusInstance } from '$lib/types';
 import type { FlexStats, ModCombatOverrides } from './types';
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('StatusRegistry')
 
 // ═══════════════════════════════════════════════════════════════
 // 内置状态定义
@@ -122,7 +125,7 @@ for (const def of BUILT_IN_STATUSES) {
 /** 注册状态定义（Mod 注入用，后注入覆盖同 id 的已有定义） */
 export function registerStatusDefinition(def: StatusDefinition): void {
 	statusDefs.set(def.id, def);
-	console.log(`[StatusRegistry] Registered status: ${def.id}`);
+	log.info(`Registered status: ${def.id}`);
 }
 
 /** 批量注册状态定义 */
@@ -130,7 +133,7 @@ export function registerStatusDefinitions(defs: StatusDefinition[]): void {
 	for (const def of defs) {
 		statusDefs.set(def.id, def);
 	}
-	console.log(`[StatusRegistry] Registered ${defs.length} status definitions`);
+	log.info(`Registered ${defs.length} status definitions`);
 }
 
 /** 获取单个状态定义 */
@@ -230,7 +233,7 @@ export function applyStatusEffect(
 ): StatusInstance[] {
 	const def = statusDefs.get(statusId);
 	if (!def) {
-		console.warn(`[StatusRegistry] Unknown status: ${statusId}`);
+		log.warn(`Unknown status: ${statusId}`);
 		return existing ?? [];
 	}
 

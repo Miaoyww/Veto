@@ -186,6 +186,30 @@ const veto = {
   ws: {
     /** 获取 WebSocket 服务器当前监听端口 */
     getPort: (): Promise<number> => ipcRenderer.invoke('veto:ws:get-port')
+  },
+
+  services: {
+    /** 获取运行中的 service 插件列表 */
+    list: (): Promise<
+      Array<{
+        id: string
+        name: string
+        version: string
+        type: string
+        running: boolean
+        startedAt?: number
+        status?: Record<string, unknown>
+      }>
+    > => ipcRenderer.invoke('veto:services:list'),
+
+    /** 重新加载指定 service 插件 */
+    reload: (pluginId: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('veto:services:reload', pluginId),
+
+    /** 向主进程 EventBus 发送事件（用于 Renderer → Service 推送） */
+    emitEvent: (type: string, data?: Record<string, unknown>): void => {
+      ipcRenderer.send('veto:event-bus:emit', { type, data })
+    }
   }
 }
 

@@ -11,6 +11,7 @@
 import { writable, get } from 'svelte/store'
 import { bootstrapStore, saveToStore } from './store-bridge'
 import { TimelineEngine, type TimelineState } from '$lib/engine/timeline-engine.svelte'
+import { emitServiceEvent } from '$lib/services/event-bus-bridge'
 
 // ─── 类型 ──────────────────────────────────────────────────────────────
 
@@ -118,15 +119,20 @@ export function createTimeline(name: string, initialSimTime: number, ratio: numb
   }
 
   timelines.update((list) => [...list, timeline])
+  emitServiceEvent('timeline:created', { timelineId: timeline.id, name, ratio })
   return timeline.id
 }
 
 /** 删除时间线 */
 export function deleteTimeline(id: string): void {
+  const timeline = get(timelines).find((t) => t.id === id)
   disposeTimelineEngine(id)
   timelines.update((list) => list.filter((t) => t.id !== id))
   if (get(currentTimelineId) === id) {
     currentTimelineId.set(null)
+  }
+  if (timeline) {
+    emitServiceEvent('timeline:deleted', { timelineId: id, name: timeline.name })
   }
 }
 

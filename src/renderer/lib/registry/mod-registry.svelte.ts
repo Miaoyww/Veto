@@ -9,6 +9,10 @@ import type {
 import type { PluginManifest } from '$lib/services/plugin-db';
 import { registerStatusDefinitions } from './status-registry';
 import { registerSensorDefinitions } from './sensor-registry';
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('ModRegistry')
+const modLog = createLogger('Mods')
 
 /** Mod 元数据（轻量，仅从 manifest 读取，供大厅列表展示） */
 
@@ -39,11 +43,11 @@ class ModRegistry {
 	load(mod: ModData): void {
 		const id = mod.id ?? `_anon_${this._entries.length}`;
 		if (this._entries.some((e) => e.id === id)) {
-			console.log('[ModRegistry.load] duplicate detected:', id);
+			log.warn('duplicate detected:', id);
 			return;
 		}
 		this._entries.push(mod);
-		console.log('[ModRegistry.load] loaded:', id, 'total entries:', this._entries.length);
+		log.info('loaded:', id, 'total entries:', this._entries.length);
 	}
 
 	/** 卸载指定 Mod（从注册表移除） */
@@ -51,7 +55,7 @@ class ModRegistry {
 		const idx = this._entries.findIndex((e) => e.id === id);
 		if (idx !== -1) {
 			this._entries.splice(idx, 1);
-			console.log('[ModRegistry.unload] removed:', id);
+			log.info('removed:', id);
 		}
 	}
 
@@ -59,8 +63,8 @@ class ModRegistry {
 	/** 获取所有已注册 Mod 条目 */
 	getModList(): ModData[] {
 		const list = [...this._entries];
-		console.log(
-			'[ModRegistry.getModList]',
+		log.debug(
+			'getModList:',
 			list.length,
 			list.map((m) => m.id)
 		);
@@ -110,7 +114,7 @@ class Mods {
 
 	/** 实际将 mod 数据写入各 Map */
 	private _applyModData(mod: ModData): void {
-		console.log(`Applying mod data: ${mod.id} - ${mod.metadata?.name}`);
+		log.debug(`Applying mod data: ${mod.id} - ${mod.metadata?.name}`);
 
 		for (const branch of mod.branches ?? []) {
 			this.branches.set(branch.id, branch);
@@ -132,8 +136,8 @@ class Mods {
 					Object.entries(mod.combatOverrides).filter(([, v]) => v !== undefined)
 				)
 			};
-			console.log(
-				`[Mods] Combat overrides updated:`,
+			modLog.info(
+				`Combat overrides updated:`,
 				JSON.stringify(this._combatOverrides)
 			);
 		}
@@ -165,10 +169,10 @@ class Mods {
 			registerSensorDefinitions(mod.sensors);
 		}
 
-		console.log(
+		log.debug(
 			`Mod ${mod.id} applied: branches=${mod.branches?.length ?? 0}, categories=${mod.categories?.length ?? 0}, unitTemplates=${mod.unitTemplates?.length ?? 0}`
 		);
-		console.log('Mod', mod);
+		log.debug('Mod', mod);
 	}
 
 	load(mod: ModData): void {
@@ -217,7 +221,7 @@ class Mods {
 			}
 		}
 
-		console.log(`[Mods] Unloaded mod: ${id}`);
+		modLog.info(`Unloaded mod: ${id}`);
 	}
 
 	clear(): void {

@@ -36,6 +36,8 @@ export const RATIO_PRESETS = [
   { value: 86400, label: '1日/秒' },
 ] as const
 
+import { emitServiceEvent } from '$lib/services/event-bus-bridge'
+
 // ─── 引擎类 ────────────────────────────────────────────────────────────
 
 export class TimelineEngine {
@@ -102,6 +104,12 @@ export class TimelineEngine {
     this.pausedSimulationTime = this._simTime
     this.paused = true
     this._save()
+    emitServiceEvent('timeline:paused', {
+      timelineId: this.id,
+      name: '',
+      pausedSimTime: this.pausedSimulationTime,
+      ratio: this.ratio
+    })
   }
 
   /** 恢复时间轴 */
@@ -111,6 +119,12 @@ export class TimelineEngine {
     this.paused = false
     this.pausedSimulationTime = undefined
     this._save()
+    emitServiceEvent('timeline:resumed', {
+      timelineId: this.id,
+      name: '',
+      simTime: this._simTime,
+      ratio: this.ratio
+    })
   }
 
   /** 切换暂停/恢复 */
@@ -125,10 +139,17 @@ export class TimelineEngine {
   /** 设置时间倍率（保持模拟时间连续） */
   setRatio(newRatio: number): void {
     if (newRatio <= 0) return
+    const oldRatio = this.ratio
     this.simulationAnchor = this._simTime
     this.realAnchor = Date.now()
     this.ratio = newRatio
     this._save()
+    emitServiceEvent('timeline:ratio_changed', {
+      timelineId: this.id,
+      name: '',
+      oldRatio,
+      newRatio
+    })
   }
 
   /** 跳转到指定模拟时间 */

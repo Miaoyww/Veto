@@ -7,6 +7,9 @@
 import { writable } from 'svelte/store'
 import { getPluginStorage, initPluginStorage } from './plugin-storage/plugin-storage-factory'
 import { setPluginListChangeCallback } from './plugin-storage/plugin-storage'
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('plugin-db')
 
 // ─── 导出新 API ────────────────────────────────────────────────────
 export { getPluginStorage, initPluginStorage } from './plugin-storage/plugin-storage-factory'
@@ -29,12 +32,12 @@ export const installedPluginsRevision = writable(0)
 initPluginStorage()
   .then(() => {
     storageInitialized.set(true)
-    console.log('[plugin-db] Storage initialized successfully')
+    log.info('Storage initialized successfully')
   })
   .catch((err) => {
     const errorMsg = err instanceof Error ? err.message : String(err)
     storageError.set(errorMsg)
-    console.error('[plugin-db] Failed to initialize storage:', err)
+    log.error('Failed to initialize storage:', err)
   })
 
 setPluginListChangeCallback(() => {
@@ -105,6 +108,7 @@ export interface PluginDetail {
   delegations?: string | null
   disabled: boolean
   incompatible: boolean
+  hasService: boolean
 }
 
 /** dist/registry.json 中每个条目的结构（manifest 字段 + 注册中心元数据） */

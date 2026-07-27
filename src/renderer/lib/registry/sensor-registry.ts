@@ -8,6 +8,9 @@
  */
 
 import type { SensorDefinition, Contact } from '$lib/types';
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('SensorRegistry')
 
 // ═══════════════════════════════════════════════════════════════
 // 注册表
@@ -23,7 +26,7 @@ const sensorDefs = new Map<string, SensorDefinition>();
 /** 注册单个传感器定义（Mod 注入用，后注入覆盖同 id 的已有定义） */
 export function registerSensorDefinition(def: SensorDefinition): void {
 	sensorDefs.set(def.id, def);
-	console.log(`[SensorRegistry] Registered sensor: ${def.id}`);
+	log.info(`Registered sensor: ${def.id}`);
 }
 
 /** 批量注册传感器定义 */
@@ -31,7 +34,7 @@ export function registerSensorDefinitions(defs: SensorDefinition[]): void {
 	for (const def of defs) {
 		sensorDefs.set(def.id, def);
 	}
-	console.log(`[SensorRegistry] Registered ${defs.length} sensor definitions`);
+	log.info(`Registered ${defs.length} sensor definitions`);
 }
 
 /** 获取单个传感器定义 */

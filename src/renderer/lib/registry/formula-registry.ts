@@ -9,6 +9,9 @@
  */
 
 import type { ModCombatOverrides } from './types';
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('FormulaRegistry')
 
 /** 战斗上下文 */
 export interface CombatContext {
@@ -122,7 +125,7 @@ export function registerPluginFormulas(
 ): void {
 	for (const [name, fn] of Object.entries(formulas)) {
 		activeFormulas.set(name, fn);
-		console.log(`[FormulaRegistry] Plugin "${_pluginId}" registered formula: ${name}`);
+		log.info(`Plugin "${_pluginId}" registered formula: ${name}`);
 	}
 }
 

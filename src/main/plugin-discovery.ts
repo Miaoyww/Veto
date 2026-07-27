@@ -10,6 +10,9 @@
 import { app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { createLogger } from './logger'
+
+const log = createLogger('PluginDiscovery')
 
 /** 插件清单信息（从 manifest.json 解析） */
 export interface PluginManifest {
@@ -46,6 +49,10 @@ export interface PluginManifest {
   events?: string
   /** 会议：代表团预设文件路径 */
   delegations?: string
+  /** 服务插件：入口文件相对路径（如 "./service.mjs"） */
+  service?: string
+  /** 服务插件：运行时标识（如 "nodejs"）。默认 "nodejs" */
+  runtime?: string
 }
 
 /** 插件实例（扫描发现后的内存表示） */
@@ -72,6 +79,8 @@ export interface PluginInstance {
     events?: string
     /** 会议：delegations.json 绝对路径 */
     delegations?: string
+    /** 服务插件：service.mjs 绝对路径 */
+    service?: string
   }
   /** 是否被用户禁用 */
   disabled: boolean
@@ -101,7 +110,7 @@ export function scanPluginDirectory(): PluginInstance[] {
   const pluginsDir = getPluginsDir()
 
   if (!fs.existsSync(pluginsDir)) {
-    console.log('[PluginDiscovery] Plugins directory does not exist, creating...')
+    log.info('Plugins directory does not exist, creating...')
     fs.mkdirSync(pluginsDir, { recursive: true })
     return []
   }
@@ -116,7 +125,7 @@ export function scanPluginDirectory(): PluginInstance[] {
     const manifestPath = path.join(pluginDir, 'manifest.json')
 
     if (!fs.existsSync(manifestPath)) {
-      console.warn(`[PluginDiscovery] Skipping ${entry.name}: no manifest.json`)
+      log.warn(`Skipping ${entry.name}: no manifest.json`)
       continue
     }
 
@@ -125,7 +134,7 @@ export function scanPluginDirectory(): PluginInstance[] {
       const manifest = JSON.parse(raw) as PluginManifest
 
       if (!manifest.id?.trim() || !manifest.name?.trim()) {
-        console.warn(`[PluginDiscovery] Skipping ${entry.name}: invalid manifest (missing id/name)`)
+        log.warn(`Skipping ${entry.name}: invalid manifest (missing id/name)`)
         continue
       }
 
@@ -173,7 +182,12 @@ export function scanPluginDirectory(): PluginInstance[] {
         deployments: getCampaignPath(manifest.deployments, 'deployments.json'),
         facilities: getCampaignPath(manifest.facilities, 'facilities.json'),
         events: getCampaignPath(manifest.events, 'events.json'),
-        delegations: getCampaignPath(manifest.delegations, 'delegations.json')
+        delegations: getCampaignPath(manifest.delegations, 'delegations.json'),
+        service: manifest.service
+          ? (fs.existsSync(path.join(pluginDir, manifest.service))
+            ? path.join(pluginDir, manifest.service)
+            : undefined)
+          : undefined
       }
 
       plugins.push({
@@ -183,10 +197,10 @@ export function scanPluginDirectory(): PluginInstance[] {
         incompatible: false
       })
     } catch (err) {
-      console.error(`[PluginDiscovery] Failed to read manifest for ${entry.name}:`, err)
+      log.error(`Failed to read manifest for ${entry.name}:`, err)
     }
   }
 
-  console.log(`[PluginDiscovery] Found ${plugins.length} plugin(s) in ${pluginsDir}`)
+  log.info(`Found ${plugins.length} plugin(s) in ${pluginsDir}`)
   return plugins
 }
