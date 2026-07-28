@@ -58,6 +58,9 @@ export class TimelineEngine {
 
   private _rafId: ReturnType<typeof requestAnimationFrame> | null = null
 
+  /** 上次触发里程碑的 sim 小时数（用于跨边界检测） */
+  private _lastMilestoneHour: number = -1
+
   /** 状态变更回调（由 timeline-store 注入） */
   _onStateChange: ((state: TimelineState) => void) | undefined
 
@@ -199,6 +202,7 @@ export class TimelineEngine {
       // 未暂停：根据锚点公式计算（补偿关闭期间流逝时间）
       this._simTime = state.simulationAnchor + (Date.now() - state.realAnchor) * state.ratio
     }
+    this._lastMilestoneHour = new Date(this._simTime).getHours()
     this._realTime = Date.now()
   }
 
@@ -227,6 +231,27 @@ export class TimelineEngine {
     if (!this.paused) {
       this._simTime =
         this.simulationAnchor + (this._realTime - this.realAnchor) * this.ratio
+    }
+    this._checkMilestone()
+  }
+
+  /** 检测模拟时间是否越过 00:00 或 12:00 整点，触发里程碑事件 */
+  private _checkMilestone(): void {
+    const simDate = new Date(this._simTime)
+    const currentHour = simDate.getHours()
+
+    if (currentHour !== this._lastMilestoneHour) {
+      this._lastMilestoneHour = currentHour
+      if (currentHour === 0 || currentHour === 12) {
+        emitServiceEvent('timeline:time_milestone', {
+          timelineId: this.id,
+          simTime: this._simTime,
+          isoDate: simDate.toISOString().slice(0, 10),
+          hour: currentHour,
+          ratio: this.ratio,
+          paused: this.paused
+        })
+      }
     }
   }
 }

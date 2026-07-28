@@ -1,6 +1,6 @@
 {
   "name": "Veto",
-  "version": "0.64.0",
+  "version": "0.65.0",
   "description": "Veto —— A modern, cross-platform, and extensible Model United Nations Conference platform.",
   "main": "./out/main/index.js",
   "author": "Miaoyww",
@@ -32,7 +32,8 @@
     "milsymbol": "^3.0.4",
     "pinyin-match": "^1.2.10",
     "postcss": "^8.5.13",
-    "sveaflet": "^0.1.4"
+    "sveaflet": "^0.1.4",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
@@ -69,4 +70,3 @@
     ]
   }
 }
-  

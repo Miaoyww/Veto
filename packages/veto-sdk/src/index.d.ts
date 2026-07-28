@@ -19,3 +19,11 @@ export type {
 export { VetoClient } from './client.mjs'
 export { matchEvent, defaultOptions } from './utils.mjs'
 export { WsTransport, QueryClient } from './transport.mjs'
+export { WsServer, WsClient } from './ws-server.mjs'
+export type {
+  WsServerOptions,
+  HttpHandler,
+  ConnectionCallback,
+  MessageCallback,
+  CloseCallback,
+} from './ws-server.d.ts'

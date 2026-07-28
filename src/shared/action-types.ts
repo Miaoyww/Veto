@@ -39,11 +39,12 @@ export type ConferenceActionType =
 
 // ── 时间线操作类型 ────────────────────────────────────────────────────────
 
-/** 时间线操作类型（共 5 种） */
+/** 时间线操作类型（共 6 种） */
 export type TimelineActionType =
   | 'paused'
   | 'resumed'
   | 'ratio_changed'
+  | 'time_milestone'
   | 'created'
   | 'deleted'
 
@@ -86,6 +87,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   paused: '暂停',
   resumed: '恢复',
   ratio_changed: '倍率变更',
+  time_milestone: '时间节点',
   created: '创建',
   deleted: '删除'
 }

@@ -2,7 +2,7 @@
  * ws-server.ts — 内建 WebSocket 服务器
  * ──────────────────────────────────────────
  * 在主进程中运行，不需要额外依赖。
- * 基于 Node.js http + crypto（WebSocket 握手 + 帧协议）。
+ * 基于 Node.js http 协议。
  *
  * 端口：从 19527 开始尝试，如遇冲突则递增寻找可用端口
  *
@@ -12,15 +12,20 @@
  */
 
 import * as http from 'http'
-import * as crypto from 'crypto'
 import type { Duplex } from 'stream'
 import { createLogger } from './logger'
+import {
+  encodeFrame,
+  encodePingFrame,
+  encodePongFrame,
+  decodeFrame,
+  sendHandshake,
+} from './ws-utils'
 
 const log = createLogger('WS')
 
 const WS_BASE_PORT = 19527
 const WS_MAX_RETRY = 99
-const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 const HEARTBEAT_INTERVAL = 5_000   // 每 5 秒发送一次 ping
 const HEARTBEAT_TIMEOUT = 10_000  // 超过 10 秒无 pong 视为断连
@@ -32,75 +37,6 @@ interface WsClient {
 }
 
 const clients = new Set<WsClient>()
-
-// ---- WebSocket 帧编码（发送文本帧） ----
-function encodeFrame(payload: string): Buffer {
-  const buf = Buffer.from(payload, 'utf-8')
-  const len = buf.length
-  const frames: Buffer[] = []
-
-  // FIN + opcode 0x1 (text)
-  frames.push(Buffer.from([0x81]))
-
-  if (len < 126) {
-    frames.push(Buffer.from([len]))
-  } else if (len < 65536) {
-    const ext = Buffer.alloc(3)
-    ext[0] = 126
-    ext.writeUInt16BE(len, 1)
-    frames.push(ext)
-  } else {
-    const ext = Buffer.alloc(9)
-    ext[0] = 127
-    ext.writeBigUInt64BE(BigInt(len), 1)
-    frames.push(ext)
-  }
-
-  frames.push(buf)
-  return Buffer.concat(frames)
-}
-
-// ---- WebSocket ping 帧编码（opcode 0x9） ----
-function encodePingFrame(): Buffer {
-  // FIN + opcode 0x9 (ping)，payload 为空
-  return Buffer.from([0x89, 0x00])
-}
-
-// ---- WebSocket 帧解码 ----
-function decodeFrame(data: Buffer): string | null {
-  if (data.length < 2) return null
-
-  const opcode = data[0] & 0x0f
-  const masked = (data[1] & 0x80) !== 0
-  let payloadLen = data[1] & 0x7f
-  let offset = 2
-
-  if (payloadLen === 126) {
-    if (data.length < 4) return null
-    payloadLen = data.readUInt16BE(2)
-    offset = 4
-  } else if (payloadLen === 127) {
-    if (data.length < 10) return null
-    payloadLen = Number(data.readBigUInt64BE(2))
-    offset = 10
-  }
-
-  const maskKey = masked ? data.subarray(offset, offset + 4) : null
-  const payloadStart = masked ? offset + 4 : offset
-  const payload = data.subarray(payloadStart, payloadStart + payloadLen)
-
-  if (masked && maskKey) {
-    for (let i = 0; i < payload.length; i++) {
-      payload[i] ^= maskKey[i % 4]
-    }
-  }
-
-  // 只处理 text (opcode 1)、close (opcode 8)、pong (opcode 0xA)
-  if (opcode === 0x8) return '__CLOSE__'
-  if (opcode === 0xA) return '__PONG__'
-  if (opcode === 0x1) return payload.toString('utf-8')
-  return null
-}
 
 // ---- 广播 ----
 function broadcast(data: unknown, excludeHost: boolean = false): void {
@@ -117,31 +53,19 @@ function broadcast(data: unknown, excludeHost: boolean = false): void {
 
 // ---- 启动服务器 ----
 export function startWsServer(): Promise<number> {
-  const server = http.createServer((_req, res) => {
+  const httpServer = http.createServer((_req, res) => {
     res.writeHead(426, { 'Content-Type': 'text/plain' })
     res.end('WebSocket only')
   })
 
-  server.on('upgrade', (req, socket) => {
+  httpServer.on('upgrade', (req, socket) => {
     const key = req.headers['sec-websocket-key']
     if (!key) {
       socket.destroy()
       return
     }
 
-    // 握手
-    const acceptKey = crypto
-      .createHash('sha1')
-      .update(key + WS_GUID)
-      .digest('base64')
-
-    socket.write(
-      'HTTP/1.1 101 Switching Protocols\r\n' +
-        'Upgrade: websocket\r\n' +
-        'Connection: Upgrade\r\n' +
-        `Sec-WebSocket-Accept: ${acceptKey}\r\n` +
-        '\r\n'
-    )
+    sendHandshake(socket, key)
 
     const client: WsClient = { socket, isHost: false, lastPong: Date.now() }
     clients.add(client)
@@ -184,6 +108,17 @@ export function startWsServer(): Promise<number> {
         }
 
         if (msg === '__PONG__') {
+          client.lastPong = Date.now()
+          continue
+        }
+
+        if (msg === '__PING__') {
+          // RFC 6455: 收到 Ping 必须回复 Pong
+          try {
+            client.socket.write(encodePongFrame(Buffer.alloc(0)))
+          } catch {
+            /* ignore */
+          }
           client.lastPong = Date.now()
           continue
         }
@@ -237,7 +172,7 @@ export function startWsServer(): Promise<number> {
   }, HEARTBEAT_INTERVAL)
 
   // 服务器关闭时清理定时器
-  server.on('close', () => {
+  httpServer.on('close', () => {
     clearInterval(heartbeatTimer)
   })
 
@@ -245,7 +180,7 @@ export function startWsServer(): Promise<number> {
     let attemptPort = WS_BASE_PORT
 
     function tryListen(): void {
-      server.once('error', (err: NodeJS.ErrnoException) => {
+      httpServer.once('error', (err: NodeJS.ErrnoException) => {
         if (err.code === 'EADDRINUSE' && attemptPort < WS_BASE_PORT + WS_MAX_RETRY) {
           attemptPort++
           tryListen()
@@ -254,7 +189,7 @@ export function startWsServer(): Promise<number> {
         }
       })
 
-      server.listen(attemptPort, () => {
+      httpServer.listen(attemptPort, () => {
         log.info(`WebSocket server listening on ws://localhost:${attemptPort}`)
         resolve(attemptPort)
       })

@@ -39,6 +39,16 @@ export function encodePingFrame(): Buffer {
   return Buffer.from([0x89, 0x00])
 }
 
+/** 编码 pong 帧（opcode 0xA），回复客户端 ping */
+export function encodePongFrame(payload: Buffer): Buffer {
+  const len = payload.length
+  const frame = Buffer.alloc(2 + len)
+  frame[0] = 0x8a // FIN + opcode 0xA
+  frame[1] = len  // 服务端不 mask
+  payload.copy(frame, 2)
+  return frame
+}
+
 /** 编码 close 帧（opcode 0x8） */
 export function encodeCloseFrame(code = 1000): Buffer {
   const buf = Buffer.alloc(2)

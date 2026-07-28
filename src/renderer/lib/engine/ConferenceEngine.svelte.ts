@@ -33,6 +33,7 @@ import type {
 import { POINT_LABELS, MOTION_LABELS, type Attendance } from '$lib/types-conference'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 import { emitServiceEvent } from '$lib/services/event-bus-bridge'
+import { getTimelineEngine } from '$lib/stores/timeline-store'
 import {
   Timer,
   calculateMajorityThresholds,
@@ -1535,6 +1536,18 @@ export class ConferenceEngine {
       ? this.delegations.find((d) => d.id === speakerEntry.delegationId)
       : null
 
+    // 如果绑定了时间线，附带当前模拟时间信息
+    const timeline = this.timelineId ? getTimelineEngine(this.timelineId) : undefined
+    const timelineInfo =
+      timeline
+        ? {
+            timelineId: this.timelineId,
+            simTime: timeline.currentSimTime,
+            ratio: timeline.ratio,
+            paused: timeline.paused
+          }
+        : null
+
     return {
       conferenceId: this.id,
       conferenceName: this.name,
@@ -1549,7 +1562,8 @@ export class ConferenceEngine {
           }
         : null,
       activeCaucusType: this.activeCaucus?.type ?? null,
-      activeCaucusMotionId: this.activeCaucus?.motionId ?? null
+      activeCaucusMotionId: this.activeCaucus?.motionId ?? null,
+      timeline: timelineInfo
     }
   }
 
