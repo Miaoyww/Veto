@@ -5,40 +5,30 @@
  * - WebSocket (ws://127.0.0.1:{port}/plugin): 事件推送（subscribe/unsubscribe/event）
  * - HTTP REST (http://127.0.0.1:{port}/api/*): 数据查询
  *
+ * 基于 WsServer 创建实例，添加 Plugin 专用的 HTTP 路由和 WebSocket 消息处理。
  * 从 EventBus 接收渲染进程发出的事件，广播给所有匹配订阅的插件客户端。
  */
 
-import * as http from 'http'
-import type { Duplex } from 'stream'
+import type { IncomingMessage, ServerResponse } from 'http'
 import { loadStore } from '../veto-store'
 import { createLogger } from '../logger'
-
-const log = createLogger('PluginServer')
-import {
-  encodeFrame,
-  encodePingFrame,
-  encodeCloseFrame,
-  decodeFrame,
-  peekFrameLength,
-  sendHandshake,
-} from '../ws-utils'
+import { WsServer, type WsClient } from '../ws-server'
 import type { ServiceEventPayload, ServiceEventType } from '../types/service-plugin'
 
-// ── 常量 ────────────────────────────────────────────────────────────────────
+const log = createLogger('PluginServer')
+
+// ── 常量 ──────────────────────────────────────────────────────
 
 const DEFAULT_PORT = 19528
-const MAX_PORT_RETRY = 99
-const HEARTBEAT_INTERVAL = 5000
-const HEARTBEAT_TIMEOUT = 10000
 
-// ── 类型 ────────────────────────────────────────────────────────────────────
+// ── 类型 ──────────────────────────────────────────────────────
 
-interface PluginWsClient {
-  socket: Duplex
+interface PluginClientData {
   subscriptions: Set<string>
   connectedAt: number
-  lastPong: number
 }
+
+type PluginWsClient = WsClient & { data: PluginClientData }
 
 interface PluginServerMessage {
   type: string
@@ -47,65 +37,77 @@ interface PluginServerMessage {
   data?: Record<string, unknown>
 }
 
-// ── PluginServer ────────────────────────────────────────────────────────────
+// ── PluginServer ──────────────────────────────────────────────
 
 export class PluginServer {
-  private httpServer: http.Server
-  private clients = new Set<PluginWsClient>()
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
-  private port = 0
+  private wsServer: WsServer
   private startedAt = 0
 
   constructor() {
-    this.httpServer = http.createServer((req, res) => {
-      this.handleHttpRequest(req, res)
-    })
+    this.wsServer = new WsServer({ port: DEFAULT_PORT, path: '/plugin' })
 
-    this.httpServer.on('upgrade', (req, socket, head) => {
-      this.handleUpgrade(req, socket as Duplex, head)
-    })
+    // ── HTTP 请求处理 ──────────────────────────────────────
+    this.wsServer.onRequest = (req, res) => {
+      return this.handleHttpRequest(req, res)
+    }
+
+    // ── WebSocket 连接 ─────────────────────────────────────
+    this.wsServer.onConnect = (client, _req) => {
+      const pluginClient = client as PluginWsClient
+      pluginClient.data = {
+        subscriptions: new Set(),
+        connectedAt: Date.now(),
+      }
+      log.info(`Plugin connected (total: ${this.wsServer.getClients().size})`)
+
+      // 发送 welcome 消息
+      this.wsServer.sendTo(client, {
+        type: 'welcome',
+        port: this.wsServer.getPort(),
+        version: '0.1.0',
+      })
+    }
+
+    // ── WebSocket 断开 ─────────────────────────────────────
+    this.wsServer.onDisconnect = (_client) => {
+      log.info(`Plugin disconnected (total: ${this.wsServer.getClients().size})`)
+    }
+
+    // ── WebSocket 消息处理 ─────────────────────────────────
+    this.wsServer.onMessage = (client, msg) => {
+      try {
+        const parsed = JSON.parse(msg) as PluginServerMessage
+        this.handleWsMessage(client as PluginWsClient, parsed)
+      } catch {
+        // ignore malformed JSON
+      }
+    }
   }
 
-  // ── 服务器生命周期 ────────────────────────────────────────────────────
+  // ── 服务器生命周期 ──────────────────────────────────────────
 
   /** 启动服务器，返回实际监听端口 */
   async start(): Promise<number> {
     this.startedAt = Date.now()
-    this.port = await this.listen(DEFAULT_PORT)
-    this.startHeartbeat()
-    log.info(`Listening on http://127.0.0.1:${this.port} (WS + HTTP)`)
-    return this.port
+    const port = await this.wsServer.start()
+    log.info(`Listening on http://127.0.0.1:${port} (WS + HTTP)`)
+    return port
   }
 
   /** 停止服务器 */
   async stop(): Promise<void> {
-    this.stopHeartbeat()
-
-    // 通知所有客户端关闭
-    for (const client of this.clients) {
-      try {
-        client.socket.write(encodeCloseFrame(1001))
-      } catch {
-        /* ignore */
-      }
-    }
-    this.clients.clear()
-
-    return new Promise((resolve) => {
-      this.httpServer.close(() => resolve())
-    })
+    await this.wsServer.stop()
   }
 
   /** 获取实际端口 */
   getPort(): number {
-    return this.port
+    return this.wsServer.getPort()
   }
 
-  // ── 事件广播 ──────────────────────────────────────────────────────────
+  // ── 事件广播 ────────────────────────────────────────────────
 
   /**
    * 从 EventBus 接收事件并广播到匹配的插件客户端。
-   * 替换旧的 eventBus.onAny() 模式。
    */
   broadcastEvent(type: ServiceEventType | string, data: Record<string, unknown> = {}): void {
     const payload: ServiceEventPayload = {
@@ -114,25 +116,16 @@ export class PluginServer {
       data,
     }
 
-    const message = encodeFrame(
-      JSON.stringify({ type: 'event', data: payload })
+    this.wsServer.broadcast(
+      { type: 'event', data: payload },
+      (client) => this.matchesAnySubscription(client as PluginWsClient, type)
     )
-
-    for (const client of this.clients) {
-      if (this.matchesAnySubscription(client, type)) {
-        try {
-          client.socket.write(message)
-        } catch {
-          this.clients.delete(client)
-        }
-      }
-    }
   }
 
-  // ── HTTP 请求处理 ─────────────────────────────────────────────────────
+  // ── HTTP 请求处理 ───────────────────────────────────────────
 
-  private handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    const url = new URL(req.url ?? '/', `http://localhost:${this.port}`)
+  private handleHttpRequest(req: IncomingMessage, res: ServerResponse): boolean {
+    const url = new URL(req.url ?? '/', `http://localhost:${this.getPort()}`)
     const path = url.pathname
 
     // CORS
@@ -143,7 +136,7 @@ export class PluginServer {
     if (req.method === 'OPTIONS') {
       res.writeHead(204)
       res.end()
-      return
+      return true
     }
 
     try {
@@ -154,24 +147,24 @@ export class PluginServer {
           JSON.stringify({
             status: 'ok',
             uptime: Date.now() - this.startedAt,
-            clients: this.clients.size,
+            clients: this.wsServer.getClients().size,
           })
         )
-        return
+        return true
       }
 
       // GET /api/timelines
       if (req.method === 'GET' && path === '/api/timelines') {
         const data = this.queryTimelines()
         this.sendJson(res, 200, { success: true, data })
-        return
+        return true
       }
 
       // GET /api/conferences
       if (req.method === 'GET' && path === '/api/conferences') {
         const data = this.queryConferences()
         this.sendJson(res, 200, { success: true, data })
-        return
+        return true
       }
 
       // GET /api/conferences/:id/minutes
@@ -181,7 +174,7 @@ export class PluginServer {
         const limit = parseInt(url.searchParams.get('limit') ?? '10')
         const data = this.getConferenceMinutes(conferenceId, limit)
         this.sendJson(res, 200, { success: true, data })
-        return
+        return true
       }
 
       // GET /api/plugins/:pluginId/config
@@ -190,7 +183,7 @@ export class PluginServer {
         const pluginId = decodeURIComponent(configGetMatch[1])
         const data = this.getPluginConfig(pluginId)
         this.sendJson(res, 200, { success: true, data })
-        return
+        return true
       }
 
       // POST /api/plugins/:pluginId/config
@@ -209,7 +202,7 @@ export class PluginServer {
             this.sendJson(res, 400, { success: false, error: 'Invalid JSON' })
           }
         })
-        return
+        return true
       }
 
       // 404
@@ -218,133 +211,40 @@ export class PluginServer {
       log.error('HTTP error:', err)
       this.sendJson(res, 500, { success: false, error: 'Internal server error' })
     }
+
+    return true
   }
 
-  // ── WebSocket 连接处理 ────────────────────────────────────────────────
-
-  private handleUpgrade(req: http.IncomingMessage, socket: Duplex, _head: Buffer): void {
-    // 只处理 /plugin 路径
-    const url = new URL(req.url ?? '/', `http://localhost:${this.port}`)
-    if (url.pathname !== '/plugin') {
-      socket.destroy()
-      return
-    }
-
-    const key = req.headers['sec-websocket-key']
-    if (!key) {
-      socket.destroy()
-      return
-    }
-
-    sendHandshake(socket, key)
-
-    const client: PluginWsClient = {
-      socket,
-      subscriptions: new Set(),
-      connectedAt: Date.now(),
-      lastPong: Date.now(),
-    }
-    this.clients.add(client)
-    log.info(`Plugin connected (total: ${this.clients.size})`)
-
-    // 发送 welcome 消息
-    try {
-      socket.write(
-        encodeFrame(
-          JSON.stringify({
-            type: 'welcome',
-            port: this.port,
-            version: '0.1.0',
-          })
-        )
-      )
-    } catch {
-      /* ignore */
-    }
-
-    let buffer = Buffer.alloc(0)
-
-    socket.on('data', (chunk: Buffer) => {
-      buffer = Buffer.concat([buffer, chunk])
-
-      // 尝试解析完整帧
-      while (buffer.length >= 2) {
-        const peeked = peekFrameLength(buffer)
-        if (!peeked) break
-
-        const frameLen = peeked.headerLen + peeked.payloadLen
-        if (buffer.length < frameLen) break
-
-        const frame = buffer.subarray(0, frameLen)
-        buffer = buffer.subarray(frameLen)
-
-        const msg = decodeFrame(frame)
-
-        if (msg === '__CLOSE__') {
-          this.removeClient(client)
-          return
-        }
-
-        if (msg === '__PONG__') {
-          client.lastPong = Date.now()
-          continue
-        }
-
-        if (msg) {
-          try {
-            const parsed = JSON.parse(msg) as PluginServerMessage
-            this.handleWsMessage(client, parsed)
-          } catch {
-            // ignore malformed JSON
-          }
-        }
-      }
-    })
-
-    socket.on('close', () => {
-      this.removeClient(client)
-    })
-
-    socket.on('error', () => {
-      this.removeClient(client)
-    })
-  }
+  // ── WebSocket 消息处理 ──────────────────────────────────────
 
   private handleWsMessage(client: PluginWsClient, msg: PluginServerMessage): void {
     switch (msg.type) {
       case 'subscribe':
         if (msg.events) {
           for (const event of msg.events) {
-            client.subscriptions.add(event)
+            client.data.subscriptions.add(event)
           }
           // 发送 ack
-          try {
-            client.socket.write(
-              encodeFrame(
-                JSON.stringify({
-                  type: 'ack',
-                  requestType: 'subscribe',
-                  events: msg.events,
-                  requestId: msg.requestId,
-                })
-              )
-            )
-          } catch {
-            /* ignore */
-          }
+          this.wsServer.sendTo(client, {
+            type: 'ack',
+            requestType: 'subscribe',
+            events: msg.events,
+            requestId: msg.requestId,
+          })
         }
         break
 
       case 'unsubscribe':
         if (msg.events) {
           for (const event of msg.events) {
-            client.subscriptions.delete(event)
+            client.data.subscriptions.delete(event)
           }
         }
         break
 
       case 'pong':
-        client.lastPong = Date.now()
+        // lastPong 由 WsServer 的心跳机制自动更新（opcode 0xA → __PONG__），
+        // 这里的 'pong' 文本消息是兼容旧协议，无需额外处理
         break
 
       default:
@@ -353,81 +253,17 @@ export class PluginServer {
     }
   }
 
-  private removeClient(client: PluginWsClient): void {
-    this.clients.delete(client)
-    try {
-      client.socket.destroy()
-    } catch {
-      /* ignore */
-    }
-    log.info(`Plugin disconnected (total: ${this.clients.size})`)
-  }
-
-  // ── 心跳 ──────────────────────────────────────────────────────────────
-
-  private startHeartbeat(): void {
-    this.heartbeatTimer = setInterval(() => {
-      const now = Date.now()
-      const pingFrame = encodePingFrame()
-
-      for (const client of this.clients) {
-        if (now - client.lastPong > HEARTBEAT_TIMEOUT) {
-          this.removeClient(client)
-          log.warn('Plugin heartbeat timeout')
-          continue
-        }
-        try {
-          client.socket.write(pingFrame)
-        } catch {
-          this.removeClient(client)
-        }
-      }
-    }, HEARTBEAT_INTERVAL)
-  }
-
-  private stopHeartbeat(): void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer)
-      this.heartbeatTimer = null
-    }
-  }
-
-  // ── 端口分配 ──────────────────────────────────────────────────────────
-
-  private listen(port: number): Promise<number> {
-    return new Promise((resolve, reject) => {
-      let attemptPort = port
-
-      const tryListen = (): void => {
-        this.httpServer.once('error', (err: NodeJS.ErrnoException) => {
-          if (err.code === 'EADDRINUSE' && attemptPort < port + MAX_PORT_RETRY) {
-            attemptPort++
-            tryListen()
-          } else {
-            reject(err)
-          }
-        })
-
-        this.httpServer.listen(attemptPort, '127.0.0.1', () => {
-          resolve(attemptPort)
-        })
-      }
-
-      tryListen()
-    })
-  }
-
-  // ── 事件匹配 ──────────────────────────────────────────────────────────
+  // ── 事件匹配 ────────────────────────────────────────────────
 
   private matchesAnySubscription(client: PluginWsClient, eventType: string): boolean {
-    if (client.subscriptions.size === 0) return false
-    for (const pattern of client.subscriptions) {
+    if (client.data.subscriptions.size === 0) return false
+    for (const pattern of client.data.subscriptions) {
       if (matchPattern(pattern, eventType)) return true
     }
     return false
   }
 
-  // ── 数据查询 ──────────────────────────────────────────────────────────
+  // ── 数据查询 ────────────────────────────────────────────────
 
   private queryTimelines() {
     try {
@@ -532,15 +368,15 @@ export class PluginServer {
     }
   }
 
-  // ── HTTP 响应辅助 ─────────────────────────────────────────────────────
+  // ── HTTP 响应辅助 ───────────────────────────────────────────
 
-  private sendJson(res: http.ServerResponse, status: number, data: unknown): void {
+  private sendJson(res: ServerResponse, status: number, data: unknown): void {
     res.writeHead(status, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify(data))
   }
 }
 
-// ── 事件模式匹配 ────────────────────────────────────────────────────────────
+// ── 事件模式匹配 ──────────────────────────────────────────────────
 
 /**
  * 检查事件类型是否匹配模式。

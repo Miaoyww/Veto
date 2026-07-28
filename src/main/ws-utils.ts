@@ -1,7 +1,7 @@
 /**
  * ws-utils.ts — WebSocket 帧编解码工具
  *
- * 从 ws-server.ts 提取，供 PluginServer 复用。
+ * 从 ws-server.ts 提取，供 WsServer 及 PluginServer 复用。
  * 零依赖，纯 Buffer 操作。
  */
 

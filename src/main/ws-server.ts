@@ -4,11 +4,10 @@
  * 在主进程中运行，不需要额外依赖。
  * 基于 Node.js http 协议。
  *
- * 端口：从 19527 开始尝试，如遇冲突则递增寻找可用端口
+ * 提供 WsServer 类用于创建可定制的 WebSocket 服务器实例，
+ * 以及 startWsServer() 便捷函数用于内建 Display 通信。
  *
- * 消息协议（JSON）：
- *   { type: "host", data: ConferenceDisplayData }   // 主机 → 服务器
- *   服务器自动广播 data 到所有非 host 的客户端
+ * 端口：从 19527 开始尝试，如遇冲突则递增寻找可用端口
  */
 
 import * as http from 'http'
@@ -19,46 +18,150 @@ import {
   encodePingFrame,
   encodePongFrame,
   decodeFrame,
+  peekFrameLength,
   sendHandshake,
 } from './ws-utils'
 
 const log = createLogger('WS')
 
-const WS_BASE_PORT = 19527
-const WS_MAX_RETRY = 99
+const DEFAULT_WS_PORT = 19527
+const DEFAULT_MAX_RETRY = 99
+const DEFAULT_HEARTBEAT_INTERVAL = 5_000
+const DEFAULT_HEARTBEAT_TIMEOUT = 10_000
 
-const HEARTBEAT_INTERVAL = 5_000   // 每 5 秒发送一次 ping
-const HEARTBEAT_TIMEOUT = 10_000  // 超过 10 秒无 pong 视为断连
+// ── 类型 ────────────────────────────────────────────────────────
 
-interface WsClient {
-  socket: Duplex
-  isHost: boolean
-  lastPong: number
+export interface WsServerOptions {
+  /** 起始端口，默认 19527 */
+  port?: number
+  /** 端口冲突时最大重试次数，默认 99 */
+  maxRetry?: number
+  /** 心跳间隔（毫秒），默认 5000 */
+  heartbeatInterval?: number
+  /** 心跳超时（毫秒），默认 10000 */
+  heartbeatTimeout?: number
+  /** WebSocket 升级路径前缀匹配。默认 '/'（匹配所有路径） */
+  path?: string
 }
 
-const clients = new Set<WsClient>()
+export interface WsClient {
+  socket: Duplex
+  lastPong: number
+  /** 附加的任意用户数据 */
+  data?: any
+}
 
-// ---- 广播 ----
-function broadcast(data: unknown, excludeHost: boolean = false): void {
-  const payload = encodeFrame(JSON.stringify(data))
-  for (const client of clients) {
-    if (excludeHost && client.isHost) continue
-    try {
-      client.socket.write(payload)
-    } catch {
-      clients.delete(client)
+// ── WsServer 类 ────────────────────────────────────────────────
+
+export class WsServer {
+  private httpServer: http.Server
+  private clients = new Set<WsClient>()
+  private opts: Required<WsServerOptions>
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private _port = 0
+
+  // ── 回调（由使用方设置） ──────────────────────────────────
+
+  /** 处理 HTTP 请求。返回 true 表示已处理，false 则回退到默认 426 响应 */
+  onRequest?: (req: http.IncomingMessage, res: http.ServerResponse) => boolean
+  /** 收到 WebSocket 文本消息 */
+  onMessage?: (client: WsClient, message: string) => void
+  /** WebSocket 客户端连接成功（握手完成后） */
+  onConnect?: (client: WsClient, req: http.IncomingMessage) => void
+  /** WebSocket 客户端断开 */
+  onDisconnect?: (client: WsClient) => void
+
+  constructor(options?: WsServerOptions) {
+    this.opts = {
+      port: options?.port ?? DEFAULT_WS_PORT,
+      maxRetry: options?.maxRetry ?? DEFAULT_MAX_RETRY,
+      heartbeatInterval: options?.heartbeatInterval ?? DEFAULT_HEARTBEAT_INTERVAL,
+      heartbeatTimeout: options?.heartbeatTimeout ?? DEFAULT_HEARTBEAT_TIMEOUT,
+      path: options?.path ?? '/',
+    }
+
+    this.httpServer = http.createServer((req, res) => {
+      if (this.onRequest?.(req, res)) return
+      // 默认：仅 WebSocket
+      res.writeHead(426, { 'Content-Type': 'text/plain' })
+      res.end('WebSocket only')
+    })
+
+    this.httpServer.on('upgrade', (req, socket, head) => {
+      this.handleUpgrade(req, socket as Duplex, head)
+    })
+  }
+
+  // ── 生命周期 ───────────────────────────────────────────────
+
+  /** 启动服务器，返回实际监听端口 */
+  async start(): Promise<number> {
+    this._port = await this.listen(this.opts.port)
+    this.startHeartbeat()
+    log.info(`WebSocket server listening on ws://127.0.0.1:${this._port}`)
+    return this._port
+  }
+
+  /** 停止服务器 */
+  async stop(): Promise<void> {
+    this.stopHeartbeat()
+    for (const client of this.clients) {
+      try { client.socket.destroy() } catch { /* ignore */ }
+    }
+    this.clients.clear()
+    return new Promise((resolve) => {
+      this.httpServer.close(() => resolve())
+    })
+  }
+
+  /** 获取实际监听端口 */
+  getPort(): number {
+    return this._port
+  }
+
+  /** 获取当前连接的所有客户端（只读） */
+  getClients(): ReadonlySet<WsClient> {
+    return this.clients
+  }
+
+  // ── 消息发送 ───────────────────────────────────────────────
+
+  /** 向所有客户端广播消息（JSON 自动序列化） */
+  broadcast(data: unknown, filter?: (client: WsClient) => boolean): void {
+    const payload = encodeFrame(JSON.stringify(data))
+    for (const client of this.clients) {
+      if (filter && !filter(client)) continue
+      try { client.socket.write(payload) } catch { this.clients.delete(client) }
     }
   }
-}
 
-// ---- 启动服务器 ----
-export function startWsServer(): Promise<number> {
-  const httpServer = http.createServer((_req, res) => {
-    res.writeHead(426, { 'Content-Type': 'text/plain' })
-    res.end('WebSocket only')
-  })
+  /** 向单个客户端发送消息（JSON 自动序列化） */
+  sendTo(client: WsClient, data: unknown): void {
+    try {
+      client.socket.write(encodeFrame(JSON.stringify(data)))
+    } catch {
+      this.clients.delete(client)
+    }
+  }
 
-  httpServer.on('upgrade', (req, socket) => {
+  /** 移除并销毁客户端连接 */
+  removeClient(client: WsClient): void {
+    this.clients.delete(client)
+    try { client.socket.destroy() } catch { /* ignore */ }
+    this.onDisconnect?.(client)
+  }
+
+  // ── WebSocket 升级处理 ─────────────────────────────────────
+
+  private handleUpgrade(req: http.IncomingMessage, socket: Duplex, _head: Buffer): void {
+    // 路径过滤
+    const url = req.url ?? '/'
+    const pathname = url.split('?')[0]
+    if (!pathname.startsWith(this.opts.path)) {
+      socket.destroy()
+      return
+    }
+
     const key = req.headers['sec-websocket-key']
     if (!key) {
       socket.destroy()
@@ -67,43 +170,31 @@ export function startWsServer(): Promise<number> {
 
     sendHandshake(socket, key)
 
-    const client: WsClient = { socket, isHost: false, lastPong: Date.now() }
-    clients.add(client)
+    const client: WsClient = { socket, lastPong: Date.now() }
+    this.clients.add(client)
+    log.info(`Client connected (total: ${this.clients.size})`)
 
-    log.info(`Client connected (total: ${clients.size})`)
+    this.onConnect?.(client, req)
 
     let buffer = Buffer.alloc(0)
 
     socket.on('data', (chunk: Buffer) => {
       buffer = Buffer.concat([buffer, chunk])
 
-      // 尝试解析完整帧
       while (buffer.length >= 2) {
-        const payloadLen = buffer[1] & 0x7f
-        let totalLen = 2
-        if (payloadLen === 126) totalLen = 4
-        else if (payloadLen === 127) totalLen = 10
+        const peeked = peekFrameLength(buffer)
+        if (!peeked) break
 
-        const maskBit = (buffer[1] & 0x80) !== 0
-        if (maskBit) totalLen += 4
-
-        let dataLen = payloadLen
-        if (payloadLen === 126 && buffer.length >= 4) {
-          dataLen = buffer.readUInt16BE(2)
-        } else if (payloadLen === 127 && buffer.length >= 10) {
-          dataLen = Number(buffer.readBigUInt64BE(2))
-        }
-
-        const frameLen = totalLen + dataLen
-        if (buffer.length < frameLen) break // 不完整帧，等更多数据
+        const frameLen = peeked.headerLen + peeked.payloadLen
+        if (buffer.length < frameLen) break
 
         const frame = buffer.subarray(0, frameLen)
         buffer = buffer.subarray(frameLen)
 
         const msg = decodeFrame(frame)
+
         if (msg === '__CLOSE__') {
-          clients.delete(client)
-          log.info(`Client disconnected (total: ${clients.size})`)
+          this.removeClient(client)
           return
         }
 
@@ -114,87 +205,101 @@ export function startWsServer(): Promise<number> {
 
         if (msg === '__PING__') {
           // RFC 6455: 收到 Ping 必须回复 Pong
-          try {
-            client.socket.write(encodePongFrame(Buffer.alloc(0)))
-          } catch {
-            /* ignore */
-          }
+          try { client.socket.write(encodePongFrame(Buffer.alloc(0))) } catch { /* ignore */ }
           client.lastPong = Date.now()
           continue
         }
 
         if (msg) {
-          try {
-            const parsed = JSON.parse(msg)
-            if (parsed.type === 'host') {
-              client.isHost = true
-              // 广播给所有非 host 客户端
-              broadcast(parsed.data, false)
-            }
-          } catch {
-            // ignore malformed
-          }
+          this.onMessage?.(client, msg)
         }
       }
     })
 
     socket.on('close', () => {
-      clients.delete(client)
-      log.info(`Client disconnected (total: ${clients.size})`)
+      this.removeClient(client)
     })
 
     socket.on('error', () => {
-      clients.delete(client)
+      this.removeClient(client)
     })
-  })
+  }
 
-  // ---- 心跳检测 ----
-  const heartbeatTimer = setInterval(() => {
-    const now = Date.now()
-    const pingFrame = encodePingFrame()
+  // ── 心跳 ───────────────────────────────────────────────────
 
-    for (const client of clients) {
-      // 超时未响应 pong，视为断连
-      if (now - client.lastPong > HEARTBEAT_TIMEOUT) {
-        clients.delete(client)
-        try { client.socket.destroy() } catch { /* ignore */ }
-        log.warn(`Client heartbeat timeout (total: ${clients.size})`)
-        continue
-      }
+  private startHeartbeat(): void {
+    this.heartbeatTimer = setInterval(() => {
+      const now = Date.now()
+      const pingFrame = encodePingFrame()
 
-      // 发送 ping
-      try {
-        client.socket.write(pingFrame)
-      } catch {
-        clients.delete(client)
-      }
-    }
-  }, HEARTBEAT_INTERVAL)
-
-  // 服务器关闭时清理定时器
-  httpServer.on('close', () => {
-    clearInterval(heartbeatTimer)
-  })
-
-  return new Promise((resolve, reject) => {
-    let attemptPort = WS_BASE_PORT
-
-    function tryListen(): void {
-      httpServer.once('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'EADDRINUSE' && attemptPort < WS_BASE_PORT + WS_MAX_RETRY) {
-          attemptPort++
-          tryListen()
-        } else {
-          reject(err)
+      for (const client of this.clients) {
+        if (now - client.lastPong > this.opts.heartbeatTimeout) {
+          this.removeClient(client)
+          log.warn('Client heartbeat timeout')
+          continue
         }
-      })
+        try { client.socket.write(pingFrame) } catch { this.removeClient(client) }
+      }
+    }, this.opts.heartbeatInterval)
 
-      httpServer.listen(attemptPort, () => {
-        log.info(`WebSocket server listening on ws://localhost:${attemptPort}`)
-        resolve(attemptPort)
-      })
+    this.httpServer.on('close', () => {
+      this.stopHeartbeat()
+    })
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
     }
+  }
 
-    tryListen()
-  })
+  // ── 端口分配 ───────────────────────────────────────────────
+
+  private listen(port: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+      let attemptPort = port
+
+      const tryListen = (): void => {
+        this.httpServer.once('error', (err: NodeJS.ErrnoException) => {
+          if (err.code === 'EADDRINUSE' && attemptPort < port + this.opts.maxRetry) {
+            attemptPort++
+            tryListen()
+          } else {
+            reject(err)
+          }
+        })
+
+        this.httpServer.listen(attemptPort, '127.0.0.1', () => {
+          resolve(attemptPort)
+        })
+      }
+
+      tryListen()
+    })
+  }
+}
+
+// ── 向后兼容：startWsServer ──────────────────────────────────
+
+/**
+ * 启动内建 WebSocket 服务器（Display 通信），返回监听端口。
+ * 内部使用 WsServer 实例，保持原有行为不变。
+ */
+export function startWsServer(): Promise<number> {
+  const server = new WsServer({ port: DEFAULT_WS_PORT })
+
+  server.onMessage = (client, msg) => {
+    try {
+      const parsed = JSON.parse(msg)
+      if (parsed.type === 'host') {
+        client.data = { ...client.data, isHost: true }
+        server.broadcast(parsed.data)
+      }
+    } catch {
+      // ignore malformed JSON
+    }
+  }
+
+  return server.start()
 }
