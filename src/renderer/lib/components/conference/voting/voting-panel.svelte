@@ -39,13 +39,11 @@
   )
   const documentName = $derived(
     targetMotion?.type === 'substantive_vote'
-      ? (targetMotion as any).documentName as string | undefined
+      ? ((targetMotion as any).documentName as string | undefined)
       : undefined
   )
 
-  const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.delegations) : null
-  )
+  const thresholds = $derived(conf ? calculateMajorityThresholds(conf.delegations) : null)
 
   const tally = $derived(
     activeSession ? tallyVotes(activeSession.ballots) : { yes: 0, no: 0, abstain: 0 }
@@ -56,9 +54,7 @@
   // 兼容旧数据
   const currentDelegationId = $derived(activeSession?.currentDelegationId ?? null)
   const isRound2 = $derived((activeSession?.round ?? 1) === 2)
-  const isVotingComplete = $derived(
-    activeSession ? currentDelegationId === null : true
-  )
+  const isVotingComplete = $derived(activeSession ? currentDelegationId === null : true)
 
   // 按 sortOrder 排序的出席代表团列表
   const presentDelegations = $derived(
@@ -76,9 +72,7 @@
 
   // 当前代表团的序号（1-based）
   const currentPosition = $derived(
-    currentDelegation
-      ? presentDelegations.findIndex((d) => d.id === currentDelegationId) + 1
-      : 0
+    currentDelegation ? presentDelegations.findIndex((d) => d.id === currentDelegationId) + 1 : 0
   )
 
   function handleCloseVoting(): void {
@@ -91,23 +85,35 @@
     const ballot = activeSession?.ballots.find((b) => b.delegationId === delegationId)
     if (!ballot) return ''
     switch (ballot.vote) {
-      case 'yes': return '赞成'
-      case 'no': return '反对'
-      case 'abstain': return '弃权'
-      case 'skip': return '跳过'
-      default: return ''
+      case 'yes':
+        return '赞成'
+      case 'no':
+        return '反对'
+      case 'abstain':
+        return '弃权'
+      case 'skip':
+        return '跳过'
+      default:
+        return ''
     }
   }
 
-  function getVoteBadgeVariant(delegationId: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
+  function getVoteBadgeVariant(
+    delegationId: string
+  ): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
     const ballot = activeSession?.ballots.find((b) => b.delegationId === delegationId)
     if (!ballot) return 'outline'
     switch (ballot.vote) {
-      case 'yes': return 'default'
-      case 'no': return 'destructive'
-      case 'abstain': return 'secondary'
-      case 'skip': return 'outline'
-      default: return 'outline'
+      case 'yes':
+        return 'default'
+      case 'no':
+        return 'destructive'
+      case 'abstain':
+        return 'secondary'
+      case 'skip':
+        return 'outline'
+      default:
+        return 'outline'
     }
   }
 </script>
@@ -125,19 +131,15 @@
       {/if}
       <p class="mt-1 text-sm text-muted-foreground">
         {activeSession.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'}表决
-        {#if activeSession.result}
-          —
-          <span class={activeSession.result === 'passed' ? 'font-bold text-emerald-600' : 'font-bold text-red-600'}>
-            {activeSession.result === 'passed' ? '通过 ✓' : '未通过 ✗'}
-          </span>
-        {/if}
       </p>
     </div>
 
     <!-- ====== 统计卡片 ====== -->
     {#if thresholds}
       <div class="grid grid-cols-4 gap-3">
-        <Card class="border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30">
+        <Card
+          class="border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
+        >
           <CardContent class="p-3 text-center">
             <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{tally.yes}</div>
             <div class="text-[10px] text-muted-foreground">赞成</div>
@@ -157,86 +159,121 @@
         </Card>
         <Card>
           <CardContent class="p-3 text-center">
-            <div class="text-2xl font-bold text-muted-foreground">{totalVoted}/{thresholds.presentCount}</div>
+            <div class="text-2xl font-bold text-muted-foreground">
+              {totalVoted}/{thresholds.presentCount}
+            </div>
             <div class="text-[10px] text-muted-foreground">已投/实到</div>
           </CardContent>
         </Card>
       </div>
     {/if}
 
-    <!-- ====== 当前投票代表团卡片 + 投票按钮 ====== -->
-    {#if !activeSession.result}
-      {#if currentDelegation}
-        <Card class="border-2 border-blue-300 bg-blue-50/30 dark:border-blue-700 dark:bg-blue-950/10">
-          <CardHeader class="pb-3 text-center">
-            <div class="flex items-center justify-center gap-2">
-              <span class="text-xs text-muted-foreground">
-                共 {presentDelegations.length} 代表团，当前第 {currentPosition} 位
-              </span>
-            </div>
-            <CardTitle class="text-2xl">{currentDelegation.name}</CardTitle>
-            {#if currentDelegation.shortName}
-              <CardDescription>{currentDelegation.shortName}</CardDescription>
+    <!-- ====== 三态：正在投票 / 投票完成 / 结果展示 ====== -->
+    {#if activeSession.result}
+      <!-- 状态 ③：结果展示 -->
+      <Card
+        class={activeSession.result === 'passed'
+          ? 'border-emerald-300 bg-emerald-50/30 dark:border-emerald-700 dark:bg-emerald-950/10'
+          : 'border-red-300 bg-red-50/30 dark:border-red-700 dark:bg-red-950/10'}
+      >
+        <CardHeader class="text-center">
+          <CardTitle
+            class={activeSession.result === 'passed'
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : 'text-red-700 dark:text-red-400'}
+          >
+            {#if activeSession.result === 'passed'}
+              <Check size={28} class="mx-auto mb-2" />
+              表决通过
+            {:else}
+              <X size={28} class="mx-auto mb-2" />
+              表决未通过
             {/if}
-          </CardHeader>
-          <CardContent>
-            <div class="flex items-center justify-center gap-3">
+          </CardTitle>
+          <CardDescription>
+            {activeSession.majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'}表决 · {totalVoted}
+            票已投
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    {:else if currentDelegation}
+      <!-- 状态 ①：正在投票 -->
+      <Card class="border-2 border-blue-300 bg-blue-50/30 dark:border-blue-700 dark:bg-blue-950/10">
+        <CardHeader class="pb-3 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <span class="text-xs text-muted-foreground">
+              共 {presentDelegations.length} 代表团，当前第 {currentPosition} 位
+            </span>
+          </div>
+          <CardTitle class="text-2xl">{currentDelegation.name}</CardTitle>
+          {#if currentDelegation.shortName}
+            <CardDescription>{currentDelegation.shortName}</CardDescription>
+          {/if}
+        </CardHeader>
+        <CardContent>
+          <div class="flex items-center justify-center gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              class="h-11 min-w-[100px] gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+              onclick={() => castVote(activeSession.id, currentDelegation.id, 'yes')}
+            >
+              <Check size={18} />
+              赞成
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              class="h-11 min-w-[100px] gap-2 border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"
+              onclick={() => castVote(activeSession.id, currentDelegation.id, 'no')}
+            >
+              <X size={18} />
+              反对
+            </Button>
+            {#if !isRound2}
               <Button
                 size="lg"
                 variant="outline"
-                class="h-11 min-w-[100px] gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-                disabled={!!activeSession.result}
-                onclick={() => castVote(activeSession.id, currentDelegation.id, 'yes')}
+                class="h-11 min-w-[100px] gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/40"
+                onclick={() => castVote(activeSession.id, currentDelegation.id, 'abstain')}
               >
-                <Check size={18} />
-                赞成
+                <Minus size={18} />
+                弃权
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                class="h-11 min-w-[100px] gap-2 border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"
-                disabled={!!activeSession.result}
-                onclick={() => castVote(activeSession.id, currentDelegation.id, 'no')}
+                class="h-11 min-w-[100px] gap-2 border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-slate-700 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-950/40"
+                onclick={() => castVote(activeSession.id, currentDelegation.id, 'skip')}
               >
-                <X size={18} />
-                反对
+                <SkipForward size={18} />
+                跳过
               </Button>
-              {#if !isRound2}
-                <Button
-                  size="lg"
-                  variant="outline"
-                  class="h-11 min-w-[100px] gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/40"
-                  disabled={!!activeSession.result}
-                  onclick={() => castVote(activeSession.id, currentDelegation.id, 'abstain')}
-                >
-                  <Minus size={18} />
-                  弃权
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  class="h-11 min-w-[100px] gap-2 border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-slate-700 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-950/40"
-                  disabled={!!activeSession.result}
-                  onclick={() => castVote(activeSession.id, currentDelegation.id, 'skip')}
-                >
-                  <SkipForward size={18} />
-                  跳过
-                </Button>
-              {/if}
-            </div>
-          </CardContent>
-        </Card>
-      {:else if isVotingComplete}
-        <Card class="border-emerald-300 bg-emerald-50/30 dark:border-emerald-700 dark:bg-emerald-950/10">
-          <CardHeader class="text-center">
-            <CardTitle class="text-emerald-700 dark:text-emerald-400">
-              <Check size={24} class="mx-auto mb-2" />
-              全部代表团已完成投票
-            </CardTitle>
-            <CardDescription>所有代表团均已投票，可公布结果</CardDescription>
-          </CardHeader>
-        </Card>
-      {/if}
+            {/if}
+          </div>
+        </CardContent>
+      </Card>
+    {:else if isVotingComplete}
+      <!-- 状态 ②：投票完成 -->
+      <Card
+        class="border-emerald-300 bg-emerald-50/30 dark:border-emerald-700 dark:bg-emerald-950/10"
+      >
+        <CardHeader class="text-center">
+          <CardTitle class="text-emerald-700 dark:text-emerald-400">
+            <Check size={24} class="mx-auto mb-2" />
+            全部代表团已完成投票
+          </CardTitle>
+          <CardDescription>所有代表团均已投票，可公布结果</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="flex justify-center">
+            <Button variant="outline" size="lg" class="gap-2" onclick={handleCloseVoting}>
+              <Vote size={16} />
+              结束投票并公布结果
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     {/if}
 
     <!-- ====== 代表团投票列表 ====== -->
@@ -253,7 +290,9 @@
             <div
               class={cn(
                 'flex items-center gap-3 px-4 py-2.5 transition-colors',
-                isCurrent && !activeSession.result && 'bg-blue-50/60 ring-1 ring-inset ring-blue-300 dark:bg-blue-950/20 dark:ring-blue-700'
+                isCurrent &&
+                  !activeSession.result &&
+                  'bg-blue-50/60 ring-1 ring-inset ring-blue-300 dark:bg-blue-950/20 dark:ring-blue-700'
               )}
             >
               <span class="min-w-0 flex-1 text-sm">
@@ -276,35 +315,13 @@
         </div>
       </CardContent>
     </Card>
-
-    <!-- ====== 结束投票按钮 ====== -->
-    {#if !activeSession.result}
-      <div class="flex justify-center">
-        {#if isVotingComplete}
-          <Button
-            size="lg"
-            class="min-w-[200px] gap-2"
-            onclick={handleCloseVoting}
-          >
-            <Vote size={16} />
-            结束投票并公布结果
-          </Button>
-        {:else}
-          <p class="text-sm text-muted-foreground">
-            {isRound2 ? '第二轮补投进行中，请依次投票...' : '唱名表决进行中，请依次投票...'}
-          </p>
-        {/if}
-      </div>
-    {/if}
   {:else}
     <!-- 空状态 -->
     <Card>
       <CardContent class="p-12 text-center">
         <Vote size={40} class="mx-auto mb-3 opacity-30" />
         <p class="text-muted-foreground">没有进行中的投票</p>
-        <p class="mt-1 text-xs text-muted-foreground/70">
-          对动议提出表决即可在此界面进行投票
-        </p>
+        <p class="mt-1 text-xs text-muted-foreground/70">对动议提出表决即可在此界面进行投票</p>
       </CardContent>
     </Card>
   {/if}

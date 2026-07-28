@@ -9,8 +9,18 @@
   import { onMount, onDestroy } from 'svelte'
   import { currentRoute, navigate } from '$lib/router.svelte'
   import {
-    Presentation, Timer, MessageSquare, Pencil,
-    Gavel, Coffee, LogOut, Check, X, ArrowLeft, Vote, FileText
+    Presentation,
+    Timer,
+    MessageSquare,
+    Pencil,
+    Gavel,
+    Coffee,
+    LogOut,
+    Check,
+    X,
+    ArrowLeft,
+    Vote,
+    FileText
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
@@ -50,13 +60,9 @@
     substantive_vote: Vote
   }
 
-  const pendingMotion = $derived(
-    conf?.motions.find((m) => m.status === 'pending') ?? null
-  )
+  const pendingMotion = $derived(conf?.motions.find((m) => m.status === 'pending') ?? null)
 
-  const resolution = $derived(
-    pendingMotion ? resolveMotion(pendingMotion.type) : null
-  )
+  const resolution = $derived(pendingMotion ? resolveMotion(pendingMotion.type) : null)
 
   const proposerDel = $derived(pendingMotion?.proposedBy ?? null)
 
@@ -126,7 +132,9 @@
     <div class="flex flex-1 items-center justify-center p-8">
       <div class="flex w-full max-w-xl flex-col gap-6">
         <!-- 动议详情 -->
-        <div class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-8 text-center dark:border-indigo-700 dark:bg-indigo-950/30">
+        <div
+          class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-8 text-center dark:border-indigo-700 dark:bg-indigo-950/30"
+        >
           <div class="flex items-center justify-center gap-2">
             <Icon size={24} class="text-indigo-600 dark:text-indigo-400" />
             <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">
@@ -143,12 +151,26 @@
             </div>
 
             {#if pendingMotion.type === 'moderated_caucus'}
-              <div class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">
-                <p>主题：<span class="font-medium text-foreground">{(pendingMotion as any).topic}</span></p>
+              <div
+                class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
+              >
+                <p>
+                  主题：<span class="font-medium text-foreground"
+                    >{(pendingMotion as any).topic}</span
+                  >
+                </p>
                 <p class="mt-0.5">
-                  总时长 <span class="font-medium text-foreground">{(pendingMotion as any).totalTimeSec / 60} 分钟</span>
-                  ，每人发言 <span class="font-medium text-foreground">{(pendingMotion as any).speakingTimePerPersonSec} 秒</span>
-                  ，最多 <span class="font-medium text-foreground">{(pendingMotion as any).maxSpeakers}</span> 人
+                  总时长 <span class="font-medium text-foreground"
+                    >{(pendingMotion as any).totalTimeSec / 60} 分钟</span
+                  >
+                  ，每人发言
+                  <span class="font-medium text-foreground"
+                    >{(pendingMotion as any).speakingTimePerPersonSec} 秒</span
+                  >
+                  ，最多
+                  <span class="font-medium text-foreground"
+                    >{(pendingMotion as any).maxSpeakers}</span
+                  > 人
                 </p>
               </div>
             {:else if pendingMotion.type === 'unmoderated_caucus'}
@@ -157,20 +179,28 @@
               </div>
             {:else if pendingMotion.type === 'modify_speaking_time'}
               <div class="mt-3 text-sm text-muted-foreground">
-                新发言时间：<span class="font-medium text-foreground">{(pendingMotion as any).newTimeSec} 秒</span>
+                新发言时间：<span class="font-medium text-foreground"
+                  >{(pendingMotion as any).newTimeSec} 秒</span
+                >
               </div>
             {:else if pendingMotion.type === 'closure_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
                 结束当前议题辩论，进入投票表决阶段
               </div>
             {:else if pendingMotion.type === 'substantive_vote'}
-              <div class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">
-                <p>文件名称：<span class="font-medium text-foreground">{(pendingMotion as any).documentName}</span></p>
+              <div
+                class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
+              >
+                <span class="font-medium text-foreground"
+                  >{(pendingMotion as any).documentName}</span
+                >
               </div>
             {/if}
           </div>
 
-          <div class="mt-4 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400">
+          <div
+            class="mt-4 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400"
+          >
             表决规则：{majorityLabel}
           </div>
         </div>
@@ -179,12 +209,8 @@
 
         <!-- 主席裁决 -->
         <div class="text-center">
-          <p class="text-base font-medium text-foreground">
-            请支持该动议的代表团高举国家牌
-          </p>
-          <p class="mt-1 text-sm text-muted-foreground">
-            主席团观察举牌后手动裁决
-          </p>
+          <p class="text-base font-medium text-foreground">请支持该动议的代表团高举国家牌</p>
+          <p class="mt-1 text-sm text-muted-foreground">主席团观察举牌后手动裁决</p>
         </div>
 
         <div class="flex items-center justify-center gap-4">
@@ -197,11 +223,7 @@
             <X size={18} />
             否决
           </Button>
-          <Button
-            size="lg"
-            class="min-w-[140px] gap-2 text-base"
-            onclick={handleApprove}
-          >
+          <Button size="lg" class="min-w-[140px] gap-2 text-base" onclick={handleApprove}>
             <Check size={18} />
             通过
           </Button>
