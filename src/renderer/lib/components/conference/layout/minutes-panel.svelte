@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { ScrollText, Gavel, Mic, Vote, MessageSquare, Coffee, Pause, Play, Flag, FileText, Calendar, Check, X, UserPlus } from '@lucide/svelte'
+  import { ScrollText, Gavel, Mic, Vote, MessageSquare, Coffee, Pause, Play, Flag, FileText, Calendar, Check, X, UserPlus, UserCheck } from '@lucide/svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
-  import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
-  import type { MinutesEventType } from '$lib/types-conference'
+  import { ACTION_LABELS } from '$lib/types-conference'
+  import type { ConferenceActionType } from '$lib/types-conference'
 
   const conf = $derived($currentConference)
 
@@ -15,11 +15,12 @@
     return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   }
 
-  function getEventIcon(eventType: MinutesEventType): typeof ScrollText {
+  function getEventIcon(eventType: ConferenceActionType): typeof ScrollText {
     switch (eventType) {
       case 'roll_call_completed':
       case 'conference_created':
         return Flag
+      case 'speaker_ready':
       case 'speaker_started':
       case 'speaker_finished':
         return Mic
@@ -50,12 +51,14 @@
         return FileText
       case 'point_proposed':
         return MessageSquare
+      case 'attendance_changed':
+        return UserCheck
       default:
         return Calendar
     }
   }
 
-  function getEventColor(eventType: MinutesEventType): string {
+  function getEventColor(eventType: ConferenceActionType): string {
     if (eventType.includes('speaker') || eventType === 'yield') return 'text-emerald-500'
     if (eventType.includes('motion')) return 'text-indigo-500'
     if (eventType.includes('voting') || eventType.includes('vote')) return 'text-blue-500'
@@ -64,6 +67,7 @@
     if (eventType.includes('suspended') || eventType.includes('closed')) return 'text-red-500'
     if (eventType.includes('resolution')) return 'text-rose-500'
     if (eventType.includes('point')) return 'text-amber-500'
+    if (eventType.includes('attendance')) return 'text-teal-500'
     return 'text-muted-foreground'
   }
 </script>
@@ -89,8 +93,8 @@
         <div class="absolute left-5 top-0 bottom-0 w-px bg-border"></div>
 
         {#each recentMinutes as entry (entry.id)}
-          {@const Icon = getEventIcon(entry.eventType)}
-          {@const colorClass = getEventColor(entry.eventType)}
+          {@const Icon = getEventIcon(entry.actionType)}
+          {@const colorClass = getEventColor(entry.actionType)}
           <div class="relative flex gap-3 px-4 py-2">
             <!-- 时间线 dot -->
             <div class="z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-border bg-card {colorClass}">
@@ -102,7 +106,7 @@
               <div class="flex items-center gap-1.5">
                 <span class="text-[10px] text-muted-foreground">{formatTime(entry.timestamp)}</span>
                 <span class="rounded bg-muted px-1 py-0.5 text-[9px] font-medium text-muted-foreground">
-                  {MINUTES_EVENT_LABELS[entry.eventType] ?? entry.eventType}
+                  {ACTION_LABELS[entry.actionType] ?? entry.actionType}
                 </span>
               </div>
               <p class="mt-0.5 text-[11px] leading-relaxed text-foreground">

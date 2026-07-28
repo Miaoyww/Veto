@@ -32,13 +32,13 @@
 
   function markPresent(): void {
     if (!currentDelegation) return
-    changeDelegationAttendance(currentDelegation.id, 'present')
+    changeDelegationAttendance(currentDelegation.id, 'present', { silent: true })
     currentIndex++
   }
 
   function markAbsent(): void {
     if (!currentDelegation) return
-    changeDelegationAttendance(currentDelegation.id, 'absent')
+    changeDelegationAttendance(currentDelegation.id, 'absent', { silent: true })
     currentIndex++
   }
 

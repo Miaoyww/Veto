@@ -533,7 +533,7 @@ export function buildDisplayData(
       : undefined,
     recentMinutes: conf.minutes.slice(-10).map((m) => ({
       timestamp: m.timestamp,
-      eventType: m.eventType,
+      eventType: m.actionType,
       description: m.description
     })),
     yieldPending: conf.yieldPending

@@ -489,9 +489,10 @@ export class PluginServer {
         .map((m) => ({
           id: m.id as string,
           timestamp: m.timestamp as number,
-          type: (m.type as string) ?? 'info',
-          title: (m.title as string) ?? '',
-          detail: m.detail as string | undefined,
+          // 向后兼容：新数据用 actionType，旧数据用 eventType
+          type: ((m.actionType ?? m.eventType) as string) ?? 'info',
+          title: (m.description as string)?.slice(0, 30) ?? '',
+          detail: m.description as string | undefined,
         }))
         .reverse()
     } catch (err) {

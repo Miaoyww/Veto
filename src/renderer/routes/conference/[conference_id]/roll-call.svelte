@@ -102,7 +102,7 @@
 
   function markPresent(): void {
     if (!currentDelegation || isTransitioning) return
-    changeDelegationAttendance(currentDelegation.id, 'present')
+    changeDelegationAttendance(currentDelegation.id, 'present', { silent: true })
     lastRollCallMarked = {
       delegation: currentDelegation,
       status: 'present',
@@ -118,7 +118,7 @@
 
   function markAbsent(): void {
     if (!currentDelegation || isTransitioning) return
-    changeDelegationAttendance(currentDelegation.id, 'absent')
+    changeDelegationAttendance(currentDelegation.id, 'absent', { silent: true })
     lastRollCallMarked = {
       delegation: currentDelegation,
       status: 'absent',
@@ -136,7 +136,7 @@
     if (!conf || isTransitioning) return
     const remaining = sortedDelegations.slice(currentIndex)
     for (const d of remaining) {
-      changeDelegationAttendance(d.id, 'present')
+      changeDelegationAttendance(d.id, 'present', { silent: true })
     }
     currentIndex = sortedDelegations.length
   }
@@ -145,7 +145,7 @@
     if (!conf || isTransitioning) return
     const remaining = sortedDelegations.slice(currentIndex)
     for (const d of remaining) {
-      changeDelegationAttendance(d.id, 'absent')
+      changeDelegationAttendance(d.id, 'absent', { silent: true })
     }
     currentIndex = sortedDelegations.length
   }

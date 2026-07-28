@@ -17,7 +17,7 @@ import type {
   YieldChoice,
   Motion,
   VoteBallot,
-  MinutesEventType,
+  ConferenceActionType,
   ConferencePhase
 } from '$lib/types-conference'
 import type {
@@ -31,7 +31,6 @@ import { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
 import { tallyVotesEngine } from '$lib/engine/conference-engine'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
 import { bootstrapStore, saveToStore } from '../store-bridge'
-import { emitServiceEvent } from '$lib/services/event-bus-bridge'
 
 const STORAGE_KEY = 'veto_conferences'
 const STORE_DOMAIN = 'conferences'
@@ -66,28 +65,6 @@ function unregisterEngine(id: string): void {
 /** 将引擎当前状态同步到 conferences writable store（用于持久化） */
 function syncEngine(engine: ConferenceEngine): void {
   conferences.update((list) => list.map((c) => (c.id === engine.id ? engine.toJSON() : c)))
-}
-
-/** 构建事件上下文数据（供 emitServiceEvent 使用） */
-function _buildEventContext(engine: ConferenceEngine): Record<string, unknown> {
-  return {
-    conferenceId: engine.id,
-    conferenceName: engine.name,
-    phase: engine.phase,
-    presentCount: engine.presentCount,
-    votingCount: engine.votingCount,
-    currentSpeaker: engine.activeSpeaker
-      ? {
-          delegationId: engine.activeSpeaker.delegationId,
-          delegationName:
-            engine.delegations.find((d) => d.id === engine.activeSpeaker!.delegationId)?.name ??
-            engine.activeSpeaker.delegationId,
-          remainingTimeSec: engine.activeSpeaker.remainingTimeSec
-        }
-      : null,
-    activeMotionType: engine.activeCaucus?.motionType ?? null,
-    activeCaucusTopic: engine.activeCaucus?.topic ?? null
-  }
 }
 
 // ---- 文件持久化（双重写入：localStorage + 文件）--------------------------
@@ -235,8 +212,8 @@ export function createConference(
 
   // 创建并注册引擎
   const engine = new ConferenceEngine(conf)
-  engine.addMinutesEntry('conference_created', `大会创建: ${name}（${venue}）`)
-  engine.addMinutesEntry('phase_changed', '进入阶段: 会前准备')
+  engine.addConferenceEntry('conference_created', `大会创建: ${name}（${venue}）`)
+  engine.addConferenceEntry('phase_changed', '进入阶段: 会前准备')
   registerEngine(engine)
 
   conferences.update((list) => [...list, engine.toJSON()])
@@ -288,10 +265,14 @@ export function getConferenceById(id: string): Conference | null {
 // ---- 点名 -----------------------------------------------------------------
 
 /** 更改代表团出席状态（含会议记录 + Display 通知，动议 & 直接管理统一入口） */
-export function changeDelegationAttendance(delegationId: string, newAttendance: Attendance): void {
+export function changeDelegationAttendance(
+  delegationId: string,
+  newAttendance: Attendance,
+  opts?: { silent?: boolean }
+): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.changeDelegationAttendance(delegationId, newAttendance)
+  engine.changeDelegationAttendance(delegationId, newAttendance, opts)
   syncEngine(engine)
 }
 
@@ -308,7 +289,6 @@ export function completeRollCall(): void {
   if (!engine) return
   engine.completeRollCall()
   syncEngine(engine)
-  emitServiceEvent('conference:roll_call_completed', _buildEventContext(engine))
 }
 
 export function resetRollCall(): void {
@@ -347,7 +327,7 @@ export function updateDelegation(id: string, updates: Partial<Delegation>): void
 export function openSpeakersList(): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.addMinutesEntry('phase_changed', '主发言名单已开启')
+  engine.addConferenceEntry('phase_changed', '主发言名单已开启')
   syncEngine(engine)
 }
 
@@ -378,7 +358,6 @@ export function startSpeaker(entryId: string): void {
   if (!engine) return
   engine.startSpeakingEntry(entryId)
   syncEngine(engine)
-  emitServiceEvent('conference:speaker_started', _buildEventContext(engine))
 }
 
 export function pauseSpeaker(): void {
@@ -400,7 +379,6 @@ export function endSpeaker(yieldChoice?: YieldChoice): void {
   if (!engine) return
   engine.endSpeaking(yieldChoice)
   syncEngine(engine)
-  emitServiceEvent('conference:speaker_finished', _buildEventContext(engine))
 }
 
 // ---- 让渡 -----------------------------------------------------------------
@@ -454,13 +432,6 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
   if (!engine) return ''
   const id = engine.proposeMotion(motionData)
   syncEngine(engine)
-  // 推送动议状态到 Display（activeMotion 自动包含 pending/recently-resolved 动议）
-  emitServiceEvent('conference:motion_proposed', {
-    ..._buildEventContext(engine),
-    motionId: id,
-    motionType: motionData.type,
-    proposedBy: motionData.proposedByDelegationId
-  })
 
   return id
 }
@@ -490,10 +461,6 @@ export function approveMotion(motionId: string): void {
   engine.approveMotion(motionId)
   syncEngine(engine)
   getDisplayBridge().sendUpdate(buildDisplayData(engine))
-  emitServiceEvent('conference:motion_approved', {
-    ..._buildEventContext(engine),
-    motionId
-  })
 }
 
 export function rejectMotion(motionId: string): void {
@@ -516,10 +483,6 @@ export function startCaucus(motionId: string): void {
   if (!engine) return
   engine.startCaucus(motionId)
   syncEngine(engine)
-  emitServiceEvent('conference:caucus_started', {
-    ..._buildEventContext(engine),
-    motionId
-  })
 }
 
 export function setCaucusProposerPosition(position: ProposerPosition): void {
@@ -548,7 +511,6 @@ export function startCaucusWithSetup(): void {
   if (!engine) return
   engine.startCaucusWithSetup()
   syncEngine(engine)
-  emitServiceEvent('conference:caucus_started', _buildEventContext(engine))
 }
 
 export function advanceCaucusSpeaker(): void {
@@ -591,7 +553,6 @@ export function endCaucus(): void {
   if (!engine) return
   engine.endCaucus()
   syncEngine(engine)
-  emitServiceEvent('conference:caucus_ended', _buildEventContext(engine))
 }
 
 // ---- 投票 -----------------------------------------------------------------
@@ -605,12 +566,6 @@ export function startVotingSession(
   if (!engine) return ''
   const id = engine.startVotingSession(targetType, targetId, majorityRule)
   syncEngine(engine)
-  emitServiceEvent('conference:voting_started', {
-    ..._buildEventContext(engine),
-    sessionId: id,
-    targetType,
-    majorityRule
-  })
   return id
 }
 
@@ -630,10 +585,6 @@ export function closeVotingSession(sessionId: string): void {
   if (!engine) return
   engine.closeVotingSession(sessionId)
   syncEngine(engine)
-  emitServiceEvent('conference:voting_ended', {
-    ..._buildEventContext(engine),
-    sessionId
-  })
 }
 
 export function tallyVotes(ballots: VoteBallot[]): { yes: number; no: number; abstain: number } {
@@ -670,7 +621,6 @@ export function suspendMeeting(): void {
   if (!engine) return
   engine.suspendMeeting()
   syncEngine(engine)
-  emitServiceEvent('conference:meeting_suspended', _buildEventContext(engine))
 }
 
 export function resumeMeeting(): void {
@@ -678,7 +628,6 @@ export function resumeMeeting(): void {
   if (!engine) return
   engine.resumeMeeting()
   syncEngine(engine)
-  emitServiceEvent('conference:meeting_resumed', _buildEventContext(engine))
 }
 
 export function closeMeeting(): void {
@@ -686,7 +635,6 @@ export function closeMeeting(): void {
   if (!engine) return
   engine.closeMeeting()
   syncEngine(engine)
-  emitServiceEvent('conference:meeting_closed', _buildEventContext(engine))
 }
 
 export function setPhase(phase: ConferencePhase): void {
@@ -694,13 +642,12 @@ export function setPhase(phase: ConferencePhase): void {
   if (!engine) return
   engine.setPhase(phase)
   syncEngine(engine)
-  emitServiceEvent('conference:phase_changed', { ..._buildEventContext(engine), newPhase: phase })
 }
 
 // ---- 会议记录 --------------------------------------------------------------
 
-export function addMinutesEntry(
-  eventType: MinutesEventType,
+export function addConferenceEntry(
+  actionType: ConferenceActionType,
   description: string,
   related?: {
     delegationId?: string
@@ -710,7 +657,7 @@ export function addMinutesEntry(
 ): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.addMinutesEntry(eventType, description, related as any)
+  engine.addConferenceEntry(actionType, description, related as any)
   syncEngine(engine)
 }
 

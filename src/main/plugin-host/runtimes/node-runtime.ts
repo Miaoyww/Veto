@@ -48,7 +48,7 @@ export class NodeRuntime implements PluginRuntime {
       cwd: pluginDir,
       env,
       silent: true,        // 捕获 stdout/stderr（等价于 pipe）
-      windowsHide: true,
+      windowsHide: true,   // @ts-expect-error: windowsHide 是 spawn() 的有效参数，fork() 内部透传，但 @types/node 的 ForkOptions 类型遗漏了它
     })
 
     // 转发 stdout/stderr 到主进程日志 + renderer DevTools

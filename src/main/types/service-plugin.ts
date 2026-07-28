@@ -5,31 +5,15 @@
  * EventBus、DataQueryAPI）和 service 插件（.mjs）之间的公共接口。
  */
 
+import type { ConferenceActionType, TimelineActionType } from '../../shared/action-types'
+
 // ── 事件类型 ──────────────────────────────────────────────────────────────
 
-/** 会议相关事件 */
-export type ConferenceEventType =
-  | 'conference:phase_changed'
-  | 'conference:speaker_started'
-  | 'conference:speaker_finished'
-  | 'conference:motion_proposed'
-  | 'conference:motion_approved'
-  | 'conference:voting_started'
-  | 'conference:voting_ended'
-  | 'conference:caucus_started'
-  | 'conference:caucus_ended'
-  | 'conference:meeting_suspended'
-  | 'conference:meeting_resumed'
-  | 'conference:meeting_closed'
-  | 'conference:roll_call_completed'
+/** 会议相关事件 — 从 ConferenceActionType 自动派生，始终与日志操作保持同步 */
+export type ConferenceEventType = `conference:${ConferenceActionType}`
 
-/** 时间线相关事件 */
-export type TimelineEventType =
-  | 'timeline:paused'
-  | 'timeline:resumed'
-  | 'timeline:ratio_changed'
-  | 'timeline:created'
-  | 'timeline:deleted'
+/** 时间线相关事件 — 从 TimelineActionType 自动派生 */
+export type TimelineEventType = `timeline:${TimelineActionType}`
 
 /** 所有 Service 事件类型 */
 export type ServiceEventType = ConferenceEventType | TimelineEventType
@@ -54,8 +38,8 @@ export interface TimelineSummary {
   realAnchor: number
 }
 
-/** 会议日志条目 */
-export interface MinutesEntry {
+/** 会议日志投影（从内部 ConferenceEntry 转换而来，供插件 API 消费） */
+export interface ConferenceLogProjection {
   id: string
   timestamp: number
   type: string
@@ -84,7 +68,7 @@ export interface DataQueryAPI {
   /** 查询所有会议 */
   queryConferences(): ConferenceSummary[]
   /** 查询指定会议的日志 */
-  getConferenceMinutes(conferenceId: string, limit?: number): MinutesEntry[]
+  getConferenceMinutes(conferenceId: string, limit?: number): ConferenceLogProjection[]
 }
 
 // ── ServiceContext ────────────────────────────────────────────────────────

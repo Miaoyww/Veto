@@ -8,13 +8,12 @@
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
+  import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
   import {
     Gavel, Play, Users, Monitor, HelpCircle, UserRoundCheck, Timer, ScrollText
   } from '@lucide/svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
-  import * as Dialog from '$lib/components/ui/dialog/index.js'
-  import { MINUTES_EVENT_LABELS } from '$lib/types-conference'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
   import {
     getDisplayBridge,
@@ -97,12 +96,6 @@
   const isTimerActive = $derived(conf?.activeSpeaker != null)
   const canProposeMotion = $derived(!isTimerActive)
   const canProposePoint = $derived(conf?.phase !== 'closed')
-
-  // Log dialog helpers
-  function formatTime(ts: number): string {
-    const d = new Date(ts)
-    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  }
 </script>
 
 <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
@@ -303,40 +296,10 @@
     {/key}
 
     <!-- Log Dialog -->
-    {#if logDialogOpen}
-      {@const recentMinutes = conf ? [...conf.minutes].reverse().slice(0, 200) : []}
-      <Dialog.Root bind:open={logDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay />
-          <Dialog.Content class="max-w-xl">
-            <Dialog.Header class="pb-1">
-              <Dialog.Title class="flex items-center gap-2 text-base font-semibold">
-                <ScrollText size={18} class="text-indigo-500" />
-                会议日志
-              </Dialog.Title>
-              <Dialog.Description class="text-xs text-muted-foreground">
-                共 {conf?.minutes.length ?? 0} 条记录
-              </Dialog.Description>
-            </Dialog.Header>
-
-            <div class="max-h-[65vh] overflow-y-auto rounded-md border bg-muted/30 p-3">
-              {#if recentMinutes.length === 0}
-                <p class="py-8 text-center text-xs text-muted-foreground">暂无会议记录</p>
-              {:else}
-                <pre class="text-xs leading-relaxed text-foreground whitespace-pre-wrap font-mono">{recentMinutes.map(entry => {
-                  const label = MINUTES_EVENT_LABELS[entry.eventType] ?? entry.eventType
-                  return `[${formatTime(entry.timestamp)}] [${label}] ${entry.description}`
-                }).join('\n')}</pre>
-              {/if}
-            </div>
-
-            <Dialog.Footer class="pt-1">
-              <Button variant="outline" onclick={() => (logDialogOpen = false)}>关闭</Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-    {/if}
+    <ConferenceLogDialog
+      bind:open={logDialogOpen}
+      minutes={conf?.minutes ?? []}
+    />
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">
       <p>请选择或创建一场大会</p>

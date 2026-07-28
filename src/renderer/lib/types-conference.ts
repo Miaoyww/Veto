@@ -316,72 +316,11 @@ export interface VotingSession {
 
 // ---- 会议记录 ------------------------------------------------------------
 
-export type MinutesEventType =
-  | 'roll_call_completed'
-  | 'roll_call_reset'
-  | 'speaker_ready'
-  | 'speaker_started'
-  | 'speaker_finished'
-  | 'yield'
-  | 'motion_proposed'
-  | 'motion_voted'
-  | 'motion_approved'
-  | 'motion_rejected'
-  | 'voting_started'
-  | 'voting_ended'
-  | 'caucus_started'
-  | 'caucus_paused'
-  | 'caucus_ended'
-  | 'meeting_suspended'
-  | 'meeting_resumed'
-  | 'meeting_closed'
-  | 'resolution_introduced'
-  | 'resolution_passed'
-  | 'resolution_failed'
-  | 'phase_changed'
-  | 'point_proposed'
-  | 'conference_created'
-
-export const MINUTES_EVENT_LABELS: Record<MinutesEventType, string> = {
-  roll_call_completed: '点名完成',
-  roll_call_reset: '重新点名',
-  speaker_ready: '准备发言',
-  speaker_started: '开始发言',
-  speaker_finished: '发言结束',
-  yield: '让渡时间',
-  motion_proposed: '动议提出',
-  motion_voted: '动议表决',
-  motion_approved: '动议通过',
-  motion_rejected: '动议未通过',
-  voting_started: '开始投票',
-  voting_ended: '投票结束',
-  caucus_started: '磋商开始',
-  caucus_paused: '磋商暂停',
-  caucus_ended: '磋商结束',
-  meeting_suspended: '暂时休会',
-  meeting_resumed: '会议恢复',
-  meeting_closed: '会议闭幕',
-  resolution_introduced: '决议草案提交',
-  resolution_passed: '决议通过',
-  resolution_failed: '决议未通过',
-  phase_changed: '阶段变更',
-  point_proposed: '问题提出',
-  conference_created: '大会创建'
-}
-
-export interface MinutesEntry {
-  id: string
-  /** 现实时间戳 */
-  timestamp: number
-  /** 事件类型 */
-  eventType: MinutesEventType
-  /** 事件描述文本 */
-  description: string
-  /** 关联代表团、动议、决议（可选） */
-  relatedDelegationId?: string
-  relatedMotionId?: string
-  relatedResolutionId?: string
-}
+// 从共享类型重导出（新名称），确保 main + renderer 进程使用同一份操作类型定义
+import type { ConferenceActionType, Entry, ConferenceEntry } from '../../shared/action-types'
+import { ACTION_LABELS } from '../../shared/action-types'
+export type { ConferenceActionType, Entry, ConferenceEntry }
+export { ACTION_LABELS }
 
 // ---- Conference（根实体）--------------------------------------------------
 
@@ -420,7 +359,7 @@ export interface Conference {
   /** 投票记录 */
   votingSessions: VotingSession[]
   /** 会议记录 */
-  minutes: MinutesEntry[]
+  minutes: ConferenceEntry[]
   /** 默认发言时间（秒），默认 120 */
   defaultSpeakingTimeSec: number
 
@@ -610,7 +549,7 @@ export interface ConferenceDisplayData {
   }
   recentMinutes: Array<{
     timestamp: number
-    eventType: MinutesEventType
+    eventType: ConferenceActionType
     description: string
   }>
   /** 让渡处理中状态（Display 端展示让渡流程） */

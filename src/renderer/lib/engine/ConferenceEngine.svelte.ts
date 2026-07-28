@@ -21,8 +21,8 @@ import type {
   DraftResolution,
   VotingSession,
   VoteBallot,
-  MinutesEntry,
-  MinutesEventType,
+  ConferenceEntry,
+  ConferenceActionType,
   Point,
   PointType,
   CaucusType,
@@ -30,8 +30,9 @@ import type {
   MajorityRule,
   VoteTargetType
 } from '$lib/types-conference'
-import { POINT_LABELS, type Attendance } from '$lib/types-conference'
+import { POINT_LABELS, MOTION_LABELS, type Attendance } from '$lib/types-conference'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
+import { emitServiceEvent } from '$lib/services/event-bus-bridge'
 import {
   Timer,
   calculateMajorityThresholds,
@@ -208,7 +209,7 @@ export class ConferenceEngine {
   draftResolutions: DraftResolution[] = $state([])
   documentNames: string[] = $state([])
   votingSessions: VotingSession[] = $state([])
-  minutes: MinutesEntry[] = $state([])
+  minutes: ConferenceEntry[] = $state([])
 
   // ── 计时器 ──
   timers: Map<string, Timer> = new Map()
@@ -245,7 +246,13 @@ export class ConferenceEngine {
     if (data.draftResolutions != null) this.draftResolutions = data.draftResolutions
     if (data.documentNames != null) this.documentNames = data.documentNames
     if (data.votingSessions != null) this.votingSessions = data.votingSessions
-    if (data.minutes != null) this.minutes = data.minutes
+    if (data.minutes != null) {
+      // 数据迁移：旧数据使用 eventType，新数据使用 actionType
+      this.minutes = (data.minutes as any[]).map((m: any) => ({
+        ...m,
+        actionType: m.actionType ?? m.eventType ?? 'phase_changed'
+      })) as ConferenceEntry[]
+    }
 
     // 还原 speakerList
     if (data.speakerLists) {
@@ -307,20 +314,26 @@ export class ConferenceEngine {
     const simpleMajority = Math.floor(votingCount / 2) + 1
     const twoThirds = Math.ceil((votingCount * 2) / 3)
 
+    const absentDelegations = this.delegations.filter((d) => d.attendance !== 'present')
+    const absentNames = absentDelegations.map((d) => d.shortName ?? d.name).join('、')
+
     const observerCount = presentCount - votingCount
-    const detail =
+    let detail =
       observerCount > 0
         ? `点名完成: 实到 ${presentCount}/${this.delegations.length}（含观察员 ${observerCount}），可投票 ${votingCount}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
         : `点名完成: 实到 ${presentCount}/${this.delegations.length}，简单多数 ${simpleMajority} 票，2/3多数 ${twoThirds} 票`
-    this.addMinutesEntry('roll_call_completed', detail)
-    this.addMinutesEntry('phase_changed', '进入阶段: 等待开启主发言名单')
+    if (absentDelegations.length > 0) {
+      detail += `；缺席: ${absentNames}`
+    }
+    this.addConferenceEntry('roll_call_completed', detail)
+    this.addConferenceEntry('phase_changed', '进入阶段: 等待开启主发言名单')
     this.phase = 'pending_speakers_list'
     this.touch()
   }
 
   resetRollCall(): void {
-    this.addMinutesEntry('roll_call_reset', '重新点名: 所有代表团出席状态已重置')
-    this.addMinutesEntry('phase_changed', '进入阶段: 点名')
+    this.addConferenceEntry('roll_call_reset', '重新点名: 所有代表团出席状态已重置')
+    this.addConferenceEntry('phase_changed', '进入阶段: 点名')
     this.phase = 'roll_call'
     this.delegations = this.delegations.map((d) => ({ ...d, attendance: 'absent' as const }))
     this.touch()
@@ -375,7 +388,6 @@ export class ConferenceEngine {
     const entryId = list.add(del, timeSec)
 
     this.speakersListHasBeenPopulated = true
-    this.addMinutesEntry('speaker_started', `${del.name} 加入主发言名单`)
     this.touch()
     return entryId
   }
@@ -388,7 +400,7 @@ export class ConferenceEngine {
   readySpeakerEntry(entryId: string): void {
     this.speakerList.readySpeaker(entryId)
     const entry = this.speakerList.entries.find((s) => s.id === entryId)
-    this.addMinutesEntry('phase_changed', `${this.getSpeakerDelegationName(entry)} 准备发言`)
+    this.addConferenceEntry('speaker_ready', `${this.getSpeakerDelegationName(entry)} 准备发言`)
     this.touch()
   }
 
@@ -407,7 +419,7 @@ export class ConferenceEngine {
       paused: false
     }
 
-    this.addMinutesEntry(
+    this.addConferenceEntry(
       'speaker_started',
       `${this.getSpeakerDelegationName(entry)} 开始发言 (${allocSec}秒)`
     )
@@ -447,7 +459,7 @@ export class ConferenceEngine {
       this.speakerList.entries.length === 0
     ) {
       this.phase = 'pending_speakers_list'
-      this.addMinutesEntry('phase_changed', '主发言名单已清空，需重新动议开启')
+      this.addConferenceEntry('phase_changed', '主发言名单已清空，需重新动议开启')
     }
 
     const speakerName = entry ? this.getSpeakerDelegationName(entry) : speaker.entryId
@@ -460,9 +472,9 @@ export class ConferenceEngine {
         comment: '让渡给评论'
       }
       logMsg += `（${yieldLabels[yieldChoice.type] ?? yieldChoice.type}，剩余 ${Math.round(remaining)} 秒）`
-      this.addMinutesEntry('yield', logMsg, { delegationId: entry?.delegationId })
+      this.addConferenceEntry('yield', logMsg, { delegationId: entry?.delegationId })
     } else {
-      this.addMinutesEntry('speaker_finished', logMsg, { delegationId: entry?.delegationId })
+      this.addConferenceEntry('speaker_finished', logMsg, { delegationId: entry?.delegationId })
     }
     this.touch()
   }
@@ -491,7 +503,7 @@ export class ConferenceEngine {
       comment: '让渡给评论'
     }
     const logMsg = `${this.getSpeakerDelegationName(entry)} ${yieldLabels[yieldChoice.type] ?? yieldChoice.type}（剩余 ${Math.round(remaining)} 秒）`
-    this.addMinutesEntry('yield', logMsg, { delegationId: entry.delegationId })
+    this.addConferenceEntry('yield', logMsg, { delegationId: entry.delegationId })
 
     if (yieldChoice.type === 'chair') {
       this.resolveYieldToChair()
@@ -523,7 +535,7 @@ export class ConferenceEngine {
     this.yieldPending = null
 
     if (yp) {
-      this.addMinutesEntry(
+      this.addConferenceEntry(
         'speaker_finished',
         `${yp.originalDelegation.name} 让渡给主席团，剩余时间作废`,
         { delegationId: yp.originalDelegationId }
@@ -552,7 +564,7 @@ export class ConferenceEngine {
     this.activeSpeaker = null
     this.yieldPending = null
 
-    this.addMinutesEntry(
+    this.addConferenceEntry(
       'speaker_finished',
       `${yp.originalDelegation.name} 让渡给 ${targetDel.name}（剩余 ${Math.round(yp.remainingSec)} 秒）`,
       { delegationId: yp.originalDelegationId }
@@ -578,7 +590,7 @@ export class ConferenceEngine {
       questionerDelegation: questionerDel
     }
 
-    this.addMinutesEntry(
+    this.addConferenceEntry(
       'yield',
       `${questionerDel.name} 向 ${yp.originalDelegation.name} 提问（剩余 ${Math.round(yp.remainingSec)} 秒回答）`,
       { delegationId: questionerDel.id }
@@ -606,7 +618,7 @@ export class ConferenceEngine {
     this.activeSpeaker = null
     this.yieldPending = null
 
-    this.addMinutesEntry(
+    this.addConferenceEntry(
       'yield',
       `${commenterDel.name} 获得 ${Math.round(yp.remainingSec)} 秒评论时间（来自 ${yp.originalDelegation.name} 的让渡）`,
       { delegationId: commenterDel.id }
@@ -631,8 +643,10 @@ export class ConferenceEngine {
     this.motions = [...this.motions, motion]
 
     const motionLabel =
-      motion.type === 'moderated_caucus' ? `有主持核心磋商: ${(motion as any).topic}` : motion.type
-    this.addMinutesEntry('motion_proposed', `${motion.proposedBy.name} 提出动议: ${motionLabel}`, {
+      motion.type === 'moderated_caucus'
+        ? `有主持核心磋商: ${(motion as any).topic}`
+        : MOTION_LABELS[motion.type] ?? motion.type
+    this.addConferenceEntry('motion_proposed', `${motion.proposedBy.name} 提出动议: ${motionLabel}`, {
       delegationId: motion.proposedBy.id,
       motionId: id
     })
@@ -644,19 +658,31 @@ export class ConferenceEngine {
     const motion = this.motions.find((m) => m.id === motionId)
     if (!motion) return
 
+    const motionLabel =
+      motion.type === 'moderated_caucus'
+        ? `有主持核心磋商: ${(motion as any).topic}`
+        : MOTION_LABELS[motion.type] ?? motion.type
+
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'approved' as const } : m
     )
-    this.addMinutesEntry('motion_approved', '动议通过', { motionId })
+    this.addConferenceEntry('motion_approved', `动议通过: ${motionLabel}`, { motionId })
     this.executeMotionAction(motion)
     this.touch()
   }
 
   rejectMotion(motionId: string): void {
+    const motion = this.motions.find((m) => m.id === motionId)
+    const motionLabel = motion
+      ? motion.type === 'moderated_caucus'
+        ? `有主持核心磋商: ${(motion as any).topic}`
+        : MOTION_LABELS[motion.type] ?? motion.type
+      : motionId
+
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'rejected' as const } : m
     )
-    this.addMinutesEntry('motion_rejected', '动议未通过', { motionId })
+    this.addConferenceEntry('motion_rejected', `动议未通过: ${motionLabel}`, { motionId })
     this.touch()
   }
 
@@ -707,7 +733,7 @@ export class ConferenceEngine {
     this.votingSessions = this.votingSessions.map((s) => (!s.endedAt ? { ...s, endedAt: now } : s))
     this.phase = 'general_debate'
     this.speakersListHasBeenPopulated = false
-    this.addMinutesEntry('phase_changed', '进入阶段: 一般性辩论（主发言名单已开启）')
+    this.addConferenceEntry('phase_changed', '进入阶段: 一般性辩论（主发言名单已开启）')
     this.touch()
   }
 
@@ -716,7 +742,7 @@ export class ConferenceEngine {
       const entryId = this.activeSpeaker.entryId
       this.speakerList.remove(entryId)
       this.activeSpeaker = null
-      this.addMinutesEntry('speaker_interrupted', '发言人时间作废（磋商动议通过）')
+      this.addConferenceEntry('speaker_finished', '发言人时间作废（磋商动议通过）')
     }
     const proposerDelId = motion.proposedBy.id
     this.phase = 'caucus_setup'
@@ -725,6 +751,8 @@ export class ConferenceEngine {
       proposerPosition: 'first',
       speakerDelegationIds: proposerDelId ? [proposerDelId] : []
     }
+    const topic = (motion as any).topic
+    this.addConferenceEntry('phase_changed', `进入阶段: 磋商准备${topic ? '（' + topic + '）' : ''}`)
     this.touch()
   }
 
@@ -735,6 +763,7 @@ export class ConferenceEngine {
     list.entries = list.entries.map((s) =>
       s.status === 'waiting' || s.status === 'ready' ? { ...s, allocatedTimeSec: newTime } : s
     )
+    this.addConferenceEntry('phase_changed', `发言时间已修改为 ${newTime} 秒`)
     this.touch()
   }
 
@@ -744,10 +773,10 @@ export class ConferenceEngine {
     }
     if (this.activeCaucus) {
       this.activeCaucus = null
-      this.addMinutesEntry('caucus_ended', '辩论结束，磋商终止')
+      this.addConferenceEntry('caucus_ended', '辩论结束，磋商终止')
     }
     this.phase = 'voting'
-    this.addMinutesEntry('phase_changed', '进入阶段: 投票表决')
+    this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
     this.touch()
   }
 
@@ -756,21 +785,30 @@ export class ConferenceEngine {
     if (docName) {
       this.addDocumentName(docName)
     }
-    const sessionId = this.startVotingSession('motion', motion.id, 'two_thirds')
-    this.addMinutesEntry(
-      'voting_started',
+    this.startVotingSession(
+      'motion',
+      motion.id,
+      'two_thirds',
       `对「${docName || '未命名文件'}」开始实质性投票 (2/3多数)`
     )
   }
 
   /** 更改代表团出席状态（统一入口：动议 & 直接管理均通过此方法） */
-  changeDelegationAttendance(delegationId: string, newAttendance: Attendance): void {
+  changeDelegationAttendance(
+    delegationId: string,
+    newAttendance: Attendance,
+    opts?: { silent?: boolean }
+  ): void {
     this.setAttendance(delegationId, newAttendance)
     const del = this.delegations.find((d) => d.id === delegationId)
-    const label = newAttendance === 'present' ? '出席' : '缺席'
-    this.addMinutesEntry('phase_changed', `${del?.name ?? delegationId} 出席状态变更为 ${label}`, {
-      delegationId
-    })
+    if (!opts?.silent) {
+      const label = newAttendance === 'present' ? '出席' : '缺席'
+      this.addConferenceEntry(
+        'attendance_changed',
+        `${del?.name ?? delegationId} 出席状态变更为 ${label}`,
+        { delegationId }
+      )
+    }
     this.touch()
     // 推送出席变更通知到 Display
     getDisplayBridge().sendUpdate(
@@ -804,7 +842,7 @@ export class ConferenceEngine {
 
     const del = this.delegations.find((d) => d.id === delegationId)
     const pointLabel = POINT_LABELS[point.type]
-    this.addMinutesEntry('point_proposed', `${del?.name ?? delegationId} 提出${pointLabel}`, {
+    this.addConferenceEntry('point_proposed', `${del?.name ?? delegationId} 提出${pointLabel}`, {
       delegationId
     })
     this.touch()
@@ -850,8 +888,8 @@ export class ConferenceEngine {
     this.activeCaucus = { motionId, type: caucusType, totalSec, elapsedSec: 0, paused: false }
 
     const label = caucusType === 'moderated' ? '有主持核心磋商' : '自由磋商'
-    this.addMinutesEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
-    this.addMinutesEntry('phase_changed', '进入阶段: 磋商')
+    this.addConferenceEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
+    this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
     this.touch()
   }
 
@@ -946,18 +984,16 @@ export class ConferenceEngine {
     this.activeSpeaker = null
 
     const firstName = caucusSpeakers[0] ? this.getSpeakerDelegationName(caucusSpeakers[0]) : ''
-    this.addMinutesEntry(
+    this.addConferenceEntry(
       'caucus_started',
       `有主持核心磋商开始${topic ? ': ' + topic : ''}，首位发言人（就绪）: ${firstName}`,
       { motionId }
     )
-    this.addMinutesEntry('phase_changed', '进入阶段: 磋商')
+    this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
     this.touch()
   }
 
   advanceCaucusSpeaker(): void {
-    console.log('advanceCaucusSpeaker:', this)
-
     const caucus = this.activeCaucus
     if (!caucus) return
 
@@ -989,30 +1025,6 @@ export class ConferenceEngine {
     const updatedSpeakers =
       currentIdx >= 0 ? speakers.filter((_, i) => i !== currentIdx) : [...speakers]
 
-    const debug = {
-      phase: 'advanceCaucusSpeaker',
-      currentIdx,
-      speakersLen: speakers.length,
-      updatedSpeakersLen: updatedSpeakers.length,
-      totalRemaining,
-      perSpeakerSec,
-      activeCaucus: {
-        motionId: updatedCaucus.motionId,
-        totalSec: updatedCaucus.totalSec,
-        elapsedSec: updatedCaucus.elapsedSec
-      },
-      activeSpeaker: this.activeSpeaker
-        ? {
-            entryId: this.activeSpeaker.entryId,
-            totalSec: this.activeSpeaker.totalSec,
-            elapsedSec: this.activeSpeaker.elapsedSec,
-            paused: this.activeSpeaker.paused
-          }
-        : null
-    }
-
-    console.log('debug:', debug)
-
     /**
      * 情况1：
      * 没有剩余发言人
@@ -1020,11 +1032,7 @@ export class ConferenceEngine {
      * 这是最容易产生僵尸状态的地方
      */
     if (updatedSpeakers.length === 0) {
-      console.log('no remaining caucus speakers')
-
       if (totalRemaining >= perSpeakerSec) {
-        console.log('return to caucus setup for more speakers')
-
         const previousMotionId = updatedCaucus.motionId
 
         this.phase = 'caucus_setup'
@@ -1039,10 +1047,9 @@ export class ConferenceEngine {
           remainingSec: totalRemaining
         }
 
-        this.addMinutesEntry('caucus_paused', '名单已走完，返回磋商准备以添加更多发言人')
+        this.addConferenceEntry('caucus_paused', '名单已走完，返回磋商准备以添加更多发言人')
+        this.addConferenceEntry('phase_changed', '进入阶段: 磋商准备')
       } else {
-        console.log('no time remaining, end caucus')
-
         this.endCaucus()
       }
 
@@ -1055,8 +1062,6 @@ export class ConferenceEngine {
      * 还有代表，并且剩余时间足够
      */
     if (totalRemaining >= perSpeakerSec) {
-      console.log('advance to next caucus speaker')
-
       const nextSpeaker: SpeakerEntry = {
         ...updatedSpeakers[0],
         status: 'ready'
@@ -1072,15 +1077,13 @@ export class ConferenceEngine {
 
       this.activeSpeaker = null
 
-      this.addMinutesEntry('speaker_ready', `${nextName} 准备发言（等待主席开始计时）`)
+      this.addConferenceEntry('speaker_ready', `${nextName} 准备发言（等待主席开始计时）`)
 
       /**
        * 情况3：
        * 有代表，但是时间不足
        */
     } else {
-      console.log('not enough time for next speaker, end caucus')
-
       this.endCaucus()
     }
 
@@ -1114,7 +1117,7 @@ export class ConferenceEngine {
     }
 
     const speakerName = this.getSpeakerDelegationName(readySpeaker)
-    this.addMinutesEntry('speaker_started', `${speakerName} 开始发言 (${perSpeakerSec}秒)`)
+    this.addConferenceEntry('speaker_started', `${speakerName} 开始发言 (${perSpeakerSec}秒)`)
     this.touch()
   }
 
@@ -1152,7 +1155,7 @@ export class ConferenceEngine {
         caucusSpeakers: [...currentSpeakers, { ...newSpeaker, status: 'ready' }],
         currentSpeakerIndex: this.activeCaucus.caucusSpeakers.length
       }
-      this.addMinutesEntry(
+      this.addConferenceEntry(
         'speaker_ready',
         `${del?.name ?? delegationId} 准备发言（等待主席开始计时）`
       )
@@ -1175,8 +1178,8 @@ export class ConferenceEngine {
   endCaucus(): void {
     this.phase = 'general_debate'
     this.activeCaucus = null
-    this.addMinutesEntry('caucus_ended', '磋商结束')
-    this.addMinutesEntry('phase_changed', '进入阶段: 一般性辩论')
+    this.addConferenceEntry('caucus_ended', '磋商结束')
+    this.addConferenceEntry('phase_changed', '进入阶段: 一般性辩论')
     this.touch()
   }
 
@@ -1187,7 +1190,8 @@ export class ConferenceEngine {
   startVotingSession(
     targetType: VoteTargetType,
     targetId: string,
-    majorityRule: MajorityRule
+    majorityRule: MajorityRule,
+    descriptionOverride?: string
   ): string {
     const id = generateId()
 
@@ -1211,11 +1215,9 @@ export class ConferenceEngine {
     this.phase = 'voting'
     this.votingSessions = [...this.votingSessions, session]
 
-    this.addMinutesEntry(
-      'voting_started',
-      `开始投票表决 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`
-    )
-    this.addMinutesEntry('phase_changed', '进入阶段: 投票表决')
+    const desc = descriptionOverride ?? `开始投票表决 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`
+    this.addConferenceEntry('voting_started', desc)
+    this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
     this.touch()
     return id
   }
@@ -1336,7 +1338,7 @@ export class ConferenceEngine {
         if (motion.type === 'substantive_vote') {
           const docName = (motion as any).documentName as string
           newSpeakersList = []
-          this.addMinutesEntry('phase_changed', '主发言名单已结束')
+          this.addConferenceEntry('phase_changed', '主发言名单已结束')
         } else {
           const motionStatus: 'approved' | 'rejected' =
             result === 'passed' ? 'approved' : 'rejected'
@@ -1349,19 +1351,19 @@ export class ConferenceEngine {
               newPhase = 'suspended'
               newActiveSpeaker = null
               newActiveCaucus = null
-              this.addMinutesEntry('meeting_suspended', '暂时休会')
-              this.addMinutesEntry('phase_changed', '进入阶段: 休会')
+              this.addConferenceEntry('meeting_suspended', '暂时休会')
+              this.addConferenceEntry('phase_changed', '进入阶段: 休会')
             } else if (motion.type === 'close_meeting') {
               newPhase = 'closed'
               newActiveSpeaker = null
               newActiveCaucus = null
-              this.addMinutesEntry('meeting_closed', '会议闭幕')
-              this.addMinutesEntry('phase_changed', '进入阶段: 闭幕')
+              this.addConferenceEntry('meeting_closed', '会议闭幕')
+              this.addConferenceEntry('phase_changed', '进入阶段: 闭幕')
             } else if (motion.type === 'closure_debate') {
               newPhase = 'voting'
               newActiveSpeaker = null
               newActiveCaucus = null
-              this.addMinutesEntry('phase_changed', '进入阶段: 投票表决')
+              this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
             } else if (motion.type === 'unmoderated_caucus') {
               const durationSec = (motion as any).durationSec as number
               newPhase = 'caucus'
@@ -1373,8 +1375,8 @@ export class ConferenceEngine {
                 elapsedSec: 0,
                 paused: false
               }
-              this.addMinutesEntry('caucus_started', '自由磋商开始')
-              this.addMinutesEntry('phase_changed', '进入阶段: 磋商')
+              this.addConferenceEntry('caucus_started', '自由磋商开始')
+              this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
             } else if (motion.type === 'modify_speaking_time') {
               const newTime = (motion as any).newTimeSec as number
               newDefaultSpeakingTimeSec = newTime
@@ -1389,7 +1391,7 @@ export class ConferenceEngine {
       }
     }
 
-    this.addMinutesEntry(
+    this.addConferenceEntry(
       'voting_ended',
       `投票结束: Yes ${yes} / No ${no} / Abstain ${abstain} → ${result === 'passed' ? '通过' : '未通过'}`
     )
@@ -1436,7 +1438,7 @@ export class ConferenceEngine {
       createdAt: Date.now()
     }
     this.draftResolutions = [...this.draftResolutions, resolution]
-    this.addMinutesEntry('resolution_introduced', `决议草案提交: ${title}`, { resolutionId: id })
+    this.addConferenceEntry('resolution_introduced', `决议草案提交: ${title}`, { resolutionId: id })
     this.touch()
     return id
   }
@@ -1449,15 +1451,15 @@ export class ConferenceEngine {
     this.phase = 'suspended'
     this.activeSpeaker = null
     this.activeCaucus = null
-    this.addMinutesEntry('meeting_suspended', '暂时休会')
-    this.addMinutesEntry('phase_changed', '进入阶段: 休会')
+    this.addConferenceEntry('meeting_suspended', '暂时休会')
+    this.addConferenceEntry('phase_changed', '进入阶段: 休会')
     this.touch()
   }
 
   resumeMeeting(): void {
     this.phase = 'pending_speakers_list'
-    this.addMinutesEntry('meeting_resumed', '会议恢复')
-    this.addMinutesEntry('phase_changed', '进入阶段: 等待开启主发言名单')
+    this.addConferenceEntry('meeting_resumed', '会议恢复')
+    this.addConferenceEntry('phase_changed', '进入阶段: 等待开启主发言名单')
     this.touch()
   }
 
@@ -1465,8 +1467,8 @@ export class ConferenceEngine {
     this.phase = 'closed'
     this.activeSpeaker = null
     this.activeCaucus = null
-    this.addMinutesEntry('meeting_closed', '会议闭幕')
-    this.addMinutesEntry('phase_changed', '进入阶段: 闭幕')
+    this.addConferenceEntry('meeting_closed', '会议闭幕')
+    this.addConferenceEntry('phase_changed', '进入阶段: 闭幕')
     this.touch()
   }
 
@@ -1479,8 +1481,28 @@ export class ConferenceEngine {
   //  会议记录
   // ================================================================
 
-  addMinutesEntry(
-    eventType: MinutesEventType,
+  /**
+   * ConferenceActionType → ServiceEventType 映射。
+   * 每条日志记录自动触发对应的插件服务事件，确保日志和事件通知始终同步。
+   */
+  private static readonly CONFERENCE_ACTION_TO_SERVICE_EVENT: Partial<Record<ConferenceActionType, string>> = {
+    roll_call_completed: 'conference:roll_call_completed',
+    speaker_started: 'conference:speaker_started',
+    speaker_finished: 'conference:speaker_finished',
+    motion_proposed: 'conference:motion_proposed',
+    motion_approved: 'conference:motion_approved',
+    voting_started: 'conference:voting_started',
+    voting_ended: 'conference:voting_ended',
+    caucus_started: 'conference:caucus_started',
+    caucus_ended: 'conference:caucus_ended',
+    meeting_suspended: 'conference:meeting_suspended',
+    meeting_resumed: 'conference:meeting_resumed',
+    meeting_closed: 'conference:meeting_closed',
+    phase_changed: 'conference:phase_changed'
+  }
+
+  addConferenceEntry(
+    actionType: ConferenceActionType,
     description: string,
     related?: {
       delegationId?: string
@@ -1488,14 +1510,47 @@ export class ConferenceEngine {
       resolutionId?: string
     }
   ): void {
-    const entry: MinutesEntry = {
+    const entry: ConferenceEntry = {
       id: generateId(),
       timestamp: Date.now(),
-      eventType,
+      actionType,
       description,
       ...related
     }
     this.minutes = [...this.minutes, entry]
+
+    // 自动触发对应的插件服务事件（与日志写入同一调用点，确保同步）
+    const serviceEventType = ConferenceEngine.CONFERENCE_ACTION_TO_SERVICE_EVENT[actionType]
+    if (serviceEventType) {
+      emitServiceEvent(serviceEventType, this.buildEventContext())
+    }
+  }
+
+  /** 构建插件事件上下文数据 */
+  private buildEventContext(): Record<string, unknown> {
+    const speakerEntry = this.activeSpeaker
+      ? this.speakerList.entries.find((s) => s.id === this.activeSpeaker!.entryId)
+      : null
+    const speakerDelegation = speakerEntry
+      ? this.delegations.find((d) => d.id === speakerEntry.delegationId)
+      : null
+
+    return {
+      conferenceId: this.id,
+      conferenceName: this.name,
+      phase: this.phase,
+      presentCount: this.getPresentCount(),
+      votingCount: this.getVotingCount(),
+      currentSpeaker: this.activeSpeaker && speakerDelegation
+        ? {
+            delegationId: speakerDelegation.id,
+            delegationName: speakerDelegation.name,
+            remainingTimeSec: Math.max(0, this.activeSpeaker.totalSec - this.activeSpeaker.elapsedSec)
+          }
+        : null,
+      activeCaucusType: this.activeCaucus?.type ?? null,
+      activeCaucusMotionId: this.activeCaucus?.motionId ?? null
+    }
   }
 
   // ================================================================
