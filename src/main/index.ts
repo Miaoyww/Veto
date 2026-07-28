@@ -132,7 +132,9 @@ function registerIpcHandlers(): void {
       disabled: p.disabled,
       incompatible: p.incompatible,
       dependencies: p.manifest.dependencies,
-      injects: p.manifest.injects,
+      injects: (p.manifest.type === 'faction' || p.manifest.type === 'campaign')
+        ? p.manifest.injects
+        : undefined,
       hasDefinitions: !!p.path.definitions,
       hasI18n: !!p.path.i18n,
       hasAssets: !!p.path.assets,

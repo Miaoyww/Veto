@@ -14,46 +14,93 @@ import { createLogger } from './logger'
 
 const log = createLogger('PluginDiscovery')
 
-/** 插件清单信息（从 manifest.json 解析） */
-export interface PluginManifest {
+// ═══════════════════════════════════════════════════════════════════
+// PluginManifest — discriminated union
+//
+// 每种插件类型拥有独立的必填/可选字段。
+// TypeScript 会根据 `type` 自动收窄，编译期防止访问不存在的字段。
+// ═══════════════════════════════════════════════════════════════════
+
+/** 所有插件类型共享的基础字段 */
+export interface BaseManifest {
   manifest_version: number
   id: string
   name: string
   version: string
   author: string
-  type: 'faction' | 'campaign' | 'utility' | 'dependency' | 'preset'
-  download_url?: string
   repo: string
+  description?: string
   hash?: string
   preview?: string
-  description?: string
+  download_url?: string
   min_engine_version?: string
-  definitions?: string | Record<string, string>
-  i18n?: string | Record<string, string>
   dependencies?: string[]
   tags?: string[]
   license?: string
-  /** 插件注入点（Phase 2+ 使用） */
+  /** i18n 声明：字符串指向 i18n/ 目录，对象为内联翻译 */
+  i18n?: string | Record<string, string>
+}
+
+/** faction 插件：提供派系/国家定义数据 */
+export interface FactionManifest extends BaseManifest {
+  type: 'faction'
+  /** 定义文件路径 或 内联定义对象 */
+  definitions: string | Record<string, string>
+  /** 注入点：formulas / events / ui 脚本路径 */
   injects?: {
-    formulas?: string // "./injects/formulas.js"
-    events?: string // "./injects/events.js"
-    ui?: string // "./injects/ui.js"
+    formulas?: string
+    events?: string
+    ui?: string
   }
-  /** 战役：地图配置文件路径 */
-  mapConfig?: string
-  /** 战役：初始部署文件路径 */
-  deployments?: string
-  /** 战役：设施配置文件路径 */
-  facilities?: string
-  /** 战役：事件配置文件路径 */
-  events?: string
-  /** 会议：代表团预设文件路径 */
+  /** 代表团预设文件路径 */
   delegations?: string
-  /** 服务插件：入口文件相对路径（如 "./service.mjs"） */
+}
+
+/** campaign 插件：提供战役/推演场景 */
+export interface CampaignManifest extends BaseManifest {
+  type: 'campaign'
+  definitions: string | Record<string, string>
+  /** 战役资源文件路径 */
+  mapConfig?: string
+  deployments?: string
+  facilities?: string
+  events?: string
+  delegations?: string
+  injects?: {
+    formulas?: string
+    events?: string
+    ui?: string
+  }
+}
+
+/** utility 插件：提供可执行的服务/工具 */
+export interface UtilityManifest extends BaseManifest {
+  type: 'utility'
+  /** 服务入口文件路径（如 "./service.mjs"） */
   service?: string
-  /** 服务插件：运行时标识（如 "nodejs"）。默认 "nodejs" */
+  /** 运行时标识（如 "nodejs"）。默认 "nodejs" */
   runtime?: string
 }
+
+/** dependency 插件：纯依赖声明，无业务逻辑 */
+export interface DependencyManifest extends BaseManifest {
+  type: 'dependency'
+}
+
+/** preset 插件：预置配置/代表团模板 */
+export interface PresetManifest extends BaseManifest {
+  type: 'preset'
+  definitions?: string | Record<string, string>
+  delegations?: string
+}
+
+/** 所有插件清单的联合类型 */
+export type PluginManifest =
+  | FactionManifest
+  | CampaignManifest
+  | UtilityManifest
+  | DependencyManifest
+  | PresetManifest
 
 /** 插件实例（扫描发现后的内存表示） */
 export interface PluginInstance {
@@ -105,6 +152,7 @@ export function ensurePluginsDir(): string {
 /**
  * 扫描 plugins/ 目录，返回发现的插件列表。
  * 不加载插件内容，仅收集元数据。
+ * 按插件类型分派资源路径解析，确保 discriminated union 的类型安全。
  */
 export function scanPluginDirectory(): PluginInstance[] {
   const pluginsDir = getPluginsDir()
@@ -138,63 +186,14 @@ export function scanPluginDirectory(): PluginInstance[] {
         continue
       }
 
-      const definitionsPath = path.join(pluginDir, 'definitions.json')
-      const definitionsDirPath = path.join(pluginDir, 'definitions')
-      const i18nPath = path.join(pluginDir, 'i18n')
-      const assetsPath = path.join(pluginDir, 'assets')
-
-      // 检测 definitions 是单文件还是目录
-      let definitionsFinal: string | undefined
-      let definitionsIsDir = false
-      if (fs.existsSync(definitionsDirPath) && fs.statSync(definitionsDirPath).isDirectory()) {
-        definitionsFinal = definitionsDirPath
-        definitionsIsDir = true
-      } else if (fs.existsSync(definitionsPath)) {
-        definitionsFinal = definitionsPath
-        definitionsIsDir = false
-      } else if (typeof manifest.definitions === 'string' && manifest.definitions.endsWith('/')) {
-        // manifest 声明为目录但目录不存在 → 记录路径但不保证存在
-        definitionsFinal = path.join(pluginDir, manifest.definitions)
-        definitionsIsDir = true
-      } else if (typeof manifest.definitions === 'string') {
-        // manifest 声明为单文件
-        definitionsFinal = path.join(pluginDir, manifest.definitions)
-        definitionsIsDir = false
-      }
-
-      // 战役资源文件检测
-      const getCampaignPath = (manifestPath: string | undefined, defaultName: string): string | undefined => {
-        if (manifestPath) {
-          const fullPath = path.join(pluginDir, manifestPath)
-          return fs.existsSync(fullPath) ? fullPath : undefined
-        }
-        const defaultPath = path.join(pluginDir, defaultName)
-        return fs.existsSync(defaultPath) ? defaultPath : undefined
-      }
-
-      const instancePath = {
-        plugin: pluginDir,
-        definitions: definitionsFinal,
-        definitionsIsDir,
-        i18n: fs.existsSync(i18nPath) ? i18nPath : undefined,
-        assets: fs.existsSync(assetsPath) ? assetsPath : undefined,
-        mapConfig: getCampaignPath(manifest.mapConfig, 'map.json'),
-        deployments: getCampaignPath(manifest.deployments, 'deployments.json'),
-        facilities: getCampaignPath(manifest.facilities, 'facilities.json'),
-        events: getCampaignPath(manifest.events, 'events.json'),
-        delegations: getCampaignPath(manifest.delegations, 'delegations.json'),
-        service: manifest.service
-          ? (fs.existsSync(path.join(pluginDir, manifest.service))
-            ? path.join(pluginDir, manifest.service)
-            : undefined)
-          : undefined
-      }
+      // 解析插件资源路径（按类型分派）
+      const instancePath = resolveInstancePaths(pluginDir, manifest)
 
       plugins.push({
         manifest,
         path: instancePath,
         disabled: false,
-        incompatible: false
+        incompatible: false,
       })
     } catch (err) {
       log.error(`Failed to read manifest for ${entry.name}:`, err)
@@ -203,4 +202,106 @@ export function scanPluginDirectory(): PluginInstance[] {
 
   log.info(`Found ${plugins.length} plugin(s) in ${pluginsDir}`)
   return plugins
+}
+
+/** 按插件类型解析资源文件路径 */
+function resolveInstancePaths(
+  pluginDir: string,
+  manifest: PluginManifest,
+): PluginInstance['path'] {
+  const i18nPath = path.join(pluginDir, 'i18n')
+  const assetsPath = path.join(pluginDir, 'assets')
+
+  const base = {
+    plugin: pluginDir,
+    definitions: undefined as string | undefined,
+    definitionsIsDir: false,
+    i18n: fs.existsSync(i18nPath) ? i18nPath : undefined,
+    assets: fs.existsSync(assetsPath) ? assetsPath : undefined,
+    mapConfig: undefined as string | undefined,
+    deployments: undefined as string | undefined,
+    facilities: undefined as string | undefined,
+    events: undefined as string | undefined,
+    delegations: undefined as string | undefined,
+    service: undefined as string | undefined,
+  }
+
+  // 处理 definitions（faction / campaign / preset 有该字段）
+  if (
+    manifest.type === 'faction' ||
+    manifest.type === 'campaign' ||
+    manifest.type === 'preset'
+  ) {
+    const def = 'definitions' in manifest ? manifest.definitions : undefined
+    const resolved = resolveDefinitions(pluginDir, def)
+    if (resolved) {
+      base.definitions = resolved.path
+      base.definitionsIsDir = resolved.isDir
+    }
+  }
+
+  // 处理 service 入口（仅 utility）
+  if (manifest.type === 'utility' && manifest.service) {
+    const servicePath = path.join(pluginDir, manifest.service)
+    if (fs.existsSync(servicePath)) {
+      base.service = servicePath
+    }
+  }
+
+  // 处理战役资源文件（仅 campaign）
+  if (manifest.type === 'campaign') {
+    base.mapConfig = resolveCampaignFile(pluginDir, manifest.mapConfig, 'map.json')
+    base.deployments = resolveCampaignFile(pluginDir, manifest.deployments, 'deployments.json')
+    base.facilities = resolveCampaignFile(pluginDir, manifest.facilities, 'facilities.json')
+    base.events = resolveCampaignFile(pluginDir, manifest.events, 'events.json')
+  }
+
+  // 处理代表团预设（faction / campaign / preset）
+  if (
+    manifest.type === 'faction' ||
+    manifest.type === 'campaign' ||
+    manifest.type === 'preset'
+  ) {
+    const delegationsFile = 'delegations' in manifest ? manifest.delegations : undefined
+    base.delegations = resolveCampaignFile(pluginDir, delegationsFile, 'delegations.json')
+  }
+
+  return base
+}
+
+/** 解析 definitions 路径：单文件 / 目录 / manifest 声明 */
+function resolveDefinitions(
+  pluginDir: string,
+  declared: string | Record<string, unknown> | undefined,
+): { path: string; isDir: boolean } | null {
+  const filePath = path.join(pluginDir, 'definitions.json')
+  const dirPath = path.join(pluginDir, 'definitions')
+
+  if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+    return { path: dirPath, isDir: true }
+  }
+  if (fs.existsSync(filePath)) {
+    return { path: filePath, isDir: false }
+  }
+  if (typeof declared === 'string' && declared.endsWith('/')) {
+    return { path: path.join(pluginDir, declared), isDir: true }
+  }
+  if (typeof declared === 'string') {
+    return { path: path.join(pluginDir, declared), isDir: false }
+  }
+  return null
+}
+
+/** 解析战役/代表团文件路径 */
+function resolveCampaignFile(
+  pluginDir: string,
+  manifestPath: string | undefined,
+  defaultName: string,
+): string | undefined {
+  if (manifestPath) {
+    const fullPath = path.join(pluginDir, manifestPath)
+    return fs.existsSync(fullPath) ? fullPath : undefined
+  }
+  const defaultPath = path.join(pluginDir, defaultName)
+  return fs.existsSync(defaultPath) ? defaultPath : undefined
 }

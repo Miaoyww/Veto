@@ -85,7 +85,8 @@ export class PluginManager {
   /** 启动单个插件 */
   async start(plugin: PluginInstance): Promise<void> {
     const pluginId = plugin.manifest.id
-    const runtimeName = plugin.manifest.runtime ?? 'nodejs'
+    const runtimeName =
+      plugin.manifest.type === 'utility' ? (plugin.manifest.runtime ?? 'nodejs') : 'nodejs'
 
     if (this.plugins.has(pluginId)) {
       log.warn(`Plugin ${pluginId} is already running`)
