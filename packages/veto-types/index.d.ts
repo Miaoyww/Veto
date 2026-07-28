@@ -97,6 +97,16 @@ declare module 'veto' {
   // ============================================================================
 
   /**
+   * Full event payload delivered to plugin handlers.
+   * Plugins receive type + timestamp + data — not just the data portion.
+   */
+  export interface EventPayload {
+    readonly type: string
+    readonly timestamp: number
+    readonly data: Record<string, unknown>
+  }
+
+  /**
    * Type-safe pub/sub event bus.
    *
    * Supports exact match, prefix wildcard (`domain:*`), and global wildcard
@@ -104,8 +114,8 @@ declare module 'veto' {
    *
    * ```ts
    * // Subscribe to all conference events
-   * const unsubscribe = events.on("conference:*", (data) => {
-   *   console.log(data.conferenceId, data.phase);
+   * const unsubscribe = events.on("conference:*", (payload) => {
+   *   console.log(payload.type, payload.timestamp, payload.data);
    * });
    *
    * // Emit (within your own plugin)
@@ -122,10 +132,10 @@ declare module 'veto' {
      * @param pattern — Event type (exact match) or pattern with `*` wildcard.
      *                  Examples: `'conference:phase_changed'`, `'conference:*'`, `'*'`
      * @param callback — Invoked each time a matching event fires.
-     *                   Receives only the `data` portion of the event payload.
+     *                   Receives the full event payload (type, timestamp, data).
      * @returns An unsubscribe function — call it to stop receiving events.
      */
-    on(pattern: string, callback: (data: Record<string, unknown>) => void): () => void
+    on(pattern: string, callback: (payload: EventPayload) => void): () => void
 
     /**
      * Fire an event.

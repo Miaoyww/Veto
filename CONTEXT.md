@@ -143,15 +143,32 @@ _Avoid_: Script, Trigger
 
 ## Plugin System（插件系统）
 
-Veto 的可扩展性框架。插件通过 `veto` 虚拟模块访问 API。
+Veto 的可扩展性框架。插件通过 `veto` 虚拟模块（类似 VS Code 的 `vscode` 模块）
+访问平台能力。Plugin Host 通过 `Module._load` 拦截实现虚拟模块注入，
+插件内 `import { ... } from 'veto'` 在运行时自动解析为 PluginContext 的字段。
+
+插件入口导出 `activate(context: PluginContext)` 和可选的 `deactivate()`。
 
 **Plugin (插件)**:
 扩展 Veto 功能的独立模块。五种类型：faction（派系数据）、campaign（战役场景）、
 utility（服务工具）、dependency（纯依赖）、preset（预置配置）。
 通过 manifest.json 声明，由 Plugin Host 在运行时加载。
+所有插件运行在 Electron main process 内（不再是独立子进程）。
 _Avoid_: Extension, Addon, Mod
 
 **PluginContext (插件上下文)**:
-注入到插件的运行时环境。包含 logger、events、storage、conference、timeline、
-notifications 六个 API。
+插件激活时注入的运行时环境。包含六个 API：
+- `logger` — 分级日志（info/warn/error/debug），输出到平台统一日志系统
+- `events` — 全局 pub/sub 事件总线，支持通配符匹配（`conference:*`）
+- `storage` — 插件隔离的键值持久化，JSON 序列化。插件必须使用 storage
+  而非自行读写文件（见 ADR-0001）
+- `conference` — 只读会议数据查询（list/get/update）
+- `timeline` — 只读时间线数据查询（list/get/update）
+- `notifications` — Toast 级用户通知（info/success/warn/error）
 _Avoid_: API, Runtime
+
+**veto 虚拟模块**:
+由 Plugin Host 注入的运行时模块。插件源码中 `import { events, storage } from 'veto'`
+在编译期通过 `@vetoexpress/types`（npm 包 `veto-dts`）获得类型检查，
+运行时由 `Module._load` 拦截返回 PluginContext 的对应字段。
+_Avoid_: @veto/sdk（已删除）

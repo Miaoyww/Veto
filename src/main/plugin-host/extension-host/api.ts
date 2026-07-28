@@ -66,10 +66,17 @@ export function createPluginLogger(pluginId: string): VetoLogger {
 // EventBus（插件视角）
 // ═══════════════════════════════════════════════════════════════════
 
+/** 完整事件负载，包含类型与时间戳 */
+export interface VetoEventPayload {
+  type: string
+  timestamp: number
+  data: Record<string, unknown>
+}
+
 /** 暴露给插件的 EventBus 接口 */
 export interface VetoEventBus {
-  /** 订阅事件，返回取消订阅函数 */
-  on(pattern: string, handler: (data: Record<string, unknown>) => void): () => void
+  /** 订阅事件，返回取消订阅函数。回调接收完整负载（含 type/timestamp/data）。 */
+  on(pattern: string, handler: (payload: VetoEventPayload) => void): () => void
   /** 分发事件 */
   emit(type: string, data?: Record<string, unknown>): void
 }
@@ -77,9 +84,9 @@ export interface VetoEventBus {
 /** 包装全局 EventBus，提供插件友好的接口 */
 function createPluginEventBus(): VetoEventBus {
   return {
-    on(pattern: string, handler: (data: Record<string, unknown>) => void): () => void {
+    on(pattern: string, handler: (payload: VetoEventPayload) => void): () => void {
       return eventBus.on(pattern, (payload) => {
-        handler(payload.data)
+        handler(payload)
       })
     },
     emit(type: string, data?: Record<string, unknown>): void {

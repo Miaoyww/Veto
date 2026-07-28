@@ -238,15 +238,16 @@ app.whenReady().then(async () => {
   }
   registerAllIpcHandlers(ipcDeps)
 
-  // Plugin Host（Module._load 拦截自动激活）
-  // 加载测试插件验证 veto 虚拟模块注入
-  const examplePluginPath = join(__dirname, '../../example-plugin')
-  if (fs.existsSync(examplePluginPath)) {
-    try {
-      await loadPlugin(examplePluginPath)
-      log.info('Example plugin loaded successfully')
-    } catch (err) {
-      log.error('Failed to load example plugin:', err)
+  // Plugin Host：激活所有 utility 插件（带 service 入口的）
+  for (const plugin of pluginInstances) {
+    if (plugin.disabled) continue
+    if (plugin.path.service) {
+      try {
+        await loadPlugin(plugin.path.plugin, plugin.manifest.id)
+        log.info(`Plugin "${plugin.manifest.id}" activated`)
+      } catch (err) {
+        log.error(`Failed to activate plugin "${plugin.manifest.id}":`, err)
+      }
     }
   }
 
