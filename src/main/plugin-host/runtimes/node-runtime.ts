@@ -42,11 +42,22 @@ export class NodeRuntime implements PluginRuntime {
 
     log.info(`Forking: "${entryPath}" (plugin: ${plugin.manifest.id})`)
 
+    // 解析 veto-loader.mjs 路径（注入 import "veto" 虚拟模块）
+    const loaderPath = this.resolveLoaderPath(pluginDir)
+    const execArgv: string[] = []
+    if (loaderPath) {
+      execArgv.push('--loader', loaderPath)
+      log.info(`Loader: ${loaderPath}`)
+    } else {
+      log.warn('veto-loader.mjs not found — import "veto" will fail')
+    }
+
     const forkOptions = {
       cwd: pluginDir,
       env,
       silent: true,
       windowsHide: true,
+      execArgv,
     }
 
     // 使用 fork() 而非 spawn('node')，确保使用 Electron 内嵌的 Node.js
@@ -203,5 +214,44 @@ export class NodeRuntime implements PluginRuntime {
         fs.copyFileSync(srcPath, destPath)
       }
     }
+  }
+
+  /**
+   * 解析 veto-loader.mjs 的绝对路径。
+   *
+   * Node.js fork 时用 --loader 注入，拦截插件的 import "veto"。
+   * 查找顺序:
+   *   1. VETO_LOADER_PATH 环境变量（调试用）
+   *   2. 项目根目录（开发模式）
+   *   3. Electron app 同级目录（生产模式）
+   */
+  private resolveLoaderPath(pluginDir: string): string | null {
+    // 允许通过环境变量覆盖
+    if (process.env.VETO_LOADER_PATH) {
+      const envPath = process.env.VETO_LOADER_PATH
+      if (fs.existsSync(envPath)) return envPath
+      log.warn(`VETO_LOADER_PATH set but file not found: ${envPath}`)
+    }
+
+    const candidates: string[] = []
+
+    // 开发模式：从插件目录向上找项目根
+    candidates.push(path.resolve(pluginDir, '..', '..', '..', '..', 'veto-loader.mjs'))
+
+    // Electron 模式：app.getAppPath()
+    try {
+      const { app } = require('electron')
+      candidates.push(path.join(app.getAppPath(), 'veto-loader.mjs'))
+    } catch {
+      // 非 Electron 环境
+    }
+
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate
+      }
+    }
+
+    return null
   }
 }

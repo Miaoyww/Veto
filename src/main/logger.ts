@@ -21,6 +21,7 @@ import { BrowserWindow } from 'electron'
 import log from 'electron-log'
 import type { LogFunctions } from 'electron-log'
 
+
 // ── 公共日志接口 ──────────────────────────────────────────────────────────
 
 export type Logger = Pick<LogFunctions, 'debug' | 'info' | 'warn' | 'error'>
@@ -76,8 +77,8 @@ export function initializeLogging(): void {
             tag,
             message: text,
             timestamp: date.getTime(),
-            variables,
-          },
+            variables
+          }
         })
       } catch {
         /* window may be destroyed */

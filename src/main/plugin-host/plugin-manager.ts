@@ -17,6 +17,7 @@ const log = createLogger('PluginManager')
 
 // ── 类型 ────────────────────────────────────────────────────────────────────
 
+/** 插件运行状态 */
 export type PluginProcessStatus = 'starting' | 'running' | 'stopping' | 'stopped' | 'error'
 
 /** 运行中的插件记录 */
