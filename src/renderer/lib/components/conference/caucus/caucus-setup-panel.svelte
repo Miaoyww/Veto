@@ -78,7 +78,17 @@
         {/if}
       </div>
     </div>
-
+    <!-- 开始磋商 -->
+    <div class="flex justify-center gap-4">
+      <Button size="lg" class="gap-2 min-w-[200px]" onclick={handleStart}>
+        <Play size={18} />
+        开始磋商
+      </Button>
+      <Button size="lg" variant="destructive" class="gap-2 min-w-[200px]" onclick={endCaucus}>
+        <Play size={18} />
+        结束磋商
+      </Button>
+    </div>
     <!-- 动议国位置 -->
     <div class="rounded-lg border bg-card p-4">
       <div class="flex items-center justify-between">
@@ -177,18 +187,6 @@
     </div>
 
     <Separator />
-
-    <!-- 开始磋商 -->
-    <div class="flex justify-center gap-4">
-      <Button size="lg" class="gap-2 min-w-[200px]" onclick={handleStart}>
-        <Play size={18} />
-        开始磋商
-      </Button>
-      <Button size="lg" variant="destructive" class="gap-2 min-w-[200px]" onclick={endCaucus}>
-        <Play size={18} />
-        结束磋商
-      </Button>
-    </div>
   {:else}
     <div class="flex flex-col items-center gap-4 text-muted-foreground">
       <Users size={48} class="opacity-30" />
