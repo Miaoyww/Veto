@@ -12,6 +12,7 @@ import { startWsServer } from './ws-server'
 import { eventBus } from './event-bus'
 import { PluginServer } from './plugin-host/plugin-server'
 import { PluginManager } from './plugin-host/plugin-manager'
+import { loadPlugin, unloadAll } from './plugin-host/extension-host/index'
 import type { PluginInstance } from './plugin-discovery'
 import type { PluginConfig } from './plugin-store'
 
@@ -783,6 +784,18 @@ app.whenReady().then(async () => {
     log.error('Failed to start plugins:', err)
   })
 
+  // 初始化 ExtensionHost（导入即激活 Module._load 拦截）
+  // 加载 example-plugin 用于验证 veto 虚拟模块注入是否正常工作
+  const examplePluginPath = join(__dirname, '../../example-plugin')
+  if (fs.existsSync(examplePluginPath)) {
+    try {
+      await loadPlugin(examplePluginPath)
+      log.info('Example plugin loaded successfully')
+    } catch (err) {
+      log.error('Failed to load example plugin:', err)
+    }
+  }
+
   // 初始化 WebSocket 服务器（模拟大会 Display 通信）
   wsServerPort = await startWsServer()
 
@@ -873,8 +886,9 @@ app.on('window-all-closed', () => {
   }
 })
 
-// 退出前停止所有 service 插件
+// 退出前停止所有插件
 app.on('before-quit', async () => {
+  await unloadAll()
   await pluginManager?.stopAll()
   await pluginServer?.stop()
 })

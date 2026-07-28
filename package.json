@@ -6,6 +6,9 @@
   "author": "Miaoyww",
   "homepage": "https://veto.miaoyww.top",
   "repository": "https://github.com/Miaoyww/Veto",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "format": "prettier --plugin prettier-plugin-svelte --write .",
     "lint": "eslint --cache .",

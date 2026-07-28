@@ -12,5 +12,7 @@
       "default": "./src/index.mjs"
     }
   },
-  "files": ["src/"]
+  "files": [
+    "src/"
+  ]
 }

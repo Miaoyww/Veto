@@ -1,0 +1,33 @@
+{
+  "name": "@vetoexpress/types",
+  "version": "0.1.0",
+  "description": "TypeScript type definitions for the Veto Plugin API",
+  "license": "MIT",
+  "author": "Miaoyww",
+  "homepage": "https://veto.miaoyww.top",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Miaoyww/Veto",
+    "directory": "packages/veto-dts"
+  },
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "index.d.ts"
+  ],
+  "keywords": [
+    "veto",
+    "plugin",
+    "typescript",
+    "type-definitions",
+    "dts",
+    "declaration"
+  ],
+  "scripts": {
+    "prepublishOnly": "echo 'This package contains only type declarations — no build step required.'"
+  }
+}
