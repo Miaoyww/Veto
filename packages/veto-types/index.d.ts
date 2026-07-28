@@ -10,7 +10,7 @@
  *
  * Usage in plugin source:
  *
- *   import { logger, storage, events, commands } from "veto";
+ *   import { logger, events, storage, conference, timeline, notifications } from "veto";
  *
  * In plugin package.json:
  *
@@ -19,17 +19,17 @@
  *   }
  * ------------------------------------------------------------------------ */
 
-// ============================================================================
-// 1. Logger
-// ============================================================================
-
-/**
- * Logger interface providing leveled logging for plugins.
- *
- * Output is captured by the Veto Plugin Host and routed to the platform's
- * unified log system.  Plugins should NOT rely on `console.*` methods directly.
- */
 declare module 'veto' {
+  // ============================================================================
+  // 1. Logger
+  // ============================================================================
+
+  /**
+   * Logger interface providing leveled logging for plugins.
+   *
+   * Output is captured by the Veto Plugin Host and routed to the platform's
+   * unified log system.  Plugins should NOT rely on `console.*` methods directly.
+   */
   export interface Logger {
     /** Log an informational message. */
     info(message: string): void
@@ -99,108 +99,218 @@ declare module 'veto' {
   /**
    * Type-safe pub/sub event bus.
    *
-   * Events are namespaced per-plugin by default.  Cross-plugin events require
-   * the `veto.` prefix and are subject to platform governance.
+   * Supports exact match, prefix wildcard (`domain:*`), and global wildcard
+   * (`*`) patterns — similar to VS Code's `EventEmitter` but string-based.
    *
    * ```ts
-   * // Subscribe
-   * const disposable = events.on<FileChangedPayload>("fileChanged", (data) => {
-   *   console.log(data.path);
+   * // Subscribe to all conference events
+   * const unsubscribe = events.on("conference:*", (data) => {
+   *   console.log(data.conferenceId, data.phase);
    * });
    *
    * // Emit (within your own plugin)
-   * events.emit("fileChanged", { path: "/foo.txt" });
+   * events.emit("custom:something_happened", { detail: 42 });
    *
    * // Unsubscribe
-   * disposable.dispose();
+   * unsubscribe();
    * ```
    */
   export interface EventBus {
     /**
-     * Subscribe to an event.
-     * @param event  — Event name. Use `veto.*` prefix for platform-level events.
-     * @param callback — Invoked each time the event fires.
-     * @returns A `Disposable` — call `.dispose()` to unsubscribe.
+     * Subscribe to events matching the given pattern.
+     *
+     * @param pattern — Event type (exact match) or pattern with `*` wildcard.
+     *                  Examples: `'conference:phase_changed'`, `'conference:*'`, `'*'`
+     * @param callback — Invoked each time a matching event fires.
+     *                   Receives only the `data` portion of the event payload.
+     * @returns An unsubscribe function — call it to stop receiving events.
      */
-    on<T = unknown>(event: string, callback: (data: T) => void): Disposable
+    on(pattern: string, callback: (data: Record<string, unknown>) => void): () => void
 
     /**
      * Fire an event.
      * Listeners are invoked asynchronously; this call does NOT await them.
+     *
+     * @param type — Event type string (e.g. `'conference:phase_changed'`).
+     * @param data — Payload forwarded to matching listeners.
      */
-    emit<T = unknown>(event: string, data: T): void
+    emit(type: string, data?: Record<string, unknown>): void
   }
 
   // ============================================================================
-  // 4. Commands
+  // 4. Conference API
   // ============================================================================
 
+  /** Lightweight conference view returned by `conference.list()`. */
+  export interface ConferenceSummary {
+    readonly id: string
+    readonly name: string
+    readonly venue?: string
+    readonly phase: string
+    readonly presentCount: number
+    readonly votingCount: number
+    readonly currentSpeaker?: { delegation: string; remaining: number }
+    readonly timelineId?: string | null
+  }
+
+  /** Full conference record returned by `conference.get()`. */
+  export interface ConferenceEntry extends ConferenceSummary {
+    readonly minutes?: MinutesEntry[]
+  }
+
+  /** Single entry in a conference's action log. */
+  export interface MinutesEntry {
+    readonly id: string
+    readonly timestamp: number
+    readonly type: string
+    readonly title: string
+    readonly detail?: string
+  }
+
   /**
-   * Command registry — mirrors VS Code's command API.
+   * Patchable fields for `conference.update()`.
+   * Only the fields that make sense to mutate from a plugin are exposed.
+   */
+  export interface ConferencePatch {
+    phase?: string
+    presentCount?: number
+    votingCount?: number
+    currentSpeaker?: { delegation: string; remaining: number } | null
+    timelineId?: string | null
+  }
+
+  /**
+   * Read-only conference data API.
    *
-   * Plugins register commands that can be invoked programmatically or triggered
-   * by the platform (menus, keybindings, toolbar buttons).
+   * Each `update()` call automatically persists the change and emits a
+   * corresponding `conference:*` event on the global EventBus so every
+   * plugin sees the change in real time.
    *
    * ```ts
-   * // Register
-   * const disposable = commands.registerCommand("myPlugin.sayHello", (name: string) => {
-   *   logger.info(`Hello, ${name}!`);
-   * });
+   * // List all conferences
+   * const all = conference.list();
    *
-   * // Execute (your own or another plugin's public commands)
-   * await commands.executeCommand("myPlugin.sayHello", "World");
-   *
-   * // Clean up on deactivation
-   * disposable.dispose();
+   * // Transition a conference phase
+   * conference.update(conf.id, { phase: "voting" });
+   * // → emits conference:phase_changed automatically
    * ```
    */
-  export interface Commands {
-    /**
-     * Register a command handler.
-     * @param id      — Unique command identifier (e.g. `"myPlugin.doSomething"`).
-     * @param handler — The function to invoke when the command is executed.
-     * @returns A `Disposable` that unregisters the command when disposed.
-     */
-    registerCommand(id: string, handler: (...args: any[]) => any): Disposable
+  export interface Conference {
+    /** List all conferences (summary view). */
+    list(): ConferenceSummary[]
+
+    /** Get a single conference with full detail (including minutes). */
+    get(id: string): ConferenceEntry | null
 
     /**
-     * Execute a registered command.
-     * @param id   — The command identifier.
-     * @param args — Arguments forwarded to the handler.
-     * @returns The handler's return value, wrapped in a Promise.
-     * @throws If the command is not registered or the handler throws.
+     * Update one or more fields of a conference.
+     * @returns The updated conference, or `null` if the id wasn't found.
      */
-    executeCommand<T = unknown>(id: string, ...args: any[]): Promise<T>
-
-    /**
-     * Return all registered command IDs.
-     * Useful for discovery / debugging.
-     */
-    getCommands(): Promise<string[]>
+    update(id: string, patch: ConferencePatch): ConferenceEntry | null
   }
 
   // ============================================================================
-  // 5. Disposable
+  // 5. Timeline API
   // ============================================================================
+
+  /** Lightweight timeline view returned by `timeline.list()`. */
+  export interface TimelineSummary {
+    readonly id: string
+    readonly name: string
+    readonly createdAt: number
+    readonly paused: boolean
+    readonly ratio: number
+    readonly simTime: number
+    readonly realAnchor: number
+  }
+
+  /** Full timeline record returned by `timeline.get()`. */
+  export interface TimelineEntry {
+    readonly id: string
+    readonly name: string
+    readonly createdAt: number
+    readonly state: TimelineState
+  }
+
+  /** Mutable runtime state of a timeline. */
+  export interface TimelineState {
+    paused: boolean
+    ratio: number
+    simulationAnchor: number
+    realAnchor: number
+  }
 
   /**
-   * Represents a resource that can be released when no longer needed.
+   * Read-only timeline data API.
    *
-   * Pattern borrowed from VS Code — `registerCommand`, `on`, etc. all return a
-   * `Disposable` so plugins can clean up in `deactivate()`.
+   * Each `update()` call automatically persists the change and emits a
+   * corresponding `timeline:*` event on the global EventBus.
+   *
+   * ```ts
+   * // Pause a timeline
+   * timeline.update(tl.id, { paused: true });
+   * // → emits timeline:paused automatically
+   * ```
    */
-  export interface Disposable {
-    dispose(): void
+  export interface Timeline {
+    /** List all timelines (summary view). */
+    list(): TimelineSummary[]
+
+    /** Get a single timeline with full detail. */
+    get(id: string): TimelineEntry | null
+
+    /**
+     * Update one or more fields of a timeline's runtime state.
+     * @returns The updated timeline, or `null` if the id wasn't found.
+     */
+    update(id: string, patch: Partial<TimelineState>): TimelineEntry | null
   }
 
   // ============================================================================
-  // 6. Plugin Lifecycle
+  // 6. Notifications
+  // ============================================================================
+
+  /** Severity level for toast notifications. */
+  export type NotificationLevel = 'info' | 'success' | 'warn' | 'error'
+
+  /** Options for `notifications.show()`. */
+  export interface NotificationOptions {
+    /** Severity level (default: `'info'`). */
+    level?: NotificationLevel
+    /** Display duration in milliseconds (default: 4000). */
+    duration?: number
+  }
+
+  /**
+   * Toast-level user notification API.
+   *
+   * Notifications appear in the Veto UI via svelte-sonner toasts.
+   * They are non-blocking and do not require user interaction.
+   *
+   * ```ts
+   * notifications.show("Plugin ready");
+   * notifications.show("Connection lost", { level: "error" });
+   * ```
+   */
+  export interface Notifications {
+    /**
+     * Show a toast notification in the Veto UI.
+     * @param message — Notification text.
+     * @param options — Optional severity level and duration.
+     */
+    show(message: string, options?: NotificationOptions): void
+  }
+
+  // ============================================================================
+  // 7. Plugin Lifecycle
   // ============================================================================
 
   /**
    * The context object passed to a plugin's `activate` function.
    *
    * It carries everything a plugin needs to interact with the Veto platform.
+   * `events`, `conference`, `timeline`, and `notifications` are shared
+   * singletons; `logger` and `storage` are scoped to the calling plugin.
    */
   export interface PluginContext {
     /** Unique identifier for this plugin instance. */
@@ -212,11 +322,17 @@ declare module 'veto' {
     /** The plugin's own scoped persistent storage. */
     readonly storage: Storage
 
-    /** The plugin-scoped event bus. */
+    /** The global event bus (shared across all plugins). */
     readonly events: EventBus
 
-    /** The global command registry. */
-    readonly commands: Commands
+    /** Read-only access to conference data. */
+    readonly conference: Conference
+
+    /** Read-only access to timeline data. */
+    readonly timeline: Timeline
+
+    /** Toast-level user notifications. */
+    readonly notifications: Notifications
 
     /**
      * Absolute path to the plugin's installation directory on disk.

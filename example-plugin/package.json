@@ -1,0 +1,10 @@
+{
+  "name": "veto-example-plugin",
+  "version": "0.1.0",
+  "description": "Example plugin demonstrating the Veto plugin API",
+  "main": "index.js",
+  "veto": {
+    "displayName": "Example Plugin",
+    "activationEvents": ["*"]
+  }
+}

@@ -8,7 +8,7 @@
  * - 接收到的消息广播给所有连接的客户端
  */
 
-import { WebSocketServer, type WebSocket } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import { createLogger } from './logger'
 
 const log = createLogger('DisplayWS')
