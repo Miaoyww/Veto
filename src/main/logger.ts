@@ -17,6 +17,7 @@
  *   log.warn('Unknown status:', id)
  */
 
+import { BrowserWindow } from 'electron'
 import log from 'electron-log'
 import type { LogFunctions } from 'electron-log'
 
@@ -46,9 +47,46 @@ export function createLogger(tag: string): Logger {
  * 初始化日志系统。应在 app.whenReady 回调中尽早调用。
  * - 设置文件传输级别为 debug（所有日志写入文件）
  * - 启用 IPC 桥接，使渲染进程可以通过 electron-log/renderer 记录日志
+ * - 安装 hook 将主进程日志转发到渲染进程 DevTools
  */
 export function initializeLogging(): void {
   log.transports.file.level = 'debug'
+
+  // 安装 hook：将主进程所有日志转发到渲染进程 DevTools
+  log.hooks.push((message) => {
+    const { data, date, level, scope, variables } = message
+    const lines =
+      typeof data === 'string'
+        ? [data]
+        : Array.isArray(data)
+          ? data.map((d) => (typeof d === 'string' ? d : JSON.stringify(d)))
+          : [JSON.stringify(data)]
+
+    const tag = scope ? `[${scope}]` : ''
+    const text = lines.join(' ')
+
+    for (const win of BrowserWindow.getAllWindows()) {
+      try {
+        // 映射 electron-log level 到 console 方法
+        const method = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'
+        win.webContents.send('veto:event', {
+          event: 'main:log',
+          data: {
+            level: method,
+            tag,
+            message: text,
+            timestamp: date.getTime(),
+            variables,
+          },
+        })
+      } catch {
+        /* window may be destroyed */
+      }
+    }
+
+    return message
+  })
+
   log.initialize()
 }
 

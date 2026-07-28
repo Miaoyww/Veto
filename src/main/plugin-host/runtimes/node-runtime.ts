@@ -42,14 +42,16 @@ export class NodeRuntime implements PluginRuntime {
 
     log.info(`Forking: "${entryPath}" (plugin: ${plugin.manifest.id})`)
 
-    // 使用 fork() 而非 spawn('node')，确保使用 Electron 内嵌的 Node.js
-    // 避免依赖系统 PATH 中的 node（版本可能不兼容，如 Node 24 + Koishi 4.x）
-    const child = fork(entryPath, [], {
+    const forkOptions = {
       cwd: pluginDir,
       env,
-      silent: true,        // 捕获 stdout/stderr（等价于 pipe）
-      windowsHide: true,   // @ts-expect-error: windowsHide 是 spawn() 的有效参数，fork() 内部透传，但 @types/node 的 ForkOptions 类型遗漏了它
-    })
+      silent: true,
+      windowsHide: true,
+    }
+
+    // 使用 fork() 而非 spawn('node')，确保使用 Electron 内嵌的 Node.js
+    // 避免依赖系统 PATH 中的 node（版本可能不兼容，如 Node 24 + Koishi 4.x）
+    const child = fork(entryPath, [], forkOptions as any)
 
     // 转发 stdout/stderr 到主进程日志 + renderer DevTools
     const pluginId = plugin.manifest.id
@@ -98,12 +100,16 @@ export class NodeRuntime implements PluginRuntime {
   }
 
   /**
-   * 确保插件的 node_modules 中有 @veto/sdk。
+   * 确保插件的 node_modules 中有 @veto/sdk 及其依赖。
    * 如果不存在，从 monorepo 的 packages/veto-sdk/src/ 复制。
    */
   private ensureSdkAvailable(pluginDir: string): void {
     const sdkDest = path.join(pluginDir, 'node_modules', '@veto/sdk')
-    if (fs.existsSync(path.join(sdkDest, 'package.json'))) return
+    if (fs.existsSync(path.join(sdkDest, 'package.json'))) {
+      // SDK 已存在，但 ws 依赖可能缺失（旧版 SDK 不需要 ws）
+      this.ensureWsAvailable(pluginDir)
+      return
+    }
 
     // 尝试从 monorepo 路径定位 SDK 源码
     // 在开发模式下，SDK 在 {appDir}/packages/veto-sdk/
@@ -129,6 +135,8 @@ export class NodeRuntime implements PluginRuntime {
         try {
           this.copyDir(srcPath, sdkDest)
           log.info(`Copied @veto/sdk from ${srcPath} to ${sdkDest}`)
+          // 同时复制 ws 依赖到插件 node_modules
+          this.ensureWsAvailable(pluginDir, srcPath)
           return
         } catch (err) {
           log.warn(`Failed to copy SDK from ${srcPath}:`, err)
@@ -137,6 +145,46 @@ export class NodeRuntime implements PluginRuntime {
     }
 
     log.warn('Could not find @veto/sdk source to copy. Plugin may fail to start.')
+  }
+
+  /**
+   * 确保插件的 node_modules 中有 ws 包。
+   * SDK 的 ws-server.mjs 依赖 ws，而插件是独立进程无法访问 Veto 主项目的 node_modules。
+   */
+  private ensureWsAvailable(pluginDir: string, sdkSrcPath?: string): void {
+    const wsDest = path.join(pluginDir, 'node_modules', 'ws')
+    if (fs.existsSync(path.join(wsDest, 'package.json'))) return
+
+    // 从 SDK 源路径向上找项目根 → node_modules/ws
+    const projectRoots = [
+      // 通过 SDK 源路径推断（packages/veto-sdk → 项目根）
+      sdkSrcPath ? path.resolve(sdkSrcPath, '..', '..', 'node_modules', 'ws') : null,
+    ].filter(Boolean) as string[]
+
+    // 通过 electron app 路径推断
+    try {
+      const { app } = require('electron')
+      const appDir = path.dirname(app.getPath('exe'))
+      projectRoots.push(path.join(appDir, '..', '..', '..', 'node_modules', 'ws'))
+      projectRoots.push(path.join(appDir, '..', 'node_modules', 'ws'))
+      projectRoots.push(path.join(app.getAppPath(), 'node_modules', 'ws'))
+    } catch {
+      /* ignore */
+    }
+
+    for (const srcPath of projectRoots) {
+      if (fs.existsSync(path.join(srcPath, 'package.json'))) {
+        try {
+          this.copyDir(srcPath, wsDest)
+          log.info(`Copied ws from ${srcPath} to ${wsDest}`)
+          return
+        } catch (err) {
+          log.warn(`Failed to copy ws from ${srcPath}:`, err)
+        }
+      }
+    }
+
+    log.warn('Could not find ws package to copy. Plugin may fail to start (ERR_MODULE_NOT_FOUND).')
   }
 
   private copyDir(src: string, dest: string): void {
