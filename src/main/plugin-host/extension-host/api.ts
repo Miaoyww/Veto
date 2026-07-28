@@ -1,15 +1,27 @@
 /**
  * api.ts — veto 虚拟模块的运行时 API 实现
  *
- * 第一版只实现 logger，但结构设计为方便后续扩展 storage / events / commands 等。
+ * 构建 `import { logger, events, storage, ... } from 'veto'` 返回的对象。
+ * 每个插件调用 `createVetoApi()` 获得独立实例（logger + storage 按插件隔离，
+ * events / conference / timeline / notifications 为全局共享单例）。
  */
 
-import { createLogger as createMainLogger } from '../../logger'
-import type { Logger as MainLogger } from '../../logger'
+import { eventBus } from '../../event-bus'
+import { createPluginStorage, type PluginStorage } from '../../storage'
+import { createNotifications, type PluginNotifications } from '../../notifications'
+import {
+  listConferences,
+  getConference,
+  updateConference,
+  listTimelines,
+  getTimeline,
+  updateTimeline,
+} from '../../data'
+import { createLogger as createMainLogger, type Logger as MainLogger } from '../../logger'
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // Logger
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 
 /** 暴露给插件的 Logger 接口 */
 export interface VetoLogger {
@@ -31,12 +43,10 @@ export function createPluginLogger(pluginId: string): VetoLogger {
       console.log(`[VetoExpress][${pluginId}][INFO] ${message}`)
       mainLogger.info(message)
     },
-
     warn(message: string): void {
       console.warn(`[VetoExpress][${pluginId}][WARN] ${message}`)
       mainLogger.warn(message)
     },
-
     error(error: Error | string): void {
       const msg = typeof error === 'string' ? error : error.message
       console.error(`[VetoExpress][${pluginId}][ERROR] ${msg}`)
@@ -45,7 +55,6 @@ export function createPluginLogger(pluginId: string): VetoLogger {
       }
       mainLogger.error(msg)
     },
-
     debug(message: string): void {
       console.debug(`[VetoExpress][${pluginId}][DEBUG] ${message}`)
       mainLogger.debug(message)
@@ -53,26 +62,66 @@ export function createPluginLogger(pluginId: string): VetoLogger {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PluginContext
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// EventBus（插件视角）
+// ═══════════════════════════════════════════════════════════════════
 
-/**
- * PluginContext — 注入到 activate(context) 的上下文对象。
- *
- * 当前只包含 id 和 logger。
- * 结构预留了 storage / events / commands 等未来扩展字段。
- */
+/** 暴露给插件的 EventBus 接口 */
+export interface VetoEventBus {
+  /** 订阅事件，返回取消订阅函数 */
+  on(pattern: string, handler: (data: Record<string, unknown>) => void): () => void
+  /** 分发事件 */
+  emit(type: string, data?: Record<string, unknown>): void
+}
+
+/** 包装全局 EventBus，提供插件友好的接口 */
+function createPluginEventBus(): VetoEventBus {
+  return {
+    on(pattern: string, handler: (data: Record<string, unknown>) => void): () => void {
+      return eventBus.on(pattern, (payload) => {
+        handler(payload.data)
+      })
+    },
+    emit(type: string, data?: Record<string, unknown>): void {
+      eventBus.emit(type, data ?? {})
+    },
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 共享单例（所有插件共用）
+// ═══════════════════════════════════════════════════════════════════
+
+const _sharedEvents = createPluginEventBus()
+const _sharedNotifications = createNotifications()
+
+const _sharedConference = {
+  list: listConferences,
+  get: getConference,
+  update: updateConference,
+}
+
+const _sharedTimeline = {
+  list: listTimelines,
+  get: getTimeline,
+  update: updateTimeline,
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PluginContext
+// ═══════════════════════════════════════════════════════════════════
+
+/** 注入到 activate(context) 的上下文对象 */
 export interface VetoPluginContext {
   readonly id: string
   readonly logger: VetoLogger
   readonly extensionPath: string
   readonly metadata: Record<string, unknown>
-
-  // ── 未来扩展 ──────────────────────────────────────────────────────────
-  // readonly storage: VetoStorage
-  // readonly events: VetoEventBus
-  // readonly commands: VetoCommands
+  readonly events: VetoEventBus
+  readonly storage: PluginStorage
+  readonly conference: typeof _sharedConference
+  readonly timeline: typeof _sharedTimeline
+  readonly notifications: PluginNotifications
 }
 
 /** 创建 PluginContext 的工厂选项 */
@@ -88,27 +137,39 @@ export function createPluginContext(options: CreateContextOptions): VetoPluginCo
     logger: createPluginLogger(options.pluginId),
     extensionPath: options.extensionPath,
     metadata: options.metadata ?? {},
+    events: _sharedEvents,
+    storage: createPluginStorage(options.extensionPath),
+    conference: _sharedConference,
+    timeline: _sharedTimeline,
+    notifications: _sharedNotifications,
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Veto API object — 即 require("veto") 返回的对象
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// Veto API — `import ... from "veto"` 返回的对象
+// ═══════════════════════════════════════════════════════════════════
 
-/**
- * 构建暴露给插件的 veto 模块对象。
- * 这个对象就是 `import { logger } from "veto"` 中 "veto" 的实际内容。
- *
- * 当前只导出一个全局 logger（插件级），插件通过 context.logger 获得专属 logger。
- * 模块顶层导出的 logger 是一个"未命名"的通用实例，用于插件在 activate() 之前
- * 或模块顶层测试输出。
- */
+/** 插件的 `import from 'veto'` 模块 */
 export interface VetoApi {
   logger: VetoLogger
+  events: VetoEventBus
+  storage: PluginStorage
+  conference: typeof _sharedConference
+  timeline: typeof _sharedTimeline
+  notifications: PluginNotifications
 }
 
-export function createVetoApi(pluginId: string): VetoApi {
+/**
+ * 为指定插件创建 veto 虚拟模块对象。
+ * 由 plugin-loader 注册到 Module._load 拦截表。
+ */
+export function createVetoApi(pluginId: string, pluginDir: string): VetoApi {
   return {
     logger: createPluginLogger(pluginId),
+    events: _sharedEvents,
+    storage: createPluginStorage(pluginDir),
+    conference: _sharedConference,
+    timeline: _sharedTimeline,
+    notifications: _sharedNotifications,
   }
 }

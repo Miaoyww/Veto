@@ -110,7 +110,7 @@ export async function loadPlugin(
 
   // 4. 注册 veto 虚拟模块 —— 这是整件事的核心
   //    Module._load 拦截在 module-injector.ts 中，import 时生效
-  const vetoApi = createVetoApi(id)
+  const vetoApi = createVetoApi(id, pluginPath)
   registerPluginApi(pluginPath, vetoApi as unknown as Record<string, unknown>)
 
   const record: LoadedPlugin = {
