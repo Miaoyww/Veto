@@ -145,6 +145,8 @@ export type MotionType =
   | 'substantive_vote'
   /** 更改出席状态 */
   | 'change_attendance'
+  /** 个人演讲 */
+  | 'individual_speech'
 
 export type MotionStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
@@ -230,6 +232,13 @@ export interface ChangeAttendanceMotion extends AbstractMotion {
   newAttendance: Attendance
 }
 
+/** 个人演讲 */
+export interface IndividualSpeechMotion extends AbstractMotion {
+  type: 'individual_speech'
+  /** 发言时长（秒） */
+  durationSec: number
+}
+
 export type Motion =
   | ModeratedCaucusMotion
   | UnmoderatedCaucusMotion
@@ -242,6 +251,7 @@ export type Motion =
   | ReorderResolutionMotion
   | SubstantiveVoteMotion
   | ChangeAttendanceMotion
+  | IndividualSpeechMotion
 
 /** 动议类型的中文标签 */
 export const MOTION_LABELS: Record<MotionType, string> = {
@@ -256,7 +266,8 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   close_meeting: '闭幕',
   reorder_resolution: '调整投票顺序',
   substantive_vote: '实质性投票',
-  change_attendance: '更改出席状态'
+  change_attendance: '更改出席状态',
+  individual_speech: '个人演讲'
 }
 
 export interface Point {
@@ -326,7 +337,7 @@ export { ACTION_LABELS }
 
 export type ProposerPosition = 'first' | 'last'
 
-export type CaucusType = 'moderated' | 'unmoderated'
+export type CaucusType = 'moderated' | 'unmoderated' | 'individual'
 
 export interface Conference {
   id: string

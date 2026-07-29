@@ -9,7 +9,7 @@
 
 // ── 会议操作类型 ──────────────────────────────────────────────────────────
 
-/** 会议操作类型（权威定义，共 25 种） */
+/** 会议操作类型（权威定义，共 27 种） */
 export type ConferenceActionType =
   | 'roll_call_completed'
   | 'roll_call_reset'
@@ -26,6 +26,8 @@ export type ConferenceActionType =
   | 'caucus_started'
   | 'caucus_paused'
   | 'caucus_ended'
+  | 'individual_speech_started'
+  | 'individual_speech_ended'
   | 'meeting_suspended'
   | 'meeting_resumed'
   | 'meeting_closed'
@@ -73,6 +75,8 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   caucus_started: '磋商开始',
   caucus_paused: '磋商暂停',
   caucus_ended: '磋商结束',
+  individual_speech_started: '个人演讲开始',
+  individual_speech_ended: '个人演讲结束',
   meeting_suspended: '暂时休会',
   meeting_resumed: '会议恢复',
   meeting_closed: '会议闭幕',

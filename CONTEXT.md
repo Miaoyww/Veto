@@ -58,6 +58,12 @@ _Avoid_: Structured Debate
 非结构化磋商。只有一个总倒计时，代表自由交流。
 _Avoid_: Free Discussion, Lobbying
 
+**IndividualSpeech (个人演讲)**:
+一种无需表决的动议。提出方获得独占发言时间（单人独白），
+时长在动议中指定，主席可随时提前结束。复用 caucus 阶段，
+结束后回到 general_debate。
+_Avoid_: Personal Statement, Solo Speech, Address
+
 **Point (问题)**:
 代表在会议中提出的程序性问题。三种类型：
 point_of_order（程序性）、point_of_inquiry（咨询性）、

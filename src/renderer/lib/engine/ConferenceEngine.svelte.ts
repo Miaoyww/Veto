@@ -726,6 +726,9 @@ export class ConferenceEngine {
       case 'change_attendance':
         this.executeChangeAttendance(motion)
         break
+      case 'individual_speech':
+        this.startCaucusImpl(motion.id)
+        break
     }
   }
 
@@ -883,13 +886,22 @@ export class ConferenceEngine {
     } else if (motion.type === 'unmoderated_caucus') {
       caucusType = 'unmoderated'
       totalSec = (motion as any).durationSec
+    } else if (motion.type === 'individual_speech') {
+      caucusType = 'individual'
+      totalSec = (motion as any).durationSec
     }
 
     this.phase = 'caucus'
     this.activeCaucus = { motionId, type: caucusType, totalSec, elapsedSec: 0, paused: false }
 
-    const label = caucusType === 'moderated' ? '有主持核心磋商' : '自由磋商'
-    this.addConferenceEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
+    const label =
+      caucusType === 'moderated'
+        ? '有主持核心磋商'
+        : caucusType === 'individual'
+          ? '个人演讲'
+          : '自由磋商'
+    const eventType = caucusType === 'individual' ? 'individual_speech_started' : 'caucus_started'
+    this.addConferenceEntry(eventType, `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
     this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
     this.touch()
   }
@@ -1177,9 +1189,13 @@ export class ConferenceEngine {
   }
 
   endCaucus(): void {
+    const caucusType = this.activeCaucus?.type
     this.phase = 'general_debate'
     this.activeCaucus = null
-    this.addConferenceEntry('caucus_ended', '磋商结束')
+    const eventType =
+      caucusType === 'individual' ? 'individual_speech_ended' : 'caucus_ended'
+    const label = caucusType === 'individual' ? '个人演讲结束' : '磋商结束'
+    this.addConferenceEntry(eventType, label)
     this.addConferenceEntry('phase_changed', '进入阶段: 一般性辩论')
     this.touch()
   }
@@ -1496,6 +1512,8 @@ export class ConferenceEngine {
     voting_ended: 'conference:voting_ended',
     caucus_started: 'conference:caucus_started',
     caucus_ended: 'conference:caucus_ended',
+    individual_speech_started: 'conference:individual_speech_started',
+    individual_speech_ended: 'conference:individual_speech_ended',
     meeting_suspended: 'conference:meeting_suspended',
     meeting_resumed: 'conference:meeting_resumed',
     meeting_closed: 'conference:meeting_closed',

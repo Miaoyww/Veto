@@ -126,7 +126,11 @@ function getWs(): WebSocket {
 
   _ws.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data) as ConferenceDisplayData
+      const raw = JSON.parse(event.data)
+      // Host 端发送的消息格式为 { type: 'host', data: ConferenceDisplayData }
+      // Display 端需要解包，取 raw.data 作为实际数据
+      const data: ConferenceDisplayData =
+        raw.type === 'host' ? (raw.data as ConferenceDisplayData) : (raw as ConferenceDisplayData)
       for (const cb of _wsListeners) {
         cb(data)
       }
@@ -381,9 +385,13 @@ export function buildDisplayData(
       type: conf.activeCaucus.type,
       status,
       topic:
-        conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)?.type === 'moderated_caucus'
-          ? (conf.motions.find((m) => m.id === conf.activeCaucus?.motionId) as any)?.topic
-          : undefined,
+        (() => {
+          const motion = conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)
+          if (!motion) return undefined
+          if (motion.type === 'moderated_caucus') return (motion as any).topic as string | undefined
+          if (motion.type === 'individual_speech') return motion.proposedBy.name
+          return undefined
+        })(),
       caucusSpeakers: conf.activeCaucus.caucusSpeakers
         ?.map((s) => {
           const delegation = conf.delegations.find((d) => d.id === s.delegationId)
@@ -476,7 +484,9 @@ export function buildDisplayData(
               ? (displayMotion as any).totalTimeSec
               : displayMotion.type === 'unmoderated_caucus'
                 ? (displayMotion as any).durationSec
-                : undefined,
+                : displayMotion.type === 'individual_speech'
+                  ? (displayMotion as any).durationSec
+                  : undefined,
           speakingTimePerPersonSec:
             displayMotion.type === 'moderated_caucus'
               ? (displayMotion as any).speakingTimePerPersonSec

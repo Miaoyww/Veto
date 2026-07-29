@@ -8,7 +8,8 @@
     Coffee,
     LogOut,
     Vote,
-    UserRoundCheck
+    UserRoundCheck,
+    Mic
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -63,6 +64,7 @@
         'change_attendance',
         'moderated_caucus',
         'unmoderated_caucus',
+        'individual_speech',
         'modify_speaking_time',
         'closure_debate',
         'suspend_meeting',
@@ -90,7 +92,8 @@
     suspend_meeting: Timer,
     close_meeting: LogOut,
     substantive_vote: Vote,
-    change_attendance: UserRoundCheck
+    change_attendance: UserRoundCheck,
+    individual_speech: Mic
   }
 
   // ---- Form state ----
@@ -122,6 +125,9 @@
   let newAttendance = $derived<Attendance>(
     selectedProposer?.attendance === 'present' ? 'absent' : 'present'
   )
+  // Individual Speech
+  let isDurationSec = $state(120)
+  let committedIsDurationSec = $state(120)
 
   function resetForm(): void {
     selectedProposer = null
@@ -139,6 +145,8 @@
     committedNewTimeSec = 90
     documentName = ''
     committedDocumentName = ''
+    isDurationSec = 120
+    committedIsDurationSec = 120
   }
 
   function handleOpenChange(value: boolean): void {
@@ -184,6 +192,9 @@
       case 'change_attendance':
         motionData.newAttendance = newAttendance
         break
+      case 'individual_speech':
+        motionData.durationSec = committedIsDurationSec
+        break
     }
 
     proposeMotion(motionData)
@@ -196,7 +207,7 @@
       if (newMotion) {
         approveMotion(newMotion.id)
 
-        if (selectedType === 'moderated_caucus' || selectedType === 'unmoderated_caucus') {
+        if (selectedType === 'moderated_caucus' || selectedType === 'unmoderated_caucus' || selectedType === 'individual_speech') {
           import('$lib/stores/conference/conference-store').then(({ startCaucus }) => {
             startCaucus(newMotion.id)
           })
@@ -228,6 +239,8 @@
         )
       case 'unmoderated_caucus':
         return ucDurationMin !== committedUcDurationMin
+      case 'individual_speech':
+        return isDurationSec !== committedIsDurationSec
       case 'modify_speaking_time':
         return newTimeSec !== committedNewTimeSec
       case 'substantive_vote':
@@ -269,7 +282,9 @@
           ? committedMcTotalSec
           : selectedType === 'unmoderated_caucus'
             ? committedUcDurationMin * 60
-            : undefined,
+            : selectedType === 'individual_speech'
+              ? committedIsDurationSec
+              : undefined,
       speakingTimePerPersonSec:
         selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
       newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined,
@@ -441,6 +456,34 @@
               </datalist>
             {/if}
             <p class="mt-1 text-[10px] text-muted-foreground">此文件将进入唱名表决（2/3多数）</p>
+          </div>
+        {:else if selectedType === 'individual_speech'}
+          <div>
+            <Label class="mb-1.5 block text-xs text-muted-foreground">发言时长（秒）</Label>
+            <Input
+              type="number"
+              min="1"
+              step="15"
+              bind:value={isDurationSec}
+              class="h-9 text-sm w-32"
+              onblur={() => (committedIsDurationSec = isDurationSec)}
+            />
+            <div class="mt-1.5 flex gap-1">
+              {#each [60, 120, 300] as sec (sec)}
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onclick={() => ((isDurationSec = sec), (committedIsDurationSec = sec))}
+                >
+                  {sec}s
+                </Button>
+              {/each}
+            </div>
+            {#if selectedProposer}
+              <p class="mt-1 text-[10px] text-muted-foreground">
+                {selectedProposer.name} 将获得 {committedIsDurationSec} 秒的独占发言时间
+              </p>
+            {/if}
           </div>
         {:else if selectedType === 'change_attendance'}
           <Separator />
