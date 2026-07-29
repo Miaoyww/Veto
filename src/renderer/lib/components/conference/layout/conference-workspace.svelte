@@ -10,7 +10,14 @@
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
   import {
-    Gavel, Play, Users, Monitor, HelpCircle, UserRoundCheck, Timer, ScrollText
+    Gavel,
+    Play,
+    Users,
+    Monitor,
+    HelpCircle,
+    UserRoundCheck,
+    Timer,
+    ScrollText
   } from '@lucide/svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -296,10 +303,7 @@
     {/key}
 
     <!-- Log Dialog -->
-    <ConferenceLogDialog
-      bind:open={logDialogOpen}
-      minutes={conf?.minutes ?? []}
-    />
+    <ConferenceLogDialog bind:open={logDialogOpen} minutes={conf?.minutes ?? []} />
   {:else}
     <div class="flex flex-1 items-center justify-center text-muted-foreground">
       <p>请选择或创建一场大会</p>

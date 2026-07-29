@@ -1,5 +1,15 @@
 <script lang="ts">
-  import { Users, Gavel, Building2, ArrowLeft, Calculator, Clock, Copy, Check, X } from '@lucide/svelte'
+  import {
+    Users,
+    Gavel,
+    Building2,
+    ArrowLeft,
+    Calculator,
+    Clock,
+    Copy,
+    Check,
+    X
+  } from '@lucide/svelte'
   import { navigate } from '$lib/router.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { bindTimeline } from '$lib/stores/conference/conference-store'
@@ -9,6 +19,7 @@
   import * as Popover from '$lib/components/ui/popover'
   import * as Command from '$lib/components/ui/command'
   import { cn } from '$lib/utils.js'
+  import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
 
   const conf = $derived($currentConference)
 
@@ -18,7 +29,6 @@
   const votingCount = $derived(
     conf?.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length ?? 0
   )
-  const totalCount = $derived(conf?.delegations.length ?? 0)
   const simpleMajority = $derived(Math.floor(votingCount / 2) + 1)
   const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
 
@@ -47,7 +57,9 @@
   const tlPausedSimTime = $derived(tlState?.pausedSimulationTime)
 
   let liveSimTime = $state(
-    tlPaused ? (tlPausedSimTime ?? tlSimAnchor) : tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
+    tlPaused
+      ? (tlPausedSimTime ?? tlSimAnchor)
+      : tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
   )
 
   $effect(() => {
@@ -124,7 +136,9 @@
 
       {#if timeline}
         <div class="mt-1.5 flex items-center gap-1.5">
-          <span class="min-w-0 truncate text-xs font-medium text-indigo-600 dark:text-indigo-400 tabular-nums">
+          <span
+            class="min-w-0 truncate text-xs font-medium text-indigo-600 dark:text-indigo-400 tabular-nums"
+          >
             {formatSimTime(liveSimTime)}
           </span>
           <Button
@@ -172,10 +186,7 @@
                 <Command.Empty>无匹配结果</Command.Empty>
                 <Command.Group>
                   {#each timelineItems as item (item.value)}
-                    <Command.Item
-                      value={item.value}
-                      onSelect={() => handleBind(item.value)}
-                    >
+                    <Command.Item value={item.value} onSelect={() => handleBind(item.value)}>
                       {item.label}
                     </Command.Item>
                   {/each}
@@ -205,42 +216,44 @@
     </div>
 
     <!-- 代表团列表 -->
-    <div class="flex-1 overflow-hidden">
-      <div class="flex items-center gap-1.5 px-5 pb-2">
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <div class="flex shrink-0 items-center gap-1.5 px-5 pb-2">
         <Users size={12} class="text-muted-foreground" />
         <span class="text-[11px] font-medium text-muted-foreground">
           代表团 ({presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票)
         </span>
       </div>
 
-      <div class="overflow-y-auto px-3 pb-3" style="max-height: calc(100% - 24px);">
-        {#each conf.delegations as delegation (delegation.id)}
-          {@const isPresent = delegation.attendance === 'present'}
-          {@const isObserver = isPresent && delegation.vetoPower === false}
-          {@const isVoter = isPresent && !isObserver}
-          <div
-            class={cn(
-              'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
-              isPresent ? '' : 'opacity-50'
-            )}
-          >
-            <!-- 名称 -->
-            <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-              {delegation.name}
-            </span>
-            <!-- 出席状态 icon -->
-            <span class="shrink-0 text-[10px]">
-              {#if isVoter}
-                <span class="text-emerald-500">●</span>
-              {:else if isObserver}
-                <span class="text-blue-500">●</span>
-              {:else}
-                <span class="text-muted-foreground/40">○</span>
-              {/if}
-            </span>
-          </div>
-        {/each}
-      </div>
+      <ScrollArea class="flex-1 min-h-0">
+        <div class="px-3 pb-3">
+          {#each conf.delegations as delegation (delegation.id)}
+            {@const isPresent = delegation.attendance === 'present'}
+            {@const isObserver = isPresent && delegation.vetoPower === false}
+            {@const isVoter = isPresent && !isObserver}
+            <div
+              class={cn(
+                'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
+                isPresent ? '' : 'opacity-50'
+              )}
+            >
+              <!-- 名称 -->
+              <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                {delegation.name}
+              </span>
+              <!-- 出席状态 icon -->
+              <span class="shrink-0 text-[10px]">
+                {#if isVoter}
+                  <span class="text-emerald-500">●</span>
+                {:else if isObserver}
+                  <span class="text-blue-500">●</span>
+                {:else}
+                  <span class="text-muted-foreground/40">○</span>
+                {/if}
+              </span>
+            </div>
+          {/each}
+        </div>
+      </ScrollArea>
     </div>
   {:else}
     <div class="flex flex-1 items-center justify-center px-5 text-center">

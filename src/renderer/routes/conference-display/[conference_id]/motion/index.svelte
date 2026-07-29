@@ -89,7 +89,7 @@
     <div class="mt-5 flex flex-col items-center gap-2">
       <AutoFitText
         text={displayTitle}
-        class="font-semibold tracking-wide text-white text-balance wrap-break-word"
+        class="font-sem ibold tracking-wide text-white text-balance wrap-break-word"
       />
     </div>
 
