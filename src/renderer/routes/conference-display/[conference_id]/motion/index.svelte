@@ -4,7 +4,7 @@
    * ──────────────────────
    * 动议阶段内容组件 —— 通过 $props 接收 Shell 传入的数据。
    *
-   * 阶段流转：editing（编辑中） → voting（表决中） → result（结果）
+   * 阶段流转：voting（表决中） → result（结果）
    */
   import {
     Presentation,
@@ -18,20 +18,19 @@
     UserRoundCheck
   } from '@lucide/svelte'
   import { MOTION_LABELS } from '$lib/types-conference'
-  import type { ConferenceDisplayData, MotionDraft } from '$lib/types-conference'
+  import type { ConferenceDisplayData } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
   import AutoFitText from '$lib/components/conference/display/auto-fit-text.svelte'
+  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
-  const draft = $derived(data.motionDraft ?? null)
   const activeMotion = $derived(data.activeMotion ?? null)
 
-  // 阶段：draft → voting → result
   const motionStage = $derived.by(() => {
-    if (activeMotion) return activeMotion.status === 'pending' ? 'voting' : 'result'
-    if (draft) return 'editing'
-    return null
+    if (!activeMotion) return null
+    return activeMotion.status === 'pending' ? 'voting' : 'result'
   })
 
   const MOTION_ICONS: Record<string, typeof Gavel> = {
@@ -46,271 +45,102 @@
     change_attendance: UserRoundCheck
   }
 
-  const typeForIcon = $derived(activeMotion?.type ?? draft?.type)
-  const Icon = $derived(typeForIcon ? (MOTION_ICONS[typeForIcon] ?? Presentation) : Presentation)
-
-  /**
-   * 按动议类型生成 Display 上展示的标题和副标题。
-   * - moderated_caucus → 标题=议题文本，副标题=空
-   * - unmoderated_caucus → 标题="自由磋商"，副标题="为 N 分钟"
-   * - modify_speaking_time → 标题="修改发言时间"，副标题="为 N 秒"
-   * - 其他 → 标题=动议类型中文名，副标题=空
-   */
-  function getDisplayParts(
-    d: MotionDraft | null,
-    am: ConferenceDisplayData['activeMotion']
-  ): { title: string; subtitle: string } {
-    const type = (am?.type ?? d?.type) as MotionType | undefined
-    if (!type) return { title: '', subtitle: '' }
-
-    switch (type) {
-      case 'moderated_caucus': {
-        const topic = am?.topic ?? d?.topic ?? ''
-        return { title: topic, subtitle: topic ? '动议主题' : '' }
-      }
-      case 'unmoderated_caucus': {
-        const sec = am?.totalTimeSec ?? d?.totalTimeSec
-        if (sec) {
-          const min = sec / 60
-          return {
-            title: '自由磋商',
-            subtitle: `为 ${min % 1 === 0 ? min : min.toFixed(1)} 分钟`
-          }
-        }
-        return { title: '自由磋商', subtitle: '' }
-      }
-      case 'modify_speaking_time': {
-        const sec = am?.newTimeSec ?? d?.newTimeSec
-        return {
-          title: '修改发言时间',
-          subtitle: sec != null ? `为 ${sec} 秒` : ''
-        }
-      }
-      case 'suspend_meeting':
-        return { title: '暂时休会', subtitle: '' }
-      case 'close_meeting':
-        return { title: '闭幕', subtitle: '' }
-      case 'closure_debate':
-        return { title: '结束辩论', subtitle: '' }
-      case 'open_speakers_list':
-        return { title: '开启主发言名单', subtitle: '' }
-      case 'change_attendance':
-        return { title: '更改出席状态', subtitle: '' }
-      case 'substantive_vote': {
-        const docName = am?.documentName ?? d?.documentName ?? ''
-        return { title: docName, subtitle: docName ? '实质性投票' : '' }
-      }
-      default:
-        return { title: MOTION_LABELS[type] ?? type, subtitle: '' }
-    }
-  }
-
-  const displayParts = $derived(getDisplayParts(draft, activeMotion))
-  const displayTitle = $derived(displayParts.title)
-  const displaySubtitle = $derived(displayParts.subtitle)
-
-  // focus 模式：有e标题内容时放大展示
-  const isFocused = $derived(
-    draft?.type != null && draft?.type !== 'open_speakers_list' && displayTitle !== ''
+  const Icon = $derived(
+    activeMotion?.type ? (MOTION_ICONS[activeMotion.type] ?? Presentation) : Presentation
   )
 
-  $effect(() => {
-    console.log('motion display data updated:', {
-      draft
-    })
-    console.log(isFocused)
-  })
+  function getDisplayParts(am: ConferenceDisplayData['activeMotion']): {
+    title: string
+  } {
+    const type = am?.type as MotionType | undefined
+    if (!type) return { title: '' }
+
+    switch (type) {
+      case 'moderated_caucus':
+        return { title: am?.topic ?? '' }
+      case 'unmoderated_caucus':
+        return { title: '自由磋商' }
+      case 'modify_speaking_time':
+        return { title: '修改发言时间' }
+      case 'suspend_meeting':
+        return { title: '暂时休会' }
+      case 'close_meeting':
+        return { title: '闭幕' }
+      case 'closure_debate':
+        return { title: '结束辩论' }
+      case 'open_speakers_list':
+        return { title: '开启主发言名单' }
+      case 'change_attendance':
+        return { title: '更改出席状态' }
+      case 'substantive_vote':
+        return { title: am?.documentName ?? '' }
+      default:
+        return { title: MOTION_LABELS[type] ?? type }
+    }
+  }
+
+  const displayTitle = $derived(getDisplayParts(activeMotion).title)
 </script>
 
-<div class="flex w-full flex-col items-center">
-  {#if motionStage}
-    <div class="w-full px-10 py-8 text-center">
-      {#if motionStage === 'editing'}
-        <!-- 编辑阶段：逐步展示填写内容 -->
-        <div
-          class="flex w-full flex-col items-center gap-4"
-          style="transition: all 0.7s ease; min-height: {isFocused ? '75vh' : 'auto'}"
-        >
-          <!-- 描述大字（focus 模式：居中） -->
-          {#if isFocused && displayTitle}
-            <div class="flex flex-col items-center justify-center gap-6">
-              <div style="animation: fadeUp 0.7s ease both">
-                <AutoFitText
-                  text={displayTitle}
-                  class="font-semibold tracking-wide text-white text-balance wrap-break-word"
-                />
-              </div>
-              {#if displaySubtitle}
-                <div
-                  class="tracking-wide text-white/60 text-3xl"
-                  style="animation: fadeUp 0.7s ease both"
-                >
-                  {displaySubtitle}
-                </div>
-              {/if}
-              <div class="mt-6 text-3xl tracking-wider text-white/40">
-                {#if draft?.totalTimeSec}
-                  <div class="text-3xl tracking-wider text-white/25">
-                    时长：<span class="text-white/45">{draft.totalTimeSec} 秒</span>
-                    {#if draft?.speakingTimePerPersonSec}
-                      <span class="mx-3 text-white/10">|</span>
-                      每人发言
-                      <span class="text-white/45">{draft.speakingTimePerPersonSec} 秒</span>
-                    {/if}
-                  </div>
-                {/if}
-                {#if draft?.newTimeSec != null}
-                  <div class="text-3xl tracking-wider text-white/25">
-                    发言时间：<span class="text-white/45">{draft.newTimeSec} 秒</span>
-                  </div>
-                {/if}
-              </div>
-            </div>
-          {/if}
+<DisplayPage>
+  {#if motionStage === 'voting' && activeMotion}
+    <DisplaySectionHeader {Icon} label="动议表决" colorClass="text-[#5B92E5]" />
 
-          <!-- 头部信息（收到 topic 后自动隐去） -->
-          {#if !isFocused}
-            <div class="flex flex-col items-center gap-4">
-              <!-- 动议 标签 -->
-              <div class="flex items-center justify-center gap-3">
-                <Icon size={24} class="text-[#5B92E5]" />
-                <span class="text-3xl font-semibold tracking-[0.08em] text-[#5B92E5] uppercase"
-                  >动议</span
-                >
-              </div>
+    <div class="mt-5 flex flex-col items-center gap-2">
+      <AutoFitText
+        text={displayTitle}
+        class="font-semibold tracking-wide text-white text-balance wrap-break-word"
+      />
+    </div>
 
-              {#if draft?.proposedBy}
-                <div style="animation: expandTracking 0.8s ease-out both">
-                  <AutoFitText
-                    text={draft.proposedBy.name}
-                    maxRem={8}
-                    class="font-semibold text-white"
-                  />
-                </div>
-                <div class="tracking-wide text-white/30 text-4xl">动议</div>
-                {#if draft?.type}
-                  <div class="text-4xl tracking-wide text-white/40">
-                    {MOTION_LABELS[draft.type] ?? draft.type}
-                  </div>
-                {/if}
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {:else if motionStage === 'voting' && activeMotion}
-        <!-- 表决阶段 -->
-        <div class="flex items-center justify-center gap-3">
-          <Icon size={32} class="text-[#5B92E5]" />
-          <span class="text-3xl font-semibold tracking-[0.08em] text-[#5B92E5] uppercase"
-            >动议表决</span
-          >
-        </div>
+    <div class="mt-3 text-3xl tracking-wider text-white/40">
+      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
+    </div>
 
-        <div class="mt-5 flex flex-col items-center gap-2">
-          <AutoFitText
-            text={displayTitle}
-            class="font-semibold tracking-wide text-white text-balance wrap-break-word"
-          />
-        </div>
-
-        <div class="mt-3 text-3xl tracking-wider text-white/40">
-          由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
-        </div>
-
-        {#if activeMotion.type === 'moderated_caucus'}
-          <div class="mt-15 space-y-2 text-2xl tracking-wider text-white/25">
-            {#if activeMotion.totalTimeSec}
-              <p>总时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span></p>
-            {/if}
-            {#if activeMotion.speakingTimePerPersonSec}
-              <p>
-                每人发言：<span class="text-white/45"
-                  >{activeMotion.speakingTimePerPersonSec} 秒</span
-                >
-              </p>
-            {/if}
-          </div>
-        {:else if activeMotion.type === 'unmoderated_caucus' && activeMotion.totalTimeSec}
-          <div class="mt-5 text-2xl tracking-wider text-white/25">
-            时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
-          </div>
-        {:else if activeMotion.type === 'modify_speaking_time' && activeMotion.newTimeSec != null}
-          <div class="mt-5 text-2xl tracking-wider text-white/25">
-            修改发言时间为 <span class="text-white/45">{activeMotion.newTimeSec} 秒</span>
-          </div>
+    {#if activeMotion.type === 'moderated_caucus'}
+      <div class="mt-15 space-y-2 text-2xl tracking-wider text-white/25">
+        {#if activeMotion.totalTimeSec}
+          <p>总时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span></p>
         {/if}
-      {:else if motionStage === 'result' && activeMotion}
-        <!-- 结果 -->
-        {@const isApproved = activeMotion.status === 'approved'}
-        <div class="flex items-center justify-center gap-3">
-          <Icon size={32} class={isApproved ? 'text-emerald-400' : 'text-red-400'} />
-          <span
-            class="text-3xl font-semibold tracking-[0.08em] uppercase {isApproved
-              ? 'text-emerald-400'
-              : 'text-red-400'}"
-          >
-            {isApproved ? '表决通过' : '表决否决'}
-          </span>
-        </div>
+        {#if activeMotion.speakingTimePerPersonSec}
+          <p>
+            每人发言：<span class="text-white/45">{activeMotion.speakingTimePerPersonSec} 秒</span>
+          </p>
+        {/if}
+      </div>
+    {:else if activeMotion.type === 'unmoderated_caucus' && activeMotion.totalTimeSec}
+      <div class="mt-5 text-2xl tracking-wider text-white/25">
+        时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
+      </div>
+    {:else if activeMotion.type === 'modify_speaking_time' && activeMotion.newTimeSec != null}
+      <div class="mt-5 text-2xl tracking-wider text-white/25">
+        修改发言时间为 <span class="text-white/45">{activeMotion.newTimeSec} 秒</span>
+      </div>
+    {/if}
+  {:else if motionStage === 'result' && activeMotion}
+    {@const isApproved = activeMotion.status === 'approved'}
+    <DisplaySectionHeader
+      {Icon}
+      label={isApproved ? '表决通过' : '表决否决'}
+      colorClass={isApproved ? 'text-emerald-400' : 'text-red-400'}
+    />
 
-        <div
-          class="mt-5 text-8xl font-bold tracking-wide {isApproved
-            ? 'text-emerald-400'
-            : 'text-red-400'}"
-        >
-          {isApproved ? '通过' : '否决'}
-        </div>
+    <div
+      class="mt-5 text-8xl font-bold tracking-wide {isApproved
+        ? 'text-emerald-400'
+        : 'text-red-400'}"
+    >
+      {isApproved ? '通过' : '否决'}
+    </div>
 
-        <div class="mt-4 font-semibold tracking-wide text-white">
-          <AutoFitText
-            text={displayTitle}
-            class="font-semibold tracking-wide text-white text-balance"
-          />
-        </div>
-        <div class="mt-3 text-3xl tracking-wider text-white/40">
-          由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
-        </div>
-      {/if}
+    <div class="mt-4 font-semibold tracking-wide text-white">
+      <AutoFitText
+        text={displayTitle}
+        class="font-semibold tracking-wide text-white text-balance"
+      />
+    </div>
+    <div class="mt-3 text-3xl tracking-wider text-white/40">
+      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
     </div>
   {/if}
-</div>
-
-<style>
-  @keyframes fadeUp {
-    0% {
-      opacity: 0;
-      transform: scale(0.5) translateY(40px);
-      letter-spacing: 0;
-    }
-    60% {
-      opacity: 1;
-      transform: scale(1.05) translateY(-8px);
-      letter-spacing: 0.08em;
-    }
-    80% {
-      transform: scale(0.97) translateY(3px);
-      letter-spacing: 0.12em;
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-      letter-spacing: 0.15em;
-    }
-  }
-
-  @keyframes expandTracking {
-    0% {
-      opacity: 0;
-      letter-spacing: 0;
-      transform: scale(0.8);
-    }
-    60% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 1;
-      letter-spacing: 0.3em;
-      transform: scale(1);
-    }
-  }
-</style>
+</DisplayPage>

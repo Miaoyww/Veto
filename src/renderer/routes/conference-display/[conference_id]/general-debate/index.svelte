@@ -18,6 +18,7 @@
   import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
   import DelegationNameDisplay from '$lib/components/conference/display/delegation-name-display.svelte'
+  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
@@ -37,7 +38,8 @@
   const isYieldDelegate = $derived(yp?.yieldType === 'delegate')
 </script>
 
-<!-- ═══ 让渡处理中状态 ═══ -->
+<DisplayPage>
+  <!-- ═══ 让渡处理中状态 ═══ -->
 {#if isYieldCalling}
   <!-- 主席呼吁场下提问/评论 -->
   <div class="flex flex-col items-center gap-10">
@@ -104,4 +106,5 @@
     title={displayTitle}
     subtitle={displaySubtitle}
   />
-{/if}
+    {/if}
+</DisplayPage>

@@ -7,6 +7,7 @@
   import { POINT_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import DelegationNameDisplay from '$lib/components/conference/display/delegation-name-display.svelte'
+  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 
@@ -21,14 +22,11 @@
   const hasType = $derived(type != null)
 </script>
 
-<div class="flex w-full flex-col items-center">
+<DisplayPage>
   {#if proposer}
-    <div class="w-full px-10 py-8 text-center">
-      <div class="mt-10">
-        <DelegationNameDisplay name={proposer.name} shortName={proposer.shortName ?? ''} />
-      </div>
+    <div class="text-center">
+      <DelegationNameDisplay name={proposer.name} shortName={proposer.shortName ?? ''} />
       {#if hasType}
-        <!-- 问题类型 -->
         <div class="mt-4 text-4xl tracking-wide text-white/40">
           提出 {label}
         </div>
@@ -37,4 +35,4 @@
       {/if}
     </div>
   {/if}
-</div>
+</DisplayPage>

@@ -20,7 +20,7 @@ const DEFAULTS: GlobalSettings = {
 	language: 'zh-cn',
 	theme: 'system',
 	displayOffsetX: 0,
-	displayOffsetY: 260
+	displayOffsetY: 0
 };
 
 function createGlobalSettings() {

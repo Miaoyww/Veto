@@ -6,7 +6,6 @@
     currentConference,
     loadConference,
     currentConferenceId,
-    motionDraft,
     pointDraft,
     saveConferencesNow
   } from '$lib/stores/conference/conference-store'
@@ -32,7 +31,6 @@
     if (conf) {
       getDisplayBridge().sendUpdate(
         buildDisplayData(conf, {
-          motionDraft: $motionDraft ?? undefined,
           pointDraft: $pointDraft ?? undefined
         })
       )

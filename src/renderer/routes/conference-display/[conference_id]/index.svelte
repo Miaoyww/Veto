@@ -106,6 +106,7 @@
 
   // 特殊动议（isRequestingVote: false）不应触发 MotionDisplay
   const isSpecialMotion = $derived(displayData?.motionDraft?.isRequestingVote === false)
+  const hasActiveMotion = $derived(displayData?.activeMotion != null)
 
   // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
   let effectivePhase = $state<string | null>(null)
@@ -238,32 +239,30 @@
       />
     {:else}
       <!-- 主展示区（phase 动态切换） -->
-      <div class="flex items-start justify-center overflow-hidden px-16" style={contentStyle}>
-        <div class="flex w-full flex-col items-center">
-          {#if displayData.pointDraft?.proposedBy || displayData.activePoint}
-            <QuestionDisplay data={displayData} />
-          {:else if effectivePhase === 'motion' && !isSpecialMotion}
-            <MotionDisplay data={displayData} />
-          {:else if effectivePhase === 'roll_call'}
-            <RollCallDisplay data={displayData} />
-          {:else if effectivePhase === 'general_debate'}
-            <GeneralDebateDisplay data={displayData} />
-          {:else if effectivePhase === 'caucus_setup'}
-            <CaucusSetupDisplay data={displayData} />
-          {:else if displayData.caucusTimer && effectivePhase === 'caucus'}
-            <CaucusDisplay data={displayData} />
-          {:else if displayData.votingSession && effectivePhase === 'voting'}
-            <VotingDisplay data={displayData} />
-          {:else if effectivePhase === 'pending_speakers_list'}
-            <PendingSpeakersListDisplay />
-          {:else if effectivePhase === 'suspended'}
-            <SuspendedDisplay />
-          {:else if effectivePhase === 'closed'}
-            <ClosedDisplay />
-          {:else}
-            <ReadyDisplay data={displayData} />
-          {/if}
-        </div>
+      <div class="flex flex-1 items-center justify-center overflow-hidden px-16" style={contentStyle}>
+        {#if displayData.pointDraft?.proposedBy || displayData.activePoint}
+          <QuestionDisplay data={displayData} />
+        {:else if effectivePhase === 'motion' && !isSpecialMotion && hasActiveMotion}
+          <MotionDisplay data={displayData} />
+        {:else if effectivePhase === 'roll_call'}
+          <RollCallDisplay data={displayData} />
+        {:else if effectivePhase === 'general_debate'}
+          <GeneralDebateDisplay data={displayData} />
+        {:else if effectivePhase === 'caucus_setup'}
+          <CaucusSetupDisplay data={displayData} />
+        {:else if displayData.caucusTimer && effectivePhase === 'caucus'}
+          <CaucusDisplay data={displayData} />
+        {:else if displayData.votingSession && effectivePhase === 'voting'}
+          <VotingDisplay data={displayData} />
+        {:else if effectivePhase === 'pending_speakers_list'}
+          <PendingSpeakersListDisplay />
+        {:else if effectivePhase === 'suspended'}
+          <SuspendedDisplay />
+        {:else if effectivePhase === 'closed'}
+          <ClosedDisplay />
+        {:else}
+          <ReadyDisplay data={displayData} />
+        {/if}
       </div>
     {/if}
   {:else}
