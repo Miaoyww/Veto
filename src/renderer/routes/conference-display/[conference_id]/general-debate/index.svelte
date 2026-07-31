@@ -13,12 +13,12 @@
   import { HelpCircle, Volume2, ArrowRight } from '@lucide/svelte'
   import { formatTime } from '$lib/utils'
   import type { ConferenceDisplayData } from '$lib/types-conference'
-  import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
-  import CurrentSpeakerCard from '$lib/components/conference/display/current-speaker-card.svelte'
-  import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
+  import SpeakerQueueDisplay from '$lib/components/conference-display/speaker-queue-display.svelte'
+  import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'
+  import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
-  import DelegationNameDisplay from '$lib/components/conference/display/delegation-name-display.svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 

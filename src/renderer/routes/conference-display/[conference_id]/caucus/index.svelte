@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import { formatTime } from '$lib/utils'
-  import { Mic, Coffee, User } from '@lucide/svelte'
-  import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
-  import CurrentSpeakerCard from '$lib/components/conference/display/current-speaker-card.svelte'
-  import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import { Coffee, User } from '@lucide/svelte'
+  import SpeakerQueueDisplay from '$lib/components/conference-display/speaker-queue-display.svelte'
+  import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'
+  import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()

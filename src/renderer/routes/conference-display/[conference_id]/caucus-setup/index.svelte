@@ -5,10 +5,10 @@
    * 磋商发言名单设置阶段 —— Display 组件。
    */
   import type { ConferenceDisplayData } from '$lib/types-conference'
-  import SpeakerQueueDisplay from '$lib/components/conference/display/speaker-queue-display.svelte'
-  import AutoFitText from '$lib/components/conference/display/auto-fit-text.svelte'
-  import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import SpeakerQueueDisplay from '$lib/components/conference-display/speaker-queue-display.svelte'
+  import AutoFitText from '$lib/components/conference-display/auto-fit-text.svelte'
+  import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
   import { Users } from '@lucide/svelte'
 

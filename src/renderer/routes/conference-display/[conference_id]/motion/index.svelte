@@ -20,9 +20,9 @@
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { ConferenceDisplayData } from '$lib/types-conference'
   import type { MotionType } from '$lib/types-conference'
-  import AutoFitText from '$lib/components/conference/display/auto-fit-text.svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
-  import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
+  import AutoFitText from '$lib/components/conference-display/auto-fit-text.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
+  import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 

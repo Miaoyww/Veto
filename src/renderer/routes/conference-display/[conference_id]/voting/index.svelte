@@ -6,9 +6,9 @@
    */
   import { Vote } from '@lucide/svelte'
   import type { ConferenceDisplayData } from '$lib/types-conference'
-  import DelegationRoster, { type RosterEntry } from '$lib/components/conference/display/delegation-roster.svelte'
-  import DisplaySectionHeader from '$lib/components/conference/display/display-section-header.svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import DelegationRoster, { type RosterEntry } from '$lib/components/conference-display/delegation-roster.svelte'
+  import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 

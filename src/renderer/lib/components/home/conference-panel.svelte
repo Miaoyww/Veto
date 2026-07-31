@@ -7,7 +7,7 @@
   import { conferences } from '$lib/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
-  import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
+  import DisplayOnlyDialog from '$lib/components/conference-display/display-only-dialog.svelte'
   import { cn } from '$lib/utils.js'
   import { fly } from 'svelte/transition'
 

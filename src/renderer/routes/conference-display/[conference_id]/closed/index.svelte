@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Gavel } from '@lucide/svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 </script>
 
 <DisplayPage>

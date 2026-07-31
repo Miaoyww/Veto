@@ -1,6 +1,6 @@
 <script lang="ts">
-  import DelegationNameDisplay from '$lib/components/conference/display/delegation-name-display.svelte'
-  import DisplayPage from '$lib/components/conference/display/display-page.svelte'
+  import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
+  import DisplayPage from '$lib/components/conference-display/display-page.svelte'
   /**
    * roll-call/index.svelte
    * ──────────────────────

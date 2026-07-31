@@ -30,7 +30,7 @@
   import QuestionDisplay from './question/index.svelte'
   import CaucusSetupDisplay from './caucus-setup/index.svelte'
   import CaucusDisplay from './caucus/index.svelte'
-  import ConferenceHeader from '$lib/components/conference/display/conference-header.svelte'
+  import ConferenceHeader from '$lib/components/conference-display/conference-header.svelte'
   import VotingDisplay from './voting/index.svelte'
   import PendingSpeakersListDisplay from './pending-speakers-list/index.svelte'
   import SuspendedDisplay from './suspended/index.svelte'
