@@ -11,7 +11,6 @@
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
-  import NextSpeakerCard from '$lib/components/conference/speakers/next-speaker-card.svelte'
   import YieldResolutionPanel from '$lib/components/conference/speakers/yield-resolution-panel.svelte'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
   import {
@@ -52,6 +51,14 @@
   const nextSpeaker = $derived<SpeakerDisplayEntry | null>(
     waitingSpeakers.length > 0 ? waitingSpeakers[0] : null
   )
+
+  // ── 自动 ready ──────────────────────────────────────────────────
+  $effect(() => {
+    if (!isSpeakerActive && !readyEntry && nextSpeaker && !conf?.yieldPending) {
+      readySpeaker(nextSpeaker.id)
+      syncDisplay()
+    }
+  })
 
   const activeSpeaker = $derived.by(() => {
     const eng = conf?.activeSpeaker
@@ -202,10 +209,6 @@
     syncDisplay()
   }
 
-  function prepareSpeaker(entryId: string): void {
-    readySpeaker(entryId)
-    syncDisplay()
-  }
 
   function beginSpeaking(entryId: string): void {
     const entry = conf?.speakerLists?.entries.find((s) => s.id === entryId)
@@ -243,10 +246,6 @@
     syncDisplay()
   }
 
-  function cancelReadySpeakerHandler(): void {
-    if (readyEntry) removeFromSpeakersList(readyEntry.id)
-    syncDisplay()
-  }
 
   // ── 键盘快捷键 ──────────────────────────────────────────────
   let yieldModifier = $state(false)
@@ -272,9 +271,6 @@
       } else if (readyEntry) {
         // 准备就绪 → 开始发言
         beginSpeaking(readyEntry.id)
-      } else if (nextSpeaker) {
-        // 下一位 → 准备发言
-        prepareSpeaker(nextSpeaker.id)
       }
     } else if (e.key === 'Escape' && isSpeakerActive) {
       e.preventDefault()
@@ -367,7 +363,10 @@
         delegationName={readyEntry.delegationName}
         allocatedTimeSec={readyEntry.allocatedTimeSec}
         onstart={() => beginSpeaking(readyEntry.id)}
-        oncancel={cancelReadySpeakerHandler}
+        oncancel={() => {
+          removeFromSpeakersList(readyEntry.id)
+          syncDisplay()
+        }}
       />
     {/if}
 
@@ -410,15 +409,6 @@
       </div>
     {/if}
 
-    {#if nextSpeaker && !isSpeakerActive && !readyEntry}
-      <NextSpeakerCard
-        label="下一位"
-        delegationName={nextSpeaker.delegationName}
-        allocatedTimeSec={nextSpeaker.allocatedTimeSec}
-        showPrepareButton={true}
-        onprepare={() => prepareSpeaker(nextSpeaker.id)}
-      />
-    {/if}
 
     <WaitingSpeakerList
       title="发言队列"

@@ -11,7 +11,7 @@
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
-  import NextSpeakerCard from '$lib/components/conference/speakers/next-speaker-card.svelte'
+
   import {
     currentConference,
     currentEngine,
@@ -47,9 +47,6 @@
   const readyEntry = $derived(speakers.find((s) => s.status === 'ready') ?? null)
   const waitingSpeakers = $derived(speakers.filter((s) => s.status === 'waiting'))
   const currentIdx = $derived(activeCaucus?.currentSpeakerIndex ?? -1)
-  const nextSpeaker = $derived<SpeakerDisplayEntry | null>(
-    waitingSpeakers.length > 0 ? waitingSpeakers[0] : null
-  )
 
   const activeSpeaker = $derived.by(() => {
     const eng = conf?.activeSpeaker
@@ -283,14 +280,6 @@
       </div>
     {/if}
 
-    {#if nextSpeaker && !isSpeakerActive && !readyEntry}
-      <NextSpeakerCard
-        label="下一位"
-        delegationName={nextSpeaker.delegationName}
-        allocatedTimeSec={nextSpeaker.allocatedTimeSec}
-        showPrepareButton={false}
-      />
-    {/if}
 
     <WaitingSpeakerList
       title="发言队列"

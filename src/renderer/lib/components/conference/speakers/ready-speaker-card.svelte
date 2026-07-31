@@ -6,6 +6,7 @@
    */
   import { Play, Trash2 } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
+  import ShortcutButton from '$lib/components/ui/shortcut-button.svelte'
   import { formatTime } from '$lib/utils'
 
   interface Props {
@@ -29,19 +30,15 @@
     {formatTime(allocatedTimeSec)}
   </div>
   <div class="mt-4 flex items-center justify-center gap-2">
-    <div class="flex flex-col items-center">
-      <Button
-        size="sm"
-        class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
-        onclick={() => onstart?.()}
-      >
-        <Play size={12} />
-        开始计时
-      </Button>
-      <span class="select-none font-mono text-[10px] leading-none text-muted-foreground/40">
-        Space
-      </span>
-    </div>
+    <ShortcutButton
+      shortcut="Space"
+      size="sm"
+      class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
+      onclick={() => onstart?.()}
+    >
+      <Play size={12} />
+      开始计时
+    </ShortcutButton>
     <Button
       size="sm"
       variant="ghost"
