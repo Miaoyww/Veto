@@ -643,8 +643,8 @@
         </div>
       {/if}
 
-      <!-- ── 下一位发言人（始终显示，只要有 waiting 就展示） ── -->
-      {#if nextSpeaker}
+      <!-- ── 下一位发言人（有活跃发言人或已准备发言人时不显示） ── -->
+      {#if nextSpeaker && !isSpeakerActive && !readyEntry}
         <NextSpeakerCard
           label="下一位"
           delegationName={nextSpeaker.delegationName}
