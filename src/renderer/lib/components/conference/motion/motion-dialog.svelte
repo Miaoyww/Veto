@@ -108,10 +108,10 @@
   // Moderated Caucus（无预设值，必须手动填写）
   let mcTopic = $state('')
   let committedTopic = $state('')
-  let mcTotalSec = $state<number | null>(null)
-  let committedMcTotalSec = $state<number | null>(null)
-  let mcSpeakerSec = $state<number | null>(null)
-  let committedMcSpeakerSec = $state<number | null>(null)
+  let mcTotalSec = $state<number | null>(360)
+  let committedMcTotalSec = $state<number | null>(360)
+  let mcSpeakerSec = $state<number | null>(60)
+  let committedMcSpeakerSec = $state<number | null>(60)
   // Unmoderated Caucus
   let ucDurationMin = $state(15)
   let committedUcDurationMin = $state(15)
@@ -135,10 +135,10 @@
     toggleValue = ''
     mcTopic = ''
     committedTopic = ''
-    mcTotalSec = null
-    committedMcTotalSec = null
-    mcSpeakerSec = null
-    committedMcSpeakerSec = null
+    mcTotalSec = 360
+    committedMcTotalSec = 360
+    mcSpeakerSec = 60
+    committedMcSpeakerSec = 60
     ucDurationMin = 15
     committedUcDurationMin = 15
     newTimeSec = 90
@@ -207,7 +207,11 @@
       if (newMotion) {
         approveMotion(newMotion.id)
 
-        if (selectedType === 'moderated_caucus' || selectedType === 'unmoderated_caucus' || selectedType === 'individual_speech') {
+        if (
+          selectedType === 'moderated_caucus' ||
+          selectedType === 'unmoderated_caucus' ||
+          selectedType === 'individual_speech'
+        ) {
           import('$lib/stores/conference/conference-store').then(({ startCaucus }) => {
             startCaucus(newMotion.id)
           })
