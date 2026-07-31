@@ -174,6 +174,9 @@ export interface TimerTickData {
  * 可复用的倒计时器实例。
  * 替代旧的模块级单例函数（startSpeakerTimer / startCaucusTimer），
  * 每个上下文（主发言名单、磋商）持有自己的 Timer 实例，通过全局注册表按 ID 查找。
+ *
+ * 使用 performance.now() 单调时钟计算实际经过时间，不依赖 setInterval 触发次数。
+ * 当 Electron 应用进入后台、Chromium 节流 setInterval 时，计时器仍能正确追赶。
  */
 export class Timer {
   readonly id: string
@@ -181,18 +184,25 @@ export class Timer {
 
   private _intervalId: ReturnType<typeof setInterval> | null = null
   private _totalSec = 0
-  private _elapsedSec = 0
+  /** performance.now() 时间戳：计时起点（已扣除 initialElapsed 和暂停时间） */
+  private _startTime = 0
+  /** 暂停时快照的已过秒数（用于 resume 时恢复 _startTime） */
+  private _savedElapsedSec = 0
 
   get isRunning(): boolean {
     return this._intervalId !== null
   }
 
-  get remainingSec(): number {
-    return Math.max(0, this._totalSec - this._elapsedSec)
+  /** 当前已过秒数（运行时从 wall clock 计算，暂停时返回快照值） */
+  get elapsedSec(): number {
+    if (this._intervalId !== null) {
+      return Math.min(this._totalSec, (performance.now() - this._startTime) / 1000)
+    }
+    return this._savedElapsedSec
   }
 
-  get elapsedSec(): number {
-    return this._elapsedSec
+  get remainingSec(): number {
+    return Math.max(0, this._totalSec - this.elapsedSec)
   }
 
   constructor(id: string, tickMs = 100) {
@@ -200,26 +210,28 @@ export class Timer {
     this.tickMs = tickMs
   }
 
-  /** 统一的 tick 逻辑，由 setInterval 驱动 */
+  /** 每次 setInterval 触发时调用，基于 performance.now() 计算实际已过时间 */
   private _tick(onTick: (data: TimerTickData) => void, onExpire: () => void): void {
-    this._elapsedSec += this.tickMs / 1000
-    const remaining = Math.max(0, this._totalSec - this._elapsedSec)
+    const elapsed = (performance.now() - this._startTime) / 1000
+    const clampedElapsed = Math.min(this._totalSec, elapsed)
+    const remaining = Math.max(0, this._totalSec - clampedElapsed)
 
     onTick({
       remainingSec: remaining,
-      elapsedSec: Math.min(this._totalSec, this._elapsedSec),
+      elapsedSec: clampedElapsed,
       totalSec: this._totalSec
     })
 
     if (remaining <= 0) {
-      this.stop()
+      this._savedElapsedSec = this._totalSec
+      clearInterval(this._intervalId!)
+      this._intervalId = null
       onExpire()
     }
   }
 
   /**
-   * 启动倒计时（累计时间模型，不依赖 Date.now()）。
-   * 先停止已有计时，再启动新的。
+   * 启动倒计时（基于 performance.now() 单调时钟）。
    * @param totalSec 倒计时总时长（秒）
    * @param onTick 每次 tick 回调
    * @param onExpire 时间耗尽回调
@@ -233,10 +245,10 @@ export class Timer {
   ): void {
     this.stop()
     this._totalSec = totalSec
-    this._elapsedSec = initialElapsed
+    this._startTime = performance.now() - initialElapsed * 1000
 
-    // 如果初始已过时间已耗尽，立即触发过期
-    if (this._elapsedSec >= this._totalSec) {
+    if (initialElapsed >= this._totalSec) {
+      this._savedElapsedSec = this._totalSec
       onTick({
         remainingSec: 0,
         elapsedSec: this._totalSec,
@@ -249,8 +261,9 @@ export class Timer {
     this._intervalId = setInterval(() => this._tick(onTick, onExpire), this.tickMs)
   }
 
-  /** 暂停计时，返回剩余秒数（不清零，供 resume 使用） */
+  /** 暂停计时，返回剩余秒数 */
   pause(): number {
+    this._savedElapsedSec = this.elapsedSec
     if (this._intervalId !== null) {
       clearInterval(this._intervalId)
       this._intervalId = null
@@ -258,12 +271,13 @@ export class Timer {
     return this.remainingSec
   }
 
-  /** 从暂停处恢复计时（保持 _totalSec 和 _elapsedSec 不变） */
+  /** 从暂停处恢复计时 */
   resume(onTick: (data: TimerTickData) => void, onExpire: () => void): void {
-    if (this._intervalId !== null) return // 已在运行
-    const remaining = this._totalSec - this._elapsedSec
+    if (this._intervalId !== null) return
+    const remaining = this._totalSec - this._savedElapsedSec
     if (remaining <= 0) return
 
+    this._startTime = performance.now() - this._savedElapsedSec * 1000
     this._intervalId = setInterval(() => this._tick(onTick, onExpire), this.tickMs)
   }
 
@@ -273,8 +287,9 @@ export class Timer {
       clearInterval(this._intervalId)
       this._intervalId = null
     }
-    this._elapsedSec = 0
+    this._savedElapsedSec = 0
     this._totalSec = 0
+    this._startTime = 0
   }
 }
 
