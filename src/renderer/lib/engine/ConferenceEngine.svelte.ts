@@ -1176,6 +1176,27 @@ export class ConferenceEngine {
     this.touch()
   }
 
+  /** 将 caucus 中状态为 ready 的发言人退回到 waiting（主席取消准备） */
+  unreadyCaucusSpeaker(): void {
+    if (!this.activeCaucus?.caucusSpeakers) return
+    const speakers = this.activeCaucus.caucusSpeakers
+    const readyIdx = speakers.findIndex((s) => s.status === 'ready')
+    if (readyIdx < 0) return
+
+    const speaker = speakers[readyIdx]
+    this.activeCaucus = {
+      ...this.activeCaucus,
+      caucusSpeakers: speakers.map((s, i) =>
+        i === readyIdx ? { ...s, status: 'waiting' as const } : s
+      )
+    }
+    this.addConferenceEntry(
+      'speaker_cancelled',
+      `取消 ${this.getSpeakerDelegationName(speaker)} 的准备状态`
+    )
+    this.touch()
+  }
+
   pauseCaucus(): void {
     if (!this.activeCaucus) return
     this.activeCaucus = { ...this.activeCaucus, paused: true }

@@ -534,6 +534,13 @@ export function appendCaucusSpeaker(delegationId: string): void {
   syncEngine(engine)
 }
 
+export function unreadyCaucusSpeaker(): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  engine.unreadyCaucusSpeaker()
+  syncEngine(engine)
+}
+
 export function pauseCaucus(): void {
   const engine = getCurrentEngine()
   if (!engine) return

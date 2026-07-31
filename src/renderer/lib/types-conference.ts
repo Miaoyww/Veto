@@ -97,6 +97,18 @@ export interface SpeakerEntry {
   canYield?: boolean
 }
 
+/**
+ * UI 展示用的发言条目视图模型。
+ * 统一了一般性辩论和磋商两种数据源的差异，供 SpeakerQueue 组件安全消费。
+ */
+export interface SpeakerDisplayEntry {
+  id: string
+  delegationId: string
+  delegationName: string
+  status: string
+  allocatedTimeSec: number
+}
+
 /** 发言名单的 JSON 序列化格式 */
 export interface SpeakerListData {
   id: string
@@ -464,6 +476,14 @@ export type TimerStatus = 'running' | 'paused'
 
 /** 发言人切换原因：timeout=计时器自然到期，ended=主席手动结束 */
 export type SpeakerTransitionReason = 'timeout' | 'ended'
+
+/** Display 计时器增量同步数据（ADR-0002），Host 每 tick 推送，Display 不维护计时器 */
+export interface TimerTickData {
+  remainingSec: number
+  elapsedSec: number
+  totalSec: number
+  status: 'playing' | 'paused'
+}
 
 export interface ConferenceDisplaySpeaker {
   delegation: Delegation

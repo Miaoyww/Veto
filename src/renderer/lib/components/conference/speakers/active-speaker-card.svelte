@@ -38,13 +38,21 @@
     onend,
     onyield
   }: Props = $props()
+
+  const isUrgent = $derived(remainingSec <= 10 && !isPaused)
 </script>
 
 <div
-  class="rounded-lg border-2 border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-700 dark:bg-emerald-950/30"
+  class="rounded-lg border-2 p-6 text-center transition-colors {isUrgent
+    ? 'animate-pulse border-red-400 bg-red-50 dark:border-red-600 dark:bg-red-950/30'
+    : 'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30'}"
 >
-  <div class="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-    {isPaused ? '计时已暂停' : '正在发言'}
+  <div
+    class="text-sm font-medium {isUrgent
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-emerald-700 dark:text-emerald-400'}"
+  >
+    {isPaused ? '计时已暂停' : isUrgent ? '⚠ 时间即将耗尽' : '正在发言'}
   </div>
   <div class="mt-1 text-2xl font-bold text-foreground">
     {delegationName}
@@ -55,7 +63,9 @@
   <div
     class="mt-3 font-mono text-5xl font-bold tabular-nums {isPaused
       ? 'text-muted-foreground'
-      : 'text-foreground'}"
+      : isUrgent
+        ? 'text-red-500'
+        : 'text-foreground'}"
   >
     {formatTime(remainingSec)}
   </div>

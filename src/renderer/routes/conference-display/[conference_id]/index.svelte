@@ -19,7 +19,7 @@
   } from '$lib/services/conference-display-bridge'
   import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
   import type { Delegation } from '$lib/types-conference'
-  import type { ConferenceDisplayData } from '$lib/types-conference'
+  import type { ConferenceDisplayData, TimerTickData } from '$lib/types-conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
   import { globalSettings } from '$lib/stores/app/global-settings.store'
   import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte'
@@ -72,6 +72,32 @@
       if ((data as any).type === 'ws-config') return
       displayData = data
     })
+
+    // 计时器增量更新（ADR-0002）：Display 不维护计时器，仅被动渲染 Host 推送的数值
+    const unsubTick = bridge.onTimerTick((tick: TimerTickData) => {
+      if (displayData?.currentSpeaker) {
+        displayData = {
+          ...displayData,
+          currentSpeaker: {
+            ...displayData.currentSpeaker,
+            remainingSec: tick.remainingSec,
+            status: tick.status
+          }
+        }
+      }
+      // caucus 计时器同步
+      if (displayData?.caucusTimer) {
+        displayData = {
+          ...displayData,
+          caucusTimer: {
+            ...displayData.caucusTimer,
+            remainingSec: tick.remainingSec,
+            status: tick.status
+          }
+        }
+      }
+    })
+
     const unsubStatus = onConnectionStatus((status: ConnectionStatus) => {
       connectionStatus = status
     })
@@ -88,6 +114,7 @@
 
     return () => {
       unsubData()
+      unsubTick()
       unsubStatus()
       unsubDisplayUpdate?.()
     }

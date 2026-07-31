@@ -14,7 +14,8 @@ import type {
   ConferenceDisplayData,
   Delegation,
   SpeakerTransitionReason,
-  CaucusSpeakerStatus
+  CaucusSpeakerStatus,
+  TimerTickData
 } from '$lib/types-conference'
 
 const DEFAULT_WS_PORT = 19527
@@ -75,10 +76,14 @@ export interface ConferenceDisplayBridge {
   openDisplay(conferenceId: string): Promise<boolean>
   /** 关闭显示窗口 */
   closeDisplay(): Promise<void>
-  /** 推送显示数据（Host 端通过 WebSocket 发送） */
+  /** 推送完整显示数据（Host 端通过 WebSocket 发送，结构变化时调用） */
   sendUpdate(data: ConferenceDisplayData): void
-  /** 监听数据更新（Display 端通过 WebSocket 接收） */
+  /** 推送计时器增量数据（Host 端每 tick 发送，Display 端不维护计时器，见 ADR-0002） */
+  sendTimerTick(data: TimerTickData): void
+  /** 监听完整数据更新（Display 端通过 WebSocket 接收） */
   onHostCommand(callback: (data: ConferenceDisplayData) => void): () => void
+  /** 监听计时器增量更新（Display 端，与 onHostCommand 独立） */
+  onTimerTick(callback: (data: TimerTickData) => void): () => void
 }
 
 // ---- 共享 WebSocket 连接 ----
@@ -87,8 +92,9 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
 let _ws: WebSocket | null = null
 let _wsListeners: Array<(data: ConferenceDisplayData) => void> = []
+let _tickListeners: Array<(data: TimerTickData) => void> = []
 let _statusListeners: Array<(status: ConnectionStatus) => void> = []
-let _pendingMessages: ConferenceDisplayData[] = []
+let _pendingMessages: Array<{ type: string; data: unknown }> = []
 let _reconnectDelay = 1000
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -117,9 +123,10 @@ function getWs(): WebSocket {
     setStatus('connected')
     console.log('[DisplayBridge] WebSocket connected')
     _reconnectDelay = 1000 // 重置退避
-    // 发送积压消息
-    for (const msg of _pendingMessages) {
-      _ws!.send(JSON.stringify({ type: 'host', data: msg }))
+    // 发送积压消息（仅发送最新的全量数据，丢弃过期 tick）
+    const lastFull = [..._pendingMessages].reverse().find((m) => m.type !== 'timer_tick')
+    if (lastFull) {
+      _ws!.send(JSON.stringify(lastFull))
     }
     _pendingMessages = []
   }
@@ -127,12 +134,19 @@ function getWs(): WebSocket {
   _ws.onmessage = (event) => {
     try {
       const raw = JSON.parse(event.data)
-      // Host 端发送的消息格式为 { type: 'host', data: ConferenceDisplayData }
-      // Display 端需要解包，取 raw.data 作为实际数据
-      const data: ConferenceDisplayData =
-        raw.type === 'host' ? (raw.data as ConferenceDisplayData) : (raw as ConferenceDisplayData)
-      for (const cb of _wsListeners) {
-        cb(data)
+      if (raw.type === 'timer_tick') {
+        // 计时器增量消息（ADR-0002）：仅更新 remainingSec/elapsedSec，不重建全量数据
+        const tickData = raw.data as TimerTickData
+        for (const cb of _tickListeners) {
+          cb(tickData)
+        }
+      } else {
+        // host 全量消息 或 向后兼容的无 type 消息
+        const data: ConferenceDisplayData =
+          raw.type === 'host' ? (raw.data as ConferenceDisplayData) : (raw as ConferenceDisplayData)
+        for (const cb of _wsListeners) {
+          cb(data)
+        }
       }
     } catch {
       // ignore
@@ -197,11 +211,25 @@ function createHostBridge(): ConferenceDisplayBridge {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(payload)
       } else {
-        _pendingMessages.push(data)
+        _pendingMessages.push({ type: 'host', data })
       }
     },
 
+    sendTimerTick: (data: TimerTickData): void => {
+      const ws = getWs()
+      const payload = JSON.stringify({ type: 'timer_tick', data })
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(payload)
+      }
+      // tick 消息不积压——断线时下一个全量 sendUpdate 会覆盖所有状态
+    },
+
     onHostCommand: (): (() => void) => {
+      // Host 端不接收 Display 消息
+      return () => {}
+    },
+
+    onTimerTick: (): (() => void) => {
       // Host 端不接收 Display 消息
       return () => {}
     }
@@ -219,12 +247,24 @@ function createDisplayBridge(): ConferenceDisplayBridge {
       // Display 端不发送更新
     },
 
+    sendTimerTick: (): void => {
+      // Display 端不发送更新
+    },
+
     onHostCommand: (callback: (data: ConferenceDisplayData) => void): (() => void) => {
       _wsListeners.push(callback)
       // 确保 WebSocket 已连接
       getWs()
       return () => {
         _wsListeners = _wsListeners.filter((cb) => cb !== callback)
+      }
+    },
+
+    onTimerTick: (callback: (data: TimerTickData) => void): (() => void) => {
+      _tickListeners.push(callback)
+      getWs()
+      return () => {
+        _tickListeners = _tickListeners.filter((cb) => cb !== callback)
       }
     }
   }
