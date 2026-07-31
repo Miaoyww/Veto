@@ -5,7 +5,6 @@
    * 可复用的「即将发言」卡片 —— 显示已准备就绪的发言人，提供开始计时/取消按钮。
    */
   import { Play, Trash2 } from '@lucide/svelte'
-  import { Button } from '$lib/components/ui/button/index.js'
   import ShortcutButton from '$lib/components/ui/shortcut-button.svelte'
   import { formatTime } from '$lib/utils'
 
@@ -39,7 +38,8 @@
       <Play size={12} />
       开始计时
     </ShortcutButton>
-    <Button
+    <ShortcutButton
+      shortcut="Esc"
       size="sm"
       variant="ghost"
       class="h-8 text-xs text-muted-foreground"
@@ -47,6 +47,6 @@
     >
       <Trash2 size={12} class="mr-1" />
       取消
-    </Button>
+    </ShortcutButton>
   </div>
 </div>

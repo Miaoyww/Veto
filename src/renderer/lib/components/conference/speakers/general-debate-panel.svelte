@@ -272,9 +272,14 @@
         // 准备就绪 → 开始发言
         beginSpeaking(readyEntry.id)
       }
-    } else if (e.key === 'Escape' && isSpeakerActive) {
+    } else if (e.key === 'Escape') {
       e.preventDefault()
-      finishSpeaker()
+      if (isSpeakerActive) {
+        finishSpeaker()
+      } else if (readyEntry) {
+        removeFromSpeakersList(readyEntry.id)
+        syncDisplay()
+      }
     }
   }
 

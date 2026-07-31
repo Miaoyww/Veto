@@ -200,9 +200,9 @@
 
   function handleSpeakerKeydown(e: KeyboardEvent): void {
     if (isInInput(e.target as HTMLElement)) return
-    if (!isSpeakerActive) return
 
     if (e.key === ' ' && !e.ctrlKey && !e.altKey) {
+      if (!isSpeakerActive) return
       e.preventDefault()
       if (timerState.isPaused) {
         resumeSpeaking()
@@ -211,7 +211,12 @@
       }
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      finishSpeaker()
+      if (isSpeakerActive) {
+        finishSpeaker()
+      } else {
+        cancelCaucusSpeaker()
+        syncDisplay()
+      }
     }
   }
 
