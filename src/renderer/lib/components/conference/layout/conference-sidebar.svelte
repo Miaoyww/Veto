@@ -9,6 +9,7 @@
     Copy,
     Check,
     UserRoundCheck,
+    UsersRound,
     X
   } from '@lucide/svelte'
   import { navigate } from '$lib/router.svelte'
@@ -235,6 +236,15 @@
         >
           <UserRoundCheck size={10} />
           代表管理
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-7 gap-1 text-[10px] ml-1"
+          onclick={() => navigate(`/conference/${conf.id}/seats`)}
+        >
+          <UsersRound size={10} />
+          席位管理
         </Button>
       </div>
 

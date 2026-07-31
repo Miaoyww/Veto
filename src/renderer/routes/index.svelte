@@ -24,7 +24,9 @@
   import ConferenceMotionPage from './conference/[conference_id]/motion.svelte'
   import ConferenceQuestionPage from './conference/[conference_id]/question.svelte'
   import ConferenceDelegationsPage from './conference/[conference_id]/delegations.svelte'
+  import ConferenceSeatsPage from './conference/[conference_id]/seats.svelte'
   import ConferenceDisplayPage from './conference-display/[conference_id]/index.svelte'
+  import DelegatePage from './delegate/[conference_id]/index.svelte'
   import ToolPage from './tools/[tool_id]/index.svelte'
   import TimelinePanel from '$lib/components/tools/timeline-panel.svelte'
 
@@ -74,10 +76,14 @@
     <ConferenceQuestionPage />
   {:else if routeId === '/conference/[conference_id]/delegations'}
     <ConferenceDelegationsPage />
+  {:else if routeId === '/conference/[conference_id]/seats'}
+    <ConferenceSeatsPage />
   {:else if routeId === '/conference/[conference_id]'}
     <ConferencePage />
   {:else if routeId === '/conference-display/[conference_id]'}
     <ConferenceDisplayPage />
+  {:else if routeId === '/delegate/[conference_id]'}
+    <DelegatePage />
   {:else if routeId === '/tools/[tool_id]'}
     <ToolPage />
   {:else}

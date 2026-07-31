@@ -207,7 +207,11 @@ export function createConference(
     minutes: [],
     defaultSpeakingTimeSec: options?.defaultSpeakingTimeSec ?? 120,
     activeCaucus: null,
-    activeSpeaker: null
+    activeSpeaker: null,
+    seatGroups: [],
+    seats: [],
+    news: [],
+    situationUpdates: []
   }
 
   // 创建并注册引擎

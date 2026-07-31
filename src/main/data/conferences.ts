@@ -29,6 +29,10 @@ export interface ConferenceEntry {
   }
   timelineId?: string | null
   minutes?: MinutesEntry[]
+  seatGroups?: unknown[]
+  seats?: unknown[]
+  news?: unknown[]
+  situationUpdates?: unknown[]
 }
 
 /** 会议日志条目 */

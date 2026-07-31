@@ -62,6 +62,8 @@ export interface Seat {
   inviteCode: string
   /** 密码哈希（本地 Chair 端管理） */
   passwordHash: string
+  /** 密码盐值 */
+  passwordSalt?: string
   /** 角色/职务描述，如 "外交部长" */
   role?: string
 }

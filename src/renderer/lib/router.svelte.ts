@@ -33,6 +33,14 @@ function parseRoute(url: URL): ParsedRoute {
     return { url, pathname, params, routeId }
   }
 
+  // /delegate/<conference_id>
+  const delegateMatch = actualPath.match(/^\/delegate\/([\w-]+)$/)
+  if (delegateMatch) {
+    params.conference_id = delegateMatch[1]!
+    routeId = '/delegate/[conference_id]'
+    return { url, pathname, params, routeId }
+  }
+
   // /battle/<id>/settings
   const battleSettingsMatch = actualPath.match(/^\/battle\/([\w-]+)\/settings/)
   if (battleSettingsMatch) {
@@ -68,6 +76,12 @@ function parseRoute(url: URL): ParsedRoute {
   if (conferenceDelegationsMatch) {
     params.conference_id = conferenceDelegationsMatch[1]!
     routeId = '/conference/[conference_id]/delegations'
+  }
+  // /conference/<id>/seats
+  const conferenceSeatsMatch = actualPath.match(/^\/conference\/([\w-]+)\/seats$/)
+  if (conferenceSeatsMatch) {
+    params.conference_id = conferenceSeatsMatch[1]!
+    routeId = '/conference/[conference_id]/seats'
   }
   // /conference/<id>
   const conferenceMatch = actualPath.match(/^\/conference\/([\w-]+)$/)

@@ -1,25 +1,198 @@
 /**
- * ws-display.ts — Display 窗口 WebSocket 通信
+ * ws-display.ts — 通用 WebSocket 通信服务器
  *
- * 基于 `ws` 包实现，替代自建的 ws-server.ts。
- * 用于模拟大会双窗口模式下的实时消息转发。
+ * 基于 `ws` 包实现。升级后支持三种客户端类型：
+ * - Chair（主席端）：连接自己的 WS server，发送状态 + 接收代表消息
+ * - Display（投屏端）：向后兼容，无 auth 即视为 display
+ * - Delegate（代表端）：auth 认证后双向通信
  *
- * - 端口从 19527 开始尝试，冲突时递增
- * - 接收到的消息广播给所有连接的客户端
+ * 端口从 19527 开始尝试，冲突时递增。
+ * 消息路由替代广播：不同消息类型路由到不同客户端集合。
  */
 
 import { WebSocketServer, WebSocket } from 'ws'
 import { createLogger } from './logger'
+import { createHash, randomBytes, timingSafeEqual, scryptSync } from 'crypto'
+import { loadStore } from './data/store'
 
-const log = createLogger('DisplayWS')
+const log = createLogger('SessionWS')
 
 const DEFAULT_PORT = 19527
 const MAX_RETRY = 99
 
+// ---- 密码工具 -----------------------------------------------------------
+
+const HASH_ALGORITHM = 'sha256'
+const SALT_LENGTH = 32 // bytes
+const KEY_LENGTH = 64   // bytes
+
+/** 使用 PBKDF2 风格的 hash（兼容 Node.js crypto，未来可迁移到 bcrypt/argon2） */
+export function hashPassword(password: string, salt?: Buffer): { hash: string; salt: string } {
+  const s = salt ?? randomBytes(SALT_LENGTH)
+  const derivedKey = scryptSync(password, s, KEY_LENGTH)
+  return {
+    hash: derivedKey.toString('hex'),
+    salt: s.toString('hex')
+  }
+}
+
+/** 验证密码 */
+export function verifyPassword(password: string, storedHash: string, storedSalt: string): boolean {
+  try {
+    const salt = Buffer.from(storedSalt, 'hex')
+    const { hash } = hashPassword(password, salt)
+    const hashA = Buffer.from(hash, 'hex')
+    const hashB = Buffer.from(storedHash, 'hex')
+    if (hashA.length !== hashB.length) return false
+    return timingSafeEqual(hashA, hashB)
+  } catch {
+    return false
+  }
+}
+
+// ---- 类型定义 -----------------------------------------------------------
+
+/** 已认证客户端信息 */
+export interface AuthenticatedClient {
+  ws: WebSocket
+  clientType: 'display' | 'delegate' | 'chair'
+  seatId?: string
+  seatGroupId?: string
+  conferenceId?: string
+  authenticated: boolean
+}
+
+/** WS 消息协议 */
+export interface WsMessage {
+  type: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
+}
+
+/** 用于 auth 解析的回调：根据 inviteCode 查找 Seat → 验证密码 */
+export type AuthResolver = (
+  inviteCode: string,
+  password: string
+) => Promise<{
+  valid: boolean
+  seatId?: string
+  seatGroupId?: string
+  conferenceId?: string
+  error?: string
+} | null>
+
+// ---- 服务器状态 ---------------------------------------------------------
+
 let wss: WebSocketServer | null = null
 
+/** 已认证的客户端映射 */
+const _clients = new Map<WebSocket, AuthenticatedClient>()
+
+/** 外部 auth 解析器（由 Chair 端设置） */
+let _authResolver: AuthResolver | null = null
+
 /**
- * 启动 Display WebSocket 服务器。
+ * 默认 auth 解析器：从文件存储加载会议数据，查找 Seat 并验证密码。
+ * 当外部未设置 auth resolver 时使用。
+ */
+async function defaultAuthResolver(
+  inviteCode: string,
+  password: string
+): Promise<{
+  valid: boolean
+  seatId?: string
+  seatGroupId?: string
+  conferenceId?: string
+  error?: string
+} | null> {
+  try {
+    const conferences = loadStore<Array<{
+      id: string
+      seats?: Array<{
+        id: string
+        inviteCode: string
+        passwordHash: string
+        passwordSalt?: string
+        seatGroupId: string
+      }>
+    }>>('conferences')
+
+    if (!conferences || !Array.isArray(conferences)) return null
+
+    for (const conf of conferences) {
+      if (!conf.seats) continue
+      const seat = conf.seats.find(
+        (s: { inviteCode: string }) => s.inviteCode === inviteCode
+      )
+      if (!seat) continue
+
+      // 验证密码
+      if (!seat.passwordHash) {
+        // 未设置密码的席位：允许任何密码
+        return {
+          valid: true,
+          seatId: seat.id,
+          seatGroupId: seat.seatGroupId,
+          conferenceId: conf.id
+        }
+      }
+
+      const isValid = verifyPassword(
+        password,
+        seat.passwordHash,
+        seat.passwordSalt ?? ''
+      )
+
+      if (isValid) {
+        return {
+          valid: true,
+          seatId: seat.id,
+          seatGroupId: seat.seatGroupId,
+          conferenceId: conf.id
+        }
+      }
+
+      return {
+        valid: false,
+        error: '密码错误'
+      }
+    }
+
+    return {
+      valid: false,
+      error: '邀请码无效'
+    }
+  } catch (err) {
+    log.error('Auth resolver error:', err)
+    return {
+      valid: false,
+      error: '认证服务错误'
+    }
+  }
+}
+
+/** 设置 auth 解析器（Chair 端在启动 WS 客户端后调用） */
+export function setAuthResolver(resolver: AuthResolver | null): void {
+  _authResolver = resolver
+}
+
+/** 获取当前 auth 解析器（回退到默认实现） */
+function getAuthResolver(): AuthResolver {
+  return _authResolver ?? defaultAuthResolver
+}
+
+/** 获取所有已认证客户端 */
+export function getAuthenticatedClients(): AuthenticatedClient[] {
+  return Array.from(_clients.values())
+}
+
+/** 按类型获取客户端 */
+export function getClientsByType(type: string): AuthenticatedClient[] {
+  return Array.from(_clients.values()).filter((c) => c.clientType === type)
+}
+
+/**
+ * 启动通用 Session WebSocket 服务器。
  * @returns 实际监听端口
  */
 export function startDisplayWs(): Promise<number> {
@@ -29,7 +202,7 @@ export function startDisplayWs(): Promise<number> {
 
       server.on('listening', () => {
         wss = server
-        log.info(`Display WS listening on ws://127.0.0.1:${port}`)
+        log.info(`Session WS listening on ws://127.0.0.1:${port}`)
         setupConnectionHandler(server)
         resolve(port)
       })
@@ -51,40 +224,280 @@ export function startDisplayWs(): Promise<number> {
 /** 设置连接处理 */
 function setupConnectionHandler(server: WebSocketServer): void {
   server.on('connection', (ws: WebSocket) => {
-    log.info(`Display client connected (total: ${server.clients.size})`)
+    log.info(`Client connected (total: ${server.clients.size})`)
 
-    ws.on('message', (data: Buffer) => {
+    // 初始未认证状态
+    const client: AuthenticatedClient = {
+      ws,
+      clientType: 'display', // 默认 display（向后兼容）
+      authenticated: false
+    }
+
+    ws.on('message', async (data: Buffer) => {
+      let parsed: WsMessage
       try {
-        const parsed = JSON.parse(data.toString())
-        // host 类型消息标记发送者
-        if (parsed.type === 'host') {
-          ;(ws as any).__isHost = true
-        }
-        // 广播给所有客户端
-        const payload = JSON.stringify(parsed)
-        for (const client of server.clients) {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(payload)
-          }
-        }
+        parsed = JSON.parse(data.toString())
       } catch {
         // 非 JSON 消息静默丢弃
+        return
       }
+
+      await handleMessage(ws, client, parsed)
     })
 
     ws.on('close', () => {
-      log.info(`Display client disconnected (total: ${server.clients.size})`)
+      _clients.delete(ws)
+      log.info(`Client disconnected (total: ${server.clients.size})`)
     })
 
-    ws.on('error', () => {
-      /* 连接错误由 close 事件处理 */
+    ws.on('error', (err) => {
+      log.warn(`Client connection error: ${err.message}`)
     })
   })
 }
 
-/** 停止 Display WebSocket 服务器 */
+/** 消息路由 */
+async function handleMessage(
+  ws: WebSocket,
+  client: AuthenticatedClient,
+  msg: WsMessage
+): Promise<void> {
+  // ── auth 消息（所有认证类型统一处理）──
+  if (msg.type === 'auth') {
+    await handleAuth(ws, client, msg)
+    return
+  }
+
+  // ── 向后兼容：host 类型 → 广播给所有 Display + Delegate ──
+  if (msg.type === 'host') {
+    ;(ws as any).__isHost = true
+    if (!client.authenticated) {
+      // 未认证 host 自动视为 display
+      client.clientType = 'display'
+      client.authenticated = true
+    }
+    broadcastToType(msg, ['display', 'delegate'])
+    return
+  }
+
+  // ── timer_tick → 所有已认证客户端（Display + Delegate + Chair）──
+  if (msg.type === 'timer_tick') {
+    broadcast(msg)
+    return
+  }
+
+  // ── 未认证客户端只能发 auth ──
+  if (!client.authenticated) {
+    sendError(ws, 'UNAUTHORIZED', '请先认证')
+    return
+  }
+
+  // ── 消息路由 ──
+  switch (msg.type) {
+    // Chair → Delegate/Display: 会议状态全量同步
+    case 'conference_sync':
+      broadcastToType(msg, ['delegate', 'display'])
+      break
+
+    // Delegate → Chair: 指令操作
+    case 'directive:create':
+    case 'directive:update':
+    case 'directive:withdraw':
+      routeToChair(msg)
+      break
+
+    // Delegate → Chair: 新闻操作
+    case 'news:create':
+    case 'news:update':
+    case 'news:submit':
+    case 'news:retract':
+      routeToChair(msg)
+      break
+
+    // Chair → Delegate: 指令状态更新
+    case 'directive:updated':
+    case 'directive:status_changed':
+      routeToSeatGroup(msg)
+      break
+
+    // Chair → Delegate: 新闻状态更新
+    case 'news:updated':
+    case 'news:published':
+    case 'news:retracted':
+      broadcastToType(msg, ['delegate'])
+      break
+
+    // Chair → Delegate: 局势更新
+    case 'situation:created':
+    case 'situation:updated':
+      broadcastToType(msg, ['delegate'])
+      break
+
+    // Chair → Delegate: 模式切换
+    case 'mode_change':
+      routeToSeatGroup(msg)
+      break
+
+    // 未知类型广播（向后兼容）
+    default:
+      broadcast(msg)
+      break
+  }
+}
+
+/** 处理 auth 消息 */
+async function handleAuth(
+  ws: WebSocket,
+  client: AuthenticatedClient,
+  msg: WsMessage
+): Promise<void> {
+  const { inviteCode, password, clientType } = msg
+
+  // Chair 端自助认证（不需要 inviteCode）
+  if (clientType === 'chair') {
+    client.clientType = 'chair'
+    client.authenticated = true
+    _clients.set(ws, client)
+    sendTo(ws, { type: 'auth_result', success: true, clientType: 'chair' })
+    log.info('Chair client authenticated')
+    return
+  }
+
+  // Display 兼容路径：无 auth 视为 display（连接后不发 auth 消息即为 display）
+  if (!inviteCode && !password) {
+    client.clientType = msg.clientType || 'display'
+    client.authenticated = true
+    _clients.set(ws, client)
+    sendTo(ws, { type: 'auth_result', success: true, clientType: client.clientType })
+    log.info(`Display client authenticated (no auth)`)
+    return
+  }
+
+  // Delegate: 验证邀请码+密码
+  if (!inviteCode || !password) {
+    sendError(ws, 'AUTH_REQUIRED', '需要邀请码和密码')
+    return
+  }
+
+  const resolver = getAuthResolver()
+  const result = await resolver(inviteCode, password)
+
+  if (!result || !result.valid) {
+    sendTo(ws, {
+      type: 'auth_result',
+      success: false,
+      error: result?.error || '邀请码或密码错误'
+    })
+    return
+  }
+
+  client.clientType = 'delegate'
+  client.seatId = result.seatId
+  client.seatGroupId = result.seatGroupId
+  client.conferenceId = result.conferenceId
+  client.authenticated = true
+
+  _clients.set(ws, client)
+
+  sendTo(ws, {
+    type: 'auth_result',
+    success: true,
+    clientType: 'delegate',
+    seatId: result.seatId,
+    seatGroupId: result.seatGroupId,
+    conferenceId: result.conferenceId
+  })
+
+  log.info(
+    `Delegate client authenticated: seat=${result.seatId}, seatGroup=${result.seatGroupId}, conf=${result.conferenceId}`
+  )
+}
+
+// ---- 发送辅助函数 -------------------------------------------------------
+
+function sendTo(ws: WebSocket, msg: WsMessage): void {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg))
+  }
+}
+
+function sendError(ws: WebSocket, code: string, message: string): void {
+  sendTo(ws, { type: 'delegate_error', code, message })
+}
+
+/** 广播给所有已认证客户端 */
+function broadcast(msg: WsMessage): void {
+  const payload = JSON.stringify(msg)
+  for (const client of _clients.values()) {
+    if (client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(payload)
+    }
+  }
+  // 也广播给未认证的 WebSocket 连接（向后兼容旧的 Display 连接）
+  if (wss) {
+    for (const ws of wss.clients) {
+      if (!_clients.has(ws) && ws.readyState === WebSocket.OPEN) {
+        ws.send(payload)
+      }
+    }
+  }
+}
+
+/** 广播给指定类型的客户端 */
+function broadcastToType(msg: WsMessage, clientTypes: string[]): void {
+  const payload = JSON.stringify(msg)
+  for (const client of _clients.values()) {
+    if (clientTypes.includes(client.clientType) && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(payload)
+    }
+  }
+  // 向后兼容：未注册的 display 连接
+  if (clientTypes.includes('display') && wss) {
+    for (const ws of wss.clients) {
+      if (!_clients.has(ws) && ws.readyState === WebSocket.OPEN) {
+        ws.send(payload)
+      }
+    }
+  }
+}
+
+/** 路由到 Chair 连接 */
+function routeToChair(msg: WsMessage): void {
+  const payload = JSON.stringify(msg)
+  for (const client of _clients.values()) {
+    if (client.clientType === 'chair' && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(payload)
+    }
+  }
+}
+
+/** 路由到指定 SeatGroup 的所有 Delegate */
+function routeToSeatGroup(msg: WsMessage): void {
+  const payload = JSON.stringify(msg)
+  const targetGroupId = msg.seatGroupId
+  for (const client of _clients.values()) {
+    if (
+      client.clientType === 'delegate' &&
+      client.ws.readyState === WebSocket.OPEN &&
+      (!targetGroupId || client.seatGroupId === targetGroupId)
+    ) {
+      client.ws.send(payload)
+    }
+  }
+  // 无 seatGroupId 时广播给所有 delegate
+  if (!targetGroupId) {
+    for (const client of _clients.values()) {
+      if (client.clientType === 'delegate' && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(payload)
+      }
+    }
+  }
+}
+
+/** 停止 Session WebSocket 服务器 */
 export function stopDisplayWs(): Promise<void> {
   return new Promise((resolve) => {
+    _clients.clear()
     if (!wss) return resolve()
     for (const client of wss.clients) {
       client.terminate()
@@ -96,7 +509,7 @@ export function stopDisplayWs(): Promise<void> {
   })
 }
 
-/** 获取 Display WS 端口 */
+/** 获取 Session WS 端口 */
 export function getDisplayWsPort(): number {
   return (wss?.address() as { port: number })?.port ?? 0
 }
