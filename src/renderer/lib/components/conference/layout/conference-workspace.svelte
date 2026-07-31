@@ -8,6 +8,7 @@
   import GeneralDebatePanel from '$lib/components/conference/speakers/general-debate-panel.svelte'
   import ModeratedCaucusPanel from '$lib/components/conference/speakers/moderated-caucus-panel.svelte'
   import FreeCaucusPanel from '$lib/components/conference/speakers/free-caucus-panel.svelte'
+  import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
@@ -100,8 +101,6 @@
     }
   })
 
-  const isSuspended = $derived(conf?.phase === 'suspended')
-  const isClosed = $derived(conf?.phase === 'closed')
   const isTimerActive = $derived(conf?.activeSpeaker != null)
   /** 磋商/磋商准备阶段不可发起新动议（动议通过后的环节） */
   const isMotionInProgress = $derived(
@@ -208,7 +207,7 @@
           </Button>
         {/if}
 
-        {#if isSuspended}
+        {#if conf.phase === 'suspended'}
           <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
             <Play size={12} />
             恢复会议
@@ -220,53 +219,22 @@
     <!-- 阶段对应内容 -->
     <div class="flex flex-1 min-h-0 overflow-hidden p-6">
       {#if conf.phase === 'preamble'}
-        <div class="flex flex-1 items-center justify-center">
-          <div class="flex flex-col items-center gap-6 text-center">
-            <div class="flex flex-col items-center gap-2">
-              <Users size={48} class="opacity-30" />
-              <h2 class="text-xl font-bold text-foreground">会前准备</h2>
-              <p class="text-sm text-muted-foreground">所有代表团已就位，准备开始点名</p>
-            </div>
-            <Button
-              size="lg"
-              class="gap-2 bg-indigo-600 hover:bg-indigo-700"
-              onclick={startRollCall}
-            >
-              <Play size={18} />
-              开始点名
-            </Button>
-          </div>
-        </div>
+        <PlaceholderPage icon={Users} title="会前准备" subtitle="所有代表团已就位，准备开始点名">
+          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
+            <Play size={18} />
+            开始点名
+          </Button>
+        </PlaceholderPage>
       {:else if conf.phase === 'roll_call'}
-        <div class="flex flex-1 items-center justify-center">
-          <div class="flex flex-col items-center gap-6 text-center">
-            <div class="flex flex-col items-center gap-2">
-              <Users size={48} class="opacity-30" />
-              <h2 class="text-xl font-bold text-foreground">点名进行中</h2>
-              <p class="text-sm text-muted-foreground">点名页面已在独立窗口中打开</p>
-            </div>
-            <Button
-              size="lg"
-              class="gap-2 bg-indigo-600 hover:bg-indigo-700"
-              onclick={startRollCall}
-            >
-              <Play size={18} />
-              进入点名页面
-            </Button>
-          </div>
-        </div>
+        <PlaceholderPage icon={Users} title="点名进行中" subtitle="点名页面已在独立窗口中打开">
+          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
+            <Play size={18} />
+            进入点名页面
+          </Button>
+        </PlaceholderPage>
       {:else if conf.phase === 'pending_speakers_list'}
-        <div class="flex flex-1 items-center justify-center">
-          <div class="flex flex-col items-center gap-6 text-center">
-            <div class="flex flex-col items-center gap-2">
-              <Users size={48} class="opacity-30" />
-              <h2 class="text-xl font-bold text-foreground">等待开启主发言名单</h2>
-              <p class="text-sm text-muted-foreground">
-                点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论
-              </p>
-            </div>
-          </div>
-        </div>
+        <PlaceholderPage icon={Users} title="等待开启主发言名单"
+          subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论" />
       {:else if conf.phase === 'general_debate'}
         <ScrollArea class="flex-1">
           <GeneralDebatePanel />
@@ -287,22 +255,10 @@
         <ScrollArea class="flex-1">
           <VotingPanel />
         </ScrollArea>
-      {:else if isSuspended}
-        <div class="flex flex-1 items-center justify-center">
-          <div class="flex flex-col items-center gap-4 text-muted-foreground">
-            <Gavel size={48} class="opacity-30" />
-            <p class="text-lg font-medium">会议休会中</p>
-            <p class="text-sm opacity-70">点击"恢复会议"继续</p>
-          </div>
-        </div>
-      {:else if isClosed}
-        <div class="flex flex-1 items-center justify-center">
-          <div class="flex flex-col items-center gap-4 text-muted-foreground">
-            <Gavel size={48} class="opacity-30" />
-            <p class="text-lg font-medium">会议已闭幕</p>
-            <p class="text-sm opacity-70">感谢各位代表的参与</p>
-          </div>
-        </div>
+      {:else if conf.phase === 'suspended'}
+        <PlaceholderPage icon={Gavel} title="会议休会中" subtitle="点击「恢复会议」继续" />
+      {:else if conf.phase === 'closed'}
+        <PlaceholderPage icon={Gavel} title="会议已闭幕" subtitle="感谢各位代表的参与" />
       {/if}
     </div>
 
