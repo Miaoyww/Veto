@@ -58,7 +58,5 @@
       <MessageCircle size={12} class="mr-1" />
       让渡给评论
     </Button>
-  {:else}
-    <span class="text-xs text-muted-foreground">（本次发言不可让渡）</span>
   {/if}
 </div>
