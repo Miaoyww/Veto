@@ -103,9 +103,7 @@
 
   const isTimerActive = $derived(conf?.activeSpeaker != null)
   /** 磋商/磋商准备阶段不可发起新动议（动议通过后的环节） */
-  const isMotionInProgress = $derived(
-    conf?.phase === 'caucus' || conf?.phase === 'caucus_setup'
-  )
+  const isMotionInProgress = $derived(conf?.phase === 'caucus' || conf?.phase === 'caucus_setup')
   const canProposeMotion = $derived(!isTimerActive && !isMotionInProgress)
   const canProposePoint = $derived(conf?.phase !== 'closed')
 </script>
@@ -219,22 +217,28 @@
     <!-- 阶段对应内容 -->
     <div class="flex flex-1 min-h-0 overflow-hidden p-6">
       {#if conf.phase === 'preamble'}
-        <PlaceholderPage icon={Users} title="会前准备" subtitle="所有代表团已就位，准备开始点名">
+        <PlaceholderPage title="会前准备" subtitle="所有代表团已就位，准备开始点名">
+          {#snippet icon()}<Users size={48} class="opacity-30" />{/snippet}
           <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
             <Play size={18} />
             开始点名
           </Button>
         </PlaceholderPage>
       {:else if conf.phase === 'roll_call'}
-        <PlaceholderPage icon={Users} title="点名进行中" subtitle="点名页面已在独立窗口中打开">
+        <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立窗口中打开">
+          {#snippet icon()}<Users size={48} class="opacity-30" />{/snippet}
           <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
             <Play size={18} />
             进入点名页面
           </Button>
         </PlaceholderPage>
       {:else if conf.phase === 'pending_speakers_list'}
-        <PlaceholderPage icon={Users} title="等待开启主发言名单"
-          subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论" />
+        <PlaceholderPage
+          title="等待开启主发言名单"
+          subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论"
+        >
+          {#snippet icon()}<Users size={48} class="opacity-30" />{/snippet}
+        </PlaceholderPage>
       {:else if conf.phase === 'general_debate'}
         <ScrollArea class="flex-1">
           <GeneralDebatePanel />
@@ -256,9 +260,13 @@
           <VotingPanel />
         </ScrollArea>
       {:else if conf.phase === 'suspended'}
-        <PlaceholderPage icon={Gavel} title="会议休会中" subtitle="点击「恢复会议」继续" />
+        <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续">
+          {#snippet icon()}<Gavel size={48} class="opacity-30" />{/snippet}
+        </PlaceholderPage>
       {:else if conf.phase === 'closed'}
-        <PlaceholderPage icon={Gavel} title="会议已闭幕" subtitle="感谢各位代表的参与" />
+        <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与">
+          {#snippet icon()}<Gavel size={48} class="opacity-30" />{/snippet}
+        </PlaceholderPage>
       {/if}
     </div>
 
