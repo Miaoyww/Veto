@@ -1,0 +1,318 @@
+<script lang="ts">
+  /**
+   * moderated-caucus-panel.svelte
+   * ─────────────────────────────
+   * 有主持核心磋商面板 —— 逐人计时 + 总时间预算 + 发言队列管理。
+   */
+  import { onDestroy, onMount } from 'svelte'
+  import { get } from 'svelte/store'
+  import { Timer, MessageSquare } from '@lucide/svelte'
+  import { Separator } from '$lib/components/ui/separator/index.js'
+  import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
+  import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
+  import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
+  import NextSpeakerCard from '$lib/components/conference/speakers/next-speaker-card.svelte'
+  import {
+    currentConference,
+    currentEngine,
+    saveConferencesNow,
+    pauseSpeaker,
+    resumeSpeaker,
+    advanceCaucusSpeaker,
+    cancelCaucusSpeaker,
+    startCaucusSpeaker
+  } from '$lib/stores/conference/conference-store'
+  import { destroyTimer } from '$lib/engine/conference-engine'
+  import { formatTime } from '$lib/utils'
+  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
+  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/hooks/use-speaker-timer.svelte'
+  import { usePausedStateRestore } from '$lib/hooks/use-paused-state-restore.svelte'
+  import type { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
+  import type { SpeakerDisplayEntry } from '$lib/types-conference'
+
+  // ── 发言队列数据 ──────────────────────────────────────────────
+  const conf = $derived($currentConference)
+  const activeCaucus = $derived(conf?.activeCaucus ?? null)
+
+  const speakers = $derived<SpeakerDisplayEntry[]>(
+    (activeCaucus?.caucusSpeakers ?? []).map((s) => ({
+      id: s.id,
+      delegationId: s.delegationId,
+      delegationName: conf?.delegations.find((d) => d.id === s.delegationId)?.name ?? '',
+      status: s.status,
+      allocatedTimeSec: s.allocatedTimeSec
+    }))
+  )
+
+  const readyEntry = $derived(speakers.find((s) => s.status === 'ready') ?? null)
+  const waitingSpeakers = $derived(speakers.filter((s) => s.status === 'waiting'))
+  const currentIdx = $derived(activeCaucus?.currentSpeakerIndex ?? -1)
+  const nextSpeaker = $derived<SpeakerDisplayEntry | null>(
+    waitingSpeakers.length > 0 ? waitingSpeakers[0] : null
+  )
+
+  const activeSpeaker = $derived.by(() => {
+    const eng = conf?.activeSpeaker
+    if (!eng) return null
+    const entry = speakers.find((s) => s.id === eng.entryId || s.delegationId === eng.entryId)
+    if (!entry) return null
+    return { ...entry, status: 'speaking' as const }
+  })
+
+  const isSpeakerActive = $derived(activeSpeaker !== null)
+
+  // ── 计时器 ────────────────────────────────────────────────────
+  const timerState = new SpeakerTimerState()
+
+  function getEngine(): ConferenceEngine | null | undefined {
+    return get(currentEngine)
+  }
+
+  function syncDisplay(): void {
+    const engine = getEngine()
+    if (engine) getDisplayBridge().sendUpdate(buildDisplayData(engine))
+  }
+
+  function sendTick(data: { remainingSec: number; elapsedSec: number }): void {
+    getDisplayBridge().sendTimerTick({
+      remainingSec: data.remainingSec,
+      elapsedSec: data.elapsedSec,
+      totalSec: timerState.displayTotal,
+      status: timerState.isPaused ? 'paused' : 'playing'
+    })
+  }
+
+  // ── 音频提示 ──────────────────────────────────────────────────
+  let audioCtx: AudioContext | null = null
+
+  function ensureAudioCtx(): AudioContext {
+    if (!audioCtx) audioCtx = new AudioContext()
+    return audioCtx
+  }
+
+  function playBeep(): void {
+    try {
+      const ctx = ensureAudioCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      osc.type = 'sine'
+      gain.gain.value = 0.1
+      osc.start()
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
+      osc.stop(ctx.currentTime + 0.15)
+    } catch {
+      // AudioContext 可能在非用户交互上下文中被阻止
+    }
+  }
+
+  let lastBeepRemaining = $state(-1)
+
+  function maybeBeep(remainingSec: number): void {
+    const remaining = Math.round(remainingSec)
+    if (remaining <= 0 || remaining === lastBeepRemaining) return
+    if (remaining === 30 || remaining === 10 || remaining === 5) {
+      lastBeepRemaining = remaining
+      playBeep()
+    }
+  }
+
+  function sendTickWithAudio(data: { remainingSec: number; elapsedSec: number }): void {
+    sendTick(data)
+    maybeBeep(data.remainingSec)
+  }
+
+  usePerSpeakerTimer(timerState, {
+    get enabled() { return true },
+    timerId: 'caucus-speaker',
+    tickMs: 1000,
+    getEngine,
+    onExpire() {
+      advanceCaucusSpeaker()
+      syncDisplay()
+    },
+    onTick: sendTickWithAudio
+  })
+
+  usePausedStateRestore(timerState, {
+    get enabled() { return true },
+    getEngine,
+    isExcludedCaucus: false
+  })
+
+  // ── 挂载时同步 Display ───────────────────────────────────────
+  $effect(() => {
+    void conf
+    syncDisplay()
+  })
+
+  // ── 总时间预算 ──────────────────────────────────────────────
+  const totalBudgetRemaining = $derived(
+    activeCaucus
+      ? Math.max(0, activeCaucus.totalSec - ((activeCaucus.elapsedSec ?? 0) + timerState.displayElapsed))
+      : 0
+  )
+  const totalBudgetSec = $derived(activeCaucus ? activeCaucus.totalSec : 0)
+
+  const isListExhausted = $derived(
+    currentIdx >= speakers.length && speakers.length > 0
+  )
+
+  // ── 操作处理 ─────────────────────────────────────────────────
+  function pauseSpeaking(): void {
+    getDisplayBridge().sendTimerTick({
+      remainingSec: timerState.displayRemaining,
+      elapsedSec: timerState.displayElapsed,
+      totalSec: timerState.displayTotal,
+      status: 'paused'
+    })
+    timerState.isPaused = true
+    pauseSpeaker()
+    syncDisplay()
+  }
+
+  function resumeSpeaking(): void {
+    timerState.isPaused = false
+    resumeSpeaker()
+    syncDisplay()
+  }
+
+  function finishSpeaker(): void {
+    timerState.isPaused = false
+    advanceCaucusSpeaker()
+    syncDisplay()
+  }
+
+  function cancelReadySpeakerHandler(): void {
+    cancelCaucusSpeaker()
+    syncDisplay()
+  }
+
+  function startCaucusSpeakerHandler(): void {
+    startCaucusSpeaker()
+    syncDisplay()
+  }
+
+  // ── 键盘快捷键（无让渡）─────────────────────────────────────
+  function isInInput(el: HTMLElement): boolean {
+    const tag = el.tagName
+    return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable
+  }
+
+  function handleSpeakerKeydown(e: KeyboardEvent): void {
+    if (isInInput(e.target as HTMLElement)) return
+    if (!isSpeakerActive) return
+
+    if (e.key === ' ' && !e.ctrlKey && !e.altKey) {
+      e.preventDefault()
+      if (timerState.isPaused) {
+        resumeSpeaking()
+      } else {
+        pauseSpeaking()
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      finishSpeaker()
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('keydown', handleSpeakerKeydown)
+    return () => window.removeEventListener('keydown', handleSpeakerKeydown)
+  })
+
+  // ── Cleanup ──────────────────────────────────────────────────
+  onDestroy(() => {
+    saveConferencesNow()
+    destroyTimer('caucus-speaker')
+  })
+</script>
+
+<div class="flex w-full flex-col gap-4">
+  {#if conf}
+    <!-- ═══ 头部：标题 + 总时间预算 ═══ -->
+    <div class="flex items-center justify-center gap-2">
+      <MessageSquare size={28} class="text-indigo-500" />
+      <h2 class="text-xl font-bold text-foreground">有主持核心磋商</h2>
+    </div>
+
+    <div class="flex items-center gap-3 text-sm text-muted-foreground">
+      <span>总剩余</span>
+      <span class="font-mono font-semibold text-foreground">{formatTime(totalBudgetRemaining)}</span>
+      <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+        <div
+          class="h-full rounded-full transition-all duration-1000 {totalBudgetRemaining <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
+          style="width: {totalBudgetSec > 0 ? ((totalBudgetSec - totalBudgetRemaining) / totalBudgetSec) * 100 : 0}%"
+        ></div>
+      </div>
+    </div>
+
+    {@const perTime = activeSpeaker?.allocatedTimeSec ?? 60}
+    {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
+    <div class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}">
+      剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span> 人（{formatTime(totalBudgetRemaining)} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span class="ml-1 text-red-400">— 当前发言人结束后将自动终止磋商</span>{/if}
+    </div>
+
+    <Separator />
+
+    <!-- ═══ 发言人区域 ═══ -->
+    {#if !activeSpeaker && readyEntry}
+      <ReadySpeakerCard
+        delegationName={readyEntry.delegationName}
+        allocatedTimeSec={readyEntry.allocatedTimeSec}
+        onstart={startCaucusSpeakerHandler}
+        oncancel={cancelReadySpeakerHandler}
+      />
+    {:else if isSpeakerActive && conf.activeSpeaker}
+      <ActiveSpeakerCard
+        delegationName={activeSpeaker.delegationName}
+        remainingSec={timerState.displayRemaining}
+        totalSec={timerState.displayTotal}
+        isPaused={timerState.isPaused}
+        canYield={false}
+        onpause={pauseSpeaking}
+        onresume={resumeSpeaking}
+        onend={() => finishSpeaker()}
+      />
+    {:else}
+      <div class="flex flex-col items-center gap-4 text-muted-foreground">
+        <Timer size={48} class="opacity-30" />
+        <p class="text-lg font-medium">等待发言...</p>
+      </div>
+    {/if}
+
+    {#if nextSpeaker && !isSpeakerActive && !readyEntry}
+      <NextSpeakerCard
+        label="下一位"
+        delegationName={nextSpeaker.delegationName}
+        allocatedTimeSec={nextSpeaker.allocatedTimeSec}
+        showPrepareButton={false}
+      />
+    {/if}
+
+    <WaitingSpeakerList
+      title="发言队列"
+      speakers={waitingSpeakers}
+      showIndex={false}
+      showDelete={false}
+    />
+
+    {#if isListExhausted}
+      <div class="text-center text-sm text-muted-foreground">
+        名单已走完，
+        {#if totalBudgetRemaining > 5}
+          返回磋商准备以添加更多发言人
+        {:else}
+          磋商即将结束
+        {/if}
+      </div>
+    {/if}
+  {:else}
+    <div class="flex flex-col items-center gap-4 text-muted-foreground">
+      <Timer size={48} class="opacity-30" />
+      <p class="text-lg font-medium">没有进行中的会议</p>
+    </div>
+  {/if}
+</div>

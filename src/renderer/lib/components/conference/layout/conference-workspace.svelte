@@ -3,9 +3,11 @@
   import { navigate } from '$lib/router.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
-  import SpeakerQueue from '$lib/components/conference/speakers/speaker-queue.svelte'
   import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
+  import GeneralDebatePanel from '$lib/components/conference/speakers/general-debate-panel.svelte'
+  import ModeratedCaucusPanel from '$lib/components/conference/speakers/moderated-caucus-panel.svelte'
+  import FreeCaucusPanel from '$lib/components/conference/speakers/free-caucus-panel.svelte'
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
@@ -267,7 +269,7 @@
         </div>
       {:else if conf.phase === 'general_debate'}
         <ScrollArea class="flex-1">
-          <SpeakerQueue mode="general_debate" />
+          <GeneralDebatePanel />
         </ScrollArea>
       {:else if conf.phase === 'caucus_setup'}
         <ScrollArea class="flex-1">
@@ -275,7 +277,11 @@
         </ScrollArea>
       {:else if conf.phase === 'caucus'}
         <ScrollArea class="flex-1">
-          <SpeakerQueue mode="caucus" />
+          {#if conf.activeCaucus?.type === 'moderated'}
+            <ModeratedCaucusPanel />
+          {:else}
+            <FreeCaucusPanel />
+          {/if}
         </ScrollArea>
       {:else if conf.phase === 'voting'}
         <ScrollArea class="flex-1">
