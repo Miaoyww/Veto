@@ -353,9 +353,11 @@ export type CaucusType = 'moderated' | 'unmoderated' | 'individual'
 
 export interface Conference {
   id: string
-  /** 大会名称，如 "安理会2026年第3次紧急会议" */
+  /** 大会名称，如 "凡尔登战役地缘政治联动体系" */
   name: string
-  /** 会场/委员会，如 "联合国安全理事会" */
+  /** 大会描述/背景 */
+  description?: string
+  /** 会场/委员会名称（standing 模式下的委员会名称，如 "联合国安全理事会"） */
   venue: string
   createdAt: number
   updatedAt: number
@@ -365,6 +367,14 @@ export interface Conference {
   delegations: Delegation[]
   /** 议题列表 */
   agenda: AgendaItem[]
+  /** 席位组列表（内阁/委员会、MPC、学团 IPC） */
+  seatGroups: import('./types-delegate').SeatGroup[]
+  /** 席位列表 */
+  seats: import('./types-delegate').Seat[]
+  /** 新闻列表 */
+  news: import('./types-delegate').News[]
+  /** 局势更新列表 */
+  situationUpdates: import('./types-delegate').SituationUpdate[]
   /** 主发言名单 */
   speakerLists?: SpeakerListData
   /** 所有动议 */
@@ -436,7 +446,7 @@ export interface Conference {
   /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
   yieldPending?: YieldPendingState | null
 
-  /** 绑定的时间线 ID */
+  /** 绑定的时间线 ID（TODO: JCC 多时间轴支持时改为 string[]，支持快轴/慢轴/停轴） */
   timelineId?: string | null
 }
 

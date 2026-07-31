@@ -1,180 +1,176 @@
 # Veto
 
-模拟联合国会议与军事推演系统。用户作为会议主席，管理代表团、主持辩论、
-处理动议、组织投票，并可切换到地图界面进行兵棋推演。
+模拟联合国大会统筹平台。用户可创建完整大会，管理席位组（内阁/委员会、MPC、学团 IPC），
+分配代表权限，支持常委模式（standing）和危机联动模式（crisis）之间的切换。
 
-## Conference（模拟大会）
+三种角色：**Chair**（主席/学团控制端）、**Delegate**（代表端）、**Display**（投屏端）。
 
-Model UN 风格的会议模拟。一场会议包含多个代表团，按议事规则进行辩论、
-磋商和投票。
+## Conference（大会）
+
+一场完整的模拟联合国大会的顶层容器。包含多个席位组、时间线，统筹管理整场活动。
+旧模型中"一个委员会"的 Conference 现已降级为 standing 模式下的一类 SeatGroup 行为。
 
 **Conference (大会)**:
-一场模拟联合国会议。包含代表团列表、议题、发言名单、动议、决议草案和投票记录。
-会议有生命周期阶段（phase），从点名开始，到闭幕结束。
-_Avoid_: Meeting, Session
+整场模拟联合国活动的根实体。包含席位组列表、时间线绑定，是主席创建会议的入口。
+_Avoid_: Meeting, Session, Committee
+
+## SeatGroup（席位组）
+
+大会下的一级组织单元。有三种类型：内阁/委员会、MPC、学团 IPC。
+
+**SeatGroup (席位组)**:
+一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在大会议事规则中的角色。
+可选择性绑定到一个 Delegation。
+_Avoid_: Role, Team, Group
+
+**SeatGroup 类型**:
+
+| 类型 | 绑定 Delegation | 模式 | 说明 |
+|---|---|---|---|
+| 内阁/委员会 (Cabinet) | 是 | standing ↔ crisis 可切换 | 代表国家或政治实体 |
+| MPC | 否 | 固定 | 主新闻中心 |
+| 学团 IPC | 否（可临时绑定） | 固定 | 推演控制中心 |
+
+**内阁/委员会 (Cabinet)**:
+既可指危机模式下的国家内阁，也可指常委模式下的多国委员会。两种模式中途可切换。
+- **危机模式 (crisis)**：Seat 独立运作，各自绑定部门（海军部、情报局等），直接发送指令。
+- **常委模式 (standing)**：内阁统一为国家立场，通过会议机制（发言名单、动议、表决）产出国家文件。
+模式切换信号由 Chair 端发出，代表端被动接收。
+_Avoid_: Committee, Council
+
+**MPC (主新闻中心)**:
+新闻的生产方。成员起草新闻草稿，提交学团审核后发布。已发布新闻可被学团撤回（从全局列表移除）。
+内部可细分多家通讯社（通过 source 字段标识）。
+_Avoid_: Press, Media
+
+**学团 IPC (推演控制中心)**:
+大会的控制中枢。成员能力独立灵活分配（某人处理指令、某人审核新闻、某人发布局势、某人控制会议）。
+可随时绑定/取消绑定到 Delegation。
+_Avoid_: Chair, Admin, Director
+
+## Seat（席位）
+
+**Seat (席位)**:
+席位组内的具体座位。每个 Seat 绑定一个 Account，携带独立于 SeatGroup 默认值的 Capability 覆盖。
+在 crisis 模式下，Seat 绑定具体部门（如"海军部长""情报局局长"）；在 standing 模式下，
+Seat 代表国家代表团内的一个角色（如"德国外交部长"）。
+_Avoid_: Member, User, Delegate
+
+## Account（账号）
+
+**Account (账号)**:
+本地管理的登录凭证。一人一码（邀请码），一个账号只能在一个大会中占据一个 Seat。
+先做本地管理（Chair 端预设），预留迁移至云服务的接口。
+通过"邀请码 + 密码"连接会议，邀请码预先绑定 SeatGroup 和 Seat。
+_Avoid_: User, Login
+
+## Capability（能力）
+
+**Capability (能力)**:
+Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（开/关）。
+
+| 能力 | 说明 |
+|---|---|
+| `view_conference` | 查看会议状态（发言名单、动议、投票等） |
+| `draft_news` | MPC：起草新闻草稿 |
+| `review_news` | 学团：审核新闻 |
+| `submit_directive` | 危机模式：提交指令 |
+| `process_directive` | 学团：处理指令 |
+| `publish_situation` | 学团：发布局势更新 |
+| `control_conference` | 控制会议流程（点名、发言、动议、投票） |
+| `draft_resolution` | 常委模式：起草决议 |
+| `internal_vote` | 内阁内部表决 |
+
+_Avoid_: Permission, Right, Role
+
+## Directive（指令）
+
+**Directive (指令)**:
+危机模式下 Seat 发出的结构化请求。有发送方和接收方，接收方审核（通过/驳回）。
+驳回后可修改重发，本地保留修改记录。一条指令只能有一个接收方。
+内阁之间的外交指令走同样的审核流程（接收方审核），所有指令通过"局势更新"展示最终处理结果，
+不建显式指令→局势更新的因果关系。
+
+指令字段：id、标题、发起人 Seat、发起人职务、接收方、保密等级（绝密/机密/秘密/公开）、
+正文、状态（draft → submitted → approved/rejected）、所属内阁、时间戳。
+_Avoid_: Order, Command, Request
+
+## News（新闻）
+
+**News (新闻)**:
+MPC 成员起草、学团审核后发布的新闻稿。生命周期：
+draft → submitted → review（学团审核）→ published / rejected。
+驳回后可修改重交。已发布新闻可被撤回（从全局新闻列表移除，非软删除）。
+包含 source 字段标识通讯社名称，为 MPC 内部细分预留。
+_Avoid_: Article, Post, Bulletin
+
+## SituationUpdate（局势更新）
+
+**SituationUpdate (局势更新)**:
+学团 IPC 发布的局势变化公告。关联 Timeline，全局可见（所有代表看到相同内容）。
+当前阶段不考虑分内阁差异化情报。预留 `relatedBattleId` 和 `relatedLocation` 字段供未来地图集成。
+_Avoid_: Event, Update, Intel
+
+## 角色（Role）
+
+**Chair (主席/学团控制端)**:
+大会创建者和管理者。控制会议流程、处理指令、审核新闻、发布局势更新、
+管理 SeatGroup/Seat 配置、控制模式切换。运行内置 WS 服务端供代表端和投屏端连接。
+
+**Delegate (代表端)**:
+代表使用的 Veto 实例。通过邀请码+密码连接主席的会议，查看同步的会议状态，
+根据 Seat 的 Capability 执行操作（提交指令、起草新闻等）。
+拥有与 Display 同级的实时同步能力。
+_Avoid_: Client, Member
+
+**Display (投屏端)**:
+只读投影窗口（已有）。通过 WebSocket 连接 Chair，不维护自身计时器（见 ADR-0002）。
+_Avoid_: Projector, Screen
+
+## Delegation（代表团）
+
+（保留，重新定位）
 
 **Delegation (代表团)**:
-代表一个国家或组织的参会实体。有全名、简称、出席状态和投票权。
-投票权为 false 的代表团视为观察员，不计入表决基数。
+代表一个国家或政治实体的抽象概念。SeatGroup（内阁/委员会类型）可选择绑定到 Delegation。
+在 standing 模式下，Delegation 是传统会议机制中的参与者（发言、投票）。
 _Avoid_: Faction, Country, Nation, Team
 
-**AgendaItem (议题)**:
-会议讨论的议题。每个议题有标题和描述，关联决议草案。
-_Avoid_: Topic, Subject
+## SpeakerList / Motion / Voting / Caucus 等
 
-**SpeakerList (主发言名单)**:
-有序的发言队列。代表团依次加入，按顺序发言。每个发言人分配固定时间。
-_Avoid_: Speaking Queue, Roster
+（保留原定义，略）
 
-**SpeakerEntry (发言条目)**:
-发言名单中的一条记录。状态机：waiting → ready → speaking → finished。
-可被 paused/interrupted。取消 ready 状态时移出队列（而非退回 waiting）。
-_Avoid_: Speaker, Turn
+以下概念属于 standing 模式下的传统会议机制，已在旧 CONTEXT.md 中定义，
+此处仅保留关键术语表。详细定义见 [types-conference.ts](src/renderer/lib/types-conference.ts)。
 
-**Yield (让渡)**:
-发言人提前结束发言时，将剩余时间让渡给主席、另一个代表团、
-或开放提问/评论。让渡获得时间的代表不能再让渡。
-_Avoid_: Delegate, Transfer
-
-**Motion (动议)**:
-代表团提出的程序性提议。共 12 种类型：开启主发言名单、有主持核心磋商、
-自由磋商、修改发言时间、延置决议草案、恢复决议草案、结束辩论、
-暂时休会、闭幕、调整投票顺序、实质性投票、更改出席状态。
-其中 `change_attendance` 为特殊动议，无需表决直接生效。
-状态机：pending → approved | rejected | expired。
-_Avoid_: Proposal, Request
-
-**Caucus (磋商)**:
-非正式讨论阶段。分为有主持磋商（moderated，按发言名单轮流发言）
-和自由磋商（unmoderated，自由讨论，主席只控制总时长）。
-_Avoid_: Discussion, Break
-
-**ModeratedCaucus (有主持磋商)**:
-结构化磋商。有主题、总时长和每人发言时间。发言顺序由主席控制，
-动议提出方可选择标首或标尾位置。
-_Avoid_: Structured Debate
-
-**UnmoderatedCaucus (自由磋商)**:
-非结构化磋商。只有一个总倒计时，代表自由交流。
-_Avoid_: Free Discussion, Lobbying
-
-**IndividualSpeech (个人演讲)**:
-一种无需表决的动议。提出方获得独占发言时间（单人独白），
-时长在动议中指定，主席可随时提前结束。复用 caucus 阶段，
-结束后回到 general_debate。
-_Avoid_: Personal Statement, Solo Speech, Address
-
-**Point (问题)**:
-代表在会议中提出的程序性问题。三种类型：
-point_of_order（程序性）、point_of_inquiry（咨询性）、
-point_of_personal_privilege（个人特权）。
-_Avoid_: Question, Interruption
-
-**DraftResolution (决议草案)**:
-由起草国（sponsors）提出、附议国（signatories）支持的正式文件。
-关联到某个议题，需要经过实质性投票通过。
-_Avoid_: Document, Proposal
-
-**VotingSession (表决)**:
-一次投票过程。针对动议（motion）或决议（resolution）。
-支持两种多数规则：simple_majority（简单多数，>50%）和
-two_thirds（三分之二多数，≥2/3）。采用唱名表决（roll-call vote），
-每个出席且有投票权的代表团依次投票。
-_Avoid_: Ballot, Poll
-
-**VoteBallot (投票票)**:
-单个代表团在表决中的投票。四种选项：yes / no / abstain / skip。
-skip 不计入总票数。
-_Avoid_: Vote, Ballot
-
-**RollCall (点名)**:
-会议开始时的出席确认环节。主席逐一点名，每个代表团回应 present 或 absent。
-完成后锁定出席名单，用于后续表决的计票基数。
-_Avoid_: Attendance Check
-
-**ConferencePhase (会议阶段)**:
-会议生命周期的阶段。状态机：
-preamble → roll_call → pending_speakers_list → general_debate ↔ caucus ↔ voting
-↔ suspended → closed。
-_Avoid_: Stage, Status
-
-**Minutes / ConferenceEntry (会议记录)**:
-会议操作的审计日志。每条记录包含操作类型、时间戳和描述。
-Action types 由 `ConferenceActionType`（25 种）统一定义。
-_Avoid_: Log, History
-
-**ProposerPosition (动议国位置)**:
-有主持磋商中动议提出方的发言位置：first（标首，第一个发言）或 last（标尾，
-最后一个发言）。
+- **SpeakerList (主发言名单)** — 有序发言队列
+- **SpeakerEntry (发言条目)** — 状态机：waiting → ready → speaking → finished
+- **Yield (让渡)** — 剩余时间转移
+- **Motion (动议)** — 程序性提议，13 种类型
+- **Caucus (磋商)** — moderated / unmoderated / individual
+- **Point (问题)** — 程序性/咨询性/个人特权
+- **DraftResolution (决议草案)** — 起草国+附议国，需表决
+- **VotingSession (表决)** — 唱名表决，simple_majority / two_thirds
+- **RollCall (点名)** — 会议出席确认
 
 ## Timeline（时间线）
 
-会议时间轴模拟器。维护现实时间与模拟会议时间之间的映射关系。
+（保留，重新定位）
 
 **Timeline (时间线)**:
-一个独立的时间模拟实例。通过倍率（ratio）控制模拟时间流逝速度。
-可暂停、恢复。支持倍率预设（1x、10x、1分/秒、1时/秒、1日/秒）。
+独立时间模拟实例。Conference 可绑定多个 Timeline（如 JCC 的快轴/慢轴/停轴）。
+通过倍率控制模拟时间流速。SituationUpdate 按 Timeline 时间排序展示。
 _Avoid_: Clock, Timer, Speed
-
-**SimulationAnchor (模拟锚点)**:
-时间线公式的基准点：`simTime = simulationAnchor + (now - realAnchor) × ratio`。
-暂停时冻结 simulationAnchor，恢复时重新计算 realAnchor。
-_Avoid_: Baseline, Reference Point
-
-**Ratio (倍率)**:
-每现实秒对应的模拟秒数。ratio=1 即实时，ratio=3600 即 1 小时/秒。
-_Avoid_: Speed, Scale, Multiplier
 
 ## Battle（兵棋推演）
 
-HOI4 风格的地图推演。在战役地图上部署单位，模拟军事行动。
+（保留，与 Conference 平级）
 
 **Battle (战局)**:
-一场推演战局。包含派系、部署单位和事件脚本。
-存储在 `battles.json`，通过 simulation-engine 按帧驱动。
+HOI4 风格地图推演。与 Conference 平级，非附属关系。插件可注入静态数据（兵种、部署、事件），
+但不能在运行时与 Battle 交互。预留与 SituationUpdate 的 `relatedBattleId` 关联。
 _Avoid_: War, Scenario, Game
-
-**Faction (派系)**:
-推演中的一方势力。在 Conference 语境中应使用 Delegation 而非 Faction。
-_Avoid_: Side, Team, Player
-
-**PlacedUnit (部署单位)**:
-地图上的一个军事单位。有坐标、速度、攻击力、组织度等属性。
-通过 simulation-engine 每帧计算移动和战斗。
-_Avoid_: Token, Piece, Entity
-
-**EventSetting (事件脚本)**:
-战役中的条件触发事件。包含触发器（trigger）、条件（condition）和动作（action）。
-_Avoid_: Script, Trigger
 
 ## Plugin System（插件系统）
 
-Veto 的可扩展性框架。插件通过 `veto` 虚拟模块（类似 VS Code 的 `vscode` 模块）
-访问平台能力。Plugin Host 通过 `Module._load` 拦截实现虚拟模块注入，
-插件内 `import { ... } from 'veto'` 在运行时自动解析为 PluginContext 的字段。
-
-插件入口导出 `activate(context: PluginContext)` 和可选的 `deactivate()`。
-
-**Plugin (插件)**:
-扩展 Veto 功能的独立模块。五种类型：faction（派系数据）、campaign（战役场景）、
-utility（服务工具）、dependency（纯依赖）、preset（预置配置）。
-通过 manifest.json 声明，由 Plugin Host 在运行时加载。
-所有插件运行在 Electron main process 内（不再是独立子进程）。
-_Avoid_: Extension, Addon, Mod
-
-**PluginContext (插件上下文)**:
-插件激活时注入的运行时环境。包含六个 API：
-- `logger` — 分级日志（info/warn/error/debug），输出到平台统一日志系统
-- `events` — 全局 pub/sub 事件总线，支持通配符匹配（`conference:*`）
-- `storage` — 插件隔离的键值持久化，JSON 序列化。插件必须使用 storage
-  而非自行读写文件（见 ADR-0001）
-- `conference` — 只读会议数据查询（list/get/update）
-- `timeline` — 只读时间线数据查询（list/get/update）
-- `notifications` — Toast 级用户通知（info/success/warn/error）
-_Avoid_: API, Runtime
-
-**veto 虚拟模块**:
-由 Plugin Host 注入的运行时模块。插件源码中 `import { events, storage } from 'veto'`
-在编译期通过 `@vetoexpress/types`（npm 包 `veto-dts`）获得类型检查，
-运行时由 `Module._load` 拦截返回 PluginContext 的对应字段。
-_Avoid_: @veto/sdk（已删除）
+（保留，略）
