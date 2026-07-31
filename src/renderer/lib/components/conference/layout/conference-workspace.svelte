@@ -101,7 +101,11 @@
   const isSuspended = $derived(conf?.phase === 'suspended')
   const isClosed = $derived(conf?.phase === 'closed')
   const isTimerActive = $derived(conf?.activeSpeaker != null)
-  const canProposeMotion = $derived(!isTimerActive)
+  /** 磋商/磋商准备阶段不可发起新动议（动议通过后的环节） */
+  const isMotionInProgress = $derived(
+    conf?.phase === 'caucus' || conf?.phase === 'caucus_setup'
+  )
+  const canProposeMotion = $derived(!isTimerActive && !isMotionInProgress)
   const canProposePoint = $derived(conf?.phase !== 'closed')
 </script>
 
@@ -191,7 +195,11 @@
             class="h-8 gap-1.5 text-xs"
             onclick={handlePrimaryAction}
             disabled={!canProposeMotion}
-            title={isTimerActive ? '发言计时进行中，无法提出动议' : ''}
+            title={isTimerActive
+              ? '发言计时进行中，无法提出动议'
+              : isMotionInProgress
+                ? '磋商进行中，无法提出新动议'
+                : ''}
           >
             <Play size={12} />
             {primaryActionLabel}

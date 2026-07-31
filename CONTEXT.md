@@ -28,7 +28,7 @@ _Avoid_: Speaking Queue, Roster
 
 **SpeakerEntry (发言条目)**:
 发言名单中的一条记录。状态机：waiting → ready → speaking → finished。
-可被 paused/interrupted。
+可被 paused/interrupted。取消 ready 状态时移出队列（而非退回 waiting）。
 _Avoid_: Speaker, Turn
 
 **Yield (让渡)**:

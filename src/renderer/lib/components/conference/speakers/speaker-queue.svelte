@@ -40,7 +40,7 @@
     // caucus
     endCaucus,
     advanceCaucusSpeaker,
-    unreadyCaucusSpeaker,
+    cancelCaucusSpeaker,
     startCaucusSpeaker,
     pauseCaucus,
     resumeCaucus
@@ -305,8 +305,11 @@
   }
 
   function cancelReadySpeakerHandler(): void {
-    // caucus: 退回 ready 状态到 waiting，而非跳到下一位
-    unreadyCaucusSpeaker()
+    if (mode === 'general_debate') {
+      if (readyEntry) removeFromSpeakersList(readyEntry.id)
+    } else {
+      cancelCaucusSpeaker()
+    }
     syncDisplay()
   }
 
@@ -625,7 +628,7 @@
           delegationName={readyEntry.delegationName}
           allocatedTimeSec={readyEntry.allocatedTimeSec}
           onstart={() => beginSpeaking(readyEntry.id)}
-          oncancel={() => removeFromSpeakersList(readyEntry.id)}
+          oncancel={cancelReadySpeakerHandler}
         />
       {/if}
 

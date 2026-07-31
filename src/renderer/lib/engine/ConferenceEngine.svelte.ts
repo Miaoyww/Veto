@@ -1006,50 +1006,21 @@ export class ConferenceEngine {
     this.touch()
   }
 
-  advanceCaucusSpeaker(): void {
-    const caucus = this.activeCaucus
-    if (!caucus) return
-
-    const speakers = caucus.caucusSpeakers ?? []
-    const currentIdx = caucus.currentSpeakerIndex ?? -1
-
-    /**
-     * 先累计当前发言人的时间
-     * 防止切换代表时总磋商时间没有增加
-     */
-    if (this.activeSpeaker) {
-      this.activeCaucus = {
-        ...caucus,
-        elapsedSec: caucus.elapsedSec + this.activeSpeaker.elapsedSec
-      }
-    }
-
-    const updatedCaucus = this.activeCaucus!
-
-    const totalRemaining = updatedCaucus.totalSec - updatedCaucus.elapsedSec
-
-    const motion = this.motions.find((m) => m.id === updatedCaucus.motionId) as any
-
-    const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
-
-    /**
-     * 删除当前发言人
-     */
-    const updatedSpeakers =
-      currentIdx >= 0 ? speakers.filter((_, i) => i !== currentIdx) : [...speakers]
-
-    /**
-     * 情况1：
-     * 没有剩余发言人
-     *
-     * 这是最容易产生僵尸状态的地方
-     */
+  /**
+   * 移除发言人后的统一过渡逻辑。
+   * 由 advanceCaucusSpeaker / cancelCaucusSpeaker 共用。
+   */
+  private transitionAfterCaucusSpeakerRemoved(
+    updatedSpeakers: SpeakerEntry[],
+    updatedCaucus: this['activeCaucus'] & {},
+    totalRemaining: number,
+    perSpeakerSec: number
+  ): void {
     if (updatedSpeakers.length === 0) {
       if (totalRemaining >= perSpeakerSec) {
         const previousMotionId = updatedCaucus.motionId
 
         this.phase = 'caucus_setup'
-
         this.activeCaucus = null
         this.activeSpeaker = null
 
@@ -1070,10 +1041,6 @@ export class ConferenceEngine {
       return
     }
 
-    /**
-     * 情况2：
-     * 还有代表，并且剩余时间足够
-     */
     if (totalRemaining >= perSpeakerSec) {
       const nextSpeaker: SpeakerEntry = {
         ...updatedSpeakers[0],
@@ -1091,16 +1058,43 @@ export class ConferenceEngine {
       this.activeSpeaker = null
 
       this.addConferenceEntry('speaker_ready', `${nextName} 准备发言（等待主席开始计时）`)
-
-      /**
-       * 情况3：
-       * 有代表，但是时间不足
-       */
     } else {
       this.endCaucus()
     }
 
     this.touch()
+  }
+
+  advanceCaucusSpeaker(): void {
+    const caucus = this.activeCaucus
+    if (!caucus) return
+
+    const speakers = caucus.caucusSpeakers ?? []
+    const currentIdx = caucus.currentSpeakerIndex ?? -1
+
+    // 先累计当前发言人的时间
+    if (this.activeSpeaker) {
+      this.activeCaucus = {
+        ...caucus,
+        elapsedSec: caucus.elapsedSec + this.activeSpeaker.elapsedSec
+      }
+    }
+
+    const updatedCaucus = this.activeCaucus!
+    const totalRemaining = updatedCaucus.totalSec - updatedCaucus.elapsedSec
+    const motion = this.motions.find((m) => m.id === updatedCaucus.motionId) as any
+    const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
+
+    // 删除当前发言人
+    const updatedSpeakers =
+      currentIdx >= 0 ? speakers.filter((_, i) => i !== currentIdx) : [...speakers]
+
+    this.transitionAfterCaucusSpeakerRemoved(
+      updatedSpeakers,
+      updatedCaucus,
+      totalRemaining,
+      perSpeakerSec
+    )
   }
 
   startCaucusSpeakerEntry(): void {
@@ -1176,25 +1170,33 @@ export class ConferenceEngine {
     this.touch()
   }
 
-  /** 将 caucus 中状态为 ready 的发言人退回到 waiting（主席取消准备） */
-  unreadyCaucusSpeaker(): void {
-    if (!this.activeCaucus?.caucusSpeakers) return
-    const speakers = this.activeCaucus.caucusSpeakers
+  /** 取消 ready 状态的发言人（移出队列并自动推进到下一位） */
+  cancelCaucusSpeaker(): void {
+    const caucus = this.activeCaucus
+    if (!caucus?.caucusSpeakers) return
+
+    const speakers = caucus.caucusSpeakers
     const readyIdx = speakers.findIndex((s) => s.status === 'ready')
     if (readyIdx < 0) return
 
     const speaker = speakers[readyIdx]
-    this.activeCaucus = {
-      ...this.activeCaucus,
-      caucusSpeakers: speakers.map((s, i) =>
-        i === readyIdx ? { ...s, status: 'waiting' as const } : s
-      )
-    }
+    const updatedSpeakers = speakers.filter((_, i) => i !== readyIdx)
+
+    const totalRemaining = caucus.totalSec - caucus.elapsedSec
+    const motion = this.motions.find((m) => m.id === caucus.motionId) as any
+    const perSpeakerSec = motion?.speakingTimePerPersonSec ?? 60
+
     this.addConferenceEntry(
       'speaker_cancelled',
       `取消 ${this.getSpeakerDelegationName(speaker)} 的准备状态`
     )
-    this.touch()
+
+    this.transitionAfterCaucusSpeakerRemoved(
+      updatedSpeakers,
+      caucus,
+      totalRemaining,
+      perSpeakerSec
+    )
   }
 
   pauseCaucus(): void {
