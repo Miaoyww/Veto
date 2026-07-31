@@ -11,13 +11,10 @@
   interface Props {
     delegationName: string
     remainingSec: number
-    elapsedSec: number
     totalSec: number
     isPaused?: boolean
     canYield?: boolean
     yieldNote?: string
-    /** "N 人中第 X 位" 的可选副标题 */
-    positionLabel?: string
     onpause?: () => void
     onresume?: () => void
     onend?: () => void
@@ -27,18 +24,17 @@
   let {
     delegationName,
     remainingSec,
-    elapsedSec,
     totalSec,
     isPaused = false,
     canYield = true,
     yieldNote,
-    positionLabel,
     onpause,
     onresume,
     onend,
     onyield
   }: Props = $props()
 
+  const elapsedSec = $derived(Math.floor(totalSec - remainingSec))
   const isUrgent = $derived(remainingSec <= 10 && !isPaused)
 </script>
 
@@ -57,9 +53,6 @@
   <div class="mt-1 text-2xl font-bold text-foreground">
     {delegationName}
   </div>
-  {#if positionLabel}
-    <div class="mt-0.5 text-xs text-muted-foreground">{positionLabel}</div>
-  {/if}
   <div
     class="mt-3 font-mono text-5xl font-bold tabular-nums {isPaused
       ? 'text-muted-foreground'
@@ -70,7 +63,7 @@
     {formatTime(remainingSec)}
   </div>
   <div class="mt-1 text-xs text-muted-foreground">
-    已用 {Math.floor(elapsedSec)}秒 / 共 {totalSec}秒
+    已用 {elapsedSec}秒 / 共 {totalSec}秒
   </div>
 
   <div class="mt-4">

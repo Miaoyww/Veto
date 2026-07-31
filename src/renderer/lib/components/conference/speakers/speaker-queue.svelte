@@ -48,10 +48,7 @@
   import { destroyTimer } from '$lib/engine/conference-engine'
   import { formatTime } from '$lib/utils'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import {
-    SpeakerTimerState,
-    usePerSpeakerTimer
-  } from '$lib/hooks/use-speaker-timer.svelte'
+  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/hooks/use-speaker-timer.svelte'
   import { usePausedStateRestore } from '$lib/hooks/use-paused-state-restore.svelte'
   import { useCaucusCountdown } from '$lib/hooks/use-caucus-countdown.svelte'
   import type { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
@@ -87,8 +84,7 @@
     rawSpeakers.map((s) => ({
       id: s.id,
       delegationId: s.delegationId,
-      delegationName:
-        conf?.delegations.find((d) => d.id === s.delegationId)?.name ?? '',
+      delegationName: conf?.delegations.find((d) => d.id === s.delegationId)?.name ?? '',
       status: s.status,
       allocatedTimeSec: s.allocatedTimeSec
     }))
@@ -103,9 +99,7 @@
     const eng = conf?.activeSpeaker
     if (!eng) return null
 
-    const entry = speakers.find(
-      (s) => s.id === eng.entryId || s.delegationId === eng.entryId
-    )
+    const entry = speakers.find((s) => s.id === eng.entryId || s.delegationId === eng.entryId)
     if (!entry) return null
 
     return { ...entry, status: 'speaking' as const }
@@ -137,7 +131,9 @@
 
   // 逐人发言计时器（一般性辩论 + 有主持磋商）
   usePerSpeakerTimer(timerState, {
-    get enabled() { return !isCaucus || isModerated },
+    get enabled() {
+      return !isCaucus || isModerated
+    },
     timerId: mode === 'general_debate' ? 'speakers-list' : 'caucus-speaker',
     tickMs: mode === 'general_debate' ? 100 : 1000,
     getEngine,
@@ -154,14 +150,18 @@
 
   // 挂载时恢复暂停态 display 值
   usePausedStateRestore(timerState, {
-    get enabled() { return !isCaucus || isModerated },
+    get enabled() {
+      return !isCaucus || isModerated
+    },
     getEngine,
     isExcludedCaucus: isCaucus && !isModerated
   })
 
   // 自由磋商 / 个人演讲总倒计时
   const caucusCountdown = useCaucusCountdown({
-    get enabled() { return isCaucus && !isModerated },
+    get enabled() {
+      return isCaucus && !isModerated
+    },
     timerId: 'caucus-countdown',
     getEngine,
     onExpire() {
@@ -187,9 +187,7 @@
   const activeSpeakerCanYield = $derived.by(() => {
     if (isCaucus) return false // 磋商暂不支持让渡
     if (!conf?.activeSpeaker) return false
-    const entry = conf?.speakerLists?.entries.find(
-      (s) => s.id === conf.activeSpeaker!.entryId
-    )
+    const entry = conf?.speakerLists?.entries.find((s) => s.id === conf.activeSpeaker!.entryId)
     return entry?.canYield !== false
   })
 
@@ -198,10 +196,8 @@
   )
 
   const yieldNote = $derived.by(() => {
-    if (isYieldAnswering)
-      return `正在回答来自 ${yieldPending?.questionerDelegation?.name} 的提问`
-    if (!activeSpeakerCanYield && conf?.activeSpeaker)
-      return '（本次发言不可让渡）'
+    if (isYieldAnswering) return `正在回答来自 ${yieldPending?.questionerDelegation?.name} 的提问`
+    if (!activeSpeakerCanYield && conf?.activeSpeaker) return '（本次发言不可让渡）'
     return undefined
   })
 
@@ -210,8 +206,7 @@
     activeCaucus
       ? Math.max(
           0,
-          activeCaucus.totalSec -
-            ((activeCaucus.elapsedSec ?? 0) + timerState.displayElapsed)
+          activeCaucus.totalSec - ((activeCaucus.elapsedSec ?? 0) + timerState.displayElapsed)
         )
       : 0
   )
@@ -224,9 +219,7 @@
 
   // ── DelegationSelector 相关（general_debate only）───────────────
   const listedDelegationIds = $derived(
-    mode === 'general_debate'
-      ? (conf?.speakerLists?.entries.map((s) => s.delegationId) ?? [])
-      : []
+    mode === 'general_debate' ? (conf?.speakerLists?.entries.map((s) => s.delegationId) ?? []) : []
   )
 
   // ── 挂载时同步 Display ──────────────────────────────────────────
@@ -463,8 +456,8 @@
       <!-- 总时间预算进度条 -->
       <div class="flex items-center gap-3 text-sm text-muted-foreground">
         <span>总剩余</span>
-        <span
-          class="font-mono font-semibold text-foreground">{formatTime(totalBudgetRemaining)}</span
+        <span class="font-mono font-semibold text-foreground"
+          >{formatTime(totalBudgetRemaining)}</span
         >
         <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div
@@ -482,9 +475,7 @@
       {@const perTime = activeSpeaker?.allocatedTimeSec ?? 60}
       {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
       <div
-        class="text-center text-xs {maxCapacity === 0
-          ? 'text-red-400'
-          : 'text-muted-foreground'}"
+        class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}"
       >
         剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span> 人（{formatTime(
           totalBudgetRemaining
@@ -528,8 +519,7 @@
         <!-- 进度条 -->
         <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            class="h-full rounded-full transition-all duration-1000 {caucusCountdown
-              .isCaucusPaused
+            class="h-full rounded-full transition-all duration-1000 {caucusCountdown.isCaucusPaused
               ? 'bg-amber-500'
               : caucusCountdown.totalRemainingSec <= 30
                 ? 'bg-red-500'
@@ -542,28 +532,16 @@
 
         <div class="flex gap-4">
           {#if caucusCountdown.isCaucusPaused}
-            <Button
-              variant="default"
-              onclick={resumeCaucusHandler}
-              class="min-w-[140px] gap-2"
-            >
+            <Button variant="default" onclick={resumeCaucusHandler} class="min-w-[140px] gap-2">
               <Timer size={14} />
               恢复计时
             </Button>
           {:else}
-            <Button
-              variant="outline"
-              onclick={pauseCaucusHandler}
-              class="min-w-[140px] gap-2"
-            >
+            <Button variant="outline" onclick={pauseCaucusHandler} class="min-w-[140px] gap-2">
               暂停计时
             </Button>
           {/if}
-          <Button
-            variant="destructive"
-            onclick={endCaucus}
-            class="min-w-[140px] gap-2"
-          >
+          <Button variant="destructive" onclick={endCaucus} class="min-w-[140px] gap-2">
             <Timer size={14} />
             提前结束磋商
           </Button>
@@ -590,7 +568,6 @@
             <ActiveSpeakerCard
               delegationName={yieldPending.originalDelegation.name}
               remainingSec={timerState.displayRemaining}
-              elapsedSec={yieldPending.allocatedSec - timerState.displayRemaining}
               totalSec={yieldPending.allocatedSec}
               isPaused={timerState.isPaused}
               canYield={false}
@@ -605,14 +582,10 @@
         <ActiveSpeakerCard
           delegationName={activeSpeaker.delegationName}
           remainingSec={timerState.displayRemaining}
-          elapsedSec={timerState.displayElapsed}
           totalSec={timerState.displayTotal}
           isPaused={timerState.isPaused}
           canYield={activeSpeakerCanYield}
           {yieldNote}
-          positionLabel={isCaucus
-            ? `${speakers.length} 人中第 ${currentIdx + 1} 位`
-            : undefined}
           onpause={pauseSpeaking}
           onresume={resumeSpeaking}
           onend={() => finishSpeaker()}
