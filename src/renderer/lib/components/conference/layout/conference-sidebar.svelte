@@ -8,6 +8,7 @@
     Clock,
     Copy,
     Check,
+    UserRoundCheck,
     X
   } from '@lucide/svelte'
   import { navigate } from '$lib/router.svelte'
@@ -216,12 +217,25 @@
     </div>
 
     <!-- 代表团列表 -->
-    <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex shrink-0 items-center gap-1.5 px-5 pb-2">
-        <Users size={12} class="text-muted-foreground" />
-        <span class="text-[11px] font-medium text-muted-foreground">
-          代表团 ({presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票)
-        </span>
+    <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
+      <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
+        <Users size={12} class="text-muted-foreground shrink-0 mt-0.5" />
+        <div class="flex flex-col min-w-0">
+          <span class="text-[11px] font-medium text-muted-foreground">代表团</span>
+          <span class="text-[10px] text-muted-foreground/60">
+            {presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票
+          </span>
+        </div>
+        <div class="flex-1"></div>
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-7 gap-1 text-[10px]"
+          onclick={() => navigate(`/conference/${conf.id}/delegations`)}
+        >
+          <UserRoundCheck size={10} />
+          代表管理
+        </Button>
       </div>
 
       <ScrollArea class="flex-1 min-h-0">

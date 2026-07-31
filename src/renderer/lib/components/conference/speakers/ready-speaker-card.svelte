@@ -29,14 +29,19 @@
     {formatTime(allocatedTimeSec)}
   </div>
   <div class="mt-4 flex items-center justify-center gap-2">
-    <Button
-      size="sm"
-      class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
-      onclick={() => onstart?.()}
-    >
-      <Play size={12} />
-      开始计时
-    </Button>
+    <div class="flex flex-col items-center">
+      <Button
+        size="sm"
+        class="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
+        onclick={() => onstart?.()}
+      >
+        <Play size={12} />
+        开始计时
+      </Button>
+      <span class="select-none font-mono text-[10px] leading-none text-muted-foreground/40">
+        Space
+      </span>
+    </div>
     <Button
       size="sm"
       variant="ghost"

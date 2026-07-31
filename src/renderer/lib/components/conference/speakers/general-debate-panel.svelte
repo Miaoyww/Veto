@@ -7,6 +7,7 @@
   import { onDestroy, onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { Timer, Shuffle, ListPlus } from '@lucide/svelte'
+  import { Button } from '$lib/components/ui/button/index.js'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
@@ -81,9 +82,7 @@
     return undefined
   })
 
-  const listedDelegationIds = $derived(
-    conf?.speakerLists?.entries.map((s) => s.delegationId) ?? []
-  )
+  const listedDelegationIds = $derived(conf?.speakerLists?.entries.map((s) => s.delegationId) ?? [])
 
   // ── 计时器 ────────────────────────────────────────────────────
   const timerState = new SpeakerTimerState()
@@ -149,7 +148,9 @@
   }
 
   usePerSpeakerTimer(timerState, {
-    get enabled() { return true },
+    get enabled() {
+      return true
+    },
     timerId: 'speakers-list',
     tickMs: 100,
     getEngine,
@@ -161,7 +162,9 @@
   })
 
   usePausedStateRestore(timerState, {
-    get enabled() { return true },
+    get enabled() {
+      return true
+    },
     getEngine,
     isExcludedCaucus: false
   })
@@ -255,16 +258,25 @@
 
   function handleSpeakerKeydown(e: KeyboardEvent): void {
     if (isInInput(e.target as HTMLElement)) return
-    if (!isSpeakerActive || yieldModifier) return
+    if (yieldModifier) return
 
     if (e.key === ' ' && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
-      if (timerState.isPaused) {
-        resumeSpeaking()
-      } else {
-        pauseSpeaking()
+      if (isSpeakerActive) {
+        // 正在发言 → 暂停 / 继续
+        if (timerState.isPaused) {
+          resumeSpeaking()
+        } else {
+          pauseSpeaking()
+        }
+      } else if (readyEntry) {
+        // 准备就绪 → 开始发言
+        beginSpeaking(readyEntry.id)
+      } else if (nextSpeaker) {
+        // 下一位 → 准备发言
+        prepareSpeaker(nextSpeaker.id)
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === 'Escape' && isSpeakerActive) {
       e.preventDefault()
       finishSpeaker()
     }
@@ -279,10 +291,18 @@
     if (yieldModifier && isSpeakerActive && activeSpeakerCanYield) {
       e.preventDefault()
       switch (e.key) {
-        case '1': finishSpeaker('chair'); break
-        case '2': finishSpeaker('delegate'); break
-        case '3': finishSpeaker('question'); break
-        case '4': finishSpeaker('comment'); break
+        case '1':
+          finishSpeaker('chair')
+          break
+        case '2':
+          finishSpeaker('delegate')
+          break
+        case '3':
+          finishSpeaker('question')
+          break
+        case '4':
+          finishSpeaker('comment')
+          break
       }
       yieldModifier = false
     }
@@ -365,24 +385,26 @@
             />
           </div>
           <div class="flex shrink-0 gap-2">
-            <button
-              class="inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs hover:bg-accent hover:text-accent-foreground"
+            <Button
+              variant="outline"
+              size="default"
               title="随机抽取一个代表团加入发言名单"
               onclick={addRandomSpeaker}
               disabled={availableDelegations.length === 0}
             >
               <Shuffle size={14} />
               随机点出
-            </button>
-            <button
-              class="inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs hover:bg-accent hover:text-accent-foreground"
+            </Button>
+            <Button
+              variant="outline"
+              size="default"
               title="将所有出席代表团加入发言名单"
               onclick={addAllSpeakers}
               disabled={availableDelegations.length === 0}
             >
               <ListPlus size={14} />
               添加全部
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -41,7 +41,9 @@
   <div class="text-sm text-muted-foreground">{exhaustedLabel}</div>
 {:else}
   <div
-    class="rounded-lg {compact ? 'border' : 'border-2'} border-amber-200 bg-amber-50/50 {compact ? 'p-3' : 'p-4'} dark:border-amber-800 dark:bg-amber-950/20"
+    class="rounded-lg {compact ? 'border' : 'border-2'} border-amber-200 bg-amber-50/50 {compact
+      ? 'p-3'
+      : 'p-4'} dark:border-amber-800 dark:bg-amber-950/20"
     class:w-full={compact}
   >
     <div class="flex items-center gap-3">
@@ -51,10 +53,19 @@
       {:else}
         <div class="flex-1"></div>
         <Badge variant="secondary" class="text-[10px]">{formatTime(allocatedTimeSec!)}</Badge>
-        <Button size="sm" class="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700" onclick={() => onprepare?.()}>
-          <Mic size={12} />
-          发言
-        </Button>
+        <div class="flex flex-col items-center">
+          <Button
+            size="sm"
+            class="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700"
+            onclick={() => onprepare?.()}
+          >
+            <Mic size={12} />
+            准备发言
+          </Button>
+          <span class="select-none font-mono text-[10px] leading-none text-muted-foreground/40">
+            Space
+          </span>
+        </div>
       {/if}
     </div>
     {#if !compact}

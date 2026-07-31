@@ -12,16 +12,7 @@
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
-  import {
-    Gavel,
-    Play,
-    Users,
-    Monitor,
-    HelpCircle,
-    UserRoundCheck,
-    Timer,
-    ScrollText
-  } from '@lucide/svelte'
+  import { Gavel, Play, Users, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
@@ -162,17 +153,6 @@
         >
           <Timer size={12} />
           计时器
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="代表管理"
-          onclick={() => navigate(`/conference/${conf.id}/delegations`)}
-        >
-          <UserRoundCheck size={12} />
-          代表管理
         </Button>
 
         {#if canProposePoint}
