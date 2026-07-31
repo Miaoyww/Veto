@@ -6,7 +6,7 @@
    */
   import { onDestroy, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { Timer } from '@lucide/svelte'
+  import { Timer, Shuffle, ListPlus } from '@lucide/svelte'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
@@ -172,9 +172,30 @@
     syncDisplay()
   })
 
+  // ── 可选代表团池（出席 + 未在名单中）───────────────
+  const availableDelegations = $derived(
+    (conf?.delegations ?? [])
+      .filter((d) => d.attendance === 'present')
+      .filter((d) => !listedDelegationIds.includes(d.id))
+  )
+
   // ── 操作处理 ─────────────────────────────────────────────────
   function addSpeaker(d: Delegation): void {
     addToSpeakersList(d.id)
+    syncDisplay()
+  }
+
+  function addAllSpeakers(): void {
+    for (const d of availableDelegations) {
+      addToSpeakersList(d.id)
+    }
+    syncDisplay()
+  }
+
+  function addRandomSpeaker(): void {
+    if (availableDelegations.length === 0) return
+    const idx = Math.floor(Math.random() * availableDelegations.length)
+    addToSpeakersList(availableDelegations[idx].id)
     syncDisplay()
   }
 
@@ -332,14 +353,38 @@
 
     {#if !isSpeakerActive && !readyEntry}
       <div class="rounded-lg border bg-card p-4">
-        <DelegationSelector
-          delegations={conf.delegations}
-          placeholder="搜索代表团名称..."
-          onselect={addSpeaker}
-          resetOnSelect={true}
-          presentOnly={true}
-          excludeIds={listedDelegationIds}
-        />
+        <div class="flex items-start gap-3">
+          <div class="flex-1">
+            <DelegationSelector
+              delegations={conf.delegations}
+              placeholder="搜索代表团名称..."
+              onselect={addSpeaker}
+              resetOnSelect={true}
+              presentOnly={true}
+              excludeIds={listedDelegationIds}
+            />
+          </div>
+          <div class="flex shrink-0 gap-2">
+            <button
+              class="inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs hover:bg-accent hover:text-accent-foreground"
+              title="随机抽取一个代表团加入发言名单"
+              onclick={addRandomSpeaker}
+              disabled={availableDelegations.length === 0}
+            >
+              <Shuffle size={14} />
+              随机点出
+            </button>
+            <button
+              class="inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs hover:bg-accent hover:text-accent-foreground"
+              title="将所有出席代表团加入发言名单"
+              onclick={addAllSpeakers}
+              disabled={availableDelegations.length === 0}
+            >
+              <ListPlus size={14} />
+              添加全部
+            </button>
+          </div>
+        </div>
       </div>
     {/if}
 
