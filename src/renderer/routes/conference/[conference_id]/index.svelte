@@ -48,10 +48,7 @@
   <title>{VETO_NAME} - 模拟大会</title>
 </svelte:head>
 
-<div class="grid h-[calc(100vh-2.25rem)] w-screen grid-cols-[auto_1fr] overflow-hidden">
+<div class="grid h-[calc(100vh-2.25rem)] w-screen overflow-hidden">
   <!-- LEFT: Delegation sidebar -->
   <ConferenceSidebar />
-
-  <!-- CENTER: Main workspace -->
-  <ConferenceWorkspace />
 </div>

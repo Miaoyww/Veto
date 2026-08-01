@@ -8,17 +8,14 @@
  * - 通过 delegate-bridge 同步到代表端
  */
 
-import { writable, derived, get } from 'svelte/store'
+import { derived, get } from 'svelte/store'
 import type {
   SeatGroup,
   Seat,
-  Directive,
-  News,
-  SituationUpdate,
   Capability,
   CabinetMode
 } from '$lib/types-delegate'
-import { currentEngine, currentConferenceId } from '../conference/conference-store'
+import { currentEngine } from '../conference/conference-store'
 import { getDelegateBridge } from '$lib/services/delegate-bridge'
 
 // ---- 辅助：获取当前引擎 -------------------------------------------------
