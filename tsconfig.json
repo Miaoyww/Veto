@@ -10,10 +10,10 @@
   ],
   "compilerOptions": {
     "$lib": [
-      "./src/renderer/lib"
+      "./apps/frontend/lib"
     ],
     "$lib/*": [
-      "./src/renderer/lib/*"
+      "./apps/frontend/lib/*"
     ]
   }
 }

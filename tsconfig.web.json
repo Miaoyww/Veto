@@ -5,8 +5,8 @@
     "src/renderer/env.d.ts",
     "src/renderer/**/*",
     "src/renderer/**/*.svelte",
-    "src/preload/*.d.ts",
-    "src/shared/**/*"
+    "apps/electron/preload/*.d.ts",
+    "apps/shared/**/*"
   ],
   "compilerOptions": {
     "verbatimModuleSyntax": true,
@@ -17,8 +17,8 @@
     "allowArbitraryExtensions": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
-      "$lib/*": ["./src/renderer/lib/*"],
-      "$units/*": ["./src/renderer/units/*"]
+      "$lib/*": ["./apps/frontend/lib/*"],
+      "$units/*": ["./apps/frontend/units/*"]
     }
   }
 }
