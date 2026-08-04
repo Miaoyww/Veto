@@ -6,12 +6,14 @@
   "homepage": "https://veto.miaoyww.top",
   "repository": "https://github.com/Miaoyww/Veto",
   "scripts": {
-    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "dev": "pnpm --parallel --filter \"@vetoexpress/electron\" --filter \"@vetoexpress/frontend\" dev",
+    "dev:electron": "pnpm --filter \"@vetoexpress/electron\" dev",
+    "dev:frontend": "pnpm --filter \"@vetoexpress/frontend\" dev",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
     "typecheck": "pnpm -r typecheck",
-    "build": "pnpm --filter './apps/*' build",
-    "test": "vitest run",
+    "build": "pnpm --filter \"@vetoexpress/*\" build",
+    "test": "vitest run", 
     "test:watch": "vitest"
   },
   "devDependencies": {

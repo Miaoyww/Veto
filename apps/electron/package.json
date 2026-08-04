@@ -1,5 +1,5 @@
 {
-  "name": "@vetoexpress/desktop",
+  "name": "@vetoexpress/electron",
   "version": "0.74.0",
   "description": "Veto —— A modern, cross-platform, and extensible Model United Nations Conference platform.",
   "main": "./out/main/index.js",
@@ -21,7 +21,7 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux"
   },
-  "dependencies": {
+  "dependencies": { 
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-log": "^5.4.4",
@@ -34,9 +34,12 @@
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@types/node": "^22.19.1",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.39.1",
     "typescript": "^5.9.2",
     "vite": "^8.0.16",
-    "vitest": "^4.1.10",
-    "eslint": "^9.39.1"
+    "vitest": "^4.1.10"
   }
 }

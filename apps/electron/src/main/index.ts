@@ -12,7 +12,7 @@
  */
 
 import { app, shell, BrowserWindow, protocol } from 'electron'
-import { join, extname } from 'path'
+import path, { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
@@ -52,7 +52,7 @@ function refreshPlugins(): void {
   pluginInstances = scanned
   log.info(
     `Plugin refresh: ${pluginInstances.length} total, ` +
-      `${pluginInstances.filter((p) => !p.disabled).length} enabled`,
+      `${pluginInstances.filter((p) => !p.disabled).length} enabled`
   )
 }
 
@@ -76,8 +76,8 @@ function createWindow(): void {
       sandbox: false,
       webSecurity: false,
       allowRunningInsecureContent: true,
-      spellcheck: false,
-    },
+      spellcheck: false
+    }
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -96,11 +96,17 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.loadURL('http://localhost:5173')
   } else {
-    mainWindow.loadURL('veto://app/index.html')
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+  
+  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  //   mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  // } else {
+  //   mainWindow.loadURL('veto://app/index.html')
+  // }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -125,8 +131,8 @@ function setupAutoUpdater(): void {
       bytesPerSecond: progress.bytesPerSecond,
       percent: Math.round(progress.percent),
       total: progress.total,
-      transferred: progress.transferred,
-    }),
+      transferred: progress.transferred
+    })
   )
   autoUpdater.on('update-downloaded', (info) => sendToAll('updater:update-downloaded', info))
   autoUpdater.on('error', (error) => sendToAll('updater:error', { message: error.message }))
@@ -144,9 +150,9 @@ protocol.registerSchemesAsPrivileged([
       secure: true,
       supportFetchAPI: true,
       corsEnabled: true,
-      stream: true,
-    },
-  },
+      stream: true
+    }
+  }
 ])
 
 function registerProtocol(): void {
@@ -186,14 +192,14 @@ function registerProtocol(): void {
       '.woff': 'font/woff',
       '.woff2': 'font/woff2',
       '.mp3': 'audio/mpeg',
-      '.wav': 'audio/wav',
+      '.wav': 'audio/wav'
     }
 
     try {
       const data = fs.readFileSync(fullPath)
       return new Response(data, {
         status: 200,
-        headers: { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' },
+        headers: { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' }
       })
     } catch {
       // SPA fallback：非文件路径返回 index.html（支持 pushState 路由）
@@ -234,7 +240,7 @@ app.whenReady().then(async () => {
     pluginInstances,
     displayWindow,
     wsServerPort,
-    refreshPlugins,
+    refreshPlugins
   }
   registerAllIpcHandlers(ipcDeps)
 
