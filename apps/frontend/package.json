@@ -1,0 +1,46 @@
+{
+  "name": "test",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+  },
+  "dependencies": {
+    "fuse.js": "^7.5.0",
+    "jszip": "^3.10.1",
+    "leaflet": "^1.9.4",
+    "milsymbol": "^3.0.4",
+    "pinyin-match": "^1.2.10",
+    "postcss": "^8.5.13",
+    "sveaflet": "^0.1.4",
+    "ws": "^8.21.1",
+	"@vetoexpress/types":"workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.63.0",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "svelte": "^5.56.1",
+    "svelte-check": "^4.6.0",
+    "typescript": "^6.0.3",
+    "eslint-plugin-svelte": "^3.13.1",
+    "mode-watcher": "^1.1.0",
+    "prettier": "^3.7.4",
+    "prettier-plugin-svelte": "^3.4.0",
+    "svelte-sonner": "^1.0.5",
+    "tailwind-merge": "^3.3.1",
+    "tailwind-variants": "^3.2.2",
+    "tailwindcss": "^4.1.13",
+    "tw-animate-css": "^1.4.0",
+    "bits-ui": "^2.16.5",
+    "@lucide/svelte": "^1.24.0",
+    "@tailwindcss/vite": "^4.1.13",
+    "@types/leaflet": "^1.9.21"
+  }
+}
