@@ -22,7 +22,6 @@ export type SidebarStateProps = {
 class SidebarState {
 	readonly props: SidebarStateProps;
 	open = $derived.by(() => this.props.open());
-	openMobile = $state(false);
 	setOpen: SidebarStateProps["setOpen"];
 	state = $derived.by(() => (this.open ? "expanded" : "collapsed"));
 
@@ -37,10 +36,6 @@ class SidebarState {
 			e.preventDefault();
 			this.toggle();
 		}
-	};
-
-	setOpenMobile = (value: boolean) => {
-		this.openMobile = value;
 	};
 
 	toggle = () => {

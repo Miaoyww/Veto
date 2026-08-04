@@ -1,8 +1,4 @@
 <script lang="ts" module>
-  import '../app.css'
-  import '../css/components.css'
-  import '$units' // 初始化 ModRegistry 基础数据
-
   import {
     BookOpen,
     Bot,
@@ -136,22 +132,13 @@
 <script lang="ts">
   import Command from '@lucide/svelte/icons/command'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import NavMain from '$lib/components/app-sidebar/nav-main.svelte'
-  import NavProjects from '$lib/components/app-sidebar/nav-projects.svelte'
-  import NavSecondary from '$lib/components/app-sidebar/nav-secondary.svelte'
-  import NavUser from '$lib/components/app-sidebar/nav-user.svelte'
-  import TitleBar from '$lib/components/titlebar.svelte'
-  import { currentRoute } from '$lib/router.svelte'
-
+  import NavMain from './nav-main.svelte'
+  import NavProjects from './nav-projects.svelte'
+  import NavSecondary from './nav-secondary.svelte'
+  import NavUser from './nav-user.svelte'
   import type { ComponentProps } from 'svelte'
   let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props()
-
-  const routeId = $derived(currentRoute?.routeId ?? '/')
 </script>
-
-{#if routeId !== '/conference-display/[conference_id]'}
-  <TitleBar />
-{/if}
 
 <Sidebar.Root bind:ref variant="inset" {...restProps} class="top-9 h-[calc(100svh-2.25rem)]!">
   <Sidebar.Header>
