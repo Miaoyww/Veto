@@ -1,167 +1,97 @@
-<script lang="ts" module>
+<script lang="ts">
+  import Command from '@lucide/svelte/icons/command'
   import {
-    BookOpen,
-    Bot,
-    ChartPie,
-    Frame,
-    LifeBuoy,
-    Send,
-    Settings2,
-    SquareTerminal
+    House,
+    CalendarRange,
+    Building2,
+    FileText,
+    ChartColumn,
+    Puzzle,
+    Settings,
+    Swords
   } from '@lucide/svelte'
-  const data = {
+
+  import * as Sidebar from '$lib/components/ui/sidebar/index.js'
+  import NavMain from '$lib/components/app-sidebar/nav-main.svelte'
+  import NavUser from '$lib/components/app-sidebar/nav-user.svelte'
+  import { authStore } from '$lib/stores/auth-store'
+
+  const data = $derived({
     user: {
       name: 'shadcn',
       email: 'm@example.com',
       avatar: '/avatars/shadcn.jpg'
     },
-    navMain: [
+    navGroups: [
       {
-        title: 'Playground',
-        url: '#',
-        icon: SquareTerminal,
-        isActive: true,
+        label: '工作台',
         items: [
           {
-            title: 'History',
-            url: '#'
+            title: '首页',
+            url: '/',
+            icon: House,
+            isActive: true
           },
           {
-            title: 'Starred',
-            url: '#'
-          },
-          {
-            title: 'Settings',
-            url: '#'
+            title: '会议',
+            url: '/conference',
+            icon: CalendarRange,
+            isActive: false,
+            items: $authStore.offline
+              ? [
+                  { title: '议程', url: '/conference' },
+                  { title: '危机军推', url: '/battle' }
+                ]
+              : [
+                  { title: '议程', url: '/conference' },
+                  { title: '危机军推', url: '/battle' },
+                  { title: '指令', url: '/conference' },
+                  { title: '新闻', url: '/conference' },
+                  { title: '局势', url: '/conference' }
+                ]
           }
         ]
       },
       {
-        title: 'Models',
-        url: '#',
-        icon: Bot,
+        label: '管理',
         items: [
-          {
-            title: 'Genesis',
-            url: '#'
-          },
-          {
-            title: 'Explorer',
-            url: '#'
-          },
-          {
-            title: 'Quantum',
-            url: '#'
-          }
+          { title: '组织', url: '/organizations', icon: Building2 },
+          { title: '模板', url: '/templates', icon: FileText },
+          { title: '数据分析', url: '/analytics', icon: ChartColumn }
         ]
       },
       {
-        title: 'Documentation',
-        url: '#',
-        icon: BookOpen,
-        items: [
-          {
-            title: 'Introduction',
-            url: '#'
-          },
-          {
-            title: 'Get Started',
-            url: '#'
-          },
-          {
-            title: 'Tutorials',
-            url: '#'
-          },
-          {
-            title: 'Changelog',
-            url: '#'
-          }
-        ]
+        label: '开发者',
+        items: [{ title: '插件', url: '/plugins', icon: Puzzle }]
       },
       {
-        title: 'Settings',
-        url: '#',
-        icon: Settings2,
-        items: [
-          {
-            title: 'General',
-            url: '#'
-          },
-          {
-            title: 'Team',
-            url: '#'
-          },
-          {
-            title: 'Billing',
-            url: '#'
-          },
-          {
-            title: 'Limits',
-            url: '#'
-          }
-        ]
-      }
-    ],
-    navSecondary: [
-      {
-        title: 'Support',
-        url: '#',
-        icon: LifeBuoy
-      },
-      {
-        title: 'Feedback',
-        url: '#',
-        icon: Send
-      }
-    ],
-    projects: [
-      {
-        name: 'Design Engineering',
-        url: '#',
-        icon: Frame
-      },
-      {
-        name: 'Sales & Marketing',
-        url: '#',
-        icon: ChartPie
+        label: '系统',
+        items: [{ title: '设置', url: '/settings', icon: Settings }]
       }
     ]
-  }
+  })
+
+  const visibleGroups = $derived(
+    $authStore.offline ? data.navGroups.filter((g) => g.label === '工作台') : data.navGroups
+  )
 </script>
 
-<script lang="ts">
-  import Command from '@lucide/svelte/icons/command'
-  import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import NavMain from '$lib/components/app-sidebar/nav-main.svelte'
-  import NavProjects from '$lib/components/app-sidebar/nav-projects.svelte'
-  import NavSecondary from '$lib/components/app-sidebar/nav-secondary.svelte'
-  import NavUser from '$lib/components/app-sidebar/nav-user.svelte'
-
-  import { type ComponentProps } from 'svelte'
-
-  let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props()
-
-</script>
-
-
-
-
-<main>
-  <Sidebar.Root bind:ref variant="inset" {...restProps} class="top-9 h-[calc(100svh-2.25rem)]!">
+<Sidebar.Provider>
+  <Sidebar.Root variant="inset" class="top-9 h-[calc(100svh-2.25rem)]!">
     <Sidebar.Header>
       <Sidebar.Menu>
         <Sidebar.MenuItem>
           <Sidebar.MenuButton size="lg">
             {#snippet child({ props })}
-              <a href="##" {...props}>
+              <a href="/" {...props}>
                 <div
                   class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
                 >
                   <Command class="size-4" />
                 </div>
                 <div class="grid flex-1 text-start text-sm leading-tight">
-                  <span class="truncate font-medium">Acme Inc</span>
-                  <span class="truncate text-xs">Enterprise</span>
+                  <span class="truncate font-medium">Veto</span>
+                  <span class="truncate text-xs">模拟联合国</span>
                 </div>
               </a>
             {/snippet}
@@ -170,12 +100,20 @@
       </Sidebar.Menu>
     </Sidebar.Header>
     <Sidebar.Content>
-      <NavMain items={data.navMain} />
-      <NavProjects projects={data.projects} />
-      <NavSecondary items={data.navSecondary} class="mt-auto" />
+      <NavMain groups={visibleGroups} />
     </Sidebar.Content>
     <Sidebar.Footer>
       <NavUser user={data.user} />
     </Sidebar.Footer>
   </Sidebar.Root>
-</main>
+
+  <Sidebar.Inset>
+    <div class="flex flex-1 items-center justify-center h-full">
+      <div class="flex flex-col items-center gap-3 text-muted-foreground">
+        <Swords size={48} class="opacity-30" />
+        <p class="text-lg font-medium">欢迎使用 Veto</p>
+        <p class="text-sm opacity-70">从左侧导航选择一个模块以开始</p>
+      </div>
+    </div>
+  </Sidebar.Inset>
+</Sidebar.Provider>

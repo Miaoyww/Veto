@@ -9,10 +9,14 @@
   import TitleBar from '$lib/components/titlebar.svelte'
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
   import { ModeWatcher } from 'mode-watcher'
+  import { isLoggedIn } from '$lib/stores/auth-store'
+
   let { children } = $props()
 
   onMount(() => {
-    goto(resolve('/login'))
+    if (!isLoggedIn()) {
+      goto(resolve('/login'))
+    }
   })
 </script>
 
@@ -20,6 +24,7 @@
 
 <SettingsDialog />
 <ModeWatcher />
+
 <div>
   {@render children?.()}
 </div>

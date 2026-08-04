@@ -8,6 +8,9 @@
   import feishu from '$lib/assets/feishu.png'
   import wechat from '$lib/assets/wechat.png'
   import { LaptopMinimal } from '@lucide/svelte'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { setOffline } from '$lib/stores/auth-store'
 </script>
 
 <div class="relative min-h-svh overflow-hidden bg-background">
@@ -69,6 +72,10 @@
               variant="outline"
               type="button"
               class="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
+              onclick={() => {
+                setOffline(true)
+                goto(resolve('/'))
+              }}
             >
               <LaptopMinimal class="size-5" />
               离线登录

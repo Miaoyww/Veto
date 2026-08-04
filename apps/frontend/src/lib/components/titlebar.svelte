@@ -5,6 +5,7 @@
   import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
   import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
   import { formatTime } from '$lib/utils'
+  import { page } from '$app/stores'
 
   let {
     variant = 'main',
@@ -13,6 +14,8 @@
     variant?: 'main' | 'display'
     onToggleFullscreen?: () => void
   } = $props()
+
+  const isLoginPage = $derived($page.url.pathname === '/login')
 
   function minimize() {
     window.electron.ipcRenderer.send('window:minimize')
@@ -26,16 +29,18 @@
 </script>
 
 <header
-  class="titlebar fixed top-0 left-0 right-0 z-50 flex h-9 items-center border-b bg-background select-none {variant ===
+  class="titlebar fixed top-0 left-0 right-0 z-50 flex h-9 items-center border-b select-none {variant ===
   'display'
     ? 'border-white/5 bg-[#060a0f]'
-    : 'border-border/30'}"
+    : 'border-transparent bg-transparent'}"
 >
-  <!-- 左：应用名（可拖动区域） -->
+  <!-- 左：应用名（可拖动区域），登录页隐藏 -->
   <div class="drag-region flex w-28 shrink-0 items-center pl-4 h-full">
-    <span class="text-base font-semibold text-foreground/70 text-center">
-      {VETO_NAME}
-    </span>
+    {#if !isLoginPage}
+      <span class="text-base font-semibold text-foreground/70 text-center">
+        {VETO_NAME}
+      </span>
+    {/if}
   </div>
 
   <!-- 中：计时器显示 / 拖拽区域 -->

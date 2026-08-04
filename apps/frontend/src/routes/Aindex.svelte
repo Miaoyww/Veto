@@ -18,16 +18,16 @@
   import BattlePanel from '$lib/components/home/battle-panel.svelte'
   import ConferencePanel from '$lib/components/home/conference-panel.svelte'
   import { currentRoute } from '$lib/router.svelte'
-  import BattlePage from './battle/[battle_id]/index.svelte'
-  import ConferencePage from './conference/[conference_id]/index.svelte'
-  import ConferenceRollCallPage from './conference/[conference_id]/roll-call.svelte'
-  import ConferenceMotionPage from './conference/[conference_id]/motion.svelte'
-  import ConferenceQuestionPage from './conference/[conference_id]/question.svelte'
-  import ConferenceDelegationsPage from './conference/[conference_id]/delegations.svelte'
-  import ConferenceSeatsPage from './conference/[conference_id]/seats.svelte'
-  import ConferenceDisplayPage from './conference-display/[conference_id]/index.svelte'
-  import DelegatePage from './delegate/[conference_id]/index.svelte'
-  import ToolPage from './tools/[tool_id]/index.svelte'
+  import BattlePage from '../battle/[battle_id]/index.svelte'
+  import ConferencePage from '../conference/[conference_id]/index.svelte'
+  import ConferenceRollCallPage from '../conference/[conference_id]/roll-call.svelte'
+  import ConferenceMotionPage from '../conference/[conference_id]/motion.svelte'
+  import ConferenceQuestionPage from '../conference/[conference_id]/question.svelte'
+  import ConferenceDelegationsPage from '../conference/[conference_id]/delegations.svelte'
+  import ConferenceSeatsPage from '../conference/[conference_id]/seats.svelte'
+  import ConferenceDisplayPage from '../conference-display/[conference_id]/index.svelte'
+  import DelegatePage from '../delegate/[conference_id]/index.svelte'
+  import ToolPage from '../tools/[tool_id]/index.svelte'
   import TimelinePanel from '$lib/components/tools/timeline-panel.svelte'
 
   let selectedMode = $state<string | null>(null)
@@ -107,7 +107,6 @@
     </div>
   {/if}
 </div>
-
 <style>
   * {
     margin: 0;

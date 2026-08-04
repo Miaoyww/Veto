@@ -10,6 +10,7 @@
  * - battles.json     — 推演战局数据
  * - settings.json    — 全局设置
  * - tools.json       — 时间线/工具数据
+ * - auth.json        — 认证状态（离线/登录）
  */
 
 import { app } from 'electron'
@@ -20,7 +21,7 @@ import { createLogger } from '../logger'
 const log = createLogger('DataStore')
 
 /** 数据域 */
-export type StoreDomain = 'conferences' | 'battles' | 'settings' | 'tools'
+export type StoreDomain = 'conferences' | 'battles' | 'settings' | 'tools' | 'auth'
 
 /** 数据域 → 文件名映射 */
 const FILES: Record<StoreDomain, string> = {
@@ -28,6 +29,7 @@ const FILES: Record<StoreDomain, string> = {
   battles: 'battles.json',
   settings: 'settings.json',
   tools: 'tools.json',
+  auth: 'auth.json'
 }
 
 /** 获取存储根目录 */
