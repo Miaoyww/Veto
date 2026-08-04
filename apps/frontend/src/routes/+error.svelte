@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { currentRoute, navigate } from '$lib/router.svelte'
   import { Home, RefreshCw } from '@lucide/svelte'
-  import Footer from '$lib/components/footer.svelte'
 
   const status = $derived(currentRoute.status ?? 500)
   const message = $derived(currentRoute.error?.message ?? 'An unexpected error occurred')
@@ -43,7 +44,7 @@
   <!-- 操作按钮 -->
   <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
     <button
-      onclick={() => navigate('/')}
+      onclick={() => goto(resolve('/'))}
       class="flex w-full items-center justify-center gap-2 rounded-xl bg-stone-800 px-5 py-3 text-sm font-medium text-white shadow transition hover:bg-stone-700 active:scale-95 sm:w-auto sm:py-2.5 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
     >
       <Home class="size-4" />
@@ -57,7 +58,4 @@
       刷新页面
     </button>
   </div>
-
-  <!-- 页脚 -->
-  <Footer />
 </div>

@@ -50,7 +50,11 @@
             ? 'text-indigo-500'
             : 'text-amber-500'}"
         onclick={() => timerDialogOpen.set(true)}
-        title={expired ? '计时器已到期（点击打开）' : st.isRunning ? '计时器运行中（点击打开）' : '计时器已暂停（点击打开）'}
+        title={expired
+          ? '计时器已到期（点击打开）'
+          : st.isRunning
+            ? '计时器运行中（点击打开）'
+            : '计时器已暂停（点击打开）'}
       >
         <Timer size={12} class={expired ? 'animate-pulse' : st.isRunning ? '' : ''} />
         <span>{formatTime(st.remainingSec)}</span>
@@ -81,27 +85,30 @@
       </button>
     {/if}
 
-    <button
+    <Button
       class="no-drag flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
       onclick={minimize}
+      variant="ghost"
       title="最小化"
     >
       <Minus size={14} />
-    </button>
-    <button
+    </Button>
+    <Button
       class="no-drag flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
       onclick={maximize}
+      variant="ghost"
       title="最大化"
     >
       <Square size={11} />
-    </button>
-    <button
+    </Button>
+    <Button
       class="no-drag close-btn flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white"
       onclick={close}
+      variant="ghost"
       title="关闭"
     >
       <X size={14} />
-    </button>
+    </Button>
   </div>
 </header>
 

@@ -1,5 +1,15 @@
 <script lang="ts">
-  import { ExternalLink, FileText, MessageCircle, RefreshCw, Download, Loader, CheckCircle2, AlertCircle, Terminal } from '@lucide/svelte'
+  import {
+    ExternalLink,
+    FileText,
+    MessageCircle,
+    RefreshCw,
+    Download,
+    Loader,
+    CheckCircle2,
+    AlertCircle,
+    Terminal
+  } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Label } from '$lib/components/ui/label'
   import SettingCard from '../../settings-card.svelte'
@@ -13,13 +23,13 @@
 
   // ── 更新状态 ──────────────────────────────────────────────────────
   type UpdateStatus =
-    | 'idle'            // 初始状态
-    | 'checking'        // 正在检查更新
-    | 'not-available'   // 已是最新版本
-    | 'available'       // 发现新版本，等待用户下载
-    | 'downloading'     // 正在下载
-    | 'downloaded'      // 下载完成，等待安装
-    | 'error'           // 出错
+    | 'idle' // 初始状态
+    | 'checking' // 正在检查更新
+    | 'not-available' // 已是最新版本
+    | 'available' // 发现新版本，等待用户下载
+    | 'downloading' // 正在下载
+    | 'downloaded' // 下载完成，等待安装
+    | 'error' // 出错
 
   let updateStatus = $state<UpdateStatus>('idle')
   let updateVersion = $state<string | null>(null)
@@ -173,7 +183,7 @@
             : updateStatus === 'downloaded'
               ? '更新已就绪，重启应用以完成安装。'
               : updateStatus === 'error'
-                ? errorMessage ?? '检查更新时发生错误。'
+                ? (errorMessage ?? '检查更新时发生错误。')
                 : '检查是否有新版本可用。'}
     >
       <div class="flex items-center gap-2">
@@ -203,9 +213,7 @@
               v{updateVersion ?? ''} 已就绪
             </span>
           </div>
-          <Button variant="default" size="sm" onclick={quitAndInstall}>
-            立即重启安装
-          </Button>
+          <Button variant="default" size="sm" onclick={quitAndInstall}>立即重启安装</Button>
         {:else if updateStatus === 'not-available'}
           <div class="flex items-center gap-2">
             <CheckCircle2 size={14} class="text-muted-foreground" />

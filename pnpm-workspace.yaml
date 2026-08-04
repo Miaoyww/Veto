@@ -3,6 +3,7 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  '@hugeicons/svelte': false
   electron: set this to true or false
-  electron-winstaller: set this to true or false
+  electron-winstaller: false
   esbuild: true

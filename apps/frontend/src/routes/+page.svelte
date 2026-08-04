@@ -1,8 +1,4 @@
 <script lang="ts" module>
-  import '../app.css'
-  import '../css/components.css'
-  import '$units' // 初始化 ModRegistry 基础数据
-
   import {
     BookOpen,
     Bot,
@@ -140,47 +136,46 @@
   import NavProjects from '$lib/components/app-sidebar/nav-projects.svelte'
   import NavSecondary from '$lib/components/app-sidebar/nav-secondary.svelte'
   import NavUser from '$lib/components/app-sidebar/nav-user.svelte'
-  import TitleBar from '$lib/components/titlebar.svelte'
-  import { currentRoute } from '$lib/router.svelte'
 
-  import type { ComponentProps } from 'svelte'
+  import { type ComponentProps } from 'svelte'
+
   let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props()
 
-  const routeId = $derived(currentRoute?.routeId ?? '/')
 </script>
 
-{#if routeId !== '/conference-display/[conference_id]'}
-  <TitleBar />
-{/if}
 
-<Sidebar.Root bind:ref variant="inset" {...restProps} class="top-9 h-[calc(100svh-2.25rem)]!">
-  <Sidebar.Header>
-    <Sidebar.Menu>
-      <Sidebar.MenuItem>
-        <Sidebar.MenuButton size="lg">
-          {#snippet child({ props })}
-            <a href="##" {...props}>
-              <div
-                class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
-              >
-                <Command class="size-4" />
-              </div>
-              <div class="grid flex-1 text-start text-sm leading-tight">
-                <span class="truncate font-medium">Acme Inc</span>
-                <span class="truncate text-xs">Enterprise</span>
-              </div>
-            </a>
-          {/snippet}
-        </Sidebar.MenuButton>
-      </Sidebar.MenuItem>
-    </Sidebar.Menu>
-  </Sidebar.Header>
-  <Sidebar.Content>
-    <NavMain items={data.navMain} />
-    <NavProjects projects={data.projects} />
-    <NavSecondary items={data.navSecondary} class="mt-auto" />
-  </Sidebar.Content>
-  <Sidebar.Footer>
-    <NavUser user={data.user} />
-  </Sidebar.Footer>
-</Sidebar.Root>
+
+
+<main>
+  <Sidebar.Root bind:ref variant="inset" {...restProps} class="top-9 h-[calc(100svh-2.25rem)]!">
+    <Sidebar.Header>
+      <Sidebar.Menu>
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton size="lg">
+            {#snippet child({ props })}
+              <a href="##" {...props}>
+                <div
+                  class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+                >
+                  <Command class="size-4" />
+                </div>
+                <div class="grid flex-1 text-start text-sm leading-tight">
+                  <span class="truncate font-medium">Acme Inc</span>
+                  <span class="truncate text-xs">Enterprise</span>
+                </div>
+              </a>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
+    </Sidebar.Header>
+    <Sidebar.Content>
+      <NavMain items={data.navMain} />
+      <NavProjects projects={data.projects} />
+      <NavSecondary items={data.navSecondary} class="mt-auto" />
+    </Sidebar.Content>
+    <Sidebar.Footer>
+      <NavUser user={data.user} />
+    </Sidebar.Footer>
+  </Sidebar.Root>
+</main>
