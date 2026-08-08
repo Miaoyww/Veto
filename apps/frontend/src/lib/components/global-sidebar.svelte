@@ -100,9 +100,9 @@
 {#if !isLoginPage}
   <Sidebar.Provider>
     <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
-      <Sidebar.Header>
+      < Sidebar.Header>
         <BrandSwitcher {hasConf} {confPrefix} />
-      </Sidebar.Header>
+      </>
 
       <Sidebar.Content>
         <Sidebar.Menu class="p-3">

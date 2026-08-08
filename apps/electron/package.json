@@ -1,6 +1,6 @@
 {
   "name": "@vetoexpress/electron",
-  "version": "0.74.0",
+  "version": "0.100.0",
   "description": "Veto —— A modern, cross-platform, and extensible Model United Nations Conference platform.",
   "main": "./out/main/index.js",
   "author": "Miaoyww",
@@ -21,7 +21,7 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux"
   },
-  "dependencies": { 
+  "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-log": "^5.4.4",
