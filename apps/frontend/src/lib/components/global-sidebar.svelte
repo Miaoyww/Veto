@@ -16,7 +16,9 @@
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import { Button } from '$lib/components/ui/button'
-  import { navigate, currentRoute } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { currentRoute } from '$lib/router.svelte'
   import { currentConferenceId, conferences } from '$lib/stores/conference/conference-store'
   import { page } from '$app/stores'
   import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
@@ -48,6 +50,11 @@
   const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
 
   let createDialogOpen = $state(false)
+
+  function goTo(path: string): void {
+    // @ts-expect-error resolve 要求字面量路由类型，这里接受通用 string
+    goto(resolve(path))
+  }
 
   type NavItem = {
     title: string
@@ -86,13 +93,6 @@
       url: `${confPrefix}/situation`,
       needsConf: true,
       isActive: routeId === `/conference/${confId}/situation`
-    },
-    {
-      title: '军事推演',
-      icon: Swords,
-      url: '/battle',
-      needsConf: true,
-      isActive: routeId.startsWith('/battle')
     }
   ])
 </script>
@@ -124,7 +124,7 @@
 
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
-                onclick={() => navigate('/')}
+                onclick={() => goto(resolve('/'))}
                 isActive={routeId === '/'}
                 class="cursor-pointer"
               >
@@ -139,7 +139,7 @@
             {#each recentConfs as conf (conf.id)}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
-                  onclick={() => navigate(`/conference/${conf.id}`)}
+                  onclick={() => goto(resolve(`/conference/${conf.id}`))}
                   class="cursor-pointer"
                 >
                   <Globe size={18} />
@@ -164,7 +164,7 @@
               {#if !item.needsConf || hasConf}
                 <Sidebar.MenuItem>
                   <Sidebar.MenuButton
-                    onclick={() => navigate(item.url)}
+                    onclick={() => goTo(item.url)}
                     isActive={item.isActive}
                     class="cursor-pointer"
                   >
@@ -173,18 +173,27 @@
                   </Sidebar.MenuButton>
                 </Sidebar.MenuItem>
               {/if}
-              {#if i === 4}
-                <Sidebar.Separator class="my-1" />
-              {/if}
             {/each}
           {/if}
         </Sidebar.Menu>
       </Sidebar.Content>
 
       <Sidebar.Footer class="mt-auto">
-        {#if !hasConf}
-          <NavUser />
+        {#if hasConf}
+          <Sidebar.Menu class="p-0 pb-1">
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                onclick={() => goto(resolve('/battle'))}
+                isActive={routeId.startsWith('/battle')}
+                class="cursor-pointer"
+              >
+                <Swords size={18} />
+                <span>军事推演</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+          </Sidebar.Menu>
         {/if}
+        <NavUser />
       </Sidebar.Footer>
 
       <Sidebar.Rail />
@@ -222,19 +231,17 @@
         </div>
 
         <!-- 右：插件入口 / 用户 + 设置 + 窗口控制按钮 -->
-        {#if !hasConf}
-          <Button
-            variant="ghost"
-            size="sm"
-            class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-            onclick={() => navigate('/tools')}
-            title="插件"
-          >
-            <Puzzle size={14} />
-          </Button>
-        {:else}
-          <NavUser />
-        {/if}
+
+        <Button
+          variant="ghost"
+          size="sm"
+          class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          onclick={() => goto(resolve('/tools'))}
+          title="插件"
+        >
+          <Puzzle size={14} />
+        </Button>
+
         <WindowControls />
       </header>
 

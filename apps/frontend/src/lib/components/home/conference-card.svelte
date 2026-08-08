@@ -13,6 +13,8 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
 
   let { conference }: { conference: Conference } = $props()
 
@@ -25,7 +27,7 @@
   function handleLoad(): void {
     if (editing) return
     loadConference(conference.id)
-    navigate(`/conference/${conference.id}`)
+    goto(resolve(`/conference/${conference.id}`))
   }
 
   function handleDelete(e: MouseEvent): void {
