@@ -162,14 +162,21 @@ _Avoid_: Faction, Country, Nation, Team
 通过倍率控制模拟时间流速。SituationUpdate 按 Timeline 时间排序展示。
 _Avoid_: Clock, Timer, Speed
 
-## Battle（兵棋推演）
-
-（保留，与 Conference 平级）
+## Battle（兵棋推演 / 军事推演）
 
 **Battle (战局)**:
-HOI4 风格地图推演。与 Conference 平级，非附属关系。插件可注入静态数据（兵种、部署、事件），
-但不能在运行时与 Battle 交互。预留与 SituationUpdate 的 `relatedBattleId` 关联。
+HOI4 风格地图推演。Conference 的下属实体，一场大会可关联多个军推（如 JCC 多轴推演）。
+插件可注入静态数据（兵种、部署、事件），但不能在运行时与 Battle 交互。
+预留与 SituationUpdate 的 `relatedBattleId` 关联。
 _Avoid_: War, Scenario, Game
+
+## File（文件）
+
+**File (文件)**:
+大会中产出的所有文档。包括决议草案（DraftResolution）、工作文件（Working Paper）、
+修正案（Amendment）、主席团公告、会议记录（minutes）、代表立场文件（Position Paper）。
+按类型分类，与会议议程平行，随时可访问。
+_Avoid_: Document, Archive
 
 ## Plugin System（插件系统）
 

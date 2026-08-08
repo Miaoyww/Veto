@@ -1,0 +1,297 @@
+<script lang="ts">
+  /**
+   * conference-display/[conference_id]/index.svelte
+   * ──────────────────────────────────────────────
+   * Display 窗口 Shell —— 唯一入口。
+   *
+   * 职责：
+   * 1. WebSocket 连接（唯一）
+   * 2. 顶部横幅 + 阶段指示器（渲染一次）
+   * 3. 根据 phase 动态切换内容组件
+   * 4. 底部近期记录
+   */
+  import { onMount, onDestroy } from 'svelte'
+  import {
+    getDisplayBridge,
+    onConnectionStatus,
+    setExternalWsUrl
+  } from '$lib/services/conference-display-bridge'
+  import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
+  import type { Delegation } from '$lib/types-conference'
+  import type { ConferenceDisplayData, TimerTickData } from '$lib/types-conference'
+  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
+  import { globalSettings } from '$lib/stores/app/global-settings.store'
+  import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte'
+
+  import RollCallDisplay from './roll-call/index.svelte'
+  import GeneralDebateDisplay from './general-debate/index.svelte'
+  import MotionDisplay from './motion/index.svelte'
+  import QuestionDisplay from './question/index.svelte'
+  import CaucusSetupDisplay from './caucus-setup/index.svelte'
+  import CaucusDisplay from './caucus/index.svelte'
+  import ConferenceHeader from '$lib/components/conference-display/conference-header.svelte'
+  import VotingDisplay from './voting/index.svelte'
+  import PendingSpeakersListDisplay from './pending-speakers-list/index.svelte'
+  import SuspendedDisplay from './suspended/index.svelte'
+  import ClosedDisplay from './closed/index.svelte'
+  import ReadyDisplay from './ready/index.svelte'
+  import ConnectionStatusDisplay from './connection-status/index.svelte'
+  import AttendanceChangeDisplay from './attendance-change.svelte'
+
+  let displayData = $state<ConferenceDisplayData | null>(null)
+  let connectionStatus = $state<ConnectionStatus>('connecting')
+  let isFullScreen = $state(false)
+
+  // 主展示区位置偏移（从全局设置加载，Alt+方向键微调后自动持久化）
+  let displayOffsetX = $state(0)
+  let displayOffsetY = $state(0)
+
+  $effect(() => {
+    displayOffsetX = $globalSettings.displayOffsetX
+    displayOffsetY = $globalSettings.displayOffsetY
+  })
+
+  const contentStyle = $derived(`transform: translate(${displayOffsetX}px, ${displayOffsetY}px)`)
+
+  function toggleFullscreen(): void {
+    window.veto?.conference?.toggleFullscreen?.()
+  }
+
+  // 快捷键（Display 窗口专用：Escape 退出全屏、Alt+方向键微调位置）
+  useKeyboardShortcuts({
+    context: 'conference-display',
+    isFullScreen: () => isFullScreen,
+    toggleFullscreen
+  })
+
+  onMount(() => {
+    const bridge = getDisplayBridge()
+    const unsubData = bridge.onHostCommand((data: ConferenceDisplayData) => {
+      // 忽略 ws-config 控制消息（非显示数据）
+      if ((data as any).type === 'ws-config') return
+      displayData = data
+    })
+
+    // 计时器增量更新（ADR-0002）：Display 不维护计时器，仅被动渲染 Host 推送的数值
+    const unsubTick = bridge.onTimerTick((tick: TimerTickData) => {
+      if (displayData?.currentSpeaker) {
+        displayData = {
+          ...displayData,
+          currentSpeaker: {
+            ...displayData.currentSpeaker,
+            remainingSec: tick.remainingSec,
+            status: tick.status
+          }
+        }
+      }
+      // caucus 计时器同步
+      if (displayData?.caucusTimer) {
+        displayData = {
+          ...displayData,
+          caucusTimer: {
+            ...displayData.caucusTimer,
+            remainingSec: tick.remainingSec,
+            status: tick.status
+          }
+        }
+      }
+    })
+
+    const unsubStatus = onConnectionStatus((status: ConnectionStatus) => {
+      connectionStatus = status
+    })
+
+    // 监听来自主进程的 Display 更新（全屏状态变更等）
+    const unsubDisplayUpdate = window.veto?.conference?.onDisplayUpdate?.((data: unknown) => {
+      const msg = data as { type?: string; wsUrl?: string; isFullScreen?: boolean }
+      if (msg.type === 'ws-config' && msg.wsUrl) {
+        setExternalWsUrl(msg.wsUrl)
+      } else if (msg.type === 'fullscreen-change') {
+        isFullScreen = msg.isFullScreen ?? false
+      }
+    })
+
+    return () => {
+      unsubData()
+      unsubTick()
+      unsubStatus()
+      unsubDisplayUpdate?.()
+    }
+  })
+
+  const headerThresholds = $derived.by(() => {
+    const voting = displayData?.votingCount
+    if (voting != null && voting > 0) {
+      return {
+        simpleMajority: Math.floor(voting / 2) + 1,
+        twoThirds: Math.ceil((voting * 2) / 3)
+      }
+    }
+    return null
+  })
+
+  // 特殊动议（isRequestingVote: false）不应触发 MotionDisplay
+  const isSpecialMotion = $derived(displayData?.motionDraft?.isRequestingVote === false)
+  const hasActiveMotion = $derived(displayData?.activeMotion != null)
+
+  // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
+  let effectivePhase = $state<string | null>(null)
+  let phaseDelayTimer: ReturnType<typeof setTimeout> | null = null
+
+  $effect(() => {
+    const newPhase = displayData?.phase ?? null
+    const motionStatus = displayData?.activeMotion?.status
+
+    // 延迟计时器激活期间不干涉
+    if (phaseDelayTimer) return
+
+    // 相同则跳过
+    if (newPhase === effectivePhase) return
+
+    // 从 motion 结果阶段切换到其他阶段 → 延迟 1 秒
+    if (
+      effectivePhase === 'motion' &&
+      motionStatus != null &&
+      motionStatus !== 'pending' &&
+      newPhase !== 'motion'
+    ) {
+      phaseDelayTimer = setTimeout(() => {
+        // 取最新的 phase（避免延迟期间 phase 再次变更）
+        effectivePhase = displayData?.phase ?? null
+        phaseDelayTimer = null
+      }, 3000)
+      return
+    }
+
+    effectivePhase = newPhase
+  })
+
+  $effect(() => {
+    console.log('[display] state:', {
+      effectivePhase,
+      rawPhase: displayData?.phase,
+      hasAttendanceChange: displayData?.attendanceChange != null,
+      hasActiveMotion: displayData?.activeMotion != null,
+      hasCurrentSpeaker: displayData?.currentSpeaker != null,
+      hasCaucusTimer: displayData?.caucusTimer != null,
+      hasVotingSession: displayData?.votingSession != null
+    })
+  })
+
+  onDestroy(() => {
+    if (phaseDelayTimer) clearTimeout(phaseDelayTimer)
+    if (attendanceTimer) clearTimeout(attendanceTimer)
+  })
+
+  // ---- 出席状态变更（全屏展示） ----
+  // 来源：changeDelegationAttendance（attendanceChange 字段）或点名（rollCall.lastMarked）
+  let attendanceChange = $state<Delegation | null>(null)
+  let attendanceTimer: ReturnType<typeof setTimeout> | null = null
+  let _lastAttendanceId = $state('')
+
+  $effect(() => {
+    const change = displayData?.attendanceChange
+    if (change) {
+      const notifId = `${change.id}-${change.attendance}`
+      if (notifId === _lastAttendanceId) return
+      _lastAttendanceId = notifId
+
+      if (attendanceTimer) clearTimeout(attendanceTimer)
+      attendanceChange = change
+
+      attendanceTimer = setTimeout(() => {
+        attendanceChange = null
+      }, ROLL_CALL_MARK_DELAY)
+      return
+    }
+
+    // 点名阶段兼容：rollCall.lastMarked
+    const lastMarked = displayData?.rollCall?.lastMarked
+    if (lastMarked) {
+      const notifId = `${lastMarked.delegation.name}-${lastMarked.status}`
+      if (notifId === _lastAttendanceId) return
+      _lastAttendanceId = notifId
+
+      if (attendanceTimer) clearTimeout(attendanceTimer)
+      attendanceChange = {
+        ...lastMarked.delegation,
+        attendance: lastMarked.status
+      }
+
+      attendanceTimer = setTimeout(() => {
+        attendanceChange = null
+      }, ROLL_CALL_MARK_DELAY)
+    }
+  })
+</script>
+
+<svelte:head>
+  <title>{VETO_NAME} - 模拟大会</title>
+  <style>
+    :global(body) {
+      background: #0a0e14;
+      color: #c8ccd4;
+      overflow: hidden;
+    }
+    .drag-region {
+      -webkit-app-region: drag;
+    }
+    .no-drag {
+      -webkit-app-region: no-drag;
+    }
+  </style>
+</svelte:head>
+
+<div class="flex h-screen w-screen flex-col bg-[#0a0e14] text-[#c8ccd4]">
+  {#if !isFullScreen}
+    <TitleBar variant="display" onToggleFullscreen={toggleFullscreen} />
+  {/if}
+
+  {#if displayData}
+    <ConferenceHeader
+      venue={displayData.venue}
+      name={displayData.name}
+      phase={effectivePhase}
+      simpleMajority={headerThresholds?.simpleMajority}
+      twoThirds={headerThresholds?.twoThirds}
+    />
+
+    <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
+    {#if attendanceChange}
+      <AttendanceChangeDisplay
+        delegationName={attendanceChange.name}
+        shortName={attendanceChange.shortName}
+        status={attendanceChange.attendance}
+      />
+    {:else}
+      <!-- 主展示区（phase 动态切换） -->
+      <div class="flex flex-1 items-center justify-center overflow-hidden px-16" style={contentStyle}>
+        {#if displayData.pointDraft?.proposedBy || displayData.activePoint}
+          <QuestionDisplay data={displayData} />
+        {:else if effectivePhase === 'motion' && !isSpecialMotion && hasActiveMotion}
+          <MotionDisplay data={displayData} />
+        {:else if effectivePhase === 'roll_call'}
+          <RollCallDisplay data={displayData} />
+        {:else if effectivePhase === 'general_debate'}
+          <GeneralDebateDisplay data={displayData} />
+        {:else if effectivePhase === 'caucus_setup'}
+          <CaucusSetupDisplay data={displayData} />
+        {:else if displayData.caucusTimer && effectivePhase === 'caucus'}
+          <CaucusDisplay data={displayData} />
+        {:else if displayData.votingSession && effectivePhase === 'voting'}
+          <VotingDisplay data={displayData} />
+        {:else if effectivePhase === 'pending_speakers_list'}
+          <PendingSpeakersListDisplay />
+        {:else if effectivePhase === 'suspended'}
+          <SuspendedDisplay />
+        {:else if effectivePhase === 'closed'}
+          <ClosedDisplay />
+        {:else}
+          <ReadyDisplay data={displayData} />
+        {/if}
+      </div>
+    {/if}
+  {:else}
+    <ConnectionStatusDisplay status={connectionStatus} />
+  {/if}
+</div>

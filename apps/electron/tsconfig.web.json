@@ -1,0 +1,24 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "composite": true,
+  "include": [
+    "src/renderer/env.d.ts",
+    "src/renderer/**/*",
+    "src/renderer/**/*.svelte",
+    "apps/electron/preload/*.d.ts",
+    "apps/shared/**/*"
+  ],
+  "compilerOptions": {
+    "verbatimModuleSyntax": true,
+    "useDefineForClassFields": true,
+    "strict": false,
+    "allowJs": true,
+    "checkJs": true,
+    "allowArbitraryExtensions": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "paths": {
+      "$lib/*": ["./apps/frontend/lib/*"],
+      "$units/*": ["./apps/frontend/units/*"]
+    }
+  }
+}

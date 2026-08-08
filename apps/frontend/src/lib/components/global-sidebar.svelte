@@ -1,0 +1,263 @@
+<script lang="ts">
+  import type { ComponentProps, Snippet } from 'svelte'
+  import {
+    House,
+    CalendarRange,
+    Send,
+    Newspaper,
+    Globe,
+    Swords,
+    Timer,
+    UserPlus,
+    Search,
+    Puzzle,
+    Plus
+  } from '@lucide/svelte'
+  import * as Sidebar from '$lib/components/ui/sidebar/index.js'
+  import { Separator } from '$lib/components/ui/separator/index.js'
+  import { Button } from '$lib/components/ui/button'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { currentRoute } from '$lib/router.svelte'
+  import { currentConferenceId, conferences } from '$lib/stores/conference/conference-store'
+  import { page } from '$app/stores'
+  import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
+  import { formatTime } from '$lib/utils'
+  import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
+  import WindowControls from './app-sidebar/window-controls.svelte'
+  import CreateConferenceDialog from './home/create-conference-dialog.svelte'
+  import NavUser from './app-sidebar/nav-user.svelte'
+
+  let {
+    className = '',
+    collapsible = 'icon',
+    children,
+    ...restProps
+  }: { className?: string; children: Snippet; collapsible?: 'offcanvas' | 'icon' | 'none' } & Omit<
+    ComponentProps<typeof Sidebar.Root>,
+    'children' | 'class'
+  > = $props()
+
+  const confId = $derived($currentConferenceId)
+  const hasConf = $derived(confId != null)
+  const routeId = $derived(currentRoute?.routeId ?? '/')
+
+  const confPrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
+
+  const isLoginPage = $derived($page.url.pathname === '/login')
+
+  // 最近大会列表（按 id 倒序，取前 5 条）
+  const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
+
+  let createDialogOpen = $state(false)
+
+  function goTo(path: string): void {
+    // @ts-expect-error resolve 要求字面量路由类型，这里接受通用 string
+    goto(resolve(path))
+  }
+
+  type NavItem = {
+    title: string
+    icon: typeof House
+    url: string
+    needsConf: boolean
+    isActive: boolean
+  }
+
+  const items = $derived<NavItem[]>([
+    { title: '首页', icon: House, url: '/', needsConf: false, isActive: routeId === '/' },
+    {
+      title: '议程',
+      icon: CalendarRange,
+      url: confPrefix,
+      needsConf: true,
+      isActive: routeId.startsWith('/conference/')
+    },
+    {
+      title: '指令',
+      icon: Send,
+      url: `${confPrefix}/directives`,
+      needsConf: true,
+      isActive: routeId === `/conference/${confId}/directives`
+    },
+    {
+      title: '新闻',
+      icon: Newspaper,
+      url: `${confPrefix}/news`,
+      needsConf: true,
+      isActive: routeId === `/conference/${confId}/news`
+    },
+    {
+      title: '局势',
+      icon: Globe,
+      url: `${confPrefix}/situation`,
+      needsConf: true,
+      isActive: routeId === `/conference/${confId}/situation`
+    }
+  ])
+</script>
+
+{#if !isLoginPage}
+  <Sidebar.Provider>
+    <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
+      <Sidebar.Header>
+        <BrandSwitcher {hasConf} {confPrefix} />
+      </Sidebar.Header>
+
+      <Sidebar.Content>
+        <Sidebar.Menu class="p-3">
+          {#if !hasConf}
+            <!-- 未加入大会：操作按钮 -->
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton class="cursor-pointer">
+                <UserPlus size={18} />
+                <span>加入大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton onclick={() => (createDialogOpen = true)} class="cursor-pointer">
+                <Plus size={18} />
+                <span>创建大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                onclick={() => goto(resolve('/'))}
+                isActive={routeId === '/'}
+                class="cursor-pointer"
+              >
+                <Search size={18} />
+                <span>寻找大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.Separator class="my-1" />
+
+            <!-- 最近大会列表 -->
+            {#each recentConfs as conf (conf.id)}
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  onclick={() => goto(resolve(`/conference/${conf.id}`))}
+                  class="cursor-pointer"
+                >
+                  <Globe size={18} />
+                  <span class="truncate">{conf.name}</span>
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            {/each}
+
+            {#if recentConfs.length === 0}
+              <div
+                class="px-2 py-3 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
+              >
+                暂无最近大会
+              </div>
+            {/if}
+          {:else}
+            <!-- 已加入大会：导航菜单 -->
+            {#each items as item, i (i)}
+              {#if i === 1}
+                <Sidebar.Separator class="my-1" />
+              {/if}
+              {#if !item.needsConf || hasConf}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton
+                    onclick={() => goTo(item.url)}
+                    isActive={item.isActive}
+                    class="cursor-pointer"
+                  >
+                    <item.icon size={18} />
+                    <span>{item.title}</span>
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/if}
+            {/each}
+          {/if}
+        </Sidebar.Menu>
+      </Sidebar.Content>
+
+      <Sidebar.Footer class="mt-auto">
+        {#if hasConf}
+          <Sidebar.Menu class="p-0 pb-1">
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                onclick={() => goto(resolve('/battle'))}
+                isActive={routeId.startsWith('/battle')}
+                class="cursor-pointer"
+              >
+                <Swords size={18} />
+                <span>军事推演</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+          </Sidebar.Menu>
+        {/if}
+        <NavUser />
+      </Sidebar.Footer>
+
+      <Sidebar.Rail />
+    </Sidebar.Root>
+
+    <Sidebar.Inset>
+      <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
+        <Sidebar.Trigger class="-ms-1" />
+
+        <Separator orientation="vertical" class="me-2 h-4" />
+
+        <!-- 中：计时器显示 / 拖拽区域 -->
+        <div class="drag-region flex-1 h-full flex items-center justify-center">
+          {#if $standaloneTimer}
+            {@const st = $standaloneTimer}
+            {@const expired = !st.isRunning && st.remainingSec <= 0}
+            <Button
+              class="no-drag flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-mono tabular-nums transition-colors hover:bg-accent/50 {expired
+                ? 'text-red-500'
+                : st.isRunning
+                  ? 'text-indigo-500'
+                  : 'text-amber-500'}"
+              variant="ghost"
+              onclick={() => timerDialogOpen.set(true)}
+              title={expired
+                ? '计时器已到期（点击打开）'
+                : st.isRunning
+                  ? '计时器运行中（点击打开）'
+                  : '计时器已暂停（点击打开）'}
+            >
+              <Timer size={12} class={expired ? 'animate-pulse' : st.isRunning ? '' : ''} />
+              <span>{formatTime(st.remainingSec)}</span>
+            </Button>
+          {/if}
+        </div>
+
+        <!-- 右：插件入口 / 用户 + 设置 + 窗口控制按钮 -->
+
+        <Button
+          variant="ghost"
+          size="sm"
+          class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          onclick={() => goto(resolve('/tools'))}
+          title="插件"
+        >
+          <Puzzle size={14} />
+        </Button>
+
+        <WindowControls />
+      </header>
+
+      <div class="flex flex-1 flex-col">
+        {@render children()}
+      </div>
+    </Sidebar.Inset>
+  </Sidebar.Provider>
+{:else}
+  {@render children()}
+{/if}
+
+<CreateConferenceDialog bind:open={createDialogOpen} />
+
+<style>
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+</style>
