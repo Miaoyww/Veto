@@ -1,17 +1,30 @@
 <script lang="ts">
   import type { ComponentProps, Snippet } from 'svelte'
-  import { House, CalendarRange, Send, Newspaper, Globe, Swords, Timer } from '@lucide/svelte'
+  import {
+    House,
+    CalendarRange,
+    Send,
+    Newspaper,
+    Globe,
+    Swords,
+    Timer,
+    UserPlus,
+    Search,
+    Puzzle,
+    Plus
+  } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
+  import { Button } from '$lib/components/ui/button'
   import { navigate, currentRoute } from '$lib/router.svelte'
-  import { currentConferenceId } from '$lib/stores/conference/conference-store'
+  import { currentConferenceId, conferences } from '$lib/stores/conference/conference-store'
   import { page } from '$app/stores'
   import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
   import { formatTime } from '$lib/utils'
-  import { Button } from '$lib/components/ui/button'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
-  import UserButton from './app-sidebar/user-button.svelte'
+  import CreateConferenceDialog from './home/create-conference-dialog.svelte'
+  import NavUser from './app-sidebar/nav-user.svelte'
 
   let {
     className = '',
@@ -30,6 +43,11 @@
   const confPrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
 
   const isLoginPage = $derived($page.url.pathname === '/login')
+
+  // 最近大会列表（按 id 倒序，取前 5 条）
+  const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
+
+  let createDialogOpen = $state(false)
 
   type NavItem = {
     title: string
@@ -81,57 +99,97 @@
 
 {#if !isLoginPage}
   <Sidebar.Provider>
-    <Sidebar.Root
-      variant="inset"
-      class="h-[calc(100svh-2.25rem)]! {className}"
-      {collapsible}
-      {...restProps}
-    >
+    <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
       <Sidebar.Header>
         <BrandSwitcher {hasConf} {confPrefix} />
       </Sidebar.Header>
 
       <Sidebar.Content>
         <Sidebar.Menu class="p-3">
-          {#each items as item, i (i)}
-            {#if hasConf}
+          {#if !hasConf}
+            <!-- 未加入大会：操作按钮 -->
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton class="cursor-pointer">
+                <UserPlus size={18} />
+                <span>加入大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton onclick={() => (createDialogOpen = true)} class="cursor-pointer">
+                <Plus size={18} />
+                <span>创建大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                onclick={() => navigate('/')}
+                isActive={routeId === '/'}
+                class="cursor-pointer"
+              >
+                <Search size={18} />
+                <span>寻找大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.Separator class="my-1" />
+
+            <!-- 最近大会列表 -->
+            {#each recentConfs as conf (conf.id)}
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  onclick={() => navigate(`/conference/${conf.id}`)}
+                  class="cursor-pointer"
+                >
+                  <Globe size={18} />
+                  <span class="truncate">{conf.name}</span>
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            {/each}
+
+            {#if recentConfs.length === 0}
+              <div
+                class="px-2 py-3 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
+              >
+                暂无最近大会
+              </div>
+            {/if}
+          {:else}
+            <!-- 已加入大会：导航菜单 -->
+            {#each items as item, i (i)}
               {#if i === 1}
                 <Sidebar.Separator class="my-1" />
               {/if}
-            {/if}
-            {#if !item.needsConf || hasConf}
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  onclick={() => navigate(item.url)}
-                  isActive={item.isActive}
-                  class="cursor-pointer"
-                >
-                  <item.icon size={18} />
-                  <span>{item.title}</span>
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-            {/if}
-            {#if hasConf}
+              {#if !item.needsConf || hasConf}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton
+                    onclick={() => navigate(item.url)}
+                    isActive={item.isActive}
+                    class="cursor-pointer"
+                  >
+                    <item.icon size={18} />
+                    <span>{item.title}</span>
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/if}
               {#if i === 4}
                 <Sidebar.Separator class="my-1" />
               {/if}
-            {/if}
-          {/each}
+            {/each}
+          {/if}
         </Sidebar.Menu>
       </Sidebar.Content>
 
-      <Sidebar.Footer>
+      <Sidebar.Footer class="mt-auto">
         {#if !hasConf}
-          <div
-            class="px-3 py-4 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
-          >
-            请先加入大会
-          </div>
+          <NavUser />
         {/if}
       </Sidebar.Footer>
 
       <Sidebar.Rail />
     </Sidebar.Root>
+
     <Sidebar.Inset>
       <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
         <Sidebar.Trigger class="-ms-1" />
@@ -163,8 +221,20 @@
           {/if}
         </div>
 
-        <!-- 右：用户 + 设置 + 窗口控制按钮 -->
-        <UserButton />
+        <!-- 右：插件入口 / 用户 + 设置 + 窗口控制按钮 -->
+        {#if !hasConf}
+          <Button
+            variant="ghost"
+            size="sm"
+            class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            onclick={() => navigate('/tools')}
+            title="插件"
+          >
+            <Puzzle size={14} />
+          </Button>
+        {:else}
+          <NavUser />
+        {/if}
         <WindowControls />
       </header>
 
@@ -176,6 +246,8 @@
 {:else}
   {@render children()}
 {/if}
+
+<CreateConferenceDialog bind:open={createDialogOpen} />
 
 <style>
   .drag-region {
