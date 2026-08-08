@@ -340,8 +340,8 @@ export interface VotingSession {
 // ---- 会议记录 ------------------------------------------------------------
 
 // 从共享类型重导出（新名称），确保 main + renderer 进程使用同一份操作类型定义
-import type { ConferenceActionType, Entry, ConferenceEntry } from '../../shared/action-types'
-import { ACTION_LABELS } from '../../shared/action-types'
+import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../shared/action-types'
+import { ACTION_LABELS } from '../../../shared/action-types'
 export type { ConferenceActionType, Entry, ConferenceEntry }
 export { ACTION_LABELS }
 

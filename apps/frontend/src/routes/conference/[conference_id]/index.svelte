@@ -11,7 +11,6 @@
   } from '$lib/stores/conference/conference-store'
   import { destroyAllTimers } from '$lib/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import ConferenceSidebar from '$lib/components/conference/layout/conference-sidebar.svelte'
   import ConferenceWorkspace from '$lib/components/conference/layout/conference-workspace.svelte'
 
   const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
@@ -48,7 +47,4 @@
   <title>{VETO_NAME} - 模拟大会</title>
 </svelte:head>
 
-<div class="grid h-[calc(100vh-2.25rem)] w-screen overflow-hidden">
-  <!-- LEFT: Delegation sidebar -->
-  <ConferenceSidebar />
-</div>
+<ConferenceWorkspace />

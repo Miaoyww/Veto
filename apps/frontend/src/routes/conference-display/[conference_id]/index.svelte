@@ -11,7 +11,6 @@
    * 4. 底部近期记录
    */
   import { onMount, onDestroy } from 'svelte'
-  import TitleBar from '$lib/components/titlebar.svelte'
   import {
     getDisplayBridge,
     onConnectionStatus,

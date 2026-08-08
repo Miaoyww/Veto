@@ -90,7 +90,7 @@
   <title>{VETO_NAME} - 问题</title>
 </svelte:head>
 
-<div class="flex h-screen w-screen flex-col bg-background">
+<div class="flex h-full w-full flex-col bg-background">
   {#if conf && latestPoint}
     {@const Icon = POINT_ICONS[latestPoint.type] ?? HelpCircle}
     {@const iconColor = POINT_COLORS[latestPoint.type]}

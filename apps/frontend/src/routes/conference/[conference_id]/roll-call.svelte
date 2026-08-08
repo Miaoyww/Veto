@@ -185,7 +185,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex h-[calc(100vh-2.25rem)] w-screen flex-col bg-background">
+<div class="flex h-full w-full flex-col bg-background">
   <!-- 顶部栏 -->
   <div class="flex items-center gap-4 border-b px-6 py-3">
     <Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleBackToConference}>

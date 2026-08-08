@@ -11,6 +11,7 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { setOffline } from '$lib/stores/auth-store'
+  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
 </script>
 
 <div class="relative min-h-svh overflow-hidden bg-background">
@@ -29,6 +30,12 @@
     </div>
 
     <span class="text-lg"> Veto </span>
+  </div>
+
+  <!-- Title bar: drag region + window controls -->
+  <div class="absolute left-0 right-0 top-0 z-20 flex h-9 items-center">
+    <div class="drag-region flex-1 h-full"></div>
+    <WindowControls />
   </div>
 
   <div class="relative z-10 flex min-h-svh items-center justify-center">
@@ -103,3 +110,9 @@
     </div>
   </div>
 </div>
+
+<style>
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+</style>

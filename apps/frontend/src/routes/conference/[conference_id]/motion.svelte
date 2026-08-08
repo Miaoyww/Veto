@@ -113,7 +113,7 @@
   <title>{VETO_NAME} - 动议表决</title>
 </svelte:head>
 
-<div class="flex h-screen w-screen flex-col bg-background">
+<div class="flex h-full w-full flex-col bg-background">
   {#if conf && pendingMotion}
     {@const Icon = MOTION_ICONS[pendingMotion.type] ?? Presentation}
     <!-- 顶部栏 -->
