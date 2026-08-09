@@ -11,7 +11,11 @@
     UserPlus,
     Search,
     Puzzle,
-    Plus
+    Plus,
+    Users,
+    UserRoundCheck,
+    UsersRound,
+    Settings
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -27,6 +31,9 @@
   import WindowControls from './app-sidebar/window-controls.svelte'
   import CreateConferenceDialog from './home/create-conference-dialog.svelte'
   import NavUser from './app-sidebar/nav-user.svelte'
+  import { currentConference } from '$lib/stores/conference/conference-store'
+  import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
+  import { cn } from '$lib/utils.js'
 
   let {
     className = '',
@@ -95,14 +102,25 @@
       isActive: routeId === `/conference/${confId}/situation`
     }
   ])
+
+  const conf = $derived($currentConference)
+
+  const presentCount = $derived(
+    conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0
+  )
+  const votingCount = $derived(
+    conf?.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length ?? 0
+  )
+  const simpleMajority = $derived(Math.floor(votingCount / 2) + 1)
+  const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
 </script>
 
 {#if !isLoginPage}
   <Sidebar.Provider>
     <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
-      < Sidebar.Header>
+      <Sidebar.Header>
         <BrandSwitcher {hasConf} {confPrefix} />
-      </>
+      </Sidebar.Header>
 
       <Sidebar.Content>
         <Sidebar.Menu class="p-3">
@@ -175,20 +193,85 @@
               {/if}
             {/each}
           {/if}
+          {#if conf}
+            <Sidebar.Separator class="my-1" />
+
+            <!-- 代表团列表 -->
+            <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
+              <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
+                <span class="text-[10px] text-muted-foreground/60">
+                  {presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="h-7 gap-1 text-[10px]"
+                  onclick={() => goto(resolve(`/conference/${conf.id}/delegations`))}
+                >
+                  <UserRoundCheck size={10} />
+                  代表管理
+                </Button>
+              </div>
+
+              <div class="px-3 pb-3">
+                {#each conf.delegations as delegation (delegation.id)}
+                  {@const isPresent = delegation.attendance === 'present'}
+                  {@const isObserver = isPresent && delegation.vetoPower === false}
+                  {@const isVoter = isPresent && !isObserver}
+                  <div
+                    class={cn(
+                      'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
+                      isPresent ? '' : 'opacity-50'
+                    )}
+                  >
+                    <!-- 名称 -->
+                    <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                      {delegation.name}
+                    </span>
+                    <!-- 出席状态 icon -->
+                    <span class="shrink-0 text-[10px]">
+                      {#if isVoter}
+                        <span class="text-emerald-500">●</span>
+                      {:else if isObserver}
+                        <span class="text-blue-500">●</span>
+                      {:else}
+                        <span class="text-muted-foreground/40">○</span>
+                      {/if}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
+          {#if conf}
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  onclick={() => goto(resolve('/battle'))}
+                  isActive={routeId.startsWith('/battle')}
+                  class="cursor-pointer"
+                >
+                  <Swords size={18} />
+                  <span>军事推演</span>
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+          {/if}
         </Sidebar.Menu>
       </Sidebar.Content>
 
       <Sidebar.Footer class="mt-auto">
         {#if hasConf}
-          <Sidebar.Menu class="p-0 pb-1">
+          <Sidebar.Menu>
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 onclick={() => goto(resolve('/battle'))}
                 isActive={routeId.startsWith('/battle')}
                 class="cursor-pointer"
               >
-                <Swords size={18} />
-                <span>军事推演</span>
+                <Settings size={18} />
+                <span>会议设置</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
           </Sidebar.Menu>
@@ -204,7 +287,21 @@
         <Sidebar.Trigger class="-ms-1" />
 
         <Separator orientation="vertical" class="me-2 h-4" />
-
+        {#if conf}
+          <!-- 表决信息 -->
+          <div class="pb-3">
+            <div class="mt-1.5 grid grid-cols-2 gap-2">
+              <div class="px-2.5 py-1.5">
+                <div class="text-[10px] text-muted-foreground">简单多数</div>
+                <div class="text-sm font-bold text-foreground">{simpleMajority}</div>
+              </div>
+              <div class="px-2.5 py-1.5">
+                <div class="text-[10px] text-muted-foreground">2/3 多数</div>
+                <div class="text-sm font-bold text-foreground">{twoThirds}</div>
+              </div>
+            </div>
+          </div>
+        {/if}
         <!-- 中：计时器显示 / 拖拽区域 -->
         <div class="drag-region flex-1 h-full flex items-center justify-center">
           {#if $standaloneTimer}

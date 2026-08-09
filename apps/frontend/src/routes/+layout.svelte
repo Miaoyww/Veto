@@ -17,16 +17,12 @@
   import { markPluginsReady } from '$lib/registry/mod-registry.svelte'
 
   // 页面组件
-  import BattlePage from './battle/[battle_id]/index.svelte'
-  import ConferencePage from './conference/[conference_id]/index.svelte'
+  import BattlePage from './conference/[conference_id]/battle/[battle_id]/index.svelte'
   import ConferenceRollCallPage from './conference/[conference_id]/roll-call.svelte'
   import ConferenceMotionPage from './conference/[conference_id]/motion.svelte'
   import ConferenceQuestionPage from './conference/[conference_id]/question.svelte'
   import ConferenceDelegationsPage from './conference/[conference_id]/delegations.svelte'
   import ConferenceSeatsPage from './conference/[conference_id]/seats.svelte'
-  import ConferenceDisplayPage from './conference-display/[conference_id]/index.svelte'
-  import DelegatePage from './delegate/[conference_id]/+page.svelte'
-  import ToolPage from './tools/[tool_id]/+page.svelte'
   import { page } from '$app/stores'
 
   let { children } = $props()
