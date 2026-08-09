@@ -8,7 +8,13 @@
   import { Label } from '$lib/components/ui/label'
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
   import * as Select from '$lib/components/ui/select'
-  import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '$lib/components/ui/empty'
+  import {
+    Empty,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+    EmptyDescription
+  } from '$lib/components/ui/empty'
   import {
     AlertDialog,
     AlertDialogAction,
@@ -18,7 +24,7 @@
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialogTrigger
   } from '$lib/components/ui/alert-dialog'
   import { cn } from '$lib/utils.js'
   import {
@@ -56,9 +62,7 @@
   const sortedDelegations = $derived(
     conf ? [...conf.delegations].sort((a, b) => a.sortOrder - b.sortOrder) : []
   )
-  const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.delegations) : null
-  )
+  const thresholds = $derived(conf ? calculateMajorityThresholds(conf.delegations) : null)
 
   // ---- 添加代表团表单 ----
   let showAddForm = $state(false)
@@ -101,11 +105,6 @@
 <div class="flex h-full w-full flex-col bg-background">
   <!-- 顶部栏 -->
   <div class="flex items-center gap-4 border-b px-6 py-3">
-    <Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleBack}>
-      <ArrowLeft size={14} />
-      返回大会
-    </Button>
-    <div class="h-4 w-px bg-border"></div>
     <UserRoundCheck size={16} class="text-indigo-500" />
     <span class="text-sm font-semibold text-foreground">代表管理</span>
     <span class="text-xs text-muted-foreground">{conf?.name}</span>
@@ -132,7 +131,8 @@
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onclick={() => {
+            <AlertDialogAction
+              onclick={() => {
                 resetRollCall()
                 showResetConfirm = false
                 goto(`/conference/${conferenceId}/roll-call`)
@@ -175,13 +175,16 @@
           </Card>
           <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
-              <span class="text-2xl font-bold text-foreground">{thresholds.simpleMajorityThreshold}</span>
+              <span class="text-2xl font-bold text-foreground"
+                >{thresholds.simpleMajorityThreshold}</span
+              >
               <span class="text-sm text-muted-foreground">简单多数</span>
             </CardContent>
           </Card>
           <Card>
             <CardContent class="flex flex-col items-center gap-1 p-5">
-              <span class="text-2xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</span>
+              <span class="text-2xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</span
+              >
               <span class="text-sm text-muted-foreground">2/3 多数</span>
             </CardContent>
           </Card>
@@ -202,24 +205,40 @@
                     bind:value={newName}
                     placeholder="国家/组织全名"
                     class="h-9 text-sm"
-                    onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAdd() }}
+                    onkeydown={(e: KeyboardEvent) => {
+                      if (e.key === 'Enter') handleAdd()
+                    }}
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <Label for="new-short-name" class="text-xs">简称 <span class="text-muted-foreground/60">（可选）</span></Label>
+                  <Label for="new-short-name" class="text-xs"
+                    >简称 <span class="text-muted-foreground/60">（可选）</span></Label
+                  >
                   <Input
                     id="new-short-name"
                     bind:value={newShortName}
                     placeholder="如：中国"
                     class="h-9 text-sm"
-                    onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAdd() }}
+                    onkeydown={(e: KeyboardEvent) => {
+                      if (e.key === 'Enter') handleAdd()
+                    }}
                   />
                 </div>
                 <div class="flex items-end justify-end gap-2">
-                  <Button size="sm" variant="outline" class="h-8 text-xs" onclick={() => (showAddForm = false)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    class="h-8 text-xs"
+                    onclick={() => (showAddForm = false)}
+                  >
                     取消
                   </Button>
-                  <Button size="sm" class="h-8 text-xs" onclick={handleAdd} disabled={!newName.trim()}>
+                  <Button
+                    size="sm"
+                    class="h-8 text-xs"
+                    onclick={handleAdd}
+                    disabled={!newName.trim()}
+                  >
                     <Plus size={12} />
                     添加
                   </Button>
@@ -233,7 +252,9 @@
         <Card>
           <CardContent class="p-0">
             <!-- 表头 -->
-            <div class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground">
+            <div
+              class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground"
+            >
               <div class="flex-1">代表团</div>
               <div class="w-28 text-center">出席状态</div>
               <div class="w-20 text-center">投票权</div>
@@ -257,7 +278,9 @@
                       {delegation.name}
                     </span>
                     {#if delegation.shortName}
-                      <span class="truncate text-xs text-muted-foreground">{delegation.shortName}</span>
+                      <span class="truncate text-xs text-muted-foreground"
+                        >{delegation.shortName}</span
+                      >
                     {/if}
                   </div>
 
@@ -290,7 +313,11 @@
                           handleVetoPowerToggle(delegation.id, target.checked)
                         }}
                         disabled={!isPresent}
-                        title={isPresent ? (delegation.vetoPower !== false ? '拥有投票权' : '观察员（无投票权）') : '未出席，不可设置投票权'}
+                        title={isPresent
+                          ? delegation.vetoPower !== false
+                            ? '拥有投票权'
+                            : '观察员（无投票权）'
+                          : '未出席，不可设置投票权'}
                       />
                       <span class="text-[11px] text-muted-foreground">
                         {delegation.vetoPower !== false ? '有' : '无'}
@@ -313,7 +340,9 @@
                         <AlertDialogHeader>
                           <AlertDialogTitle>删除代表团</AlertDialogTitle>
                           <AlertDialogDescription>
-                            确定要删除 <span class="font-semibold text-foreground">{delegation.name}</span> 吗？此操作不可撤销。
+                            确定要删除 <span class="font-semibold text-foreground"
+                              >{delegation.name}</span
+                            > 吗？此操作不可撤销。
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
