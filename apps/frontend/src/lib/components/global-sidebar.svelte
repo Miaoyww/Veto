@@ -16,7 +16,10 @@
     UserRoundCheck,
     UsersRound,
     Settings,
-    ArrowLeft
+    ArrowLeft,
+
+    Wrench
+
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -101,6 +104,13 @@
       url: `${confPrefix}/situation`,
       needsConf: true,
       isActive: routeId === `${confPrefix}/situation`
+    },
+    {
+      title: '工具',
+      icon: Wrench,
+      url: `${confPrefix}/tools`,
+      needsConf: true,
+      isActive: routeId === `${confPrefix}/tools`
     },
     {
       title: '军事推演',
