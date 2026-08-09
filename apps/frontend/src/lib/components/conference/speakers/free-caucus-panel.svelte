@@ -7,6 +7,7 @@
   import { onDestroy } from 'svelte'
   import { get } from 'svelte/store'
   import { Timer, Coffee } from '@lucide/svelte'
+  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import {
@@ -35,7 +36,9 @@
   }
 
   const caucusCountdown = useCaucusCountdown({
-    get enabled() { return true },
+    get enabled() {
+      return true
+    },
     timerId: 'caucus-countdown',
     getEngine,
     onExpire() {
@@ -54,7 +57,9 @@
 
   const progressPercent = $derived(
     caucusCountdown.totalSec > 0
-      ? ((caucusCountdown.totalSec - caucusCountdown.totalRemainingSec) / caucusCountdown.totalSec) * 100
+      ? ((caucusCountdown.totalSec - caucusCountdown.totalRemainingSec) /
+          caucusCountdown.totalSec) *
+          100
       : 0
   )
 
@@ -79,10 +84,7 @@
 <div class="flex w-full flex-col gap-4">
   {#if conf}
     <div class="flex flex-col items-center gap-6">
-      <div class="flex items-center gap-2">
-        <Coffee size={28} class="text-amber-500" />
-        <h2 class="text-xl font-bold text-foreground">自由磋商</h2>
-      </div>
+      <PanelHeader icon={Coffee} title="自由磋商" />
 
       <div class="text-center">
         {#if caucusCountdown.isCaucusPaused}
@@ -93,8 +95,10 @@
         <div
           class="font-mono text-7xl font-bold tabular-nums transition-colors"
           class:text-amber-500={caucusCountdown.isCaucusPaused}
-          class:text-red-500={!caucusCountdown.isCaucusPaused && caucusCountdown.totalRemainingSec <= 30}
-          class:text-foreground={!caucusCountdown.isCaucusPaused && caucusCountdown.totalRemainingSec > 30}
+          class:text-red-500={!caucusCountdown.isCaucusPaused &&
+            caucusCountdown.totalRemainingSec <= 30}
+          class:text-foreground={!caucusCountdown.isCaucusPaused &&
+            caucusCountdown.totalRemainingSec > 30}
         >
           {formatTime(caucusCountdown.totalRemainingSec)}
         </div>

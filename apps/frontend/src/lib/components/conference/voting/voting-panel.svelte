@@ -17,6 +17,7 @@
   } from '$lib/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
   import { cn } from '$lib/utils.js'
+  import PanelHeader from '../common/panel-header.svelte'
 
   const conf = $derived($currentConference)
 
@@ -122,10 +123,7 @@
   {#if activeSession && conf}
     <!-- ====== 标题 ====== -->
     <div class="text-center">
-      <h2 class="flex items-center justify-center gap-2 text-xl font-bold text-foreground">
-        <Vote size={22} class="text-blue-500" />
-        {documentName ? '实质性投票' : '投票表决'}
-      </h2>
+      <PanelHeader icon={Vote} title={documentName ? '实质性投票' : '投票表决'} />
       {#if documentName}
         <p class="mt-1 text-base font-semibold text-foreground">「{documentName}」</p>
       {/if}

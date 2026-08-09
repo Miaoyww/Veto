@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { LucideIcon } from '@lucide/svelte'
   /**
    * placeholder-page.svelte
    * ────────────────────────
@@ -8,19 +9,19 @@
   import type { Snippet } from 'svelte'
 
   interface Props {
-    icon: Snippet
+    icon: LucideIcon
     title: string
     subtitle?: string
     children?: Snippet
   }
 
-  let { icon, title, subtitle, children }: Props = $props()
+  let { icon: Icon, title, subtitle, children }: Props = $props()
 </script>
 
 <div class="flex flex-1 items-center justify-center">
   <div class="flex flex-col items-center gap-6 text-center">
     <div class="flex flex-col items-center gap-2">
-      {@render icon()}
+      <Icon />
       <h2 class="text-xl font-bold text-foreground">{title}</h2>
       {#if subtitle}
         <p class="text-sm text-muted-foreground">{subtitle}</p>

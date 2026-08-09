@@ -7,6 +7,7 @@
   import { onDestroy, onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { Timer, MessageSquare } from '@lucide/svelte'
+  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import ActiveSpeakerCard from '$lib/components/conference/speakers/active-speaker-card.svelte'
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
@@ -122,7 +123,9 @@
   }
 
   usePerSpeakerTimer(timerState, {
-    get enabled() { return true },
+    get enabled() {
+      return true
+    },
     timerId: 'caucus-speaker',
     tickMs: 1000,
     getEngine,
@@ -134,7 +137,9 @@
   })
 
   usePausedStateRestore(timerState, {
-    get enabled() { return true },
+    get enabled() {
+      return true
+    },
     getEngine,
     isExcludedCaucus: false
   })
@@ -148,14 +153,15 @@
   // ── 总时间预算 ──────────────────────────────────────────────
   const totalBudgetRemaining = $derived(
     activeCaucus
-      ? Math.max(0, activeCaucus.totalSec - ((activeCaucus.elapsedSec ?? 0) + timerState.displayElapsed))
+      ? Math.max(
+          0,
+          activeCaucus.totalSec - ((activeCaucus.elapsedSec ?? 0) + timerState.displayElapsed)
+        )
       : 0
   )
   const totalBudgetSec = $derived(activeCaucus ? activeCaucus.totalSec : 0)
 
-  const isListExhausted = $derived(
-    currentIdx >= speakers.length && speakers.length > 0
-  )
+  const isListExhausted = $derived(currentIdx >= speakers.length && speakers.length > 0)
 
   // ── 操作处理 ─────────────────────────────────────────────────
   function pauseSpeaking(): void {
@@ -235,18 +241,20 @@
 <div class="flex w-full flex-col gap-4">
   {#if conf}
     <!-- ═══ 头部：标题 + 总时间预算 ═══ -->
-    <div class="flex items-center justify-center gap-2">
-      <MessageSquare size={28} class="text-indigo-500" />
-      <h2 class="text-xl font-bold text-foreground">有主持核心磋商</h2>
-    </div>
+    <PanelHeader icon={MessageSquare} title="有主持核心磋商" />
 
     <div class="flex items-center gap-3 text-sm text-muted-foreground">
       <span>总剩余</span>
-      <span class="font-mono font-semibold text-foreground">{formatTime(totalBudgetRemaining)}</span>
+      <span class="font-mono font-semibold text-foreground">{formatTime(totalBudgetRemaining)}</span
+      >
       <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
         <div
-          class="h-full rounded-full transition-all duration-1000 {totalBudgetRemaining <= 30 ? 'bg-red-500' : 'bg-indigo-500'}"
-          style="width: {totalBudgetSec > 0 ? ((totalBudgetSec - totalBudgetRemaining) / totalBudgetSec) * 100 : 0}%"
+          class="h-full rounded-full transition-all duration-1000 {totalBudgetRemaining <= 30
+            ? 'bg-red-500'
+            : 'bg-indigo-500'}"
+          style="width: {totalBudgetSec > 0
+            ? ((totalBudgetSec - totalBudgetRemaining) / totalBudgetSec) * 100
+            : 0}%"
         ></div>
       </div>
     </div>
@@ -254,7 +262,11 @@
     {@const perTime = activeSpeaker?.allocatedTimeSec ?? 60}
     {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
     <div class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}">
-      剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span> 人（{formatTime(totalBudgetRemaining)} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span class="ml-1 text-red-400">— 当前发言人结束后将自动终止磋商</span>{/if}
+      剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span> 人（{formatTime(
+        totalBudgetRemaining
+      )} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span class="ml-1 text-red-400"
+          >— 当前发言人结束后将自动终止磋商</span
+        >{/if}
     </div>
 
     <Separator />
@@ -284,7 +296,6 @@
         <p class="text-lg font-medium">等待发言...</p>
       </div>
     {/if}
-
 
     <WaitingSpeakerList
       title="发言队列"

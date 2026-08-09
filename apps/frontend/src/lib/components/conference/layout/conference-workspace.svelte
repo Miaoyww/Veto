@@ -13,6 +13,7 @@
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
   import { Gavel, Play, Users, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
+  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Button } from '$lib/components/ui/button/index.js'
   import { setPhase, resumeMeeting } from '$lib/stores/conference/conference-store'
@@ -103,12 +104,7 @@
   {#if conf}
     <!-- 顶部横幅：阶段 + 控制 -->
     <div class="flex items-center gap-3 border-b px-6 py-3">
-      <div class="flex items-center gap-2">
-        <Gavel size={16} class="text-indigo-500" />
-        <span class="text-sm font-semibold text-foreground">
-          {PHASE_LABELS[conf.phase] ?? conf.phase}
-        </span>
-      </div>
+      <PanelHeader icon={Gavel} title={PHASE_LABELS[conf.phase] ?? conf.phase} />
 
       <div class="ml-auto flex items-center gap-2">
         {#if wsPort !== null}
@@ -197,16 +193,14 @@
     <!-- 阶段对应内容 -->
     <div class="flex flex-1 min-h-0 overflow-hidden p-6">
       {#if conf.phase === 'preamble'}
-        <PlaceholderPage title="会前准备" subtitle="所有代表团已就位，准备开始点名">
-          {#snippet icon()}<Users size={48} class="opacity-30" />{/snippet}
+        <PlaceholderPage title="会前准备" subtitle="所有代表团已就位，准备开始点名" icon={Users}>
           <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
             <Play size={18} />
             开始点名
           </Button>
         </PlaceholderPage>
       {:else if conf.phase === 'roll_call'}
-        <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立窗口中打开">
-          {#snippet icon()}<Users size={48} class="opacity-30" />{/snippet}
+        <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立窗口中打开" icon={Users}>
           <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
             <Play size={18} />
             进入点名页面
@@ -216,9 +210,8 @@
         <PlaceholderPage
           title="等待开启主发言名单"
           subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论"
-        >
-          {#snippet icon()}<Users size={48} class="opacity-30" />{/snippet}
-        </PlaceholderPage>
+          icon={Users}
+        />
       {:else if conf.phase === 'general_debate'}
         <ScrollArea class="flex-1">
           <GeneralDebatePanel />
@@ -240,13 +233,9 @@
           <VotingPanel />
         </ScrollArea>
       {:else if conf.phase === 'suspended'}
-        <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续">
-          {#snippet icon()}<Gavel size={48} class="opacity-30" />{/snippet}
-        </PlaceholderPage>
+        <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续" icon={Gavel} />
       {:else if conf.phase === 'closed'}
-        <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与">
-          {#snippet icon()}<Gavel size={48} class="opacity-30" />{/snippet}
-        </PlaceholderPage>
+        <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与" icon={Gavel} />
       {/if}
     </div>
 
