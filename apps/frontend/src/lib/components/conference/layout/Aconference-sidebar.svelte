@@ -16,10 +16,8 @@
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { bindTimeline } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
-  import { timelines } from '$lib/stores/timeline-store'
   import { Button } from '$lib/components/ui/button'
-  import * as Popover from '$lib/components/ui/popover'
-  import * as Command from '$lib/components/ui/command'
+
   import { cn } from '$lib/utils.js'
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
 
@@ -35,9 +33,7 @@
 
   // ── 时间线绑定 ──────────────────────────────────────────────────────────
 
-  const timelineId = $derived(conf?.timelineId ?? null)
-  const timeline = $derived(timelineId ? $timelines.find((t) => t.id === timelineId) : null)
-  const timelineItems = $derived($timelines.map((t) => ({ value: t.id, label: t.name })))
+ 
 
   function formatSimTime(ts: number): string {
     const d = new Date(ts)
@@ -50,57 +46,9 @@
   }
 
   // 实时模拟时间（RAF 循环）
-  const tlState = $derived(timeline?.state)
-  const tlPaused = $derived(tlState?.paused ?? true)
-  const tlSimAnchor = $derived(tlState?.simulationAnchor ?? 0)
-  const tlRealAnchor = $derived(tlState?.realAnchor ?? 0)
-  const tlRatio = $derived(tlState?.ratio ?? 1)
-  const tlPausedSimTime = $derived(tlState?.pausedSimulationTime)
 
-  let liveSimTime = $state(
-    tlPaused
-      ? (tlPausedSimTime ?? tlSimAnchor)
-      : tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
-  )
 
-  $effect(() => {
-    if (tlPaused || !timeline) {
-      liveSimTime = tlPausedSimTime ?? tlSimAnchor
-      return () => {}
-    }
 
-    let rafId: number
-    const loop = () => {
-      liveSimTime = tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
-      rafId = requestAnimationFrame(loop)
-    }
-    rafId = requestAnimationFrame(loop)
-
-    return () => cancelAnimationFrame(rafId)
-  })
-
-  let copied = $state(false)
-
-  async function copySimTime(): Promise<void> {
-    await navigator.clipboard.writeText(formatSimTime(liveSimTime))
-    copied = true
-    setTimeout(() => (copied = false), 1500)
-  }
-
-  let timelinePopoverOpen = $state(false)
-
-  function handleBind(timelineId: string): void {
-    if (conf) {
-      bindTimeline(conf.id, timelineId)
-    }
-    timelinePopoverOpen = false
-  }
-
-  function handleUnbind(): void {
-    if (conf) {
-      bindTimeline(conf.id, null)
-    }
-  }
 </script>
 
 <aside class="flex h-full w-[260px] shrink-0 flex-col border-r bg-muted/30">
@@ -123,68 +71,7 @@
         <span>时间线</span>
       </div>
 
-      {#if timeline}
-        <div class="mt-1.5 flex items-center gap-1.5">
-          <span
-            class="min-w-0 truncate text-xs font-medium text-indigo-600 dark:text-indigo-400 tabular-nums"
-          >
-            {formatSimTime(liveSimTime)}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            class="size-5 shrink-0 text-muted-foreground hover:text-foreground"
-            title="复制模拟时间"
-            onclick={copySimTime}
-          >
-            {#if copied}
-              <Check size={11} class="text-green-500" />
-            {:else}
-              <Copy size={11} />
-            {/if}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            class="size-5 shrink-0 text-muted-foreground hover:text-red-500"
-            title="解除绑定"
-            onclick={handleUnbind}
-          >
-            <X size={11} />
-          </Button>
-        </div>
-      {:else if timelineItems.length > 0}
-        <Popover.Root bind:open={timelinePopoverOpen}>
-          <Popover.Trigger>
-            {#snippet child({ props })}
-              <Button
-                variant="ghost"
-                size="sm"
-                class="mt-1 h-7 w-full justify-start gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-                {...props}
-              >
-                <span class="text-[10px]">+</span>
-                绑定时间线
-              </Button>
-            {/snippet}
-          </Popover.Trigger>
-          <Popover.Content class="w-[200px] p-0">
-            <Command.Root>
-              <Command.Input placeholder="搜索..." />
-              <Command.List>
-                <Command.Empty>无匹配结果</Command.Empty>
-                <Command.Group>
-                  {#each timelineItems as item (item.value)}
-                    <Command.Item value={item.value} onSelect={() => handleBind(item.value)}>
-                      {item.label}
-                    </Command.Item>
-                  {/each}
-                </Command.Group>
-              </Command.List>
-            </Command.Root>
-          </Popover.Content>
-        </Popover.Root>
-      {/if}
+
     </div>
 
     <!-- 表决信息 -->

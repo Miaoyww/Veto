@@ -240,8 +240,6 @@
 
 <div class="flex w-full flex-col gap-4">
   {#if conf}
-    <!-- ═══ 头部：标题 + 总时间预算 ═══ -->
-    <PanelHeader icon={MessageSquare} title="有主持核心磋商" />
 
     <div class="flex items-center gap-3 text-sm text-muted-foreground">
       <span>总剩余</span>

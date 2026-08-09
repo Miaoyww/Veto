@@ -123,7 +123,6 @@
   {#if activeSession && conf}
     <!-- ====== 标题 ====== -->
     <div class="text-center">
-      <PanelHeader icon={Vote} title={documentName ? '实质性投票' : '投票表决'} />
       {#if documentName}
         <p class="mt-1 text-base font-semibold text-foreground">「{documentName}」</p>
       {/if}

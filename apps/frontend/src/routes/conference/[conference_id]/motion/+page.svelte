@@ -20,8 +20,7 @@
     Check,
     X,
     ArrowLeft,
-    Vote,
-    FileText
+    Vote
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
@@ -36,6 +35,7 @@
   import { MOTION_LABELS } from '$lib/types-conference'
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import { VETO_NAME } from '$lib/const'
+  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
 
@@ -119,14 +119,7 @@
     {@const Icon = MOTION_ICONS[pendingMotion.type] ?? Presentation}
     <!-- 顶部栏 -->
     <div class="flex items-center gap-4 border-b px-6 py-3">
-      <Button size="sm" variant="ghost" class="h-8 gap-1.5 text-xs" onclick={goBack}>
-        <ArrowLeft size={14} />
-        返回
-      </Button>
-      <div class="flex items-center gap-2">
-        <Vote size={16} class="text-indigo-500" />
-        <span class="text-sm font-semibold text-foreground">动议表决</span>
-      </div>
+      <PanelHeader icon={Icon} title="动议表决" />
     </div>
 
     <!-- 主内容 -->
