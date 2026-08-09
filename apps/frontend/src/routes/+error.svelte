@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { page } from '$app/stores'
   import { Home, RefreshCw } from '@lucide/svelte'
 
-  const status = $derived(currentRoute.status ?? 500)
-  const message = $derived(currentRoute.error?.message ?? 'An unexpected error occurred')
+  const status = $derived($page.status ?? 500)
+  const message = $derived($page.error?.message ?? 'An unexpected error occurred')
   const catUrl = $derived(`https://http.cat/${status}`)
 </script>
 

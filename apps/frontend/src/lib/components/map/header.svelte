@@ -3,7 +3,8 @@
   import { currentBattle, runtimePositions } from '$lib/stores/battle/battle-store'
   import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/engine/game-clock.store'
   import { cn, type WithElementRef } from '$lib/utils'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import { onMount, onDestroy } from 'svelte'
@@ -67,7 +68,7 @@
   <!-- 左侧：返回 + 战役名 + 控制栏 -->
   <div class="veto-card gap-3">
     <Button
-      onclick={() => navigate('/')}
+      onclick={() => goto(resolve('/'))}
       variant="ghost"
       class="-ml-1 inline-flex items-center justify-center rounded-md p-2 text-stone-600 transition-colors hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-700/50 dark:hover:text-stone-100"
       title="返回首页"

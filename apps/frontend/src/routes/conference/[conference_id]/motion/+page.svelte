@@ -7,7 +7,8 @@
    * 当动议提交后导航至此页，主席团观察举牌后手动裁决。
    */
   import { onMount, onDestroy } from 'svelte'
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import {
     Presentation,
     Timer,
@@ -36,7 +37,7 @@
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import { VETO_NAME } from '$lib/const'
 
-  const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
+  const conferenceId = $derived($page.params.conference_id ?? null)
 
   onMount(() => {
     if (conferenceId) {
@@ -84,7 +85,7 @@
 
   function goBack(): void {
     if (conf) {
-      navigate(`/conference/${conf.id}`)
+      goto(`/conference/${conf.id}`)
     }
   }
 
@@ -96,7 +97,7 @@
         (m) => m.status === 'approved' || m.status === 'rejected'
       )
       if (!hasProcessedMotion) {
-        navigate(`/conference/${conf.id}`)
+        goto(`/conference/${conf.id}`)
       }
     }
   })

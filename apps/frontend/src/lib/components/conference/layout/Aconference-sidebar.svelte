@@ -12,7 +12,7 @@
     UsersRound,
     X
   } from '@lucide/svelte'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { bindTimeline } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
@@ -219,7 +219,7 @@
           variant="outline"
           size="sm"
           class="h-7 gap-1 text-[10px]"
-          onclick={() => navigate(`/conference/${conf.id}/delegations`)}
+          onclick={() => goto(`/conference/${conf.id}/delegations`)}
         >
           <UserRoundCheck size={10} />
           代表管理
@@ -228,7 +228,7 @@
           variant="outline"
           size="sm"
           class="h-7 gap-1 text-[10px] ml-1"
-          onclick={() => navigate(`/conference/${conf.id}/seats`)}
+          onclick={() => goto(`/conference/${conf.id}/seats`)}
         >
           <UsersRound size={10} />
           席位管理

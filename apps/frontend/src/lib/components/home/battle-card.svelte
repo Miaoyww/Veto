@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Swords } from '@lucide/svelte'
   import type { Battle } from '$lib/types'
   import {
@@ -32,7 +32,7 @@
   function handleLoad(): void {
     if (editing) return
     loadBattle(battle.id)
-    navigate(`/battle/${battle.id}`)
+    goto(`/battle/${battle.id}`)
   }
 
   function handleDelete(e: MouseEvent): void {

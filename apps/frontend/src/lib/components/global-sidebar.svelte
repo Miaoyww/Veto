@@ -23,17 +23,15 @@
   import { Button } from '$lib/components/ui/button'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { currentRoute } from '$lib/router.svelte'
   import { currentConferenceId, conferences } from '$lib/stores/conference/conference-store'
   import { page } from '$app/stores'
   import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
-  import { formatTime } from '$lib/utils'
+  import { formatTime, navigateToConference } from '$lib/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
   import CreateConferenceDialog from './home/create-conference-dialog.svelte'
   import NavUser from './app-sidebar/nav-user.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
-  import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import { cn } from '$lib/utils.js'
 
   let {
@@ -48,7 +46,7 @@
 
   const confId = $derived($currentConferenceId)
   const hasConf = $derived(confId != null)
-  const routeId = $derived(currentRoute?.routeId ?? '/')
+  const routeId = $derived($page.url.pathname ?? '/')
 
   const confPrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
 
@@ -56,7 +54,9 @@
 
   // 最近大会列表（按 id 倒序，取前 5 条）
   const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
-
+  $effect(() => {
+    console.log(routeId)
+  })
   let createDialogOpen = $state(false)
 
   function goTo(path: string): void {
@@ -79,28 +79,42 @@
       icon: CalendarRange,
       url: confPrefix,
       needsConf: true,
-      isActive: routeId.startsWith('/conference/')
+      isActive: routeId === confPrefix
     },
     {
       title: '指令',
       icon: Send,
       url: `${confPrefix}/directives`,
       needsConf: true,
-      isActive: routeId === `/conference/${confId}/directives`
+      isActive: routeId === `${confPrefix}/directives`
     },
     {
       title: '新闻',
       icon: Newspaper,
       url: `${confPrefix}/news`,
       needsConf: true,
-      isActive: routeId === `/conference/${confId}/news`
+      isActive: routeId === `${confPrefix}/news`
     },
     {
       title: '局势',
       icon: Globe,
       url: `${confPrefix}/situation`,
       needsConf: true,
-      isActive: routeId === `/conference/${confId}/situation`
+      isActive: routeId === `${confPrefix}/situation`
+    },
+    {
+      title: '军事推演',
+      icon: Swords,
+      url: `${confPrefix}/battle`,
+      needsConf: true,
+      isActive: routeId === `${confPrefix}/battle`
+    },
+    {
+      title: '代表管理',
+      icon: UserRoundCheck,
+      url: `${confPrefix}/delegations`,
+      needsConf: false,
+      isActive: routeId === `${confPrefix}/delegations`
     }
   ])
 
@@ -158,7 +172,7 @@
             {#each recentConfs as conf (conf.id)}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
-                  onclick={() => goto(resolve(`/conference/${conf.id}`))}
+                  onclick={() => navigateToConference(conf.id)}
                   class="cursor-pointer"
                 >
                   <Globe size={18} />
@@ -203,15 +217,6 @@
                 <span class="text-[10px] text-muted-foreground/60">
                   {presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="h-7 gap-1 text-[10px]"
-                  onclick={() => goto(resolve(`/conference/${conf.id}/delegations`))}
-                >
-                  <UserRoundCheck size={10} />
-                  代表管理
-                </Button>
               </div>
 
               <div class="px-3 pb-3">
@@ -244,39 +249,10 @@
               </div>
             </div>
           {/if}
-
-          {#if conf}
-            <Sidebar.Menu>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  onclick={() => goto(resolve('/battle'))}
-                  isActive={routeId.startsWith('/battle')}
-                  class="cursor-pointer"
-                >
-                  <Swords size={18} />
-                  <span>军事推演</span>
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-            </Sidebar.Menu>
-          {/if}
         </Sidebar.Menu>
       </Sidebar.Content>
 
       <Sidebar.Footer class="mt-auto">
-        {#if hasConf}
-          <Sidebar.Menu>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                onclick={() => goto(resolve('/battle'))}
-                isActive={routeId.startsWith('/battle')}
-                class="cursor-pointer"
-              >
-                <Settings size={18} />
-                <span>会议设置</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-          </Sidebar.Menu>
-        {/if}
         <NavUser />
       </Sidebar.Footer>
 

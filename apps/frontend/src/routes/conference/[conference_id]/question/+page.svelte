@@ -5,7 +5,8 @@
    * 问题页面 —— 提交问题后导航至此页，主席可随时结束问题返回。
    */
   import { onMount } from 'svelte'
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { AlertTriangle, HelpCircle, User, ArrowLeft } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import {
@@ -19,7 +20,7 @@
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import { VETO_NAME } from '$lib/const'
 
-  const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
+  const conferenceId = $derived($page.params.conference_id ?? null)
 
   onMount(() => {
     if (conferenceId) {
@@ -67,14 +68,14 @@
 
   function goBack(): void {
     if (conf) {
-      navigate(`/conference/${conf.id}`)
+      goto(`/conference/${conf.id}`)
     }
   }
 
   // 如果没有最近的问题，自动返回
   $effect(() => {
     if (conf && !latestPoint) {
-      navigate(`/conference/${conf.id}`)
+      goto(`/conference/${conf.id}`)
     }
   })
 

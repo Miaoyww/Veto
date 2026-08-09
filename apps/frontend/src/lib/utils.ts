@@ -1,5 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
+import { loadConference } from '$lib/stores/conference/conference-store';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -11,6 +14,12 @@ export type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
 export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "children"> : T;
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
+
+/** 加载会议并导航到会议页面 */
+export function navigateToConference(id: string): void {
+  loadConference(id)
+  goto(resolve(`/conference/${id}`))
+}
 
 /** 格式化秒数为 mm:ss */
 export function formatTime(seconds: number): string {

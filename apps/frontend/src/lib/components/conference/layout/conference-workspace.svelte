@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
   import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
@@ -55,7 +55,7 @@
   function startRollCall(): void {
     if (!conf) return
     setPhase('roll_call')
-    navigate(`/conference/${conf.id}/roll-call`)
+    goto(`/conference/${conf.id}/roll-call`)
   }
 
   // Phase-specific action buttons

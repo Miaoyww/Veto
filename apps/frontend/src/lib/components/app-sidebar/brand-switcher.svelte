@@ -2,7 +2,8 @@
   import { ChevronsUpDown, House, CalendarRange } from '@lucide/svelte'
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import favicon from '$lib/assets/favicon.png'
   import { VETO_NAME } from '$lib/const'
   import { currentConference } from '$lib/stores/conference/conference-store'
@@ -46,12 +47,12 @@
         sideOffset={4}
       >
         <DropdownMenu.Label class="text-xs text-muted-foreground">导航</DropdownMenu.Label>
-        <DropdownMenu.Item onclick={() => navigate('/')} class="gap-2 p-2">
+        <DropdownMenu.Item onclick={() => goto(resolve('/'))} class="gap-2 p-2">
           <House size={16} />
           首页
         </DropdownMenu.Item>
         {#if hasConf}
-          <DropdownMenu.Item onclick={() => navigate(confPrefix)} class="gap-2 p-2">
+          <DropdownMenu.Item onclick={() => goto(resolve('/' + confPrefix.split('/').slice(1).join('/')))} class="gap-2 p-2">
             <CalendarRange size={16} />
             议程
           </DropdownMenu.Item>

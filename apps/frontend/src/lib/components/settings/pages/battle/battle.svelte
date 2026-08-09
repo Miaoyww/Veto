@@ -19,11 +19,12 @@
 	import type { DateValue } from '@internationalized/date';
 	import type { EventSetting } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { currentRoute, navigate } from '$lib/router.svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { fly } from 'svelte/transition';
 
 	const DISPLAY_SCALES = [60, 3600, 86400] as const;
-	const battleId = currentRoute.params.battle_id ?? null;
+	const battleId = $page.params.battle_id ?? null;
 
 	let initial = get(currentBattle);
 	onMount(() => {
@@ -110,7 +111,7 @@
 		if (!battle || !id) return;
 		showConfirm(`删除战局 "${battle.name}"`, '此操作不可撤销，战局数据将永久删除。', () => {
 			deleteBattle(id);
-			navigate('/');
+			goto('/');
 		});
 	}
 

@@ -11,7 +11,7 @@
   } from '$lib/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/types-conference'
   import type { Delegation, PointType } from '$lib/types-conference'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
@@ -68,7 +68,7 @@
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
-    navigate(`/conference/${conf.id}/question`)
+    goto(`/conference/${conf.id}/question`)
 
     open = false
     resetForm()

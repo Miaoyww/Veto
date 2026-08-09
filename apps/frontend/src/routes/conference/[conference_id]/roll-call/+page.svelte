@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { ArrowLeft, Check, X, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
     import {
@@ -15,7 +16,7 @@
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
   import type { Delegation, Attendance } from '$lib/types-conference'
 
-  const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
+  const conferenceId = $derived($page.params.conference_id ?? null)
 
   let wsPort = $state<number | null>(null)
 
@@ -160,11 +161,11 @@
 
   function handleComplete(): void {
     completeRollCall()
-    navigate(`/conference/${conferenceId}`)
+    goto(`/conference/${conferenceId}`)
   }
 
   function handleBackToConference(): void {
-    navigate(`/conference/${conferenceId}`)
+    goto(`/conference/${conferenceId}`)
   }
 
   function handleKeydown(e: KeyboardEvent): void {

@@ -25,7 +25,7 @@
     dismissLastResolvedMotion
   } from '$lib/stores/conference/conference-store'
   import { resolveMotion, calcMaxSpeakers } from '$lib/engine/conference-engine'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { MotionType, Attendance, Delegation } from '$lib/types-conference'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
@@ -218,7 +218,7 @@
         }
       }
     } else {
-      navigate(`/conference/${conf.id}/motion`)
+      goto(`/conference/${conf.id}/motion`)
     }
 
     open = false

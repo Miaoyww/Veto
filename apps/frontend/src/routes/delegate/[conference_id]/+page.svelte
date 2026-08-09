@@ -1,7 +1,19 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import type { Seat, Capability, CabinetMode, Directive, News, SituationUpdate, Classification } from '$lib/types-delegate'
-  import { initWsPort, getDelegateBridge, onDelegateConnectionStatus } from '$lib/services/delegate-bridge'
+  import type {
+    Seat,
+    Capability,
+    CabinetMode,
+    Directive,
+    News,
+    SituationUpdate,
+    Classification
+  } from '$lib/types-delegate'
+  import {
+    initWsPort,
+    getDelegateBridge,
+    onDelegateConnectionStatus
+  } from '$lib/services/delegate-bridge'
   import type { ConnectionStatus, ConferenceSyncData } from '$lib/services/delegate-bridge'
   import type { TimerTickData } from '$lib/types-conference'
   import LoginScreen from '$lib/components/delegate/LoginScreen.svelte'
@@ -9,7 +21,7 @@
   import DirectivePanel from '$lib/components/delegate/DirectivePanel.svelte'
   import NewsPanel from '$lib/components/delegate/NewsPanel.svelte'
   import SituationTimeline from '$lib/components/delegate/SituationTimeline.svelte'
-  import { currentRoute } from '$lib/router.svelte'
+  import { page } from '$app/stores'
 
   // ── 状态 ──
   let connectionStatus = $state<ConnectionStatus>('disconnected')
@@ -23,7 +35,7 @@
   let situationUpdates = $state<SituationUpdate[]>([])
   let connecting = $state(false)
 
-  const conferenceId = $derived(currentRoute.params.conference_id ?? '')
+  const conferenceId = $derived($page.params.conference_id ?? '')
 
   // ── 认证 ──
   function handleAuthenticate(inviteCode: string, password: string): void {
@@ -49,17 +61,13 @@
         capabilities = data.myCapabilities ?? []
       },
       onDirectiveUpdated: (directive: Directive) => {
-        directives = directives.map((d) =>
-          d.id === directive.id ? directive : d
-        )
+        directives = directives.map((d) => (d.id === directive.id ? directive : d))
         if (!directives.some((d) => d.id === directive.id)) {
           directives = [...directives, directive]
         }
       },
       onNewsUpdated: (news: News) => {
-        newsList = newsList.map((n) =>
-          n.id === news.id ? news : n
-        )
+        newsList = newsList.map((n) => (n.id === news.id ? news : n))
         if (!newsList.some((n) => n.id === news.id)) {
           newsList = [...newsList, news]
         }
@@ -146,11 +154,7 @@
 </script>
 
 {#if !authenticated}
-  <LoginScreen
-    onAuthenticate={handleAuthenticate}
-    error={authError}
-    connecting={connecting}
-  />
+  <LoginScreen onAuthenticate={handleAuthenticate} error={authError} {connecting} />
 {:else if seat}
   <DelegateShell
     {seat}

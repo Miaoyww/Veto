@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { Trash2, Play, Pencil, Check, X, Clock, Copy } from '@lucide/svelte'
   import type { Timeline } from '$lib/stores/timeline-store'
   import { currentTimelineId, deleteTimeline, renameTimeline } from '$lib/stores/timeline-store'
@@ -19,7 +19,7 @@
   function handleEnter(): void {
     if (editing) return
     currentTimelineId.set(timeline.id)
-    navigate(`/tools/${timeline.id}`)
+    goto(`/tools/${timeline.id}`)
   }
 
   function handleDelete(e: MouseEvent): void {

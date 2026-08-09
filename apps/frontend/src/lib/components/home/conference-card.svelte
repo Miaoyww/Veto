@@ -3,17 +3,15 @@
   import type { Conference } from '$lib/types-conference'
   import {
     currentConferenceId,
-    loadConference,
     deleteConference,
     renameConference
   } from '$lib/stores/conference/conference-store'
+  import { navigateToConference } from '$lib/utils'
   import { showConfirm } from '$lib/stores/app/global-ui-store'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
-  import { goto } from '$app/navigation'
-  import { resolve } from '$app/paths'
 
   let { conference }: { conference: Conference } = $props()
 
@@ -25,8 +23,7 @@
 
   function handleLoad(): void {
     if (editing) return
-    loadConference(conference.id)
-    goto(resolve(`/conference/${conference.id}`))
+    navigateToConference(conference.id)
   }
 
   function handleDelete(e: MouseEvent): void {

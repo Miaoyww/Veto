@@ -2,7 +2,8 @@
   import { onMount, onDestroy } from 'svelte'
   import { ArrowLeft, Wrench } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import TimelineControl from '$lib/components/tools/timeline-control.svelte'
   import {
     getTimelineEngine,
@@ -13,7 +14,7 @@
   import { get } from 'svelte/store'
   import { TimelineEngine } from '$lib/engine/timeline-engine.svelte'
 
-  const toolId = $derived(currentRoute?.params?.tool_id ?? null)
+  const toolId = $derived($page.params.tool_id ?? null)
 
   let engine = $state<TimelineEngine | null>(null)
   let timelineName = $state('')
@@ -39,7 +40,7 @@
 <div class="flex flex-col h-[calc(100vh-2.25rem)] w-screen overflow-hidden">
   <!-- 顶部栏 -->
   <div class="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-background/60 backdrop-blur-md">
-    <Button variant="ghost" size="icon" onclick={() => navigate('/tools')}>
+    <Button variant="ghost" size="icon" onclick={() => goto('/tools')}>
       <ArrowLeft size={18} />
     </Button>
     <Wrench size={20} class="text-muted-foreground" />

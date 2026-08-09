@@ -2,7 +2,7 @@
   import PlusIcon from '@lucide/svelte/icons/plus'
   import ClockIcon from '@lucide/svelte/icons/clock'
   import CalendarIcon from '@lucide/svelte/icons/calendar'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { createTimeline } from '$lib/stores/timeline-store'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -51,7 +51,7 @@
     const id = createTimeline(trimmedName, simTimeMs, selectedRatio)
 
     open = false
-    navigate(`/tools/${id}`)
+    goto(`/tools/${id}`)
   }
 
   function handleKeydown(e: KeyboardEvent): void {

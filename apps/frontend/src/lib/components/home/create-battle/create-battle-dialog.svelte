@@ -3,7 +3,7 @@
   import SwordsIcon from '@lucide/svelte/icons/swords'
   import PuzzleIcon from '@lucide/svelte/icons/puzzle'
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left'
-  import { navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
   import { onMount } from 'svelte'
   import { createBattle } from '$lib/stores/battle/battle-store'
   import { CalendarDate, type DateValue } from '@internationalized/date'
@@ -80,7 +80,7 @@
       enabledMods
     })
     open = false
-    navigate(`/battle/${id}`)
+    goto(`/battle/${id}`)
   }
 
   function handleOpenChange(value: boolean) {
@@ -110,7 +110,7 @@
       campaignId
     })
     campaignDialogOpen = false
-    navigate(`/battle/${id}`)
+    goto(`/battle/${id}`)
   }
 </script>
 

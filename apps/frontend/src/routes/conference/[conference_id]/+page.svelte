@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { currentRoute } from '$lib/router.svelte'
+  import { page } from '$app/stores'
   import { VETO_NAME } from '$lib/const'
   import {
     currentConference,
@@ -13,7 +13,7 @@
   import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
   import ConferenceWorkspace from '$lib/components/conference/layout/conference-workspace.svelte'
 
-  const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
+  const conferenceId = $derived($page.params.conference_id ?? null)
 
   onMount(() => {
     if (conferenceId) {

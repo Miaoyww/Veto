@@ -10,24 +10,14 @@
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
   import GlobalSidebar from '$lib/components/global-sidebar.svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import { currentRoute } from '$lib/router.svelte'
   import { timerDialogOpen } from '$lib/stores/conference/timer-store'
   import { dbGetAllPlugins } from '$lib/services/plugin-db'
   import { injectToRegistry } from '$lib/services/plugin-registry'
   import { markPluginsReady } from '$lib/registry/mod-registry.svelte'
 
-  // 页面组件
-  import BattlePage from './conference/[conference_id]/battle/[battle_id]/index.svelte'
-  import ConferenceRollCallPage from './conference/[conference_id]/roll-call.svelte'
-  import ConferenceMotionPage from './conference/[conference_id]/motion.svelte'
-  import ConferenceQuestionPage from './conference/[conference_id]/question.svelte'
-  import ConferenceDelegationsPage from './conference/[conference_id]/delegations.svelte'
-  import ConferenceSeatsPage from './conference/[conference_id]/seats.svelte'
   import { page } from '$app/stores'
 
   let { children } = $props()
-
-  const routeId = $derived(currentRoute?.routeId ?? '/')
 
   // 从主进程文件系统恢复用户已安装的插件 + 加载应用数据
   if (typeof window !== 'undefined') {

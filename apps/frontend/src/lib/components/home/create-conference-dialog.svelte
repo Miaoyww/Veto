@@ -2,7 +2,7 @@
   import PlusIcon from '@lucide/svelte/icons/plus'
   import UsersIcon from '@lucide/svelte/icons/users'
   import PuzzleIcon from '@lucide/svelte/icons/puzzle'
-  import { navigate } from '$lib/router.svelte'
+  import { navigateToConference } from '$lib/utils'
   import { createConference } from '$lib/stores/conference/conference-store'
   import {
     delegationPresets,
@@ -82,7 +82,7 @@
 
     open = false
     resetForm()
-    navigate(`/conference/${id}`)
+    navigateToConference(id)
   }
 
   function resetForm(): void {

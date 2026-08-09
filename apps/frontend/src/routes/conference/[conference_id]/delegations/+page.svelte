@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { ArrowLeft, Users, Plus, Trash2, UserRoundCheck, RotateCcw } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -35,7 +36,7 @@
   import { VETO_NAME } from '$lib/const'
   import type { Attendance } from '$lib/types-conference'
 
-  const conferenceId = $derived(currentRoute?.params?.conference_id ?? null)
+  const conferenceId = $derived($page.params.conference_id ?? null)
 
   onMount(() => {
     if (conferenceId) {
@@ -89,7 +90,7 @@
   }
 
   function handleBack(): void {
-    navigate(`/conference/${conferenceId}`)
+    goto(`/conference/${conferenceId}`)
   }
 </script>
 
@@ -134,7 +135,7 @@
             <AlertDialogAction onclick={() => {
                 resetRollCall()
                 showResetConfirm = false
-                navigate(`/conference/${conferenceId}/roll-call`)
+                goto(`/conference/${conferenceId}/roll-call`)
               }}
             >
               确认重新点名

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { currentRoute, navigate } from '$lib/router.svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { onDestroy, onMount } from 'svelte'
   import Map from '$lib/components/map/map.svelte'
   import { battles, currentBattleId } from '$lib/stores/battle/battle-store'
@@ -18,12 +19,12 @@
 
   useKeyboardShortcuts()
 
-  const battleId = currentRoute.params.battle_id ?? null
+  const battleId = $page.params.battle_id ?? null
   const battle = get(battles).find((b) => b.id === battleId)
   const exists = !!battle
 
   if (!exists) {
-    navigate('/')
+    goto('/')
   } else {
     currentBattleId.set(battleId)
   }
