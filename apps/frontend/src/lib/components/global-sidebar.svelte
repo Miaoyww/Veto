@@ -7,7 +7,6 @@
     Newspaper,
     Globe,
     Swords,
-    Timer,
     UserPlus,
     Search,
     Puzzle,
@@ -17,32 +16,23 @@
     UsersRound,
     Settings,
     ArrowLeft,
-    Wrench,
-    Check,
-    Copy,
-    X
+    Wrench
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import { Button } from '$lib/components/ui/button'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import {
-    currentConferenceId,
-    conferences,
-    bindTimeline
-  } from '$lib/stores/conference/conference-store'
+  import { currentConferenceId, conferences } from '$lib/stores/conference/conference-store'
   import { page } from '$app/stores'
-  import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
-  import { formatTime, navigateToConference } from '$lib/utils'
+  import { navigateToConference } from '$lib/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
   import CreateConferenceDialog from './home/create-conference-dialog.svelte'
   import NavUser from './app-sidebar/nav-user.svelte'
+  import DynamicIsland from './dynamic-island.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { cn } from '$lib/utils.js'
-  import * as Popover from '$lib/components/ui/popover'
-  import * as Command from '$lib/components/ui/command'
   let {
     className = '',
     collapsible = 'icon',
@@ -144,74 +134,6 @@
   )
   const simpleMajority = $derived(Math.floor(votingCount / 2) + 1)
   const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
-
-  import { timelines } from '$lib/stores/timeline-store'
-
-  const timelineId = $derived(conf?.timelineId ?? null)
-  const timeline = $derived(timelineId ? $timelines.find((t) => t.id === timelineId) : null)
-  const timelineItems = $derived($timelines.map((t) => ({ value: t.id, label: t.name })))
-
-  const tlState = $derived(timeline?.state)
-  const tlPaused = $derived(tlState?.paused ?? true)
-  const tlSimAnchor = $derived(tlState?.simulationAnchor ?? 0)
-  const tlRealAnchor = $derived(tlState?.realAnchor ?? 0)
-  const tlRatio = $derived(tlState?.ratio ?? 1)
-  const tlPausedSimTime = $derived(tlState?.pausedSimulationTime)
-
-  let liveSimTime = $state(
-    tlPaused
-      ? (tlPausedSimTime ?? tlSimAnchor)
-      : tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
-  )
-
-  $effect(() => {
-    if (tlPaused || !timeline) {
-      liveSimTime = tlPausedSimTime ?? tlSimAnchor
-      return () => {}
-    }
-
-    let rafId: number
-    const loop = () => {
-      liveSimTime = tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
-      rafId = requestAnimationFrame(loop)
-    }
-    rafId = requestAnimationFrame(loop)
-
-    return () => cancelAnimationFrame(rafId)
-  })
-
-  function formatSimTime(ts: number): string {
-    const d = new Date(ts)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd} ${hh}:${min}`
-  }
-
-  let copied = $state(false)
-
-  async function copySimTime(): Promise<void> {
-    await navigator.clipboard.writeText(formatSimTime(liveSimTime))
-    copied = true
-    setTimeout(() => (copied = false), 1500)
-  }
-
-  let timelinePopoverOpen = $state(false)
-
-  function handleBind(timelineId: string): void {
-    if (conf) {
-      bindTimeline(conf.id, timelineId)
-    }
-    timelinePopoverOpen = false
-  }
-
-  function handleUnbind(): void {
-    if (conf) {
-      bindTimeline(conf.id, null)
-    }
-  }
 </script>
 
 {#if !isLoginPage}
@@ -370,82 +292,8 @@
         {/if}
         <!-- 中：拖拽区域 -->
         <div class="drag-region flex-1 h-full">
-          <!-- 灵动岛：计时器 + 时间线 -->
-          {#if $standaloneTimer || timeline || timelineItems.length > 0}
-            <div class="flex justify-center px-4 pb-1">
-              <div
-                class="flex items-center gap-3 rounded-full bg-foreground px-4 py-1.5 text-xs text-background shadow-lg transition-all duration-300"
-              >
-                {#if $standaloneTimer}
-                  {@const st = $standaloneTimer}
-                  {@const expired = !st.isRunning && st.remainingSec <= 0}
-                  <button
-                    class="flex items-center gap-1.5 font-mono tabular-nums transition-opacity hover:opacity-80 {expired
-                      ? 'text-red-400'
-                      : st.isRunning
-                        ? 'text-indigo-300'
-                        : 'text-amber-300'}"
-                    onclick={() => timerDialogOpen.set(true)}
-                    title={expired
-                      ? '计时器已到期（点击打开）'
-                      : st.isRunning
-                        ? '计时器运行中（点击打开）'
-                        : '计时器已暂停（点击打开）'}
-                  >
-                    <Timer size={12} class={expired ? 'animate-pulse' : ''} />
-                    <span>{formatTime(st.remainingSec)}</span>
-                  </button>
-                  {#if timeline || timelineItems.length > 0}
-                    <span class="h-4 w-px bg-background/20" />
-                  {/if}
-                {/if}
-
-                {#if timeline}
-                  <div class="flex items-center gap-1.5">
-                    <span class="font-mono tabular-nums">{formatSimTime(liveSimTime)}</span>
-                    <button class="hover:opacity-80" title="复制模拟时间" onclick={copySimTime}>
-                      {#if copied}
-                        <Check size={11} class="text-green-400" />
-                      {:else}
-                        <Copy size={11} />
-                      {/if}
-                    </button>
-                    <button class="hover:text-red-400" title="解除绑定" onclick={handleUnbind}>
-                      <X size={11} />
-                    </button>
-                  </div>
-                {:else if timelineItems.length > 0}
-                  <Popover.Root bind:open={timelinePopoverOpen}>
-                    <Popover.Trigger>
-                      {#snippet child({ props })}
-                        <button class="flex items-center gap-1 hover:opacity-80" {...props}>
-                          <Plus size={11} />
-                          <span>绑定时间线</span>
-                        </button>
-                      {/snippet}
-                    </Popover.Trigger>
-                    <Popover.Content class="w-[200px] p-0">
-                      <Command.Root>
-                        <Command.Input placeholder="搜索..." />
-                        <Command.List>
-                          <Command.Empty>无匹配结果</Command.Empty>
-                          <Command.Group>
-                            {#each timelineItems as item (item.value)}
-                              <Command.Item
-                                value={item.value}
-                                onSelect={() => handleBind(item.value)}
-                              >
-                                {item.label}
-                              </Command.Item>
-                            {/each}
-                          </Command.Group>
-                        </Command.List>
-                      </Command.Root>
-                    </Popover.Content>
-                  </Popover.Root>
-                {/if}
-              </div>
-            </div>
+          {#if conf}
+            <DynamicIsland />
           {/if}
         </div>
 
