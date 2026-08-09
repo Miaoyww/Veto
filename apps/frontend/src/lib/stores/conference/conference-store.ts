@@ -262,6 +262,10 @@ export function loadConference(id: string): void {
   }
 }
 
+export function unloadConference(): void {
+  currentConferenceId.set(null)
+}
+
 export function getConferenceById(id: string): Conference | null {
   return get(conferences).find((c) => c.id === id) ?? null
 }

@@ -23,7 +23,6 @@
   import { cn } from '$lib/utils.js'
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
 
-  const conf = $derived($currentConference)
 
   const presentCount = $derived(
     conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0
@@ -107,24 +106,12 @@
 <aside class="flex h-full w-[260px] shrink-0 flex-col border-r bg-muted/30">
   {#if conf}
     <!-- 返回按钮 -->
-    <div class="px-3 pt-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        class="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-        onclick={() => navigate('/')}
-      >
-        <ArrowLeft size={14} />
-        返回主页
-      </Button>
-    </div>
-
     <!-- 会场信息 -->
     <div class="px-5 pt-2 pb-2">
-      <h1 class="text-base font-bold leading-tight text-foreground">{conf.name}</h1>
+      <h1 class="text-base font-bold leading-tight text-foreground"></h1>
       <div class="mt-2 flex flex-wrap items-center gap-1.5">
         <span class="inline-flex items-center gap-1 py-0.5 text-[11px] font-medium">
-          {conf.venue}
+          {}
         </span>
       </div>
     </div>

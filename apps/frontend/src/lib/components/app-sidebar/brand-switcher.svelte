@@ -5,9 +5,15 @@
   import { navigate } from '$lib/router.svelte'
   import favicon from '$lib/assets/favicon.png'
   import { VETO_NAME } from '$lib/const'
+  import { currentConference } from '$lib/stores/conference/conference-store'
 
   let { hasConf = false, confPrefix = '/conference' }: { hasConf?: boolean; confPrefix?: string } =
     $props()
+
+  const conf = $derived($currentConference)
+
+  let title = $derived(conf ? `${conf.name}` : VETO_NAME)
+  let subTitle = $derived(conf ? `${conf.venue}` : '会议系统')
 </script>
 
 <Sidebar.Menu>
@@ -26,8 +32,8 @@
               <img src={favicon} alt={VETO_NAME} class="size-8" />
             </div>
             <div class="grid flex-1 text-start text-sm leading-tight">
-              <span class="truncate font-medium">{VETO_NAME}</span>
-              <span class="truncate text-xs">会议系统</span>
+              <span class="truncate font-medium">{title}</span>
+              <span class="truncate text-xs">{subTitle}</span>
             </div>
             <ChevronsUpDown size={16} class="ms-auto" />
           </Sidebar.MenuButton>

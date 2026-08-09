@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { navigate } from '$lib/router.svelte'
   import { Trash2, Play, Pencil, Check, X, CalendarDays, Users, Building2 } from '@lucide/svelte'
   import type { Conference } from '$lib/types-conference'
   import {

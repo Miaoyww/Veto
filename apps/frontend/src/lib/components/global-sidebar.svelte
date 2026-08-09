@@ -15,7 +15,8 @@
     Users,
     UserRoundCheck,
     UsersRound,
-    Settings
+    Settings,
+    ArrowLeft
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -284,6 +285,11 @@
 
     <Sidebar.Inset>
       <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
+        {#if conf}
+          <Button variant="ghost" size="icon" onclick={() => goto(resolve('/'))}>
+            <ArrowLeft size={14} />
+          </Button>
+        {/if}
         <Sidebar.Trigger class="-ms-1" />
 
         <Separator orientation="vertical" class="me-2 h-4" />
