@@ -10,7 +10,8 @@
   import { resolve } from '$app/paths'
   import LoginForm from '$lib/components/login/login-form.svelte'
   import RegForm from '$lib/components/login/reg-form.svelte'
-  import { setOffline } from '$lib/stores/auth-store'
+  import { onMount } from 'svelte'
+  import { setOffline, authStore } from '$lib/stores/auth-store'
   import wechat from '$lib/assets/wechat.png'
   import feishu from '$lib/assets/feishu.png'
 
@@ -19,6 +20,13 @@
   let card: Card = $state('login')
 
   import { scale } from 'svelte/transition'
+
+  onMount(async () => {
+    await authStore.ready
+    if (authStore.isLoggedIn()) {
+      goto(resolve('/'))
+    }
+  })
 
   const zoomTransition = { start: 0.7, opacity: 1 }
   const outDuration = { ...zoomTransition, duration: 180 }

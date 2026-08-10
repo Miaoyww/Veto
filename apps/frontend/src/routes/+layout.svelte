@@ -45,20 +45,29 @@
     if (typeof window === 'undefined') return
 
     let initialized = false
-    authStore.ready.then(() => {
-      initialized = true
-      // 登录状态下从服务器拉取最新用户信息
-      if (authStore.isLoggedIn() && authStore.getToken()) {
-        authStore.refreshUser()
-      }
-    })
 
+    // 监听状态变化（登录/登出时触发）
     const unsub = authStore.subscribe((state) => {
       if (!initialized) return
       if (!state.isLoggedIn && !isLoginPage) {
         goto(resolve('/login'))
       }
     })
+
+    authStore.ready.then(() => {
+      initialized = true
+
+      // 启动后从持久化存储恢复了登录态 → 拉取最新用户数据
+      if (authStore.isLoggedIn() && authStore.getToken()) {
+        authStore.refreshUser()
+      }
+
+      // 主动检查一次：bootstrap 完成时若仍未登录，跳转
+      if (!authStore.isLoggedIn() && !isLoginPage) {
+        goto(resolve('/login'))
+      }
+    })
+
     return unsub
   })
 </script>

@@ -30,15 +30,29 @@
   let avatarSrc = $state('')
   const MAX_AVATAR_KB = 512
 
-  function handleCropped(dataUrl: string) {
-    // 裁切后的 Data URL 大约为原图 4/3，这里近似校验
-    const sizeKB = (dataUrl.length * 0.75) / 1024
-    if (sizeKB > MAX_AVATAR_KB) {
-      error = `头像文件过大（约 ${Math.round(sizeKB)} KB），请缩小裁切区域或换一张更小的图片`
+  async function handleCropped(blobUrl: string) {
+    try {
+      const response = await fetch(blobUrl)
+      const blob = await response.blob()
+
+      // 校验裁剪后的实际二进制大小
+      if (blob.size > MAX_AVATAR_KB * 1024) {
+        error = `头像文件过大（约 ${Math.round(blob.size / 1024)} KB），请缩小裁切区域或换一张更小的图片`
+        avatarSrc = ''
+        return
+      }
+
+      // 将 blob 转为 data URL（Base64），用于持久化存储和显示
+      avatarSrc = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(blob)
+      })
+    } catch {
+      error = '头像处理失败，请重试'
       avatarSrc = ''
-      return
     }
-    avatarSrc = dataUrl
   }
 
   // ─── UI 状态 ────────────────────────────────────────────────────
@@ -139,11 +153,13 @@
 
     submitting = true
     try {
+      // 从 data URL 中提取纯 Base64 发送给服务端
+      const avatarB64 = avatarSrc ? avatarSrc.split(',')[1] : undefined
       const result = await register(
         regToken,
         regPassword,
         regName.trim() || undefined,
-        avatarSrc || undefined
+        avatarB64
       )
       // 从服务器拉取用户信息（含服务端处理后的 avatar URL）
       let userFromServer = getMe()

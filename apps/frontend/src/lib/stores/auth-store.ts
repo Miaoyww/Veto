@@ -75,10 +75,16 @@ function createAuthStore() {
     },
 
     /** 更新用户信息（注册后设置昵称等） */
-    updateUser(user: Partial<AuthUser>) {
+    updateUser(partial: Partial<AuthUser>) {
       update((state) => {
         if (!state.user) return state
-        const next = { ...state, user: { ...state.user, ...user } }
+        // 若传入的 avatar 是纯 Base64，补全为 data URL
+        const avatar = partial.avatar
+          ? partial.avatar.startsWith('data:')
+            ? partial.avatar
+            : `data:image/png;base64,${partial.avatar}`
+          : state.user.avatar
+        const next = { ...state, user: { ...state.user, ...partial, avatar } }
         saveToStore('auth', next)
         return next
       })
@@ -90,9 +96,15 @@ function createAuthStore() {
         const { user } = await getMe()
         update((state) => {
           if (!state.user) return state
+          // 若服务端返回的是纯 Base64（无 data: 前缀），补全为 data URL 以供 <img> 显示
+          const avatar = user.avatar
+            ? user.avatar.startsWith('data:')
+              ? user.avatar
+              : `data:image/png;base64,${user.avatar}`
+            : ''
           const next = {
             ...state,
-            user: { ...state.user, ...user }
+            user: { ...state.user, ...user, avatar }
           }
           saveToStore('auth', next)
           return next
