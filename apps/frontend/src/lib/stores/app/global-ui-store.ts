@@ -2,6 +2,10 @@ import { writable } from 'svelte/store';
 
 export const settingsDialogOpen = writable(false);
 
+export type SettingsSection = 'general' | 'mods' | 'venue' | 'about' | 'account';
+
+export const activeSettingsSection = writable<SettingsSection | null>(null);
+
 export const alertDialogStore = writable<{
 	open: boolean;
 	title: string;

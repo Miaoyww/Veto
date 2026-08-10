@@ -8,6 +8,8 @@
  *   POST /auth/verify-code   — 校验验证码，返回 regToken
  *   POST /auth/register      — 消费 regToken + 密码，返回 Token
  *   POST /auth/login         — 邮箱 + 密码登录，返回 Token
+ *   GET  /auth/me            — 获取当前用户信息
+ *   PATCH /auth/me           — 修改当前用户信息
  *   GET  /health             — 健康检查
  */
 
@@ -53,6 +55,21 @@ export interface MeResponse {
   }
 }
 
+export interface PatchMeBody {
+  name?: string
+  avatar?: string
+  password?: string
+}
+
+export interface PatchMeResponse {
+  ok: true
+  user: {
+    name: string
+    email: string
+    avatar: string
+  }
+}
+
 // ─── Token 管理 ─────────────────────────────────────────────────────
 
 let cachedToken: string | null = null
@@ -90,7 +107,11 @@ class ApiErrorResponse extends Error {
   }
 }
 
-async function request<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+async function request<T>(
+  path: string,
+  body?: Record<string, unknown>,
+  method: 'GET' | 'POST' | 'PATCH' = 'POST'
+): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
@@ -101,7 +122,7 @@ async function request<T>(path: string, body?: Record<string, unknown>): Promise
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: body ? 'POST' : 'GET',
+    method: body ? method : 'GET',
     headers,
     body: body ? JSON.stringify(body) : undefined,
   })
@@ -152,6 +173,11 @@ export async function login(email: string, password: string): Promise<LoginRespo
 /** 获取当前登录用户信息 */
 export async function getMe(): Promise<MeResponse> {
   return request<MeResponse>('/auth/me')
+}
+
+/** 修改当前用户信息（name、avatar、password，只更新传入字段） */
+export async function patchMe(body: PatchMeBody): Promise<PatchMeResponse> {
+  return request<PatchMeResponse>('/auth/me', body as Record<string, unknown>, 'PATCH')
 }
 
 /** 健康检查 */

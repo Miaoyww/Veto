@@ -1,18 +1,24 @@
 <script lang="ts">
-  import { Settings, Info, X, Puzzle, Map } from '@lucide/svelte'
+  import { Settings, Info, X, Puzzle, Map, BadgeCheck, User } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
+  import * as Separator from '$lib/components/ui/separator/index.js'
+  import * as Avatar from '$lib/components/ui/avatar/index.js'
   import GeneralPage from './pages/common/general.svelte'
   import ModsPage from './pages/common/mods.svelte'
   import AboutPage from '../settings/pages/common/about.svelte'
   import VenuePage from './pages/common/venue.svelte'
+  import AccountPage from './pages/common/account.svelte'
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
-  import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
+  import { settingsDialogOpen, activeSettingsSection } from '$lib/stores/app/global-ui-store'
+  import { authStore } from '$lib/stores/auth-store'
   const version = __APP_VERSION__
 
   let activeSection = $state<Section>('general')
-  type Section = 'general' | 'mods' | 'venue' | 'about'
+  type Section = 'general' | 'mods' | 'venue' | 'about' | 'account'
+
+  const user = $derived($authStore.user)
 
   interface NavItem {
     key: Section
@@ -29,7 +35,20 @@
   let NAV_BOTTOM: NavItem[] = $state([{ key: 'about', label: '关于', icon: Info }])
 
   let open = $state(false)
-  settingsDialogOpen.subscribe((v) => (open = v))
+  settingsDialogOpen.subscribe((v) => {
+    const wasClosed = !open && v
+    open = v
+    if (wasClosed) {
+      // 打开时读取指定的 section，否则默认 general
+      const target = $activeSettingsSection
+      if (target) {
+        activeSection = target
+        activeSettingsSection.set(null)
+      } else {
+        activeSection = 'general'
+      }
+    }
+  })
 
   function onOpenChange(o: boolean): void {
     settingsDialogOpen.set(o)
@@ -59,6 +78,36 @@
             <h1 class="text-[26px] font-bold leading-none tracking-tight">设置</h1>
             <p class="mt-1.5 text-sm text-muted-foreground">个性化与全局设置</p>
           </div>
+
+          <!-- 用户卡片 -->
+          <div class="px-3 pt-1 pb-1">
+            <button
+              class="w-full cursor-pointer rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-accent"
+              class:bg-accent={activeSection === 'account'}
+              onclick={() => (activeSection = 'account')}
+            >
+              <div class="flex items-center gap-3">
+                <Avatar.Root class="size-9 rounded-full shrink-0">
+                  {#if user?.avatar}
+                    <Avatar.Image src={user.avatar} alt={user.name ?? ''} />
+                  {/if}
+                  <Avatar.Fallback class="rounded-full bg-muted">
+                    <User size={16} />
+                  </Avatar.Fallback>
+                </Avatar.Root>
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium">{user?.name ?? '未登录'}</div>
+                  <div class="truncate text-xs text-muted-foreground">{user?.email ?? ''}</div>
+                </div>
+                <BadgeCheck size={16} class="shrink-0 text-muted-foreground" />
+              </div>
+            </button>
+          </div>
+
+          <div class="px-3 pb-1">
+            <Separator.Root />
+          </div>
+
           <div class="flex flex-1 flex-col gap-0.5 px-3 pt-3">
             {#each NAV_TOP as item (item.key)}
               <Button
@@ -100,6 +149,7 @@
               {#if activeSection === 'mods'}<ModsPage />{/if}
               {#if activeSection === 'venue'}<VenuePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
+              {#if activeSection === 'account'}<AccountPage />{/if}
             </div>
           </ScrollArea>
         </div>

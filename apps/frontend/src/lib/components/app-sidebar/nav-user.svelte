@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { BadgeCheck, Bell, ChevronsUpDown, LogOut, User } from '@lucide/svelte'
+  import { BadgeCheck, ChevronsUpDown, LogOut, User } from '@lucide/svelte'
   import * as Avatar from '$lib/components/ui/avatar/index.js'
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
+  import { settingsDialogOpen, activeSettingsSection } from '$lib/stores/app/global-ui-store'
   import { setOffline, authStore } from '$lib/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -67,13 +67,15 @@
         </DropdownMenu.Label>
         <DropdownMenu.Separator />
         <DropdownMenu.Group>
-          <DropdownMenu.Item class="gap-2" onclick={() => settingsDialogOpen.set(true)}>
+          <DropdownMenu.Item
+            class="gap-2"
+            onclick={() => {
+              activeSettingsSection.set('account')
+              settingsDialogOpen.set(true)
+            }}
+          >
             <BadgeCheck size={16} />
             账户设置
-          </DropdownMenu.Item>
-          <DropdownMenu.Item class="gap-2">
-            <Bell size={16} />
-            通知
           </DropdownMenu.Item>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
