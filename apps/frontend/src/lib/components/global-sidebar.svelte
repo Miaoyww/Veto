@@ -16,7 +16,10 @@
     UsersRound,
     Settings,
     ArrowLeft,
-    Wrench
+    Wrench,
+
+    Files
+
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -100,6 +103,13 @@
       url: `${confPrefix}/situation`,
       needsConf: true,
       isActive: routeId === `${confPrefix}/situation`
+    },
+    {
+      title: '文件',
+      icon: Files,
+      url: `${confPrefix}/documents`,
+      needsConf: true,
+      isActive: routeId === `${confPrefix}/documents`
     },
     {
       title: '工具',

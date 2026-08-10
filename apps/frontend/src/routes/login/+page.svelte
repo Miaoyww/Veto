@@ -1,17 +1,32 @@
 <script lang="ts">
-  import LoginForm from '$lib/components/login/login-form.svelte'
   import DescContent from '$lib/components/login/desc-content.svelte'
-  import { Button } from '$lib/components/ui/button/index.js'
-  import { FieldSeparator } from '$lib/components/ui/field/index.js'
-
   import favicon from '$lib/assets/favicon.png'
-  import feishu from '$lib/assets/feishu.png'
-  import wechat from '$lib/assets/wechat.png'
+  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import { Button } from '$lib/components/ui/button'
+  import * as Card from '$lib/components/ui/card'
+  import { Separator } from '$lib/components/ui/separator'
   import { LaptopMinimal } from '@lucide/svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
+  import LoginForm from '$lib/components/login/login-form.svelte'
+  import RegForm from '$lib/components/login/reg-form.svelte'
   import { setOffline } from '$lib/stores/auth-store'
-  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import wechat from '$lib/assets/wechat.png'
+  import feishu from '$lib/assets/feishu.png'
+
+  type Card = 'login' | 'register'
+
+  let card: Card = $state('login')
+
+  import { scale } from 'svelte/transition'
+
+  const zoomTransition = { start: 0.7, opacity: 1 }
+  const outDuration = { ...zoomTransition, duration: 180 }
+  const inDuration = { ...zoomTransition, duration: 260 }
+
+  function switchCard(to: Card) {
+    card = to
+  }
 </script>
 
 <div class="relative min-h-svh overflow-hidden bg-background">
@@ -44,68 +59,101 @@
       <!-- Left content -->
       <DescContent />
 
-      <!-- Right login -->
+      <!-- Right auth card -->
       <section class="flex w-full items-center justify-center px-6 py-12 lg:w-[520px]">
-        <div
-          class="
-          w-full max-w-md
-          rounded-3xl
-          border
-          bg-card/80
-          p-8
-          shadow-2xl
-          backdrop-blur-xl
-        "
-        >
-          <div class="mb-8">
-            <h2 class="text-3xl font-bold tracking-tight">欢迎回来</h2>
-
-            <div>
-              <p class="text-gray-400">
-                没有账号? <a href="##" class="text-blue-400 underline underline-offset-4"
-                  >立即注册</a
+        <Card.Root class="w-full max-w-md rounded-3xl border bg-card/80 p-8 shadow-2xl backdrop-blur-xl">
+          <Card.Header class="p-0">
+            {#if card === 'login'}
+              <Card.Title class="text-3xl font-bold">欢迎回来</Card.Title>
+              <div class="text-sm text-muted-foreground">
+                没有账号?
+                <Button
+                  type="button"
+                  variant="link"
+                  class="inline text-blue-400 underline"
+                  onclick={() => switchCard('register')}
                 >
-              </p>
-            </div>
-          </div>
+                  立即注册
+                </Button>
+              </div>
+            {:else}
+              <Card.Title class="text-3xl font-bold tracking-tight">创建账号</Card.Title>
+              <div class="text-sm text-muted-foreground">
+                已有账号?
+                <Button
+                  type="button"
+                  variant="ghost"
+                  class="inline text-blue-400 underline underline-offset-4"
+                  onclick={() => switchCard('login')}
+                >
+                  登录
+                </Button>
+              </div>
+            {/if}
+          </Card.Header>
 
-          <LoginForm />
+          <Card.Content class="p-0">
+            {#key card}
+              {#if card === 'login'}
+                <div in:scale={inDuration} out:scale={outDuration}>
+                  <LoginForm id="auth" onSwitchToRegister={() => switchCard('register')} />
+                </div>
+              {:else}
+                <div in:scale={inDuration} out:scale={outDuration}>
+                  <RegForm id="auth" switchCard={() => switchCard('login')} />
+                </div>
+              {/if}
+            {/key}
+          </Card.Content>
 
-          <FieldSeparator class="my-6">其他方式</FieldSeparator>
-
-          <div class="flex gap-3">
-            <!-- 离线登录 -->
-            <Button
-              variant="outline"
-              type="button"
-              class="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
-              onclick={() => {
-                setOffline(true)
-                goto(resolve('/'))
-              }}
+          <!-- Separator with text -->
+          <div class="relative h-5">
+            <Separator class="absolute top-1/2" />
+            <span
+              class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground"
             >
-              <LaptopMinimal class="size-5" />
-              离线登录
-            </Button>
-
-            <!-- 微信登录 -->
-            <Button variant="outline" type="button" class="size-12 rounded-lg p-0 shadow-sm">
-              <img src={wechat} class="size-5" alt="wechat" />
-            </Button>
-
-            <!-- 飞书登录 -->
-            <Button variant="outline" type="button" class="size-12 rounded-lg p-0 shadow-sm">
-              <img src={feishu} class="size-5" alt="feishu" />
-            </Button>
+              其他方式
+            </span>
           </div>
 
-          <p class="mt-8 text-center text-xs text-muted-foreground">
-            点击 「登录」 即表示您同意我们的
-            <a href="/terms" class="underline text-blue-400 underline-offset-4 hover:text-primary">
-              服务条款
-            </a>
-          </p>
-        </div>
+          <Card.Footer class="flex-col gap-3 p-0">
+            <div class="flex w-full gap-3">
+              <!-- 离线登录 -->
+              <Button
+                variant="outline"
+                type="button"
+                class="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
+                onclick={() => {
+                  setOffline(true)
+                  goto(resolve('/'))
+                }}
+              >
+                <LaptopMinimal class="size-5" />
+                离线登录
+              </Button>
+
+              <!-- 微信登录 -->
+              <Button variant="outline" type="button" class="size-12 rounded-lg p-0 shadow-sm">
+                <img src={wechat} class="size-5" alt="wechat" />
+              </Button>
+
+              <!-- 飞书登录 -->
+              <Button variant="outline" type="button" class="size-12 rounded-lg p-0 shadow-sm">
+                <img src={feishu} class="size-5" alt="feishu" />
+              </Button>
+            </div>
+
+            <p class="text-center text-xs text-muted-foreground">
+              点击 「登录」 即表示您同意我们的
+              <a
+                href="/terms"
+                class="underline text-blue-400 underline-offset-4 hover:text-primary"
+              >
+                服务条款
+              </a>
+            </p>
+          </Card.Footer>
+        </Card.Root>
       </section>
     </div>
   </div>

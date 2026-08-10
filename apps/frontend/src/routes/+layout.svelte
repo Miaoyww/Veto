@@ -16,6 +16,9 @@
   import { markPluginsReady } from '$lib/registry/mod-registry.svelte'
 
   import { page } from '$app/stores'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { authStore } from '$lib/stores/auth-store'
 
   let { children } = $props()
 
@@ -35,6 +38,23 @@
   }
 
   const isLoginPage = $derived($page.url.pathname === '/login')
+
+  // 认证守卫：未登录则跳转到登录页（等 bootstrap 完成后才生效）
+  $effect(() => {
+    // 跳过服务端渲染
+    if (typeof window === 'undefined') return
+
+    let initialized = false
+    authStore.ready.then(() => { initialized = true })
+
+    const unsub = authStore.subscribe((state) => {
+      if (!initialized) return
+      if (!state.isLoggedIn && !isLoginPage) {
+        goto(resolve('/login'))
+      }
+    })
+    return unsub
+  })
 </script>
 
 <svelte:head>
