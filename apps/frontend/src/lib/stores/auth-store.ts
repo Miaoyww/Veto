@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store'
 import { bootstrapStore, saveToStore } from './store-bridge'
-import { getToken, setToken, clearToken } from '$lib/services/api-client'
+import { getToken, setToken, clearToken, getMe } from '$lib/services/api-client'
 
 // ─── 类型 ──────────────────────────────────────────────────────────────
 
@@ -82,6 +82,24 @@ function createAuthStore() {
         saveToStore('auth', next)
         return next
       })
+    },
+
+    /** 从服务器拉取最新用户信息并更新 Store */
+    async refreshUser() {
+      try {
+        const { user } = await getMe()
+        update((state) => {
+          if (!state.user) return state
+          const next = {
+            ...state,
+            user: { ...state.user, ...user }
+          }
+          saveToStore('auth', next)
+          return next
+        })
+      } catch {
+        // 获取失败时静默忽略（网络异常等）
+      }
     },
 
     /** 登出 */

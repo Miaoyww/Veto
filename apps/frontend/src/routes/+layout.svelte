@@ -45,7 +45,13 @@
     if (typeof window === 'undefined') return
 
     let initialized = false
-    authStore.ready.then(() => { initialized = true })
+    authStore.ready.then(() => {
+      initialized = true
+      // 登录状态下从服务器拉取最新用户信息
+      if (authStore.isLoggedIn() && authStore.getToken()) {
+        authStore.refreshUser()
+      }
+    })
 
     const unsub = authStore.subscribe((state) => {
       if (!initialized) return

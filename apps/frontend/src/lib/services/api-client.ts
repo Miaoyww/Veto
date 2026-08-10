@@ -44,6 +44,15 @@ export interface User {
   created_at: string
 }
 
+export interface MeResponse {
+  ok: true
+  user: {
+    name: string
+    email: string
+    avatar: string
+  }
+}
+
 // ─── Token 管理 ─────────────────────────────────────────────────────
 
 let cachedToken: string | null = null
@@ -118,9 +127,17 @@ export async function verifyCode(email: string, code: string): Promise<VerifyCod
   return request<VerifyCodeResponse>('/auth/verify-code', { email, code })
 }
 
-/** 使用 regToken + 密码完成注册，返回认证 Token */
-export async function register(regToken: string, password: string): Promise<RegisterResponse> {
-  const result = await request<RegisterResponse>('/auth/register', { regToken, password })
+/** 使用 regToken + 密码完成注册，可选 name 和 avatar（Base64），返回认证 Token */
+export async function register(
+  regToken: string,
+  password: string,
+  name?: string,
+  avatar?: string
+): Promise<RegisterResponse> {
+  const body: Record<string, unknown> = { regToken, password }
+  if (name) body.name = name
+  if (avatar) body.avatar = avatar
+  const result = await request<RegisterResponse>('/auth/register', body)
   setToken(result.token)
   return result
 }
@@ -130,6 +147,11 @@ export async function login(email: string, password: string): Promise<LoginRespo
   const result = await request<LoginResponse>('/auth/login', { email, password })
   setToken(result.token)
   return result
+}
+
+/** 获取当前登录用户信息 */
+export async function getMe(): Promise<MeResponse> {
+  return request<MeResponse>('/auth/me')
 }
 
 /** 健康检查 */

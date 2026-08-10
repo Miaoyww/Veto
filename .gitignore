@@ -6,3 +6,4 @@ out
 *.log*
 release.ps1
 .vscode/*
+docs/*

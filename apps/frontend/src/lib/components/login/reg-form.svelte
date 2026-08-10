@@ -2,10 +2,12 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
   import { Label } from '$lib/components/ui/label/index.js'
-  import { sendVerificationCode, verifyCode, register } from '$lib/services/api-client'
+  import * as ImageCropper from '$lib/components/ui/image-cropper/index.js'
+  import { sendVerificationCode, verifyCode, register, getMe } from '$lib/services/api-client'
   import { authStore } from '$lib/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
+  import { Camera, UserRound } from '@lucide/svelte'
 
   let {
     switchCard,
@@ -23,6 +25,21 @@
   let regName = $state('')
   let regPassword = $state('')
   let regPasswordConfirm = $state('')
+
+  // ─── 头像（ImageCropper） ────────────────────────────────────────
+  let avatarSrc = $state('')
+  const MAX_AVATAR_KB = 512
+
+  function handleCropped(dataUrl: string) {
+    // 裁切后的 Data URL 大约为原图 4/3，这里近似校验
+    const sizeKB = (dataUrl.length * 0.75) / 1024
+    if (sizeKB > MAX_AVATAR_KB) {
+      error = `头像文件过大（约 ${Math.round(sizeKB)} KB），请缩小裁切区域或换一张更小的图片`
+      avatarSrc = ''
+      return
+    }
+    avatarSrc = dataUrl
+  }
 
   // ─── UI 状态 ────────────────────────────────────────────────────
   let sendingCode = $state(false)
@@ -122,14 +139,29 @@
 
     submitting = true
     try {
-      const result = await register(regToken, regPassword)
+      const result = await register(
+        regToken,
+        regPassword,
+        regName.trim() || undefined,
+        avatarSrc || undefined
+      )
+      // 从服务器拉取用户信息（含服务端处理后的 avatar URL）
+      let userFromServer = getMe()
+        .then(({ user }) => user)
+        .catch(() => null)
+      // 先用本地数据登录（不阻塞跳转）
       authStore.login(result.token, {
         id: '',
         email: regEmail.trim(),
         name: regName.trim() || regEmail.trim().split('@')[0],
-        avatar: '',
+        avatar: avatarSrc,
         created_at: new Date().toISOString()
       })
+      // 后台静默更新服务端返回的用户信息
+      const serverUser = await userFromServer
+      if (serverUser) {
+        authStore.updateUser(serverUser)
+      }
       goto(resolve('/'))
     } catch (err: any) {
       error = err.message ?? '注册失败，请重试'
@@ -214,11 +246,57 @@
       </Button>
     </div>
   {:else if regStep === 'info'}
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-5">
+      <!-- 标题 -->
       <div class="flex flex-col items-center gap-1 text-center">
         <h1 class="text-2xl font-bold">完善信息</h1>
-        <p class="text-sm text-balance text-muted-foreground">设置你的显示名称和密码</p>
+        <p class="text-sm text-muted-foreground">设置头像、名称和密码</p>
       </div>
+
+      <!-- 头像 -->
+      <div class="flex justify-center">
+        <ImageCropper.Root bind:src={avatarSrc} onCropped={handleCropped}>
+          <ImageCropper.UploadTrigger>
+            <ImageCropper.Preview>
+              {#snippet child({ src })}
+                <div class="relative">
+                  <div
+                    class="group relative flex size-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted transition-colors hover:border-muted-foreground/50"
+                  >
+                    {#if src}
+                      <img {src} alt="头像预览" class="size-full rounded-full object-cover" />
+                      <div
+                        class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <Camera class="size-5 text-white" />
+                      </div>
+                    {:else}
+                      <UserRound class="size-10 text-muted-foreground" />
+                    {/if}
+                  </div>
+                  {#if src}
+                    <div
+                      class="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110"
+                    >
+                      <Camera class="size-3.5" />
+                    </div>
+                  {/if}
+                </div>
+              {/snippet}
+            </ImageCropper.Preview>
+          </ImageCropper.UploadTrigger>
+
+          <ImageCropper.Dialog>
+            <ImageCropper.Cropper cropShape="round" aspect={1} />
+            <ImageCropper.Controls>
+              <ImageCropper.Cancel />
+              <ImageCropper.Crop />
+            </ImageCropper.Controls>
+          </ImageCropper.Dialog>
+        </ImageCropper.Root>
+      </div>
+
+      <!-- 表单字段 -->
       <div class="flex flex-col gap-2">
         <Label for="reg-name-{id}">显示名称</Label>
         <Input

@@ -4,16 +4,17 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
-  import { setOffline } from '$lib/stores/auth-store'
+  import { setOffline, authStore } from '$lib/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
 
-  // 自持用户数据（后续接入真实 auth/profile store）
-  const user = {
-    name: '用户',
-    email: '',
-    avatar: ''
-  }
+  const user = $derived(
+    $authStore.user ?? {
+      name: '用户',
+      email: '',
+      avatar: ''
+    }
+  )
 </script>
 
 <Sidebar.Menu>

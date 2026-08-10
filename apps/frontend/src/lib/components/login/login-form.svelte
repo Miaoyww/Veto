@@ -5,7 +5,7 @@
   import { Tabs, TabsList, TabsTrigger, TabsContent } from '$lib/components/ui/tabs/index.js'
   import { cn, type WithElementRef } from '$lib/utils.js'
   import type { HTMLFormAttributes } from 'svelte/elements'
-  import { login } from '$lib/services/api-client'
+  import { login, getMe } from '$lib/services/api-client'
   import { authStore } from '$lib/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -52,6 +52,7 @@
     loginSubmitting = true
     try {
       const result = await login(loginEmail.trim(), loginPassword)
+      const maybeUser = getMe().then(({ user }) => user).catch(() => null)
       authStore.login(result.token, {
         id: '',
         email: loginEmail.trim(),
@@ -59,6 +60,10 @@
         avatar: '',
         created_at: ''
       })
+      const serverUser = await maybeUser
+      if (serverUser) {
+        authStore.updateUser(serverUser)
+      }
       goto(resolve('/'))
     } catch (err: any) {
       error = err.message ?? '登录失败，请重试'
