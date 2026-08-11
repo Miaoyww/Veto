@@ -18,7 +18,6 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Overlay />
   <Dialog.Content>
     <Dialog.Title class="flex items-center gap-2 text-base font-semibold tracking-wide">
       <UsersIcon size={18} class="text-indigo-500" />

@@ -13,7 +13,8 @@
     UserRoundCheck,
     ArrowLeft,
     Wrench,
-    Files
+    Files,
+    Monitor
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -31,6 +32,7 @@
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { cn } from '$lib/utils.js'
   import JoinConferenceDialog from './home/join-conference-dialog.svelte'
+  import DisplayOnlyDialog from './conference/display-only-dialog.svelte'
   let {
     className = '',
     collapsible = 'icon',
@@ -54,6 +56,7 @@
   $effect(() => {
     console.log(routeId)
   })
+  let displayOnlyDialogOpen = $state(false)
   let createDialogOpen = $state(false)
   let joinBattleDialogOpen = $state(false)
   function goTo(path: string): void {
@@ -300,6 +303,16 @@
           variant="ghost"
           size="sm"
           class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          onclick={() => (displayOnlyDialogOpen = true)}
+          title="显示窗口"
+        >
+          <Monitor size={14} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
           onclick={() => goto(resolve('/tools'))}
           title="插件"
         >
@@ -317,6 +330,7 @@
 {:else}
   {@render children()}
 {/if}
+<DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
 
 <CreateConferenceDialog bind:open={createDialogOpen} />
 

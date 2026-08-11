@@ -133,7 +133,6 @@
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
   <Dialog.Portal>
-    <Dialog.Overlay />
     <Dialog.Content
       class="w-5xl max-w-[calc(100vw-40px)] sm:max-w-5xl h-[85vh]"
       onkeydown={handleKeydown}

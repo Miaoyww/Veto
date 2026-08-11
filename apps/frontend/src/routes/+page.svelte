@@ -8,10 +8,8 @@
   import * as Card from '$lib/components/ui/card/index.js'
   import { conferences, unloadConference } from '$lib/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
-  import DisplayOnlyDialog from '$lib/components/conference-display/display-only-dialog.svelte'
   import { fly } from 'svelte/transition'
   let query = $state('')
-  let displayOnlyDialogOpen = $state(false)
   const filteredConferences = $derived(
     query.trim()
       ? $conferences.filter(
@@ -93,5 +91,4 @@
   </div>
 
   <!-- Display Only Dialog -->
-  <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
 </div>
