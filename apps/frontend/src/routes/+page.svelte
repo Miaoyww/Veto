@@ -8,14 +8,10 @@
   import * as Card from '$lib/components/ui/card/index.js'
   import { conferences, unloadConference } from '$lib/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
-  import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
   import DisplayOnlyDialog from '$lib/components/conference-display/display-only-dialog.svelte'
   import { fly } from 'svelte/transition'
-
   let query = $state('')
-  let dialogOpen = $state(false)
   let displayOnlyDialogOpen = $state(false)
-
   const filteredConferences = $derived(
     query.trim()
       ? $conferences.filter(
@@ -95,9 +91,6 @@
       </div>
     </ScrollArea>
   </div>
-
-  <!-- Create Conference Dialog -->
-  <CreateConferenceDialog bind:open={dialogOpen} />
 
   <!-- Display Only Dialog -->
   <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />

@@ -10,7 +10,6 @@
     presetsLoaded,
     loadDelegationPresets,
     startAutoRefresh,
-    stopAutoRefresh,
     formatPresetAsText,
     type DelegationPreset
   } from '$lib/stores/conference/delegation-preset-store'

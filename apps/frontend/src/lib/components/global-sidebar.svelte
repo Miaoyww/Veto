@@ -8,18 +8,12 @@
     Globe,
     Swords,
     UserPlus,
-    Search,
     Puzzle,
     Plus,
-    Users,
     UserRoundCheck,
-    UsersRound,
-    Settings,
     ArrowLeft,
     Wrench,
-
     Files
-
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -36,6 +30,7 @@
   import DynamicIsland from './dynamic-island.svelte'
   import { currentConference } from '$lib/stores/conference/conference-store'
   import { cn } from '$lib/utils.js'
+  import JoinConferenceDialog from './home/join-conference-dialog.svelte'
   let {
     className = '',
     collapsible = 'icon',
@@ -60,7 +55,7 @@
     console.log(routeId)
   })
   let createDialogOpen = $state(false)
-
+  let joinBattleDialogOpen = $state(false)
   function goTo(path: string): void {
     // @ts-expect-error resolve 要求字面量路由类型，这里接受通用 string
     goto(resolve(path))
@@ -107,9 +102,9 @@
     {
       title: '文件',
       icon: Files,
-      url: `${confPrefix}/documents`,
+      url: `${confPrefix}/files`,
       needsConf: true,
-      isActive: routeId === `${confPrefix}/documents`
+      isActive: routeId === `${confPrefix}/files`
     },
     {
       title: '工具',
@@ -158,7 +153,10 @@
           {#if !hasConf}
             <!-- 未加入大会：操作按钮 -->
             <Sidebar.MenuItem>
-              <Sidebar.MenuButton class="cursor-pointer">
+              <Sidebar.MenuButton
+                onclick={() => (joinBattleDialogOpen = true)}
+                class="cursor-pointer"
+              >
                 <UserPlus size={18} />
                 <span>加入大会</span>
               </Sidebar.MenuButton>
@@ -168,17 +166,6 @@
               <Sidebar.MenuButton onclick={() => (createDialogOpen = true)} class="cursor-pointer">
                 <Plus size={18} />
                 <span>创建大会</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                onclick={() => goto(resolve('/'))}
-                isActive={routeId === '/'}
-                class="cursor-pointer"
-              >
-                <Search size={18} />
-                <span>寻找大会</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
 
@@ -332,6 +319,8 @@
 {/if}
 
 <CreateConferenceDialog bind:open={createDialogOpen} />
+
+<JoinConferenceDialog bind:open={joinBattleDialogOpen} />
 
 <style>
   .drag-region {
