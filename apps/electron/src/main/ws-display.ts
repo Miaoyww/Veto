@@ -11,8 +11,6 @@
  */
 
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http'
-import fs from 'fs'
-import path from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createLogger } from './logger'
 import { randomBytes, timingSafeEqual, scryptSync } from 'crypto'
@@ -205,7 +203,7 @@ export function getClientsByType(type: string): AuthenticatedClient[] {
 export function startDisplayWs(): Promise<number> {
   return new Promise((resolve, reject) => {
     const tryListen = (port: number): void => {
-      const server = createServer(handleRendererRequest)
+      const server = createServer(handleLanHttpRequest)
 
       wss = new WebSocketServer({ noServer: true })
 
@@ -243,25 +241,6 @@ export function startDisplayWs(): Promise<number> {
   })
 }
 
-const MIME_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.ico': 'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.map': 'application/json'
-}
-
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body)
   response.writeHead(status, {
@@ -272,47 +251,7 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
   response.end(payload)
 }
 
-function serveRendererFile(response: ServerResponse, requestPath: string): void {
-  const rendererRoot = path.resolve(__dirname, '../renderer')
-  const decodedPath = decodeURIComponent(requestPath)
-  let filePath = path.normalize(path.join(rendererRoot, decodedPath))
-
-  if (filePath === rendererRoot) {
-    filePath = path.join(rendererRoot, 'index.html')
-  }
-
-  if (!filePath.startsWith(rendererRoot + path.sep)) {
-    response.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
-    response.end('Forbidden')
-    return
-  }
-
-  let stat: fs.Stats | null = null
-  try {
-    stat = fs.statSync(filePath)
-  } catch {
-    // SPA fallback is required for /delegate/:id and /conference-display/:id.
-    filePath = path.join(rendererRoot, 'index.html')
-    stat = fs.statSync(filePath)
-  }
-
-  if (stat.isDirectory()) {
-    filePath = path.join(filePath, 'index.html')
-    stat = fs.statSync(filePath)
-  }
-
-  const ext = path.extname(filePath).toLowerCase()
-  const isHtml = ext === '.html'
-  response.writeHead(200, {
-    'Content-Type': MIME_TYPES[ext] ?? 'application/octet-stream',
-    'Content-Length': stat.size,
-    'Cache-Control': isHtml ? 'no-store' : 'public, max-age=3600',
-    'X-Content-Type-Options': 'nosniff'
-  })
-  fs.createReadStream(filePath).pipe(response)
-}
-
-function handleRendererRequest(
+function handleLanHttpRequest(
   request: IncomingMessage,
   response: ServerResponse
 ): void {
@@ -332,7 +271,7 @@ function handleRendererRequest(
     return
   }
 
-  serveRendererFile(response, requestPath)
+  sendJson(response, 404, { error: 'not_found' })
 }
 
 /** 设置连接处理 */

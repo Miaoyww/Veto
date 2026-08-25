@@ -5,6 +5,8 @@ import { createLogger } from './logger'
 
 const log = createLogger('LanService')
 
+const DEFAULT_CONFERENCE_PORT = 19527
+
 export interface LanConferenceInfo {
   conferenceId: string
   name: string
@@ -69,6 +71,63 @@ export function getLanServerInfo(port: number): LanServerInfo {
 
 export function getAdvertisedConference(): LanConferenceInfo | null {
   return advertisedConference ? { ...advertisedConference } : null
+}
+
+export async function queryLanConference(address: string): Promise<DiscoveredLanConference | null> {
+  const trimmed = address.trim()
+  if (!trimmed) return null
+
+  const withHttpScheme = /^wss?:\/\//i.test(trimmed)
+    ? trimmed.replace(/^ws/i, 'http')
+    : /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : `http://${trimmed}`
+
+  let parsed: URL
+  try {
+    parsed = new URL(withHttpScheme)
+  } catch {
+    throw new Error('invalid lan address')
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('unsupported lan address protocol')
+  }
+
+  const port = parsed.port ? Number(parsed.port) : DEFAULT_CONFERENCE_PORT
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('invalid lan address port')
+  }
+
+  const host = formatHost(parsed.hostname)
+  const httpUrl = `http://${host}:${port}`
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 2500)
+
+  try {
+    const response = await fetch(`${httpUrl}/__veto/health`, {
+      cache: 'no-store',
+      signal: controller.signal
+    })
+    if (!response.ok) throw new Error('conference health check failed')
+
+    const health = (await response.json()) as {
+      server?: string
+      conference?: LanConferenceInfo | null
+    }
+    if (health.server !== 'veto.lan' || !health.conference) return null
+
+    return {
+      ...health.conference,
+      host: parsed.hostname,
+      port,
+      url: httpUrl,
+      wsUrl: `ws://${host}:${port}`,
+      appVersion: 'unknown'
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 export function publishLanConference(info: LanConferenceInfo, port: number): void {

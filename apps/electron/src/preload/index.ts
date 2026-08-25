@@ -199,6 +199,18 @@ const veto = {
       urls: string[]
     }> => ipcRenderer.invoke('veto:lan:get-server-info'),
 
+    /** 手动查询局域网内某个 Chair 端正在开放的会议 */
+    queryConference: (address: string): Promise<{
+      conferenceId: string
+      name: string
+      phase: string
+      host: string
+      port: number
+      url: string
+      wsUrl: string
+      appVersion: string
+    } | null> => ipcRenderer.invoke('veto:lan:query', address),
+
     /** 广播当前打开的会议 */
     publishConference: (info: {
       conferenceId: string

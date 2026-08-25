@@ -97,6 +97,16 @@ export interface VetoAPI {
       addresses: string[]
       urls: string[]
     }>
+    queryConference: (address: string) => Promise<{
+      conferenceId: string
+      name: string
+      phase: string
+      host: string
+      port: number
+      url: string
+      wsUrl: string
+      appVersion: string
+    } | null>
     publishConference: (info: {
       conferenceId: string
       name: string

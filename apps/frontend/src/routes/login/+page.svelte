@@ -31,7 +31,6 @@
     phase: string
     host: string
     port: number
-    url: string
     wsUrl: string
   }
 
@@ -47,53 +46,30 @@
     scanError = ''
 
     try {
-      if (window.veto?.lan) {
-        meetings = await window.veto.lan.scan()
-      } else if (window.location.protocol.startsWith('http')) {
-        const current = await queryMeeting(window.location.origin)
-        meetings = current ? [current] : []
+      if (!window.veto?.lan) {
+        scanError = '请通过 Veto Electron 客户端加入会议'
+        meetings = []
+        return
       }
+      meetings = await window.veto.lan.scan()
     } catch {
-      scanError = '未找到可加入的会议'
+      scanError = '扫描失败，请检查网络或使用手动连接'
     } finally {
       scanning = false
     }
   }
 
-  async function queryMeeting(origin: string): Promise<LanMeeting | null> {
-    const response = await fetch(`${origin}/__veto/health`, {
-      cache: 'no-store'
-    })
-    if (!response.ok) throw new Error('conference server unavailable')
-
-    const health = (await response.json()) as {
-      conference?: {
-        conferenceId: string
-        name: string
-        phase: string
-      } | null
-    }
-    if (!health.conference) return null
-
-    const url = new URL(origin)
-    return {
-      ...health.conference,
-      host: url.hostname,
-      port: Number(url.port || 80),
-      url: origin.replace(/\/$/, ''),
-      wsUrl: origin.replace(/^http/, 'ws').replace(/\/$/, '')
-    }
-  }
-
   function join(meeting: LanMeeting): void {
-    if (window.veto) {
-      setExternalWsUrl(meeting.wsUrl)
-      const route = `/conference-display/${meeting.conferenceId}` as `/conference-display/${string}`
-      goto(resolve(route))
+    if (!window.veto?.lan) {
+      scanError = '请通过 Veto Electron 客户端加入会议'
       return
     }
 
-    window.location.href = `${meeting.url}/conference-display/${meeting.conferenceId}`
+    scanError = ''
+    setExternalWsUrl(meeting.wsUrl)
+    goto(resolve('/conference-display/[conference_id]', {
+      conference_id: meeting.conferenceId
+    }))
   }
 
   async function joinManual(event: Event): Promise<void> {
@@ -105,9 +81,12 @@
     manualError = ''
 
     try {
-      const normalized = /^https?:\/\//i.test(value) ? value : `http://${value}`
-      const origin = new URL(normalized).origin
-      const meeting = await queryMeeting(origin)
+      if (!window.veto?.lan) {
+        manualError = '请通过 Veto Electron 客户端加入会议'
+        return
+      }
+
+      const meeting = await window.veto.lan.queryConference(value)
       if (!meeting) {
         manualError = '该地址上没有正在开放的会议'
         return

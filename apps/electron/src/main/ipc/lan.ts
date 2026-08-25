@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import {
   getLanServerInfo,
   publishLanConference,
+  queryLanConference,
   scanLanConferences,
   stopLanConference
 } from '../lan-service'
@@ -12,6 +13,8 @@ export function registerLanIpc(getPort: () => number): void {
   )
 
   ipcMain.handle('veto:lan:get-server-info', () => getLanServerInfo(getPort()))
+
+  ipcMain.handle('veto:lan:query', (_event, address: string) => queryLanConference(address))
 
   ipcMain.handle(
     'veto:lan:publish-conference',
