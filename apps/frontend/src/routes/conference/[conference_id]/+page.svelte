@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
 
   import { VETO_NAME } from '$lib/const'
 
@@ -53,6 +54,7 @@
   let pointDialogOpen = $state(false)
   let logDialogOpen = $state(false)
   let wsPort = $state<number | null>(null)
+  let lanUrl = $state<string | null>(null)
 
   onMount(async () => {
     // 加载会议
@@ -66,6 +68,19 @@
 
     // 初始化显示端 WS
     wsPort = await initWsPort()
+    if (window.veto?.lan) {
+      const serverInfo = await window.veto.lan.getServerInfo()
+      lanUrl = serverInfo.urls[0] ?? null
+    }
+  })
+
+  $effect(() => {
+    if (!conf) return
+    void window.veto?.lan?.publishConference({
+      conferenceId: conf.id,
+      name: conf.name,
+      phase: conf.phase
+    })
   })
 
   // 自动同步 Display 窗口
@@ -92,6 +107,7 @@
   onDestroy(async () => {
     // 离开页面保存状态
     await saveConferencesNow()
+    await window.veto?.lan?.unpublishConference()
 
     destroyAllTimers()
   })
@@ -115,7 +131,8 @@
 
     setPhase('roll_call')
 
-    goto(`/conference/${conf.id}/roll-call`)
+    const route = `/conference/${conf.id}/roll-call` as `/conference/${string}/roll-call`
+    goto(resolve(route))
   }
 
   function handlePrimaryAction(): void {
@@ -176,7 +193,11 @@
             class="select-none text-[11px] text-muted-foreground/70"
             title="WebSocket 端口：{wsPort}"
           >
+            {#if lanUrl}
+              {lanUrl}
+            {:else}
             WS :{wsPort}
+            {/if}
           </span>
         {/if}
 

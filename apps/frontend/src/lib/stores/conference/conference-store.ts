@@ -133,6 +133,18 @@ export const conferencesReady: Promise<void> = bootstrapStore<Conference[]>(STOR
 /** 当前激活的大会 ID */
 export const currentConferenceId = writable<string | null>(null)
 
+const LAST_OPENED_KEY = 'veto_last_opened_conference'
+
+/** 最近一次打开的大会 ID（用于首页"继续上次"横幅，独立持久化，退出会议不清空） */
+export const lastOpenedConferenceId = writable<string | null>(
+  typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_OPENED_KEY) : null
+)
+lastOpenedConferenceId.subscribe((id) => {
+  if (typeof localStorage === 'undefined') return
+  if (id) localStorage.setItem(LAST_OPENED_KEY, id)
+  else localStorage.removeItem(LAST_OPENED_KEY)
+})
+
 /** 当前大会（派生，向后兼容） */
 export const currentConference = derived(
   [conferences, currentConferenceId],
@@ -222,6 +234,7 @@ export function createConference(
 
   conferences.update((list) => [...list, engine.toJSON()])
   currentConferenceId.set(id)
+  lastOpenedConferenceId.set(id)
   return id
 }
 
@@ -259,6 +272,7 @@ export function loadConference(id: string): void {
   const conf = getConferenceById(id)
   if (conf) {
     currentConferenceId.set(id)
+    lastOpenedConferenceId.set(id)
   }
 }
 

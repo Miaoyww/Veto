@@ -37,7 +37,11 @@
     ])
   }
 
-  const isLoginPage = $derived($page.url.pathname === '/login')
+  const isPublicRoute = $derived(
+    $page.url.pathname === '/login' ||
+      $page.url.pathname.startsWith('/conference-display/') ||
+      $page.url.pathname.startsWith('/delegate/')
+  )
 
   // 认证守卫：未登录则跳转到登录页（等 bootstrap 完成后才生效）
   $effect(() => {
@@ -49,7 +53,7 @@
     // 监听状态变化（登录/登出时触发）
     const unsub = authStore.subscribe((state) => {
       if (!initialized) return
-      if (!state.isLoggedIn && !isLoginPage) {
+      if (!state.isLoggedIn && !isPublicRoute) {
         goto(resolve('/login'))
       }
     })
@@ -63,7 +67,7 @@
       }
 
       // 主动检查一次：bootstrap 完成时若仍未登录，跳转
-      if (!authStore.isLoggedIn() && !isLoginPage) {
+      if (!authStore.isLoggedIn() && !isPublicRoute) {
         goto(resolve('/login'))
       }
     })

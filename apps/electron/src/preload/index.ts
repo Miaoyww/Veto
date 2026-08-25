@@ -188,6 +188,30 @@ const veto = {
     getPort: (): Promise<number> => ipcRenderer.invoke('veto:ws:get-port')
   },
 
+  lan: {
+    /** 扫描局域网内正在广播的 Veto 会议 */
+    scan: (timeoutMs?: number) => ipcRenderer.invoke('veto:lan:scan', timeoutMs),
+
+    /** 获取本机 Chair 端的局域网地址 */
+    getServerInfo: (): Promise<{
+      port: number
+      addresses: string[]
+      urls: string[]
+    }> => ipcRenderer.invoke('veto:lan:get-server-info'),
+
+    /** 广播当前打开的会议 */
+    publishConference: (info: {
+      conferenceId: string
+      name: string
+      phase: string
+    }): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:lan:publish-conference', info),
+
+    /** 停止广播当前会议 */
+    unpublishConference: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:lan:unpublish-conference')
+  },
+
   services: {
     /** 获取运行中的 service 插件列表 */
     list: (): Promise<

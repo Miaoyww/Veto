@@ -49,7 +49,11 @@
 
   const confPrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
 
-  const isLoginPage = $derived($page.url.pathname === '/login')
+  const isStandaloneRoute = $derived(
+    $page.url.pathname === '/login' ||
+      $page.url.pathname.startsWith('/conference-display/') ||
+      $page.url.pathname.startsWith('/delegate/')
+  )
 
   // 最近大会列表（按 id 倒序，取前 5 条）
   const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
@@ -144,7 +148,7 @@
   const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
 </script>
 
-{#if !isLoginPage}
+{#if !isStandaloneRoute}
   <Sidebar.Provider>
     <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
       <Sidebar.Header>

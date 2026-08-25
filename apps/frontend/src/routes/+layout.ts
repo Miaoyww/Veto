@@ -6,14 +6,21 @@ export const ssr = false
 export const prerender = false
 export const csr = true
 
+function isPublicRoute(pathname: string): boolean {
+  return (
+    pathname === '/login' ||
+    pathname.startsWith('/conference-display/') ||
+    pathname.startsWith('/delegate/')
+  )
+}
+
 export const load: LayoutLoad = ({ url }) => {
   // 已登录则放行
   if (isLoggedIn()) {
     return
   }
 
-  // 避免重定向死循环：如果已经在 /login 页面就不再跳转
-  if (url.pathname !== '/login') {
+  if (!isPublicRoute(url.pathname)) {
     redirect(302, '/login')
   }
 }

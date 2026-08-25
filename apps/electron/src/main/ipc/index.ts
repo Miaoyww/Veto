@@ -13,6 +13,7 @@ import type { DisplayWindowRef } from './conference'
 import { registerWindowIpc } from './window'
 import { registerAppIpc } from './app'
 import { registerWsIpc } from './ws'
+import { registerLanIpc } from './lan'
 import { registerStoreIpc } from './store'
 import { registerConfigIpc } from './config'
 import { registerEventBusIpc } from './event-bus'
@@ -44,6 +45,7 @@ export function registerAllIpcHandlers(deps: IpcDependencies): void {
 
   // 有依赖模块
   registerWsIpc(() => deps.wsServerPort)
+  registerLanIpc(() => deps.wsServerPort)
   registerConfigIpc(deps.refreshPlugins)
   registerPluginsIpc(deps.pluginInstances, deps.refreshPlugins)
   registerAssetsIpc(deps.pluginInstances)

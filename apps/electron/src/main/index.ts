@@ -14,7 +14,7 @@
 import { app, shell, BrowserWindow, protocol } from 'electron'
 import path, { join, extname } from 'path'
 import * as fs from 'fs'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import { createLogger, initializeLogging, log as baseLog } from './logger'
 import icon from '../../resources/icon.png?asset'
@@ -66,7 +66,7 @@ function createWindow(): void {
     height: 720,
     minWidth: 1200,
     minHeight: 720,
-    show: false,
+    show: true,
     frame: false,
     center: true,
     autoHideMenuBar: true,
@@ -96,12 +96,12 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  if (process.env.NODE_ENV === 'development') {
+  if (is.dev) {
     mainWindow.loadURL('http://localhost:5173')
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
-  
+
   // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
   //   mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   // } else {

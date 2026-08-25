@@ -47,8 +47,9 @@ let _wsPort: number | null = null
 export async function initWsPort(): Promise<number> {
   if (_wsPort !== null) return _wsPort
   if (typeof window !== 'undefined' && window.veto?.ws) {
-    _wsPort = await window.veto.ws.getPort()
-    return _wsPort
+    const port = await window.veto.ws.getPort()
+    _wsPort = port
+    return port
   }
   _wsPort = DEFAULT_WS_PORT
   return _wsPort
@@ -59,6 +60,13 @@ export function getWsPort(): number {
 }
 
 function buildDefaultWsUrl(): string {
+  if (
+    typeof window !== 'undefined' &&
+    window.location.protocol.startsWith('http') &&
+    !['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ) {
+    return `ws://${window.location.host}`
+  }
   return `ws://localhost:${_wsPort ?? DEFAULT_WS_PORT}`
 }
 

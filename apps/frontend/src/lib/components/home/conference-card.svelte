@@ -1,5 +1,16 @@
 <script lang="ts">
-  import { Trash2, Play, Pencil, Check, X, CalendarDays, Users, Building2 } from '@lucide/svelte'
+  import {
+    Trash2,
+    Play,
+    Pencil,
+    Check,
+    X,
+    CalendarDays,
+    Users,
+    Building2,
+    Mic,
+    Bell
+  } from '@lucide/svelte'
   import type { Conference } from '$lib/types-conference'
   import {
     currentConferenceId,
@@ -12,8 +23,12 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { PHASE_LABELS } from '$lib/engine/conference-engine'
+  import { getCurrentSpeakerName, getPendingMotionCount } from './conference-status'
 
   let { conference }: { conference: Conference } = $props()
+
+  const currentSpeaker = $derived(getCurrentSpeakerName(conference))
+  const pendingCount = $derived(getPendingMotionCount(conference))
 
   let editing = $state(false)
   let editName = $state('')
@@ -152,6 +167,18 @@
       <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
         {PHASE_LABELS[conference.phase] ?? conference.phase}
       </span>
+      {#if currentSpeaker}
+        <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+          <Mic class="size-3" />
+          {currentSpeaker}
+        </span>
+      {/if}
+      {#if pendingCount > 0}
+        <span class="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+          <Bell class="size-3" />
+          {pendingCount} 待处理
+        </span>
+      {/if}
     </div>
   </CardContent>
 </Card>

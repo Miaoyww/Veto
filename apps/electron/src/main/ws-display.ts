@@ -10,10 +10,14 @@
  * 消息路由替代广播：不同消息类型路由到不同客户端集合。
  */
 
+import { createServer, IncomingMessage, Server, ServerResponse } from 'http'
+import fs from 'fs'
+import path from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createLogger } from './logger'
-import { createHash, randomBytes, timingSafeEqual, scryptSync } from 'crypto'
+import { randomBytes, timingSafeEqual, scryptSync } from 'crypto'
 import { loadStore } from './data/store'
+import { getAdvertisedConference } from './lan-service'
 
 const log = createLogger('SessionWS')
 
@@ -22,7 +26,6 @@ const MAX_RETRY = 99
 
 // ---- 密码工具 -----------------------------------------------------------
 
-const HASH_ALGORITHM = 'sha256'
 const SALT_LENGTH = 32 // bytes
 const KEY_LENGTH = 64   // bytes
 
@@ -60,6 +63,7 @@ export interface AuthenticatedClient {
   seatGroupId?: string
   conferenceId?: string
   authenticated: boolean
+  isLocal: boolean
 }
 
 /** WS 消息协议 */
@@ -84,6 +88,9 @@ export type AuthResolver = (
 // ---- 服务器状态 ---------------------------------------------------------
 
 let wss: WebSocketServer | null = null
+let httpServer: Server | null = null
+let lastHostMessage: WsMessage | null = null
+let lastTimerMessage: WsMessage | null = null
 
 /** 已认证的客户端映射 */
 const _clients = new Map<WebSocket, AuthenticatedClient>()
@@ -198,40 +205,151 @@ export function getClientsByType(type: string): AuthenticatedClient[] {
 export function startDisplayWs(): Promise<number> {
   return new Promise((resolve, reject) => {
     const tryListen = (port: number): void => {
-      const server = new WebSocketServer({ port, host: '127.0.0.1' })
+      const server = createServer(handleRendererRequest)
+
+      wss = new WebSocketServer({ noServer: true })
+
+      server.on('upgrade', (request, socket, head) => {
+        if (!wss) {
+          socket.destroy()
+          return
+        }
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          server.emit('veto:connection', ws, request)
+        })
+      })
 
       server.on('listening', () => {
-        wss = server
-        log.info(`Session WS listening on ws://127.0.0.1:${port}`)
+        httpServer = server
+        log.info(`Veto LAN server listening on http://0.0.0.0:${port}`)
         setupConnectionHandler(server)
         resolve(port)
       })
 
       server.on('error', (err: NodeJS.ErrnoException) => {
         if (err.code === 'EADDRINUSE' && port < DEFAULT_PORT + MAX_RETRY) {
+          wss?.close()
           server.close()
           tryListen(port + 1)
         } else {
           reject(err)
         }
       })
+
+      server.listen(port, '0.0.0.0')
     }
 
     tryListen(DEFAULT_PORT)
   })
 }
 
-/** 设置连接处理 */
-function setupConnectionHandler(server: WebSocketServer): void {
-  server.on('connection', (ws: WebSocket) => {
-    log.info(`Client connected (total: ${server.clients.size})`)
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.map': 'application/json'
+}
 
-    // 初始未认证状态
+function sendJson(response: ServerResponse, status: number, body: unknown): void {
+  const payload = JSON.stringify(body)
+  response.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'no-store'
+  })
+  response.end(payload)
+}
+
+function serveRendererFile(response: ServerResponse, requestPath: string): void {
+  const rendererRoot = path.resolve(__dirname, '../renderer')
+  const decodedPath = decodeURIComponent(requestPath)
+  let filePath = path.normalize(path.join(rendererRoot, decodedPath))
+
+  if (filePath === rendererRoot) {
+    filePath = path.join(rendererRoot, 'index.html')
+  }
+
+  if (!filePath.startsWith(rendererRoot + path.sep)) {
+    response.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
+    response.end('Forbidden')
+    return
+  }
+
+  let stat: fs.Stats | null = null
+  try {
+    stat = fs.statSync(filePath)
+  } catch {
+    // SPA fallback is required for /delegate/:id and /conference-display/:id.
+    filePath = path.join(rendererRoot, 'index.html')
+    stat = fs.statSync(filePath)
+  }
+
+  if (stat.isDirectory()) {
+    filePath = path.join(filePath, 'index.html')
+    stat = fs.statSync(filePath)
+  }
+
+  const ext = path.extname(filePath).toLowerCase()
+  const isHtml = ext === '.html'
+  response.writeHead(200, {
+    'Content-Type': MIME_TYPES[ext] ?? 'application/octet-stream',
+    'Content-Length': stat.size,
+    'Cache-Control': isHtml ? 'no-store' : 'public, max-age=3600',
+    'X-Content-Type-Options': 'nosniff'
+  })
+  fs.createReadStream(filePath).pipe(response)
+}
+
+function handleRendererRequest(
+  request: IncomingMessage,
+  response: ServerResponse
+): void {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    response.writeHead(405, { Allow: 'GET, HEAD' })
+    response.end()
+    return
+  }
+
+  const requestPath = new URL(request.url ?? '/', 'http://localhost').pathname
+  if (requestPath === '/__veto/health') {
+    sendJson(response, 200, {
+      status: 'ok',
+      server: 'veto.lan',
+      conference: getAdvertisedConference()
+    })
+    return
+  }
+
+  serveRendererFile(response, requestPath)
+}
+
+/** 设置连接处理 */
+function setupConnectionHandler(server: Server): void {
+  server.on('veto:connection', (ws: WebSocket, request: IncomingMessage) => {
+    log.info(`Client connected (total: ${wss?.clients.size ?? 0})`)
+
+    // Unauthenticated connections are read-only display clients.
     const client: AuthenticatedClient = {
       ws,
       clientType: 'display', // 默认 display（向后兼容）
-      authenticated: false
+      authenticated: false,
+      isLocal: isLoopbackAddress(request.socket.remoteAddress)
     }
+
+    if (lastHostMessage) sendTo(ws, lastHostMessage)
+    if (lastTimerMessage) sendTo(ws, lastTimerMessage)
 
     ws.on('message', async (data: Buffer) => {
       let parsed: WsMessage
@@ -247,13 +365,17 @@ function setupConnectionHandler(server: WebSocketServer): void {
 
     ws.on('close', () => {
       _clients.delete(ws)
-      log.info(`Client disconnected (total: ${server.clients.size})`)
+      log.info(`Client disconnected (total: ${wss?.clients.size ?? 0})`)
     })
 
     ws.on('error', (err) => {
       log.warn(`Client connection error: ${err.message}`)
     })
   })
+}
+
+function isLoopbackAddress(address: string | undefined): boolean {
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1'
 }
 
 /** 消息路由 */
@@ -270,18 +392,28 @@ async function handleMessage(
 
   // ── 向后兼容：host 类型 → 广播给所有 Display + Delegate ──
   if (msg.type === 'host') {
+    if (!client.isLocal) {
+      sendError(ws, 'FORBIDDEN', '仅本机主席端可以推送会议画面')
+      return
+    }
     ;(ws as any).__isHost = true
     if (!client.authenticated) {
       // 未认证 host 自动视为 display
       client.clientType = 'display'
       client.authenticated = true
     }
+    lastHostMessage = msg
     broadcastToType(msg, ['display', 'delegate'])
     return
   }
 
   // ── timer_tick → 所有已认证客户端（Display + Delegate + Chair）──
   if (msg.type === 'timer_tick') {
+    if (!client.isLocal) {
+      sendError(ws, 'FORBIDDEN', '仅本机主席端可以推送计时状态')
+      return
+    }
+    lastTimerMessage = msg
     broadcast(msg)
     return
   }
@@ -289,6 +421,12 @@ async function handleMessage(
   // ── 未认证客户端只能发 auth ──
   if (!client.authenticated) {
     sendError(ws, 'UNAUTHORIZED', '请先认证')
+    return
+  }
+
+  // Until seat credentials are implemented, remote clients are read-only.
+  if (!client.isLocal) {
+    sendError(ws, 'READ_ONLY', '当前会议仅允许主席端写入')
     return
   }
 
@@ -355,6 +493,14 @@ async function handleAuth(
 
   // Chair 端自助认证（不需要 inviteCode）
   if (clientType === 'chair') {
+    if (!client.isLocal) {
+      sendTo(ws, {
+        type: 'auth_result',
+        success: false,
+        error: '主席端仅允许本机连接'
+      })
+      return
+    }
     client.clientType = 'chair'
     client.authenticated = true
     _clients.set(ws, client)
@@ -498,18 +644,34 @@ function routeToSeatGroup(msg: WsMessage): void {
 export function stopDisplayWs(): Promise<void> {
   return new Promise((resolve) => {
     _clients.clear()
-    if (!wss) return resolve()
-    for (const client of wss.clients) {
+    lastHostMessage = null
+    lastTimerMessage = null
+    for (const client of wss?.clients ?? []) {
       client.terminate()
     }
+
+    const closeHttp = (done: () => void): void => {
+      if (!httpServer) {
+        done()
+        return
+      }
+      httpServer.close(() => done())
+      httpServer = null
+    }
+
+    if (!wss) {
+      closeHttp(() => resolve())
+      return
+    }
+
     wss.close(() => {
       wss = null
-      resolve()
+      closeHttp(() => resolve())
     })
   })
 }
 
 /** 获取 Session WS 端口 */
 export function getDisplayWsPort(): number {
-  return (wss?.address() as { port: number })?.port ?? 0
+  return (httpServer?.address() as { port: number } | null)?.port ?? 0
 }

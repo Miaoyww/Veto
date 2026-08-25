@@ -79,6 +79,31 @@ export interface VetoAPI {
   ws: {
     getPort: () => Promise<number>
   }
+  lan: {
+    scan: (timeoutMs?: number) => Promise<
+      Array<{
+        conferenceId: string
+        name: string
+        phase: string
+        host: string
+        port: number
+        url: string
+        wsUrl: string
+        appVersion: string
+      }>
+    >
+    getServerInfo: () => Promise<{
+      port: number
+      addresses: string[]
+      urls: string[]
+    }>
+    publishConference: (info: {
+      conferenceId: string
+      name: string
+      phase: string
+    }) => Promise<{ success: boolean }>
+    unpublishConference: () => Promise<{ success: boolean }>
+  }
   services: {
     list: () => Promise<
       Array<{

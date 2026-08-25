@@ -12,7 +12,9 @@
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
     "typecheck": "pnpm -r typecheck",
-    "build": "pnpm --filter \"@vetoexpress/*\" build",
+    "build:frontend": "pnpm --filter @vetoexpress/frontend build",
+    "build:electron": "pnpm --filter @vetoexpress/electron build",
+    "build": "pnpm build:frontend && node scripts/copy-frontend.mjs && pnpm build:electron",
     "test": "vitest run",
     "sync-version": "tsx scripts/sync-version.ts",
     "test:watch": "vitest"
