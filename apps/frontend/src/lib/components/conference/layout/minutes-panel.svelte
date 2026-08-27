@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ScrollText, Gavel, Mic, Vote, MessageSquare, Coffee, Pause, Play, Flag, FileText, Calendar, Check, X, UserPlus, UserCheck } from '@lucide/svelte'
-  import { currentConference } from '$lib/stores/conference/conference-store'
+  import { currentConference } from '$lib/classes/stores/conference/conference-store'
   import { ACTION_LABELS } from '$lib/types-conference'
   import type { ConferenceActionType } from '$lib/types-conference'
 

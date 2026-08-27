@@ -3,8 +3,8 @@
   import * as Avatar from '$lib/components/ui/avatar/index.js'
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import { settingsDialogOpen, activeSettingsSection } from '$lib/stores/app/global-ui-store'
-  import { setOffline, authStore } from '$lib/stores/auth-store'
+  import { settingsDialogOpen, activeSettingsSection } from '$lib/classes/stores/app/global-ui-store'
+  import { setOffline, authStore } from '$lib/classes/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
 

@@ -10,9 +10,9 @@
     disposeTimelineEngine,
     currentTimelineId,
     timelines,
-  } from '$lib/stores/timeline-store'
+  } from '$lib/classes/stores/timeline-store'
   import { get } from 'svelte/store'
-  import { TimelineEngine } from '$lib/engine/timeline-engine.svelte'
+  import { TimelineEngine } from '$lib/classes/engine/timeline-engine.svelte'
 
   const toolId = $derived($page.params.tool_id ?? null)
 

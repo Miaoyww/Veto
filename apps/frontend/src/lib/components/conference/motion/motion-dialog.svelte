@@ -23,8 +23,8 @@
     proposeMotion,
     approveMotion,
     dismissLastResolvedMotion
-  } from '$lib/stores/conference/conference-store'
-  import { resolveMotion, calcMaxSpeakers } from '$lib/engine/conference-engine'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { resolveMotion, calcMaxSpeakers } from '$lib/classes/engine/conference-engine'
   import { goto } from '$app/navigation'
   import { MOTION_LABELS } from '$lib/types-conference'
   import type { MotionType, Attendance, Delegation } from '$lib/types-conference'
@@ -212,7 +212,7 @@
           selectedType === 'unmoderated_caucus' ||
           selectedType === 'individual_speech'
         ) {
-          import('$lib/stores/conference/conference-store').then(({ startCaucus }) => {
+          import('$lib/classes/stores/conference/conference-store').then(({ startCaucus }) => {
             startCaucus(newMotion.id)
           })
         }

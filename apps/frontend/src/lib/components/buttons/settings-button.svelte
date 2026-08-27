@@ -3,7 +3,7 @@
   import { Settings } from '@lucide/svelte'
   import { tweened } from 'svelte/motion'
   import { cubicInOut, linear } from 'svelte/easing'
-  import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
+  import { settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
 
   const rotate = tweened(0, { duration: 300, easing: cubicInOut })
   const scale = tweened(1, { duration: 200, easing: cubicInOut })

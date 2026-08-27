@@ -15,13 +15,13 @@
     getDisplayBridge,
     onConnectionStatus,
     setExternalWsUrl
-  } from '$lib/services/conference-display-bridge'
-  import type { ConnectionStatus } from '$lib/services/conference-display-bridge'
+  } from '$lib/classes/services/conference-display-bridge'
+  import type { ConnectionStatus } from '$lib/classes/services/conference-display-bridge'
   import type { Delegation } from '$lib/types-conference'
   import type { ConferenceDisplayData, TimerTickData } from '$lib/types-conference'
-  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
-  import { globalSettings } from '$lib/stores/app/global-settings.store'
-  import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte'
+  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
+  import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
+  import { useKeyboardShortcuts } from '$lib/classes/hooks/use-keyboard-shortcuts.svelte'
 
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'

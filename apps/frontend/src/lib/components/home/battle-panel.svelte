@@ -4,7 +4,7 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
   import * as InputGroup from '$lib/components/ui/input-group/index.js'
   import * as Card from '$lib/components/ui/card/index.js'
-  import { battles } from '$lib/stores/battle/battle-store'
+  import { battles } from '$lib/classes/stores/battle/battle-store'
   import BattleCard from '$lib/components/home/battle-card.svelte'
   import CreateBattleDialog from '$lib/components/home/create-battle/create-battle-dialog.svelte'
   import { cn } from '$lib/utils.js'

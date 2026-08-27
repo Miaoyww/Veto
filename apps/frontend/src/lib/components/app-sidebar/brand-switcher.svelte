@@ -5,8 +5,8 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import favicon from '$lib/assets/favicon.png'
-  import { VETO_NAME } from '$lib/const'
-  import { currentConference } from '$lib/stores/conference/conference-store'
+  import { VETO_NAME } from '$lib/classes/const'
+  import { currentConference } from '$lib/classes/stores/conference/conference-store'
 
   let { hasConf = false, confPrefix = '/conference' }: { hasConf?: boolean; confPrefix?: string } =
     $props()

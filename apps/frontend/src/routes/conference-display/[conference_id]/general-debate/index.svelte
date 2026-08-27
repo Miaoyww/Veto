@@ -16,7 +16,7 @@
   import SpeakerQueueDisplay from '$lib/components/conference-display/speaker-queue-display.svelte'
   import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
-  import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
+  import { DISPLAY_MAX_SPEAKERS } from '$lib/classes/const'
   import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 

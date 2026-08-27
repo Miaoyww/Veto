@@ -3,7 +3,7 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { globalSettings } from '$lib/stores/app/global-settings.store'
+  import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
   import { fly } from 'svelte/transition'
 
   let offsetX = $state($globalSettings.displayOffsetX)

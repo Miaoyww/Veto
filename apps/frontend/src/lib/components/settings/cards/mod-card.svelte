@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Package, ShieldCheck, User } from '@lucide/svelte'
-  import type { ModData } from '$lib/registry/types'
-  import { registry } from '$lib/registry/mod-registry.svelte'
+  import type { ModData } from '$lib/classes/registry/types'
+  import { registry } from '$lib/classes/registry/mod-registry.svelte'
   import { Badge } from '$lib/components/ui/badge'
 
   let {

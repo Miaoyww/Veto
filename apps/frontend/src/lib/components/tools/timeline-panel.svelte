@@ -4,7 +4,7 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
   import * as InputGroup from '$lib/components/ui/input-group/index.js'
   import * as Card from '$lib/components/ui/card/index.js'
-  import { timelines } from '$lib/stores/timeline-store'
+  import { timelines } from '$lib/classes/stores/timeline-store'
   import TimelineCard from '$lib/components/tools/timeline-card.svelte'
   import CreateTimelineDialog from '$lib/components/tools/create-timeline-dialog.svelte'
   import { cn } from '$lib/utils.js'

@@ -3,9 +3,9 @@
   import { get } from 'svelte/store'
   import { Map, TileLayer } from 'sveaflet'
   import * as L from 'leaflet'
-  import { coords, zoom, mapFlyTo } from '$lib/stores/battle/map-store'
-  import { gameClock } from '$lib/engine/game-clock.store'
-  import { getContactDisplayRadius, isUnitConfirmed } from '$lib/registry/sensor-registry'
+  import { coords, zoom, mapFlyTo } from '$lib/classes/stores/battle/map-store'
+  import { gameClock } from '$lib/classes/engine/game-clock.store'
+  import { getContactDisplayRadius, isUnitConfirmed } from '$lib/classes/registry/sensor-registry'
   import UnitContextMenu from './context-menus/unit-context-menu.svelte'
   import MapContextMenu from './context-menus/map-context-menu.svelte'
   import FacilityPopup from './cards/facility-popup.svelte'
@@ -24,12 +24,12 @@
     updatePlacedUnit,
     addLog,
     runtimePositions
-  } from '$lib/stores/battle/battle-store'
-  import { pendingRoute, addPendingPoint, cancelPendingRoute, applyPendingRoute, selectedWaypoint, routeInsertMode } from '$lib/stores/battle/route.store'
-  import { unitDragEnabled } from '$lib/stores/battle/battle-ui-store'
+  } from '$lib/classes/stores/battle/battle-store'
+  import { pendingRoute, addPendingPoint, cancelPendingRoute, applyPendingRoute, selectedWaypoint, routeInsertMode } from '$lib/classes/stores/battle/route.store'
+  import { unitDragEnabled } from '$lib/classes/stores/battle/battle-ui-store'
   import type { UnitTemplate, PlacedUnit, Faction, FacilityType } from '$lib/types'
   import { getNatoIcon } from '$lib/utils/unit-icon'
-  import { getMilSymbolSVG, getMilSymbolAnchor } from '$lib/utils/milsymbol-utils'
+  import { getMilSymbolSVG, getMilSymbolAnchor } from '$lib/classes/utils/milsymbol-utils'
   import { fly } from 'svelte/transition'
 
   /** 设施类型 → 北约 7 字符功能代码（兼容现有 milsymbol 管线） */

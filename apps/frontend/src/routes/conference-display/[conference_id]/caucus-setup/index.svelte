@@ -9,7 +9,7 @@
   import AutoFitText from '$lib/components/conference-display/auto-fit-text.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
-  import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
+  import { DISPLAY_MAX_SPEAKERS } from '$lib/classes/const'
   import { Users } from '@lucide/svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()

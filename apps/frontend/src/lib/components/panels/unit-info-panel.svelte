@@ -4,9 +4,9 @@
     selectedPlacedUnitId,
     selectedPlacedUnit,
     runtimePositions
-  } from '$lib/stores/battle/battle-store'
-  import { mods } from '$lib/registry/mod-registry.svelte'
-  import { getSensorDefinition } from '$lib/registry/sensor-registry'
+  } from '$lib/classes/stores/battle/battle-store'
+  import { mods } from '$lib/classes/registry/mod-registry.svelte'
+  import { getSensorDefinition } from '$lib/classes/registry/sensor-registry'
   import {
     Heart,
     Zap,

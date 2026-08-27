@@ -1,9 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { Trash2, Play, Pencil, Check, X, Clock, Copy } from '@lucide/svelte'
-  import type { Timeline } from '$lib/stores/timeline-store'
-  import { currentTimelineId, deleteTimeline, renameTimeline } from '$lib/stores/timeline-store'
-  import { showConfirm } from '$lib/stores/app/global-ui-store'
+  import type { Timeline } from '$lib/classes/stores/timeline-store'
+  import { currentTimelineId, deleteTimeline, renameTimeline } from '$lib/classes/stores/timeline-store'
+  import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'

@@ -3,10 +3,10 @@
   import { Button } from '$lib/components/ui/button'
   import * as Popover from '$lib/components/ui/popover'
   import * as Command from '$lib/components/ui/command'
-  import { standaloneTimer, timerDialogOpen } from '$lib/stores/conference/timer-store'
+  import { standaloneTimer, timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
   import { formatTime } from '$lib/utils'
-  import { timelines } from '$lib/stores/timeline-store'
-  import { currentConference, bindTimeline } from '$lib/stores/conference/conference-store'
+  import { timelines } from '$lib/classes/stores/timeline-store'
+  import { currentConference, bindTimeline } from '$lib/classes/stores/conference/conference-store'
 
   // ─── 时间线数据 ──────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { currentBattle, selectedPlacedUnitId } from '$lib/stores/battle/battle-store'
-  import { mapFlyTo } from '$lib/stores/battle/map-store'
+  import { currentBattle, selectedPlacedUnitId } from '$lib/classes/stores/battle/battle-store'
+  import { mapFlyTo } from '$lib/classes/stores/battle/map-store'
   import type { ActionLogEntry, MessageCategory } from '$lib/types'
   import { Swords, Navigation, Settings, Calendar, ChevronDown, ChevronUp } from '@lucide/svelte'
   import { fly } from 'svelte/transition'

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { UnitTemplate, PlacedUnit, Faction } from '$lib/types';
-	import { mods } from '$lib/registry/mod-registry.svelte';
+	import { mods } from '$lib/classes/registry/mod-registry.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import {
 		Heart,
@@ -13,7 +13,7 @@
 		MapPin
 	} from '@lucide/svelte';
 	import NatoSymbol from '../../nato-symbol.svelte';
-	import { runtimePositions } from '$lib/stores/battle/battle-store';
+	import { runtimePositions } from '$lib/classes/stores/battle/battle-store';
 
 	let { unit, faction, placed }: { unit: UnitTemplate; faction: Faction; placed: PlacedUnit } =
 		$props();

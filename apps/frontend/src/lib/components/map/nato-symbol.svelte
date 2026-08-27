@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getMilSymbolSVG } from '$lib/utils/milsymbol-utils';
+	import { getMilSymbolSVG } from '$lib/classes/utils/milsymbol-utils';
 
 	let {
 		natoCode,

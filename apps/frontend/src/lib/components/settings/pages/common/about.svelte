@@ -14,7 +14,7 @@
   import { Label } from '$lib/components/ui/label'
   import SettingCard from '../../settings-card.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
-  import { VETO_NAME } from '$lib/const'
+  import { VETO_NAME } from '$lib/classes/const'
   import { fly } from 'svelte/transition'
   import { onMount, onDestroy } from 'svelte'
 

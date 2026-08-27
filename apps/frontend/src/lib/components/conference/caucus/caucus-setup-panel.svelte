@@ -9,14 +9,14 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
-  import { currentConference } from '$lib/stores/conference/conference-store'
+  import { currentConference } from '$lib/classes/stores/conference/conference-store'
   import {
     setCaucusProposerPosition,
     addToCaucusSpeakers,
     removeFromCaucusSpeakers,
     startCaucusWithSetup,
     endCaucus
-  } from '$lib/stores/conference/conference-store'
+  } from '$lib/classes/stores/conference/conference-store'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
   import type { Delegation } from '$lib/types-conference'
 

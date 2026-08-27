@@ -8,7 +8,7 @@
     currentConference,
     pointDraft,
     proposePoint
-  } from '$lib/stores/conference/conference-store'
+  } from '$lib/classes/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/types-conference'
   import type { Delegation, PointType } from '$lib/types-conference'
   import { goto } from '$app/navigation'

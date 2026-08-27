@@ -4,7 +4,7 @@
   import { Input } from '$lib/components/ui/input/index.js'
   import { Label } from '$lib/components/ui/label/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
-  import { getWsUrl } from '$lib/services/conference-display-bridge'
+  import { getWsUrl } from '$lib/classes/services/conference-display-bridge'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 

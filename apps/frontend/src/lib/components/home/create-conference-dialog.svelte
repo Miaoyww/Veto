@@ -3,7 +3,7 @@
   import UsersIcon from '@lucide/svelte/icons/users'
   import PuzzleIcon from '@lucide/svelte/icons/puzzle'
   import { navigateToConference } from '$lib/utils'
-  import { createConference } from '$lib/stores/conference/conference-store'
+  import { createConference } from '$lib/classes/stores/conference/conference-store'
   import {
     delegationPresets,
     presetsLoading,
@@ -12,7 +12,7 @@
     startAutoRefresh,
     formatPresetAsText,
     type DelegationPreset
-  } from '$lib/stores/conference/delegation-preset-store'
+  } from '$lib/classes/stores/conference/delegation-preset-store'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Input } from '$lib/components/ui/input/index.js'

@@ -21,11 +21,18 @@ import { createLogger } from '../logger'
 const log = createLogger('DataStore')
 
 /** 数据域 */
-export type StoreDomain = 'conferences' | 'battles' | 'settings' | 'tools' | 'auth'
+export type StoreDomain =
+  | 'conferences'
+  | 'events'
+  | 'battles'
+  | 'settings'
+  | 'tools'
+  | 'auth'
 
 /** 数据域 → 文件名映射 */
 const FILES: Record<StoreDomain, string> = {
   conferences: 'conferences.json',
+  events: 'conference-events.json',
   battles: 'battles.json',
   settings: 'settings.json',
   tools: 'tools.json',

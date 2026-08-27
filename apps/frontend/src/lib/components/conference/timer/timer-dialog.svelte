@@ -13,7 +13,7 @@
     startStandaloneTimer,
     pauseStandaloneTimer,
     resetStandaloneTimer
-  } from '$lib/stores/conference/timer-store'
+  } from '$lib/classes/stores/conference/timer-store'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 

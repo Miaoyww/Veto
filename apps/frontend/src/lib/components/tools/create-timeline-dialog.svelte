@@ -3,14 +3,14 @@
   import ClockIcon from '@lucide/svelte/icons/clock'
   import CalendarIcon from '@lucide/svelte/icons/calendar'
   import { goto } from '$app/navigation'
-  import { createTimeline } from '$lib/stores/timeline-store'
+  import { createTimeline } from '$lib/classes/stores/timeline-store'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
   import { Label } from '$lib/components/ui/label/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import * as Popover from '$lib/components/ui/popover/index.js'
   import { Calendar } from '$lib/components/ui/calendar/index.js'
-  import { RATIO_PRESETS } from '$lib/engine/timeline-engine.svelte'
+  import { RATIO_PRESETS } from '$lib/classes/engine/timeline-engine.svelte'
   import { today, getLocalTimeZone, type CalendarDate } from '@internationalized/date'
 
   let { open = $bindable(false) }: { open: boolean } = $props()

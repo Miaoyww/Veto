@@ -21,15 +21,14 @@
   import { Button } from '$lib/components/ui/button'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { currentConferenceId, conferences } from '$lib/stores/conference/conference-store'
+  import { currentConferenceId, conferences } from '$lib/classes/stores/conference/conference-store'
   import { page } from '$app/stores'
   import { navigateToConference } from '$lib/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
-  import CreateConferenceDialog from './home/create-conference-dialog.svelte'
   import NavUser from './app-sidebar/nav-user.svelte'
   import DynamicIsland from './dynamic-island.svelte'
-  import { currentConference } from '$lib/stores/conference/conference-store'
+  import { currentConference } from '$lib/classes/stores/conference/conference-store'
   import { cn } from '$lib/utils.js'
   import JoinConferenceDialog from './home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from './conference/display-only-dialog.svelte'
@@ -61,7 +60,6 @@
     console.log(routeId)
   })
   let displayOnlyDialogOpen = $state(false)
-  let createDialogOpen = $state(false)
   let joinBattleDialogOpen = $state(false)
   function goTo(path: string): void {
     // @ts-expect-error resolve 要求字面量路由类型，这里接受通用 string
@@ -170,7 +168,10 @@
             </Sidebar.MenuItem>
 
             <Sidebar.MenuItem>
-              <Sidebar.MenuButton onclick={() => (createDialogOpen = true)} class="cursor-pointer">
+              <Sidebar.MenuButton
+                onclick={() => goTo('/conference-events/new')}
+                class="cursor-pointer"
+              >
                 <Plus size={18} />
                 <span>创建大会</span>
               </Sidebar.MenuButton>
@@ -278,8 +279,9 @@
         {/if}
         <Sidebar.Trigger class="-ms-1" />
 
-        <Separator orientation="vertical" class="me-2 h-4" />
         {#if conf}
+          <Separator orientation="vertical" class="me-2 h-4" />
+
           <!-- 表决信息 -->
           <div class="pb-3">
             <div class="mt-1.5 grid grid-cols-2 gap-2">
@@ -335,8 +337,6 @@
   {@render children()}
 {/if}
 <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
-
-<CreateConferenceDialog bind:open={createDialogOpen} />
 
 <JoinConferenceDialog bind:open={joinBattleDialogOpen} />
 

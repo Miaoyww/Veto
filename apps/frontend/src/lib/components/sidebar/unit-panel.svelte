@@ -10,17 +10,17 @@
     updateFaction,
     interactionMode,
     pendingPlaceUnitId
-  } from '$lib/stores/battle/battle-store'
+  } from '$lib/classes/stores/battle/battle-store'
   import type { UnitTemplate, UnitSide } from '$lib/types'
-  import { registry, mods } from '$lib/registry/mod-registry.svelte'
-  import type { CategoryDefinition, ComponentTypeGroup } from '$lib/registry/types'
+  import { registry, mods } from '$lib/classes/registry/mod-registry.svelte'
+  import type { CategoryDefinition, ComponentTypeGroup } from '$lib/classes/registry/types'
   import { X, Swords, Pencil, Check } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import BranchSelector from '$lib/components/buttons/branch-selector.svelte'
-  import { mapFlyTo } from '$lib/stores/battle/map-store'
+  import { mapFlyTo } from '$lib/classes/stores/battle/map-store'
   import {
     Card,
     CardContent,
@@ -28,7 +28,7 @@
     CardTitle,
     CardDescription
   } from '$lib/components/ui/card'
-  import { runtimePositions } from '$lib/stores/battle/battle-store'
+  import { runtimePositions } from '$lib/classes/stores/battle/battle-store'
   import UnitListRow from '$lib/components/cards/units/unit-list-row.svelte'
 
   // 编辑状态
@@ -183,7 +183,7 @@
   function removeComponent(compId: string) {
     if (!$currentFactionId || !editingUnitId) return
     updateUnit($currentFactionId, editingUnitId, (u) => {
-      const newComponents: Record<string, import('$lib/registry/types').ComponentEntry[]> = {}
+      const newComponents: Record<string, import('$lib/classes/registry/types').ComponentEntry[]> = {}
       for (const [key, entries] of Object.entries(u.components ?? {})) {
         newComponents[key] = entries.filter((e) => e.id !== compId)
       }

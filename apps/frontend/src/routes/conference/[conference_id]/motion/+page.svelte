@@ -30,11 +30,11 @@
     loadConference,
     approveMotion,
     rejectMotion
-  } from '$lib/stores/conference/conference-store'
-  import { resolveMotion } from '$lib/engine/conference-engine'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { resolveMotion } from '$lib/classes/engine/conference-engine'
   import { MOTION_LABELS } from '$lib/types-conference'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import { VETO_NAME } from '$lib/const'
+  import { getDisplayBridge, buildDisplayData } from '$lib/classes/services/conference-display-bridge'
+  import { VETO_NAME } from '$lib/classes/const'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)

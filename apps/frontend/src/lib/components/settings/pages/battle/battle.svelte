@@ -7,8 +7,8 @@
 		clearLog,
 		deleteBattle,
 		getBattleById
-	} from '$lib/stores/battle/battle-store';
-	import { showConfirm } from '$lib/stores/app/global-ui-store';
+	} from '$lib/classes/stores/battle/battle-store';
+	import { showConfirm } from '$lib/classes/stores/app/global-ui-store';
 	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';

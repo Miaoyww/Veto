@@ -11,8 +11,8 @@
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
-  import { settingsDialogOpen, activeSettingsSection } from '$lib/stores/app/global-ui-store'
-  import { authStore } from '$lib/stores/auth-store'
+  import { settingsDialogOpen, activeSettingsSection } from '$lib/classes/stores/app/global-ui-store'
+  import { authStore } from '$lib/classes/stores/auth-store'
   const version = __APP_VERSION__
 
   let activeSection = $state<Section>('general')
@@ -80,7 +80,7 @@
           </div>
 
           <!-- 用户卡片 -->
-          <div class="px-3 pt-1 pb-1">
+          <!-- <div class="px-3 pt-1 pb-1">
             <button
               class="w-full cursor-pointer rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-accent"
               class:bg-accent={activeSection === 'account'}
@@ -102,7 +102,7 @@
                 <BadgeCheck size={16} class="shrink-0 text-muted-foreground" />
               </div>
             </button>
-          </div>
+          </div> -->
 
           <div class="px-3 pb-1">
             <Separator.Root />

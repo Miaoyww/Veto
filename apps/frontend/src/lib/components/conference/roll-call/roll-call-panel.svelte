@@ -5,8 +5,8 @@
     currentConference,
     changeDelegationAttendance,
     completeRollCall
-  } from '$lib/stores/conference/conference-store'
-  import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { calculateMajorityThresholds } from '$lib/classes/engine/conference-engine'
   import { cn } from '$lib/utils.js'
 
   const conf = $derived($currentConference)

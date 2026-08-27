@@ -1,6 +1,6 @@
 <script lang="ts">
   import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "$lib/components/ui/alert-dialog";
-  import { alertDialogStore, hideAlert } from "$lib/stores/app/global-ui-store";
+  import { alertDialogStore, hideAlert } from "$lib/classes/stores/app/global-ui-store";
   import { get } from "svelte/store";
 
   let state = get(alertDialogStore);

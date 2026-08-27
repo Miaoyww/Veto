@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Minus, Settings, Square, X } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
-  import { settingsDialogOpen } from '$lib/stores/app/global-ui-store'
+  import { settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
 
   function minimize() {
     window.electron.ipcRenderer.send('window:minimize')

@@ -37,9 +37,9 @@
     removeDelegation,
     resetRollCall,
     saveConferencesNow
-  } from '$lib/stores/conference/conference-store'
-  import { calculateMajorityThresholds, destroyAllTimers } from '$lib/engine/conference-engine'
-  import { VETO_NAME } from '$lib/const'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { calculateMajorityThresholds, destroyAllTimers } from '$lib/classes/engine/conference-engine'
+  import { VETO_NAME } from '$lib/classes/const'
   import type { Attendance } from '$lib/types-conference'
   import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
   import { resolve } from '$app/paths'

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Seat, Capability } from '$lib/types-delegate'
-  import { addSeat, updateSeat, setSeatPassword } from '$lib/stores/delegate/delegate-store'
+  import { addSeat, updateSeat, setSeatPassword } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'

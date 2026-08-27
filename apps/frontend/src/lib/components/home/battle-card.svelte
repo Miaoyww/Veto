@@ -7,9 +7,9 @@
     loadBattle,
     deleteBattle,
     renameBattle
-  } from '$lib/stores/battle/battle-store'
-  import { showConfirm } from '$lib/stores/app/global-ui-store'
-  import { registry } from '$lib/registry/mod-registry.svelte'
+  } from '$lib/classes/stores/battle/battle-store'
+  import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
+  import { registry } from '$lib/classes/registry/mod-registry.svelte'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'

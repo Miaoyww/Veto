@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Facility, FacilityType } from '$lib/types'
-  import { getMilSymbolSVG } from '$lib/utils/milsymbol-utils'
+  import { getMilSymbolSVG } from '$lib/classes/utils/milsymbol-utils'
 
   let { facility, onclick }: { facility: Facility; onclick?: () => void } = $props()
 

@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
 
-  import { VETO_NAME } from '$lib/const'
+  import { VETO_NAME } from '$lib/classes/const'
 
   import {
     currentConference,
@@ -14,19 +14,19 @@
     saveConferencesNow,
     setPhase,
     resumeMeeting
-  } from '$lib/stores/conference/conference-store'
+  } from '$lib/classes/stores/conference/conference-store'
 
-  import { destroyAllTimers } from '$lib/engine/conference-engine'
+  import { destroyAllTimers } from '$lib/classes/engine/conference-engine'
 
   import {
     getDisplayBridge,
     buildDisplayData,
     initWsPort
-  } from '$lib/services/conference-display-bridge'
+  } from '$lib/classes/services/conference-display-bridge'
 
-  import { PHASE_LABELS } from '$lib/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
 
-  import { timerDialogOpen } from '$lib/stores/conference/timer-store'
+  import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
 
   import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
   import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'

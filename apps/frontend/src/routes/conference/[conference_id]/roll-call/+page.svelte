@@ -10,10 +10,10 @@
     loadConference,
     changeDelegationAttendance,
     completeRollCall
-  } from '$lib/stores/conference/conference-store'
-  import { calculateMajorityThresholds } from '$lib/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/services/conference-display-bridge'
-  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/const'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { calculateMajorityThresholds } from '$lib/classes/engine/conference-engine'
+  import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/classes/services/conference-display-bridge'
+  import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import type { Delegation, Attendance } from '$lib/types-conference'
 
   const conferenceId = $derived($page.params.conference_id ?? null)

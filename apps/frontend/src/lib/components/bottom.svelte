@@ -1,7 +1,7 @@
 <script lang="ts">
   import SettingsButton from '$lib/components/buttons/settings-button.svelte'
   import { Button } from '$lib/components/ui/button'
-    import { leftBarPinned, unitsCardOpen, unitDragEnabled } from '$lib/stores/battle/battle-ui-store'
+    import { leftBarPinned, unitsCardOpen, unitDragEnabled } from '$lib/classes/stores/battle/battle-ui-store'
   import {
     interactionMode,
     saveBattleWithToast,
@@ -12,9 +12,9 @@
     clearRoute,
     updatePlacedUnit,
     addLog
-  } from '$lib/stores/battle/battle-store'
+  } from '$lib/classes/stores/battle/battle-store'
   import { Activity, Ruler, Save, Swords, Crosshair, X, Zap, Hand } from '@lucide/svelte'
-  import { coords } from '$lib/stores/battle/map-store'
+  import { coords } from '$lib/classes/stores/battle/map-store'
   import { fly } from 'svelte/transition'
 
   let lat = $derived($coords.lat.toFixed(5))

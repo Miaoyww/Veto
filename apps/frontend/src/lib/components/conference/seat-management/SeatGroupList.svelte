@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SeatGroup } from '$lib/types-delegate'
-  import { seatGroups, removeSeatGroup } from '$lib/stores/delegate/delegate-store'
+  import { seatGroups, removeSeatGroup } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'
   import { Trash2, Edit3, Users } from '@lucide/svelte'

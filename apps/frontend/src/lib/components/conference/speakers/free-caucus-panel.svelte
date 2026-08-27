@@ -17,12 +17,12 @@
     endCaucus,
     pauseCaucus,
     resumeCaucus
-  } from '$lib/stores/conference/conference-store'
-  import { destroyTimer } from '$lib/engine/conference-engine'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { destroyTimer } from '$lib/classes/engine/conference-engine'
   import { formatTime } from '$lib/utils'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import { useCaucusCountdown } from '$lib/hooks/use-caucus-countdown.svelte'
-  import type { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
+  import { getDisplayBridge, buildDisplayData } from '$lib/classes/services/conference-display-bridge'
+  import { useCaucusCountdown } from '$lib/classes/hooks/use-caucus-countdown.svelte'
+  import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
 
   const conf = $derived($currentConference)
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Download, CheckCircle2, Loader, Tag, User, Package, Star } from '@lucide/svelte'
-  import type { PluginManifest } from '$lib/services/plugin-db'
-  import { installPlugin } from '$lib/services/plugin-registry'
+  import type { PluginManifest } from '$lib/classes/services/plugin-db'
+  import { installPlugin } from '$lib/classes/services/plugin-registry'
   import { Button } from '$lib/components/ui/button'
   import { onMount } from 'svelte'
 

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
 
   import { Search, Plus, Users, Monitor, UserPlus, Play, Mic, Bell, Clock } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -12,12 +14,12 @@
     lastOpenedConferenceId,
     unloadConference,
     getPresentCount
-  } from '$lib/stores/conference/conference-store'
+  } from '$lib/classes/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
   import JoinConferenceDialog from '$lib/components/home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
-  import { PHASE_LABELS } from '$lib/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
   import {
     getCurrentSpeakerName,
     getPendingMotionCount
@@ -26,7 +28,6 @@
   import { fly } from 'svelte/transition'
 
   let query = $state('')
-  let createDialogOpen = $state(false)
   let joinDialogOpen = $state(false)
   let displayOnlyDialogOpen = $state(false)
 
@@ -74,7 +75,7 @@
             </p>
           </div>
           <div class="flex gap-3">
-            <Button size="lg" class="gap-2" onclick={() => (createDialogOpen = true)}>
+            <Button size="lg" class="gap-2" onclick={() => goto(resolve('/conference-events/new'))}>
               <Plus size={18} />
               创建新大会
             </Button>
@@ -93,7 +94,6 @@
     {:else}
       <!-- Header -->
       <div class="grid grid-cols-3 items-center gap-6 border-b px-8 py-5">
-
         <!-- 中间：搜索 -->
         <InputGroup.Root>
           <InputGroup.Input bind:value={query} placeholder="搜索大会..." />
@@ -101,6 +101,13 @@
             <Search class="h-4 w-4" />
           </InputGroup.Addon>
         </InputGroup.Root>
+
+        <div class="flex justify-end">
+          <Button class="gap-2" onclick={() => goto(resolve('/conference-events/new'))}>
+            <Plus size={16} />
+            创建大会
+          </Button>
+        </div>
       </div>
 
       <!-- Conference List -->
@@ -183,8 +190,6 @@
     {/if}
   </div>
 </div>
-
-<CreateConferenceDialog bind:open={createDialogOpen} />
 
 <JoinConferenceDialog bind:open={joinDialogOpen} />
 

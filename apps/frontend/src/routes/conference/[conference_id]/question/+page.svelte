@@ -14,11 +14,11 @@
     currentConferenceId,
     loadConference,
     dismissLatestPoint
-  } from '$lib/stores/conference/conference-store'
+  } from '$lib/classes/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/types-conference'
   import type { PointType } from '$lib/types-conference'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import { VETO_NAME } from '$lib/const'
+  import { getDisplayBridge, buildDisplayData } from '$lib/classes/services/conference-display-bridge'
+  import { VETO_NAME } from '$lib/classes/const'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
 

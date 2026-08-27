@@ -6,7 +6,7 @@
   import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
-  import { DISPLAY_MAX_SPEAKERS } from '$lib/const'
+  import { DISPLAY_MAX_SPEAKERS } from '$lib/classes/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>

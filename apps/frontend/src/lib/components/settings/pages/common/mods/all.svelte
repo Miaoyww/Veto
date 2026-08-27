@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Puzzle } from '@lucide/svelte'
-  import { registry } from '$lib/registry/mod-registry.svelte'
+  import { registry } from '$lib/classes/registry/mod-registry.svelte'
   import ModCard from '../../../cards/mod-card.svelte'
 
   // 直接从 registry 获取响应式列表

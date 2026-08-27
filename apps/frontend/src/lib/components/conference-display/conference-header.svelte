@@ -4,7 +4,7 @@
    * ─────────────────────────
    * Display 顶部横幅 —— 会场信息 + 阶段指示器。可复用于所有 Display 窗口。
    */
-  import { PHASE_LABELS } from '$lib/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
 
   let {
     venue,

@@ -11,10 +11,10 @@
     X
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
-  import type { PluginManifest } from '$lib/services/plugin-db'
-  import { dbGetAllPlugins } from '$lib/services/plugin-db'
-  import { fetchPluginRegistry, fetchPluginStars } from '$lib/services/plugin-registry'
-  import { importModPackage } from '$lib/services/mod-package-service'
+  import type { PluginManifest } from '$lib/classes/services/plugin-db'
+  import { dbGetAllPlugins } from '$lib/classes/services/plugin-db'
+  import { fetchPluginRegistry, fetchPluginStars } from '$lib/classes/services/plugin-registry'
+  import { importModPackage } from '$lib/classes/services/mod-package-service'
   import RegistryPluginCard from '../../../cards/registry-plugin-card.svelte'
   import { onMount } from 'svelte'
 

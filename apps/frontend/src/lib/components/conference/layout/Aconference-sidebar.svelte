@@ -13,9 +13,9 @@
     X
   } from '@lucide/svelte'
   import { goto } from '$app/navigation'
-  import { currentConference } from '$lib/stores/conference/conference-store'
-  import { bindTimeline } from '$lib/stores/conference/conference-store'
-  import { PHASE_LABELS } from '$lib/engine/conference-engine'
+  import { currentConference } from '$lib/classes/stores/conference/conference-store'
+  import { bindTimeline } from '$lib/classes/stores/conference/conference-store'
+  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
   import { Button } from '$lib/components/ui/button'
 
   import { cn } from '$lib/utils.js'

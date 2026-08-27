@@ -20,7 +20,7 @@
     resolveYieldToDelegate,
     resolveYieldToQuestion,
     resolveYieldToComment
-  } from '$lib/stores/conference/conference-store'
+  } from '$lib/classes/stores/conference/conference-store'
   import type { Conference, YieldPendingState } from '$lib/types-conference'
 
   interface Props {

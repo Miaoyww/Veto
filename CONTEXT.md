@@ -1,25 +1,32 @@
 # Veto
 
-模拟联合国大会统筹平台。用户可创建完整大会，管理席位组（内阁/委员会、MPC、学团 IPC），
-分配代表权限，支持常委模式（standing）和危机联动模式（crisis）之间的切换。
+模拟联合国大会统筹平台。用户创建大会（ConferenceEvent），并在大会下规划多场小会议
+（Conference），管理角色、席位、新闻、局势与文件，支持常委模式（standing）和危机联动模式
+（crisis）之间的切换。
 
 三种角色：**Chair**（主席/学团控制端）、**Delegate**（代表端）、**Display**（投屏端）。
 
-## Conference（大会）
+## ConferenceEvent（大会）
 
-一场完整的模拟联合国大会的顶层容器。包含多个席位组、时间线，统筹管理整场活动。
-旧模型中"一个委员会"的 Conference 现已降级为 standing 模式下的一类 SeatGroup 行为。
+**ConferenceEvent (大会)**:
+一场完整模拟联合国活动的根实体，如“枣庄市第17届模拟联合国大会”。包含一场或多场小会议、
+大会级角色模板、全局新闻和全局局势更新。大会本身不直接承载发言名单、动议、表决等议事流程。
+_Avoid_: Meeting, Session, Committee, Conference
 
-**Conference (大会)**:
-整场模拟联合国活动的根实体。包含席位组列表、时间线绑定，是主席创建会议的入口。
-_Avoid_: Meeting, Session, Committee
+## Conference（小会议）
+
+**Conference (小会议)**:
+大会下的一场具体会议，如“美国内阁”“英国内阁”“MPC”。每场小会议拥有自己的主席、席位、
+议事状态、指令、代表团与局域网服务。发言名单、动议、表决等议事流程属于小会议。
+现有代码中的 Conference 先保持该名称并降级为该含义，后续迁移时避免一次性重命名。
+_Avoid_: Event, Cabinet, Committee Group
 
 ## SeatGroup（席位组）
 
-大会下的一级组织单元。有三种类型：内阁/委员会、MPC、学团 IPC。
+小会议内的席位组织单元。有三种类型：内阁/委员会、MPC、学团 IPC。
 
 **SeatGroup (席位组)**:
-一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在大会议事规则中的角色。
+一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在小会议中的协作方式。
 可选择性绑定到一个 Delegation。
 _Avoid_: Role, Team, Group
 
@@ -44,7 +51,7 @@ _Avoid_: Committee, Council
 _Avoid_: Press, Media
 
 **学团 IPC (推演控制中心)**:
-大会的控制中枢。成员能力独立灵活分配（某人处理指令、某人审核新闻、某人发布局势、某人控制会议）。
+大会侧的推演控制会议。成员能力独立灵活分配（某人处理指令、某人审核新闻、某人发布局势、某人控制会议）。
 可随时绑定/取消绑定到 Delegation。
 _Avoid_: Chair, Admin, Director
 
@@ -55,6 +62,13 @@ _Avoid_: Chair, Admin, Director
 在 crisis 模式下，Seat 绑定具体部门（如"海军部长""情报局局长"）；在 standing 模式下，
 Seat 代表国家代表团内的一个角色（如"德国外交部长"）。
 _Avoid_: Member, User, Delegate
+
+## RoleTemplate（角色模板）
+
+**RoleTemplate (角色模板)**:
+大会级角色定义，包含名称与默认能力集。小会议创建席位时选择角色模板，并可在席位上覆盖具体能力。
+常见模板包括常规代表、MPC 记者、观察员、学团控制者。角色模板不是登录身份；席位才是代表身份。
+_Avoid_: Role, Permission, Account
 
 ## Account（账号）
 
@@ -71,15 +85,18 @@ Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（
 
 | 能力 | 说明 |
 |---|---|
-| `view_conference` | 查看会议状态（发言名单、动议、投票等） |
-| `draft_news` | MPC：起草新闻草稿 |
-| `review_news` | 学团：审核新闻 |
-| `submit_directive` | 危机模式：提交指令 |
-| `process_directive` | 学团：处理指令 |
-| `publish_situation` | 学团：发布局势更新 |
-| `control_conference` | 控制会议流程（点名、发言、动议、投票） |
-| `draft_resolution` | 常委模式：起草决议 |
-| `internal_vote` | 内阁内部表决 |
+| `view_conference` | 查看会议状态 |
+| `view_situation` | 查看全局局势 |
+| `view_news` | 查看全局新闻 |
+| `view_files` | 查看文件 |
+| `draft_news` | 起草新闻草稿 |
+| `review_news` | 审核新闻 |
+| `submit_directive` | 提交指令 |
+| `process_directive` | 处理指令 |
+| `send_files` | 发送文件 |
+| `publish_situation` | 发布局势更新 |
+| `control_conference` | 控制会议流程 |
+| `draft_resolution` | 起草决议 |
 
 _Avoid_: Permission, Right, Role
 
@@ -98,7 +115,7 @@ _Avoid_: Order, Command, Request
 ## News（新闻）
 
 **News (新闻)**:
-MPC 成员起草、学团审核后发布的新闻稿。生命周期：
+属于大会层的全局新闻稿，由 MPC 成员起草、学团审核后发布。生命周期：
 draft → submitted → review（学团审核）→ published / rejected。
 驳回后可修改重交。已发布新闻可被撤回（从全局新闻列表移除，非软删除）。
 包含 source 字段标识通讯社名称，为 MPC 内部细分预留。
@@ -107,7 +124,7 @@ _Avoid_: Article, Post, Bulletin
 ## SituationUpdate（局势更新）
 
 **SituationUpdate (局势更新)**:
-学团 IPC 发布的局势变化公告。关联 Timeline，全局可见（所有代表看到相同内容）。
+属于大会层的全局局势变化公告，由学团 IPC 发布。关联 Timeline，所有小会议中的代表看到相同内容。
 当前阶段不考虑分内阁差异化情报。预留 `relatedBattleId` 和 `relatedLocation` 字段供未来地图集成。
 _Avoid_: Event, Update, Intel
 

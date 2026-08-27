@@ -22,13 +22,13 @@
     advanceCaucusSpeaker,
     cancelCaucusSpeaker,
     startCaucusSpeaker
-  } from '$lib/stores/conference/conference-store'
-  import { destroyTimer } from '$lib/engine/conference-engine'
+  } from '$lib/classes/stores/conference/conference-store'
+  import { destroyTimer } from '$lib/classes/engine/conference-engine'
   import { formatTime } from '$lib/utils'
-  import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/hooks/use-speaker-timer.svelte'
-  import { usePausedStateRestore } from '$lib/hooks/use-paused-state-restore.svelte'
-  import type { ConferenceEngine } from '$lib/engine/ConferenceEngine.svelte'
+  import { getDisplayBridge, buildDisplayData } from '$lib/classes/services/conference-display-bridge'
+  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/hooks/use-speaker-timer.svelte'
+  import { usePausedStateRestore } from '$lib/classes/hooks/use-paused-state-restore.svelte'
+  import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
   import type { SpeakerDisplayEntry } from '$lib/types-conference'
 
   // ── 发言队列数据 ──────────────────────────────────────────────

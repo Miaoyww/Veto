@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SeatGroup, Seat } from '$lib/types-delegate'
-  import { currentConference } from '$lib/stores/conference/conference-store'
+  import { currentConference } from '$lib/classes/stores/conference/conference-store'
   import SeatGroupList from './SeatGroupList.svelte'
   import SeatGroupEditor from './SeatGroupEditor.svelte'
   import SeatList from './SeatList.svelte'

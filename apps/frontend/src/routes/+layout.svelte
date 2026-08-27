@@ -3,22 +3,22 @@
   import '../css/components.css'
   import '$units' // 初始化 ModRegistry 基础数据
   import { ModeWatcher } from 'mode-watcher'
-  import { VETO_NAME } from '$lib/const'
+  import { VETO_NAME } from '$lib/classes/const'
   import logo from '$lib/assets/logo.svg'
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
   import GlobalSidebar from '$lib/components/global-sidebar.svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
-  import { timerDialogOpen } from '$lib/stores/conference/timer-store'
-  import { dbGetAllPlugins } from '$lib/services/plugin-db'
-  import { injectToRegistry } from '$lib/services/plugin-registry'
-  import { markPluginsReady } from '$lib/registry/mod-registry.svelte'
+  import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
+  import { dbGetAllPlugins } from '$lib/classes/services/plugin-db'
+  import { injectToRegistry } from '$lib/classes/services/plugin-registry'
+  import { markPluginsReady } from '$lib/classes/registry/mod-registry.svelte'
 
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { authStore } from '$lib/stores/auth-store'
+  import { authStore } from '$lib/classes/stores/auth-store'
 
   let { children } = $props()
 
@@ -31,9 +31,12 @@
         }
         markPluginsReady()
       }),
-      import('$lib/stores/conference/conference-store').then((m) => m.conferencesReady),
-      import('$lib/stores/battle/battle-store').then((m) => m.battlesReady),
-      import('$lib/stores/timeline-store').then((m) => m.timelinesReady)
+      import('$lib/classes/stores/conference/conference-store').then((m) => m.conferencesReady),
+      import('$lib/classes/stores/conference/conference-event-store').then(
+        (m) => m.conferenceEventsReady
+      ),
+      import('$lib/classes/stores/battle/battle-store').then((m) => m.battlesReady),
+      import('$lib/classes/stores/timeline-store').then((m) => m.timelinesReady)
     ])
   }
 

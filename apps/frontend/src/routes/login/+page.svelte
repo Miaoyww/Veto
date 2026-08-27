@@ -21,9 +21,9 @@
   import DescContent from '$lib/components/login/desc-content.svelte'
   import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
   import favicon from '$lib/assets/favicon.png'
-  import { PHASE_LABELS } from '$lib/engine/conference-engine'
-  import { setOffline } from '$lib/stores/auth-store'
-  import { setExternalWsUrl } from '$lib/services/conference-display-bridge'
+  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
+  import { setOffline } from '$lib/classes/stores/auth-store'
+  import { setExternalWsUrl } from '$lib/classes/services/conference-display-bridge'
 
   interface LanMeeting {
     conferenceId: string
