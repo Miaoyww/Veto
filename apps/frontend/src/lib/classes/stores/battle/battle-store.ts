@@ -14,16 +14,16 @@ import {
 	removeStatusEffect,
 	hasStatusEffect,
 	getEffectiveStats
-} from '$lib/classes/registry/status-registry'
+} from '$lib/classes/services/engine/registry/status-registry'
 import {
 	getMaxDetectionRange,
 	isUnitConfirmed,
 	getContactsForFaction
-} from '$lib/classes/registry/sensor-registry'
+} from '$lib/classes/services/engine/registry/sensor-registry'
 import type { StatusInstance, MessageCategory } from '$lib/classes/types'
 import { gameClock } from '$lib/engine/game-clock.store'
 import { resolveStatus } from '$lib/engine/status-resolver'
-import { bootstrapStore, saveToStore, deleteFromStore } from '../store-bridge'
+import { bootstrapStore, saveToStore, deleteFromStore } from '../../helpers/store-bridge'
 
 const STORAGE_KEY = 'wars_battles'
 const STORE_DOMAIN = 'battles'

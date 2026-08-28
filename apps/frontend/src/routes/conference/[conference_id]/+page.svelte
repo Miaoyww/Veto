@@ -22,7 +22,7 @@
     getDisplayBridge,
     buildDisplayData,
     initWsPort
-  } from '$lib/classes/services/conference-display-bridge'
+  } from '$lib/classes/clients/conference-display-client'
 
   import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
 

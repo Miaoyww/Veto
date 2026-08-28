@@ -5,7 +5,7 @@
   import { Badge } from '$lib/components/ui/badge'
   import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs'
   import { LogOut, Wifi, WifiOff, Activity } from '@lucide/svelte'
-  import type { ConnectionStatus } from '$lib/classes/services/delegate-bridge'
+  import type { ConnectionStatus } from '$lib/classes/clients/delegate-client'
 
   interface Props {
     seat: Seat

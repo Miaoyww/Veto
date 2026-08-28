@@ -15,8 +15,8 @@
     getDisplayBridge,
     onConnectionStatus,
     setExternalWsUrl
-  } from '$lib/classes/services/conference-display-bridge'
-  import type { ConnectionStatus } from '$lib/classes/services/conference-display-bridge'
+  } from '$lib/classes/clients/conference-display-client'
+  import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
   import type { Delegation } from '$lib/types-conference'
   import type { ConferenceDisplayData, TimerTickData } from '$lib/types-conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'

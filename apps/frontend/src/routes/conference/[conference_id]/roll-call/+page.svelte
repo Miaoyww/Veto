@@ -12,7 +12,7 @@
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/classes/services/conference-display-bridge'
+  import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/classes/clients/conference-display-client'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import type { Delegation, Attendance } from '$lib/types-conference'
 

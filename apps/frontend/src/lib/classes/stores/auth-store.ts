@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store'
-import { bootstrapStore, saveToStore } from './store-bridge'
+import { bootstrapStore, saveToStore } from '../helpers/store-bridge'
 import { getToken, setToken, clearToken, getMe } from '$lib/services/api-client'
 
 // ─── 类型 ──────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ const DEFAULTS: AuthState = {
   offline: false,
   isLoggedIn: false,
   token: null,
-  user: null,
+  user: null
 }
 
 // ─── Store ─────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ function createAuthStore() {
           offline: value,
           isLoggedIn: value,
           token: null,
-          user: null,
+          user: null
         }
         saveToStore('auth', next)
         return next
@@ -136,7 +136,7 @@ function createAuthStore() {
     },
     getUser(): AuthUser | null {
       return get(store).user
-    },
+    }
   }
 }
 

@@ -296,7 +296,7 @@ export function setDisplayBridge(bridge: ConferenceDisplayBridge): void {
 
 import type { Conference } from '$lib/classes/types-conference'
 import { tallyVotes } from '$lib/classes/stores/conference/conference-store'
-import { calculateMajorityThresholds } from '$lib/classes/engine/conference-engine'
+import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
 import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
 
 /**

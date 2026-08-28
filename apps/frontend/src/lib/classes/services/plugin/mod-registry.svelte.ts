@@ -5,10 +5,10 @@ import type {
 	ModData,
 	ModMetadata,
 	ModCombatOverrides
-} from './types';
+} from '../engine/registry/types';
 import type { PluginManifest } from '$lib/services/plugin-db';
-import { registerStatusDefinitions } from './status-registry';
-import { registerSensorDefinitions } from './sensor-registry';
+import { registerStatusDefinitions } from '../engine/registry/status-registry';
+import { registerSensorDefinitions } from '../engine/registry/sensor-registry';
 import { createLogger } from '$lib/classes/logger';
 
 const log = createLogger('ModRegistry')

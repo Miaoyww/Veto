@@ -29,9 +29,9 @@ import type {
 } from '$lib/classes/types-conference'
 import type { Seat, SeatGroup } from '$lib/classes/types-delegate'
 import { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
-import { tallyVotesEngine } from '$lib/classes/engine/conference-engine'
+import { tallyVotesEngine } from '$lib/classes/services/engine/conference-engine'
 import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-import { bootstrapStore, saveToStore } from '../store-bridge'
+import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
 
 const STORAGE_KEY = 'veto_conferences'
 const STORE_DOMAIN = 'conferences'

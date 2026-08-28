@@ -13,8 +13,8 @@
     initWsPort,
     getDelegateBridge,
     onDelegateConnectionStatus
-  } from '$lib/classes/services/delegate-bridge'
-  import type { ConnectionStatus, ConferenceSyncData } from '$lib/classes/services/delegate-bridge'
+  } from '$lib/classes/clients/delegate-client'
+  import type { ConnectionStatus, ConferenceSyncData } from '$lib/classes/clients/delegate-client'
   import type { TimerTickData } from '$lib/types-conference'
   import LoginScreen from '$lib/components/delegate/LoginScreen.svelte'
   import DelegateShell from '$lib/components/delegate/DelegateShell.svelte'

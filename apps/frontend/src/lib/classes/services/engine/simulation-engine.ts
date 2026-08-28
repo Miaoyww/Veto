@@ -27,19 +27,19 @@ import {
 	addLog,
 	autoAttackEnabled,
 	moveToFallen
-} from '../stores/battle/battle-store';
-import type { RuntimeUnitPosition } from '../stores/battle/battle-store';
+} from '../../stores/battle/battle-store';
+import type { RuntimeUnitPosition } from '../../stores/battle/battle-store';
 import type { Contact } from '$lib/classes/types';
 import { mods } from '$lib/classes/registry/mod-registry.svelte';
-import type { ModCombatOverrides } from '$lib/classes/registry/types';
-import { getFormula, getEffectiveOverrides } from '$lib/classes/registry/formula-registry';
-import type { CombatContext } from '$lib/classes/registry/formula-registry';
+import type { ModCombatOverrides } from '$lib/classes/services/engine/registry/types';
+import { getFormula, getEffectiveOverrides } from '$lib/classes/services/engine/registry/formula-registry';
+import type { CombatContext } from '$lib/classes/services/engine/registry/formula-registry';
 import {
 	getEffectiveStats,
 	tickStatusEffects,
 	applyStatusEffect,
 	hasStatusEffect
-} from '$lib/classes/registry/status-registry';
+} from '$lib/classes/services/engine/registry/status-registry';
 import {
 	runDetectionScan,
 	tickContactDecay,
@@ -47,7 +47,7 @@ import {
 	getMaxDetectionRange,
 	type ObserverInfo,
 	type TargetInfo
-} from '$lib/classes/registry/sensor-registry';
+} from '$lib/classes/services/engine/registry/sensor-registry';
 
 // ---- 引擎状态（模块级单例） ----
 let rafId: number | null = null;

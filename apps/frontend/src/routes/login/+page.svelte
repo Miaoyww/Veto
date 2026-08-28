@@ -23,7 +23,7 @@
   import favicon from '$lib/assets/favicon.png'
   import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
   import { setOffline } from '$lib/classes/stores/auth-store'
-  import { setExternalWsUrl } from '$lib/classes/services/conference-display-bridge'
+  import { setExternalWsUrl } from '$lib/classes/clients/conference-display-client'
 
   interface LanMeeting {
     conferenceId: string

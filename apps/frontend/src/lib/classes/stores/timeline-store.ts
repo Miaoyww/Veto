@@ -9,7 +9,7 @@
  */
 
 import { writable, get } from 'svelte/store'
-import { bootstrapStore, saveToStore } from './store-bridge'
+import { bootstrapStore, saveToStore } from '../helpers/store-bridge'
 import { TimelineEngine, type TimelineState } from '$lib/classes/engine/timeline-engine.svelte'
 import { emitServiceEvent } from '$lib/services/event-bus-bridge'
 

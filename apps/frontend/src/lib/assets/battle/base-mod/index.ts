@@ -5,7 +5,7 @@
  * 注入全局 ModRegistry。之后通过 registry.* API 访问所有数据，无需硬编码。
  */
 import { registry } from '$lib/classes/registry/mod-registry.svelte';
-import type { ModData, ModMetadata } from '$lib/classes/registry/types';
+import type { ModData, ModMetadata } from '$lib/classes/services/engine/registry/types';
 
 import branchesJson from './base/branches.json';
 import categoriesJson from './base/categories.json';

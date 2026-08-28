@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
-import { bootstrapStore, saveToStore, deleteFromStore } from '../store-bridge';
-import { syncAcrossWindows } from '../cross-window-sync';
+import { bootstrapStore, saveToStore, deleteFromStore } from '../../helpers/store-bridge';
+import { syncAcrossWindows } from '../../helpers/cross-window-sync';
 
 export interface GlobalSettings {
 	/** 新建战局时的默认图标风格 */

@@ -7,7 +7,7 @@
  * 仅在 isCaucus && !isModerated 时启用。
  */
 
-import { createTimer, getTimer } from '$lib/classes/engine/conference-engine'
+import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
 import { saveConferencesNow } from '$lib/classes/stores/conference/conference-store'
 import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
 

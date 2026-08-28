@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Wifi, WifiOff, LoaderCircle } from '@lucide/svelte'
-  import type { ConnectionStatus } from '$lib/classes/services/conference-display-bridge'
+  import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
 
   let { status }: { status: ConnectionStatus } = $props()
 </script>

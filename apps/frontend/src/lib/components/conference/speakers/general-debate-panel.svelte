@@ -27,7 +27,7 @@
     saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
   import { destroyTimer } from '$lib/classes/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/services/conference-display-bridge'
+  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
   import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/hooks/use-speaker-timer.svelte'
   import { usePausedStateRestore } from '$lib/classes/hooks/use-paused-state-restore.svelte'
   import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
