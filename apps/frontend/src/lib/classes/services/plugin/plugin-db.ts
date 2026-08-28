@@ -5,15 +5,15 @@
  */
 
 import { writable } from 'svelte/store'
-import { getPluginStorage, initPluginStorage } from './plugin-storage/plugin-storage-factory'
-import { setPluginListChangeCallback } from './plugin-storage/plugin-storage'
+import { getPluginStorage, initPluginStorage } from './storage/plugin-storage-factory'
+import { setPluginListChangeCallback } from './storage/plugin-storage'
 import { createLogger } from '$lib/classes/logger';
 
 const log = createLogger('plugin-db')
 
 // ─── 导出新 API ────────────────────────────────────────────────────
-export { getPluginStorage, initPluginStorage } from './plugin-storage/plugin-storage-factory'
-export type { PluginStorage } from './plugin-storage/plugin-storage'
+export { getPluginStorage, initPluginStorage } from './storage/plugin-storage-factory'
+export type { PluginStorage } from './storage/plugin-storage'
 
 /**
  * 存储初始化状态和错误信息
