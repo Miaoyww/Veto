@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Plus, Trash2 } from '@lucide/svelte'
-  import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
   import * as Field from '$lib/components/ui/field'
   import { Input } from '$lib/components/ui/input'
