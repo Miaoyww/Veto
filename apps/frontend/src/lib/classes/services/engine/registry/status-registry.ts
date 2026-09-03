@@ -11,8 +11,8 @@
  *   可叠加，通过 StatusInstance 管理，有持续时间和属性修正
  */
 
-import type { StatusDefinition, StatusInstance } from '$lib/classes/types';
-import type { FlexStats, ModCombatOverrides } from './types';
+import type { StatusDefinition, StatusInstance } from '$lib/classes/types/battle';
+import type { FlexStats, ModCombatOverrides } from '$lib/classes/types/battle';
 import { createLogger } from '$lib/classes/logger';
 
 const log = createLogger('StatusRegistry')

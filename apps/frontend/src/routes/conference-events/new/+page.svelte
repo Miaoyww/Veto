@@ -18,8 +18,8 @@
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
   import { Textarea } from '$lib/components/ui/textarea'
-  import type { Capability, SeatGroupType } from '$lib/types-delegate'
-  import type { RoleTemplate } from '$lib/types-event'
+  import type { Capability, SeatGroupType } from '$lib/classes/types/delegate'
+  import type { RoleTemplate } from '$lib/classes/types/event'
   import { createConferenceEvent } from '$lib/classes/stores/conference/conference-event-store'
 
   interface SeatDraft {

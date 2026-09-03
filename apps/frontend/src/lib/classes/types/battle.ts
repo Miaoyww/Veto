@@ -1,16 +1,5 @@
 // ============ 注册表类型 & 单例（再导出供其他模块使用） ============
-export type {
-  FlexStats,
-  ComponentEntry,
-  ComponentTypeGroup,
-  BranchDefinition,
-  CategoryDefinition,
-  UnitTemplate,
-  ModCombatOverrides,
-  ModData
-} from '$lib/classes/services/engine/registry/types'
-
-export { registry, mods } from '$lib/classes/registry/mod-registry.svelte'
+export { registry, mods } from '$lib/classes/services/plugin/mod-registry.svelte'
 
 // ============ 阵营立场 ============
 
@@ -172,8 +161,6 @@ export interface CampaignEventState {
 
 // ============ 地图上放置的单位 ============
 
-import type { FlexStats } from '$lib/classes/services/engine/registry/types'
-
 export interface PlacedUnit {
   id: string
   /** 引用 Faction.units 中某个 UnitTemplate 的 id */
@@ -198,7 +185,7 @@ export interface PlacedUnit {
    */
   natoCode?: string
   /** 激活的状态效果列表（Phase 4） */
-  statusEffects?: import('./types').StatusInstance[]
+  statusEffects?: StatusInstance[]
   /** 该单位装备的传感器 ID 列表（Phase 3，覆盖模板默认值） */
   sensorIds?: string[]
   /** 手动指定的攻击目标单位 ID（Phase 9） */
@@ -217,8 +204,6 @@ export interface PlacedUnit {
 }
 
 // ============ 势力 ============
-
-import type { UnitTemplate } from '$lib/classes/services/engine/registry/types'
 
 export interface Faction {
   id: string
@@ -303,8 +288,6 @@ export interface ActionLogEntry {
 
 // ============ 动态注册表类型定义 ============
 // 所有硬编码的 Branch/Category/UnitType 枚举均已废除，统一用 string ID。
-
-import type { PluginManifest } from '$lib/services/plugin-db'
 
 /**
  * 灵活战斗属性字典。
@@ -398,7 +381,7 @@ export interface UnitTemplate {
   /** 该模板默认装备的传感器 ID 列表（Phase 3） */
   sensorIds?: string[]
   /** 单位方向信号特征（影响被探测概率，Phase 3） */
-  signatures?: import('$lib/classes/types').UnitSignatures
+  signatures?: import('$lib/classes/types/battle').UnitSignatures
 }
 
 /** Mod 战斗公式覆盖（均为可选，未提供则使用引擎默认值） */
@@ -472,15 +455,15 @@ export interface ModData {
   /** 战斗公式覆盖 */
   combatOverrides?: ModCombatOverrides
   /** 战役地图配置（type='campaign' 时有效） */
-  mapConfig?: import('$lib/classes/types').CampaignMapConfig
+  mapConfig?: import('$lib/classes/types/battle').CampaignMapConfig
   /** 战役初始部署（type='campaign' 时有效） */
-  deployments?: import('$lib/classes/types').CampaignDeployment
+  deployments?: import('$lib/classes/types/battle').CampaignDeployment
   /** 战役设施列表（type='campaign' 时有效，Phase 2 使用） */
-  facilities?: import('$lib/classes/types').Facility[]
+  facilities?: import('$lib/classes/types/battle').Facility[]
   /** 战役事件列表（type='campaign' 时有效，Phase 6 使用） */
-  events?: import('$lib/classes/types').CampaignEvent[]
+  events?: import('$lib/classes/types/battle').CampaignEvent[]
   /** 传感器注册表（type='campaign' 时有效，Phase 3 使用） */
-  sensors?: import('$lib/classes/types').SensorDefinition[]
+  sensors?: import('$lib/classes/types/battle').SensorDefinition[]
   /** 状态效果定义（Phase 4 使用） */
-  statusDefinitions?: import('$lib/classes/types').StatusDefinition[]
+  statusDefinitions?: import('$lib/classes/types/battle').StatusDefinition[]
 }

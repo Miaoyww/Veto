@@ -13,7 +13,7 @@ import type {
   Motion,
   MotionType,
   MajorityRule
-} from '$lib/classes/types-conference'
+} from '$lib/classes/types/conference'
 
 // ---- 阶段状态机 ----------------------------------------------------------
 

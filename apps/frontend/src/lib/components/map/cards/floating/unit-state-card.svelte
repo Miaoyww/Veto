@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { currentBattle, runtimePositions } from '$lib/classes/stores/battle/battle-store';
-	import { mods } from '$lib/classes/registry/mod-registry.svelte';
+	import { mods } from '$lib/classes/services/plugin/mod-registry.svelte';
 	import { pendingRoute } from '$lib/classes/stores/battle/route.store';
 	import { Button } from '$lib/components/ui/button';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';

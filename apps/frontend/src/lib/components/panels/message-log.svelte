@@ -1,7 +1,7 @@
 <script lang="ts">
   import { currentBattle, selectedPlacedUnitId } from '$lib/classes/stores/battle/battle-store'
   import { mapFlyTo } from '$lib/classes/stores/battle/map-store'
-  import type { ActionLogEntry, MessageCategory } from '$lib/types'
+  import type { ActionLogEntry, MessageCategory } from '$lib/classes/types/battle'
   import { Swords, Navigation, Settings, Calendar, ChevronDown, ChevronUp } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
   import { Badge } from '$lib/components/ui/badge'

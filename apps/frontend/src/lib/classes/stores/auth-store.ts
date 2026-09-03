@@ -1,6 +1,5 @@
 import { writable, get } from 'svelte/store'
 import { bootstrapStore, saveToStore } from '../helpers/store-bridge'
-import { getToken, setToken, clearToken, getMe } from '$lib/services/api-client'
 
 // ─── 类型 ──────────────────────────────────────────────────────────────
 
@@ -35,21 +34,15 @@ function createAuthStore() {
   const { subscribe, set, update } = store
 
   // 从 localStorage / 文件恢复
-  let initialized = false
   const ready = bootstrapStore<AuthState>('auth', DEFAULTS).then((data) => {
-    // 同步 token 到 api-client 的内存缓存
-    if (data.token) {
-      setToken(data.token)
-    }
     set(data)
-    initialized = true
   })
 
   return {
     subscribe,
     ready,
 
-    /** 离线登录（跳过服务端认证） */
+    /** 离线登录（组织者模式，无账号体系） */
     setOffline(value: boolean) {
       update((state) => {
         const next = {
@@ -64,9 +57,8 @@ function createAuthStore() {
       })
     },
 
-    /** 设置登录状态（token 验证成功后调用） */
+    /** 设置登录状态（本地会话） */
     login(token: string, user: AuthUser) {
-      setToken(token)
       update((state) => {
         const next = { ...state, isLoggedIn: true, offline: false, token, user }
         saveToStore('auth', next)
@@ -74,7 +66,7 @@ function createAuthStore() {
       })
     },
 
-    /** 更新用户信息（注册后设置昵称等） */
+    /** 更新用户信息（本地持久化） */
     updateUser(partial: Partial<AuthUser>) {
       update((state) => {
         if (!state.user) return state
@@ -90,33 +82,8 @@ function createAuthStore() {
       })
     },
 
-    /** 从服务器拉取最新用户信息并更新 Store */
-    async refreshUser() {
-      try {
-        const { user } = await getMe()
-        update((state) => {
-          if (!state.user) return state
-          // 若服务端返回的是纯 Base64（无 data: 前缀），补全为 data URL 以供 <img> 显示
-          const avatar = user.avatar
-            ? user.avatar.startsWith('data:')
-              ? user.avatar
-              : `data:image/png;base64,${user.avatar}`
-            : ''
-          const next = {
-            ...state,
-            user: { ...state.user, ...user, avatar }
-          }
-          saveToStore('auth', next)
-          return next
-        })
-      } catch {
-        // 获取失败时静默忽略（网络异常等）
-      }
-    },
-
     /** 登出 */
     logout() {
-      clearToken()
       update((state) => {
         const next = { ...DEFAULTS }
         saveToStore('auth', next)
@@ -132,7 +99,7 @@ function createAuthStore() {
       return get(store).isLoggedIn
     },
     getToken(): string | null {
-      return get(store).token ?? getToken()
+      return get(store).token
     },
     getUser(): AuthUser | null {
       return get(store).user

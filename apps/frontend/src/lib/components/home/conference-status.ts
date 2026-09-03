@@ -1,4 +1,4 @@
-import type { Conference } from '$lib/classes/types-conference'
+import type { Conference } from '$lib/classes/types/conference'
 
 /**
  * 首页与会议卡片共享的会议状态派生工具。

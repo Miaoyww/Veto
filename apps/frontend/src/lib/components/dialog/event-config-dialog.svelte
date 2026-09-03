@@ -8,10 +8,10 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 
-	import type { EventSetting } from '$lib/types';
+	import type { EventSetting } from '$lib/classes/types/battle';
 	import { Zap, X, Plus } from '@lucide/svelte';
 	import EventCard from '$lib/components/settings/cards/event-card.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '$lib/classes/utils.js';
 
 	const PRESET_IDS = new Set([
 		'natural_disaster',

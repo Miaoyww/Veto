@@ -4,7 +4,7 @@
   import * as Popover from '$lib/components/ui/popover'
   import * as Command from '$lib/components/ui/command'
   import { standaloneTimer, timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
-  import { formatTime } from '$lib/utils'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
   import { timelines } from '$lib/classes/stores/timeline-store'
   import { currentConference, bindTimeline } from '$lib/classes/stores/conference/conference-store'
 

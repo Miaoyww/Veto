@@ -16,7 +16,7 @@ import type {
   SpeakerTransitionReason,
   CaucusSpeakerStatus,
   TimerTickData
-} from '$lib/classes/types-conference'
+} from '$lib/classes/types/conference'
 
 const DEFAULT_WS_PORT = 19527
 
@@ -294,10 +294,10 @@ export function setDisplayBridge(bridge: ConferenceDisplayBridge): void {
 
 // ---- 辅助：从 Conference / ConferenceEngine 构建 DisplayData -----------------
 
-import type { Conference } from '$lib/classes/types-conference'
+import type { Conference } from '$lib/classes/types/conference'
 import { tallyVotes } from '$lib/classes/stores/conference/conference-store'
 import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
-import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
+import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
 
 /**
  * 构建 Display 窗口数据。

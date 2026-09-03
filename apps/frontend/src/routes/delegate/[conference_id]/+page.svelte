@@ -8,14 +8,14 @@
     News,
     SituationUpdate,
     Classification
-  } from '$lib/types-delegate'
+  } from '$lib/classes/types/delegate'
   import {
     initWsPort,
     getDelegateBridge,
     onDelegateConnectionStatus
   } from '$lib/classes/clients/delegate-client'
   import type { ConnectionStatus, ConferenceSyncData } from '$lib/classes/clients/delegate-client'
-  import type { TimerTickData } from '$lib/types-conference'
+  import type { TimerTickData } from '$lib/classes/types/conference'
   import LoginScreen from '$lib/components/delegate/LoginScreen.svelte'
   import DelegateShell from '$lib/components/delegate/DelegateShell.svelte'
   import DirectivePanel from '$lib/components/delegate/DirectivePanel.svelte'

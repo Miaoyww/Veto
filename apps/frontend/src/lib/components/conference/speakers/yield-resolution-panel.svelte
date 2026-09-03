@@ -13,15 +13,15 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
-  import type { Delegation } from '$lib/types-conference'
-  import { formatTime } from '$lib/utils'
+  import type { Delegation } from '$lib/classes/types/conference'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
   import {
     resolveYieldToChair,
     resolveYieldToDelegate,
     resolveYieldToQuestion,
     resolveYieldToComment
   } from '$lib/classes/stores/conference/conference-store'
-  import type { Conference, YieldPendingState } from '$lib/types-conference'
+  import type { Conference, YieldPendingState } from '$lib/classes/types/conference'
 
   interface Props {
     conference: Conference

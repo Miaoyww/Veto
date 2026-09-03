@@ -9,11 +9,10 @@
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
   import GlobalSidebar from '$lib/components/global-sidebar.svelte'
-  import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
-  import { dbGetAllPlugins } from '$lib/classes/services/plugin-db'
-  import { injectToRegistry } from '$lib/classes/services/plugin-registry'
-  import { markPluginsReady } from '$lib/classes/registry/mod-registry.svelte'
+  import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
+  import { injectToRegistry } from '$lib/classes/services/plugin/plugin-registry'
+  import { markPluginsReady } from '$lib/classes/services/plugin/mod-registry.svelte'
 
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
@@ -51,31 +50,23 @@
     // 跳过服务端渲染
     if (typeof window === 'undefined') return
 
-    let initialized = false
-
-    // 监听状态变化（登录/登出时触发）
-    const unsub = authStore.subscribe((state) => {
-      if (!initialized) return
-      if (!state.isLoggedIn && !isPublicRoute) {
-        goto(resolve('/login'))
-      }
-    })
+    let unsub: (() => void) | null = null
 
     authStore.ready.then(() => {
-      initialized = true
-
-      // 启动后从持久化存储恢复了登录态 → 拉取最新用户数据
-      if (authStore.isLoggedIn() && authStore.getToken()) {
-        authStore.refreshUser()
-      }
-
       // 主动检查一次：bootstrap 完成时若仍未登录，跳转
       if (!authStore.isLoggedIn() && !isPublicRoute) {
         goto(resolve('/login'))
       }
+
+      // 监听状态变化（登录/登出时触发）
+      unsub = authStore.subscribe((state) => {
+        if (!state.isLoggedIn && !isPublicRoute) {
+          goto(resolve('/login'))
+        }
+      })
     })
 
-    return unsub
+    return () => unsub?.()
   })
 </script>
 

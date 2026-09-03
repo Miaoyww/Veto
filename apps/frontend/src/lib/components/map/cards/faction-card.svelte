@@ -2,7 +2,7 @@
 	import { currentFactionId, selectFaction, removeFaction } from '$lib/classes/stores/battle/battle-store';
 	import { Button } from '$lib/components/ui/button';
 	import { Trash2 } from '@lucide/svelte';
-	import type { Faction } from '$lib/types';
+	import type { Faction } from '$lib/classes/types/battle';
 
 	let { faction }: { faction: Faction } = $props();
 </script>

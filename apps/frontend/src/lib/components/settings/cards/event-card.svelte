@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Switch } from '$lib/components/ui/switch/index.js'
   import { Button } from '$lib/components/ui/button/index.js'
-  import type { EventSetting } from '$lib/types'
+  import type { EventSetting } from '$lib/classes/types/battle'
   import {
     AlertTriangleIcon,
     UsersIcon,

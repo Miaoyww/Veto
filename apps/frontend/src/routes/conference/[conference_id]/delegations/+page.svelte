@@ -26,7 +26,7 @@
     AlertDialogTitle,
     AlertDialogTrigger
   } from '$lib/components/ui/alert-dialog'
-  import { cn } from '$lib/utils.js'
+  import { cn } from '$lib/classes/utils.js'
   import {
     currentConference,
     currentConferenceId,
@@ -38,9 +38,9 @@
     resetRollCall,
     saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
-  import { calculateMajorityThresholds, destroyAllTimers } from '$lib/classes/engine/conference-engine'
+  import { calculateMajorityThresholds, destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
   import { VETO_NAME } from '$lib/classes/const'
-  import type { Attendance } from '$lib/types-conference'
+  import type { Attendance } from '$lib/classes/types/conference'
   import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
   import { resolve } from '$app/paths'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'

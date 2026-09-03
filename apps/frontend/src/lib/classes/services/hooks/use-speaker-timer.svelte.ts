@@ -9,7 +9,7 @@
 
 import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
 import { saveConferencesNow } from '$lib/classes/stores/conference/conference-store'
-import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
+import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
 
 /** 发言计时器共享运行时状态（per-speaker timer 与 paused-state-restore 共用） */
 export class SpeakerTimerState {

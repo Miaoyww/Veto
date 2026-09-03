@@ -40,7 +40,7 @@
 <script lang="ts">
 	import { Button, type ButtonProps as ButtonPrimitiveProps } from '$lib/components/ui/button';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '$lib/classes/utils.js';
 
 	let {
 		ref = $bindable(null),

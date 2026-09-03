@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   import { goto } from '$app/navigation'
   import { Trash2, Play, Pencil, Check, X, CalendarDays, Clock, Swords } from '@lucide/svelte'
-  import type { Battle } from '$lib/types'
+  import type { Battle } from '$lib/classes/types/battle'
   import {
     currentBattleId,
     loadBattle,
@@ -9,7 +9,7 @@
     renameBattle
   } from '$lib/classes/stores/battle/battle-store'
   import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
-  import { registry } from '$lib/classes/registry/mod-registry.svelte'
+  import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'

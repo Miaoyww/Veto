@@ -3,7 +3,7 @@
   import { Kbd, KbdGroup } from '$lib/components/ui/kbd'
   import * as Accordion from '$lib/components/ui/accordion/index.js'
   import { Button } from '$lib/components/ui/button'
-  import { SHORTCUT_DEFS } from '$lib/classes/hooks/use-keyboard-shortcuts.svelte'
+  import { SHORTCUT_DEFS } from '$lib/classes/services/hooks/use-keyboard-shortcuts.svelte'
   import { clearAllBattles, importBattles } from '$lib/classes/stores/battle/battle-store'
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
   import { showConfirm } from '$lib/classes/stores/app/global-ui-store'

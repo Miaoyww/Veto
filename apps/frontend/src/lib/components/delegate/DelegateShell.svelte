@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Seat, Capability, CabinetMode } from '$lib/types-delegate'
+  import type { Seat, Capability, CabinetMode } from '$lib/classes/types/delegate'
   import type { Snippet } from 'svelte'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'

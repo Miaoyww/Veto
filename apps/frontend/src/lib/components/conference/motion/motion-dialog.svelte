@@ -24,10 +24,10 @@
     approveMotion,
     dismissLastResolvedMotion
   } from '$lib/classes/stores/conference/conference-store'
-  import { resolveMotion, calcMaxSpeakers } from '$lib/classes/engine/conference-engine'
+  import { resolveMotion, calcMaxSpeakers } from '$lib/classes/services/engine/conference-engine'
   import { goto } from '$app/navigation'
-  import { MOTION_LABELS } from '$lib/types-conference'
-  import type { MotionType, Attendance, Delegation } from '$lib/types-conference'
+  import { MOTION_LABELS } from '$lib/classes/types/conference'
+  import type { MotionType, Attendance, Delegation } from '$lib/classes/types/conference'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()

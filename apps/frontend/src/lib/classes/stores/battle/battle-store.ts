@@ -7,8 +7,8 @@ import type {
   PlacedUnit,
   ActionLogEntry,
   UnitSide
-} from '$lib/classes/types'
-import { registry } from '$lib/classes/registry/mod-registry.svelte'
+} from '$lib/classes/types/battle'
+import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
 import {
 	applyStatusEffect,
 	removeStatusEffect,
@@ -20,9 +20,9 @@ import {
 	isUnitConfirmed,
 	getContactsForFaction
 } from '$lib/classes/services/engine/registry/sensor-registry'
-import type { StatusInstance, MessageCategory } from '$lib/classes/types'
-import { gameClock } from '$lib/engine/game-clock.store'
-import { resolveStatus } from '$lib/engine/status-resolver'
+import type { StatusInstance, MessageCategory } from '$lib/classes/types/battle'
+import { gameClock } from '$lib/classes/services/engine/game-clock.store'
+import { resolveStatus } from '$lib/classes/services/engine/status-resolver'
 import { bootstrapStore, saveToStore, deleteFromStore } from '../../helpers/store-bridge'
 
 const STORAGE_KEY = 'wars_battles'
@@ -842,7 +842,7 @@ export function importBattles(data: unknown): [number, number] {
 
 // ============ 设施 CRUD ============
 
-export function addFacility(facility: import('$lib/classes/types').Facility): void {
+export function addFacility(facility: import('$lib/classes/types/battle').Facility): void {
   pushUndoSnapshot(`添加设施: ${facility.name}`)
   updateCurrentBattle((b) => ({
     ...b,
@@ -862,7 +862,7 @@ export function removeFacility(facilityId: string): void {
   addLog(`删除设施: ${facility?.name ?? ''}`)
 }
 
-export function updateFacility(facilityId: string, updates: Partial<import('$lib/classes/types').Facility>): void {
+export function updateFacility(facilityId: string, updates: Partial<import('$lib/classes/types/battle').Facility>): void {
   const battle = get(currentBattle)
   const facility = battle?.facilities?.find((f) => f.id === facilityId)
   pushUndoSnapshot(`更新设施: ${facility?.name ?? ''}`)
@@ -968,7 +968,7 @@ export function unitHasStatusEffect(placedUnitId: string, statusId: string): boo
  * 获取当前选中阵营的所有侦察接触。
  * 如果没有选中阵营则返回空数组。
  */
-export function getCurrentFactionContacts(): import('$lib/classes/types').Contact[] {
+export function getCurrentFactionContacts(): import('$lib/classes/types/battle').Contact[] {
   const battle = get(currentBattle)
   const factionId = get(currentFactionId)
   if (!battle || !factionId) return []
@@ -1010,11 +1010,11 @@ export interface RuntimeUnitPosition {
   /** 是否正在交战（由引擎战斗结算更新） */
   isEngaged: boolean
   /** 激活的状态效果列表（Phase 4） */
-  statusEffects?: import('$lib/classes/types').StatusInstance[]
+  statusEffects?: import('$lib/classes/types/battle').StatusInstance[]
   /** 该单位装备的传感器 ID 列表（Phase 3） */
   sensorIds?: string[]
   /** 行为姿态（Phase 5），默认 'aggressive' */
-  behavior?: import('$lib/classes/types').UnitBehavior
+  behavior?: import('$lib/classes/types/battle').UnitBehavior
 }
 
 /**

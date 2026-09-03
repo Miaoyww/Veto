@@ -11,7 +11,7 @@
    * - 进行中 + lastMarked → 显示代表团名/进度条/统计，叠加 PRESENT/ABSENT badge
    * - 进行中（无标记）     → 仅显示代表团名/进度条/统计
    */
-  import type { ConferenceDisplayData } from '$lib/types-conference'
+  import type { ConferenceDisplayData } from '$lib/classes/types/conference'
 
   let { data }: { data: ConferenceDisplayData } = $props()
 </script>

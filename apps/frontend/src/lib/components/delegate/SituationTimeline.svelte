@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SituationUpdate } from '$lib/types-delegate'
+  import type { SituationUpdate } from '$lib/classes/types/delegate'
   import { Clock, MapPin, Globe } from '@lucide/svelte'
 
   interface Props {

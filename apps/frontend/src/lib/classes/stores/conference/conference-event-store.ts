@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store'
-import type { ConferenceEvent, RoleTemplate } from '$lib/classes/types-event'
-import type { Capability, Seat, SeatGroup, SeatGroupType } from '$lib/classes/types-delegate'
+import type { ConferenceEvent, RoleTemplate } from '$lib/classes/types/event'
+import type { Capability, Seat, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
 import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
 import { createConference, saveConferencesNow } from './conference-store'
 

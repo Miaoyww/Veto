@@ -10,7 +10,7 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import * as Popover from '$lib/components/ui/popover/index.js'
   import { Calendar } from '$lib/components/ui/calendar/index.js'
-  import { RATIO_PRESETS } from '$lib/classes/engine/timeline-engine.svelte'
+  import { RATIO_PRESETS } from '$lib/classes/services/engine/timeline-engine.svelte'
   import { today, getLocalTimeZone, type CalendarDate } from '@internationalized/date'
 
   let { open = $bindable(false) }: { open: boolean } = $props()

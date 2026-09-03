@@ -17,11 +17,11 @@
     setExternalWsUrl
   } from '$lib/classes/clients/conference-display-client'
   import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
-  import type { Delegation } from '$lib/types-conference'
-  import type { ConferenceDisplayData, TimerTickData } from '$lib/types-conference'
+  import type { Delegation } from '$lib/classes/types/conference'
+  import type { ConferenceDisplayData, TimerTickData } from '$lib/classes/types/conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
-  import { useKeyboardShortcuts } from '$lib/classes/hooks/use-keyboard-shortcuts.svelte'
+  import { useKeyboardShortcuts } from '$lib/classes/services/hooks/use-keyboard-shortcuts.svelte'
 
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
@@ -243,10 +243,6 @@
 </svelte:head>
 
 <div class="flex h-screen w-screen flex-col bg-[#0a0e14] text-[#c8ccd4]">
-  {#if !isFullScreen}
-    <TitleBar variant="display" onToggleFullscreen={toggleFullscreen} />
-  {/if}
-
   {#if displayData}
     <ConferenceHeader
       venue={displayData.venue}

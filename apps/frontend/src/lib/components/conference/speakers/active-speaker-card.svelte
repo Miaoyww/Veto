@@ -5,8 +5,8 @@
    * 可复用的「正在发言」卡片 —— 显示当前发言人名称、倒计时、发言控制按钮。
    */
   import SpeakerControls from '$lib/components/conference/speakers/speaker-controls.svelte'
-  import { formatTime } from '$lib/utils'
-  import type { YieldType } from '$lib/types-conference'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
+  import type { YieldType } from '$lib/classes/types/conference'
 
   interface Props {
     delegationName: string

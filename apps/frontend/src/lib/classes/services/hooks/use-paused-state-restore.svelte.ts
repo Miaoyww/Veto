@@ -7,8 +7,10 @@
  * timer 不会在 per-speaker effect 中启动，需要此 composable 恢复 UI 显示状态。
  */
 
-import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
-import { SpeakerTimerState } from '$lib/hoo$lib/classes/hooks/use-speaker-timer.svelteort interface PausedStateRestoreOptions {
+import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+import { SpeakerTimerState } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
+
+export interface PausedStateRestoreOptions {
   /** 与 per-speaker timer 相同的 enabled 条件 */
   enabled: boolean
   /** 获取当前 engine 实例 */

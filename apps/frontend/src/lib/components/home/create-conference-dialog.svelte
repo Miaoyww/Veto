@@ -2,7 +2,7 @@
   import PlusIcon from '@lucide/svelte/icons/plus'
   import UsersIcon from '@lucide/svelte/icons/users'
   import PuzzleIcon from '@lucide/svelte/icons/puzzle'
-  import { navigateToConference } from '$lib/utils'
+  import { navigateToConference } from '$lib/classes/utils'
   import { createConference } from '$lib/classes/stores/conference/conference-store'
   import {
     delegationPresets,

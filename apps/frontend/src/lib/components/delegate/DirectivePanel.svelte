@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Directive, Classification, DirectiveStatus } from '$lib/types-delegate'
+  import type { Directive, Classification, DirectiveStatus } from '$lib/classes/types/delegate'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'

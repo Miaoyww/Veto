@@ -1,14 +1,14 @@
 <script lang="ts">
   import { ArrowLeft, Play, Pause, Gauge, AlertTriangle, Clock } from '@lucide/svelte'
   import { currentBattle, runtimePositions } from '$lib/classes/stores/battle/battle-store'
-  import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/classes/engine/game-clock.store'
-  import { cn, type WithElementRef } from '$lib/utils'
+  import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/classes/services/engine/game-clock.store'
+  import { cn, type WithElementRef } from '$lib/classes/utils'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import { onMount, onDestroy } from 'svelte'
-  import { startEngine, stopEngine } from '$lib/classes/engine/simulation-engine'
+  import { startEngine, stopEngine } from '$lib/classes/services/engine/simulation-engine'
   import { fly } from 'svelte/transition'
 
   import type { HTMLInputAttributes } from 'svelte/elements'

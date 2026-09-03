@@ -29,7 +29,7 @@ import type {
   ProposerPosition,
   MajorityRule,
   VoteTargetType
-} from '$lib/classes/types-conference'
+} from '$lib/classes/types/conference'
 import type {
   SeatGroup,
   Seat,
@@ -39,10 +39,10 @@ import type {
   Capability,
   CabinetMode,
   Classification
-} from '$lib/classes/types-delegate'
-import { POINT_LABELS, MOTION_LABELS, type Attendance } from '$lib/classes/types-conference'
-import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
-import { emitServiceEvent } from '$lib/services/event-bus-bridge'
+} from '$lib/classes/types/delegate'
+import { POINT_LABELS, MOTION_LABELS, type Attendance } from '$lib/classes/types/conference'
+import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
+import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'
 import { getTimelineEngine } from '$lib/classes/stores/timeline-store'
 import {
   Timer,

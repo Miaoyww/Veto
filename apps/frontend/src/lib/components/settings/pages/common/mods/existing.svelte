@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { PackageCheck, Trash2 } from '@lucide/svelte';
-	import { dbGetAllPlugins, dbDeletePlugin, dbDeletePluginAssets, installedPluginsRevision } from '$lib/classes/services/plugin-db';
-	import type { InstalledPlugin } from '$lib/classes/services/plugin-db';
+	import { dbGetAllPlugins, dbDeletePlugin, dbDeletePluginAssets, installedPluginsRevision } from '$lib/classes/services/plugin/plugin-db';
+	import type { InstalledPlugin } from '$lib/classes/services/plugin/plugin-db';
 	import { Button } from '$lib/components/ui/button';
 
 	let dbPlugins = $state<InstalledPlugin[]>([]);

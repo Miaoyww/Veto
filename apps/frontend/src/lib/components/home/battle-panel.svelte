@@ -7,7 +7,7 @@
   import { battles } from '$lib/classes/stores/battle/battle-store'
   import BattleCard from '$lib/components/home/battle-card.svelte'
   import CreateBattleDialog from '$lib/components/home/create-battle/create-battle-dialog.svelte'
-  import { cn } from '$lib/utils.js'
+  import { cn } from '$lib/classes/utils.js'
   import { fly } from 'svelte/transition'
 
   interface Props {

@@ -36,7 +36,7 @@ export const RATIO_PRESETS = [
   { value: 86400, label: '1日/秒' },
 ] as const
 
-import { emitServiceEvent } from '$lib/services/event-bus-bridge'
+import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'
 
 // ─── 引擎类 ────────────────────────────────────────────────────────────
 

@@ -5,7 +5,7 @@
    * 可复用的 Display 发言名单组件。展示下一个发言代表 + 后续队列，支持限制显示数量。
    */
   import { Mic } from '@lucide/svelte'
-  import type { Delegation } from '$lib/types-conference'
+  import type { Delegation } from '$lib/classes/types/conference'
   import DisplaySectionHeader from './display-section-header.svelte'
   import DelegationNameDisplay from './delegation-name-display.svelte'
   import DelegationRoster, { type RosterEntry } from './delegation-roster.svelte'

@@ -14,9 +14,9 @@ import type {
   Seat,
   Capability,
   CabinetMode
-} from '$lib/classes/types-delegate'
+} from '$lib/classes/types/delegate'
 import { currentEngine } from '../conference/conference-store'
-import { getDelegateBridge } from '$lib/services/delegate-bridge'
+import { getDelegateBridge } from '$lib/classes/clients/delegate-client'
 
 // ---- 辅助：获取当前引擎 -------------------------------------------------
 

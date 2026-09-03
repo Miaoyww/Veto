@@ -7,7 +7,7 @@
    * - voting : 彩色圆点（赞成/反对/弃权/跳过/未投）+ 名称 + 当前高亮
    * - list   : 序号 + 名称，超出上限显示 "还有 N 位代表"
    */
-  import { cn } from '$lib/utils.js'
+  import { cn } from '$lib/classes/utils.js'
 
   export interface RosterEntry {
     /** 唯一标识（用于 key 和 currentId 匹配） */

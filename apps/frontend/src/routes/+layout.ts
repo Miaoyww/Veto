@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit'
 import type { LayoutLoad } from './$types'
-import { isLoggedIn } from '$lib/stores/auth-store'
+import { isLoggedIn } from '$lib/classes/stores/auth-store'
 
 export const ssr = false
 export const prerender = false

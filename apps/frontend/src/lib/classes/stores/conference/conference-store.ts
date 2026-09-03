@@ -19,18 +19,18 @@ import type {
   VoteBallot,
   ConferenceActionType,
   ConferencePhase
-} from '$lib/classes/types-conference'
+} from '$lib/classes/types/conference'
 import type {
   PointType,
   Attendance,
   ProposerPosition,
   MajorityRule,
   VoteTargetType
-} from '$lib/classes/types-conference'
-import type { Seat, SeatGroup } from '$lib/classes/types-delegate'
-import { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
+} from '$lib/classes/types/conference'
+import type { Seat, SeatGroup } from '$lib/classes/types/delegate'
+import { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
 import { tallyVotesEngine } from '$lib/classes/services/engine/conference-engine'
-import { getDisplayBridge, buildDisplayData } from '$lib/services/conference-display-bridge'
+import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
 
 const STORAGE_KEY = 'veto_conferences'

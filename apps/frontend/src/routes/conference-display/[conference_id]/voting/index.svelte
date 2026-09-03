@@ -5,7 +5,7 @@
    * 投票阶段 Display 内容组件 —— 展示唱名表决过程给观众。
    */
   import { Vote } from '@lucide/svelte'
-  import type { ConferenceDisplayData } from '$lib/types-conference'
+  import type { ConferenceDisplayData } from '$lib/classes/types/conference'
   import DelegationRoster, { type RosterEntry } from '$lib/components/conference-display/delegation-roster.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'

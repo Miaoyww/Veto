@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Seat } from '$lib/types-delegate'
+  import type { Seat } from '$lib/classes/types/delegate'
   import { Button } from '$lib/components/ui/button'
   import {
     Dialog,

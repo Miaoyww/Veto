@@ -13,8 +13,8 @@
     conferences,
     unloadConference
   } from '$lib/classes/stores/conference/conference-store'
-  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
-  import { navigateToConference } from '$lib/utils'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
+  import { navigateToConference } from '$lib/classes/utils'
 
   let ready = $state(false)
   let copied = $state('')

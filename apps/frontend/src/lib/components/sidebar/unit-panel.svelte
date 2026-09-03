@@ -11,9 +11,9 @@
     interactionMode,
     pendingPlaceUnitId
   } from '$lib/classes/stores/battle/battle-store'
-  import type { UnitTemplate, UnitSide } from '$lib/types'
-  import { registry, mods } from '$lib/classes/registry/mod-registry.svelte'
-  import type { CategoryDefinition, ComponentTypeGroup } from '$lib/classes/registry/types'
+  import type { UnitTemplate, UnitSide } from '$lib/classes/types/battle'
+  import { registry, mods } from '$lib/classes/services/plugin/mod-registry.svelte'
+  import type { CategoryDefinition, ComponentTypeGroup } from '$lib/classes/types/battle'
   import { X, Swords, Pencil, Check } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -183,7 +183,7 @@
   function removeComponent(compId: string) {
     if (!$currentFactionId || !editingUnitId) return
     updateUnit($currentFactionId, editingUnitId, (u) => {
-      const newComponents: Record<string, import('$lib/classes/registry/types').ComponentEntry[]> = {}
+      const newComponents: Record<string, import('$lib/classes/types/battle').ComponentEntry[]> = {}
       for (const [key, entries] of Object.entries(u.components ?? {})) {
         newComponents[key] = entries.filter((e) => e.id !== compId)
       }

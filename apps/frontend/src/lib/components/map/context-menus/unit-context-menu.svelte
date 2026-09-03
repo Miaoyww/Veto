@@ -15,8 +15,8 @@
 		Crosshair,
 		Ban
 	} from '@lucide/svelte';
-	import { mods } from '$lib/classes/registry/mod-registry.svelte';
-	import type { PlacedUnit } from '$lib/types';
+	import { mods } from '$lib/classes/services/plugin/mod-registry.svelte';
+	import type { PlacedUnit } from '$lib/classes/types/battle';
 	import * as L from 'leaflet';
 	import {
 		currentBattle,
@@ -29,7 +29,7 @@
 		addLog,
 		runtimePositions
 	} from '$lib/classes/stores/battle/battle-store';
-	import { gameClock } from '$lib/classes/engine/game-clock.store';
+	import { gameClock } from '$lib/classes/services/engine/game-clock.store';
 	import { startPendingRoute } from '$lib/classes/stores/battle/route.store';
 
 	interface Props {

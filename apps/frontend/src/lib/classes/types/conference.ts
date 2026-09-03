@@ -340,8 +340,8 @@ export interface VotingSession {
 // ---- 会议记录 ------------------------------------------------------------
 
 // 从共享类型重导出（新名称），确保 main + renderer 进程使用同一份操作类型定义
-import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../../shared/action-types'
-import { ACTION_LABELS } from '../../../../shared/action-types'
+import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../../../shared/action-types'
+import { ACTION_LABELS } from '../../../../../shared/action-types'
 export type { ConferenceActionType, Entry, ConferenceEntry }
 export { ACTION_LABELS }
 
@@ -370,13 +370,13 @@ export interface Conference {
   /** 议题列表 */
   agenda: AgendaItem[]
   /** 席位组列表（内阁/委员会、MPC、学团 IPC） */
-  seatGroups: import('./types-delegate').SeatGroup[]
+  seatGroups: import('./delegate').SeatGroup[]
   /** 席位列表 */
-  seats: import('./types-delegate').Seat[]
+  seats: import('./delegate').Seat[]
   /** 新闻列表 */
-  news: import('./types-delegate').News[]
+  news: import('./delegate').News[]
   /** 局势更新列表 */
-  situationUpdates: import('./types-delegate').SituationUpdate[]
+  situationUpdates: import('./delegate').SituationUpdate[]
   /** 主发言名单 */
   speakerLists?: SpeakerListData
   /** 所有动议 */

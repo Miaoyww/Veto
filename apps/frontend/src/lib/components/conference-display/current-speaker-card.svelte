@@ -5,8 +5,8 @@
    * Display 端当前发言人卡片：状态标题栏 + 代表团全称/简称 + 发言倒计时。
    */
   import { Mic } from '@lucide/svelte'
-  import { formatTime } from '$lib/utils'
-  import type { Delegation } from '$lib/types-conference'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
+  import type { Delegation } from '$lib/classes/types/conference'
   import DisplaySectionHeader from './display-section-header.svelte'
   import DelegationNameDisplay from './delegation-name-display.svelte'
 

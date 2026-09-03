@@ -15,8 +15,8 @@
     closeVotingSession,
     tallyVotes
   } from '$lib/classes/stores/conference/conference-store'
-  import { calculateMajorityThresholds } from '$lib/classes/engine/conference-engine'
-  import { cn } from '$lib/utils.js'
+  import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
+  import { cn } from '$lib/classes/utils.js'
   import PanelHeader from '../common/panel-header.svelte'
 
   const conf = $derived($currentConference)

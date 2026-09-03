@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
-import type { UnitTemplate, PlacedUnit, Faction } from '$lib/classes/types';
-import { mods, registry } from '$lib/classes/registry/mod-registry.svelte';
+import type { UnitTemplate, PlacedUnit, Faction } from '$lib/classes/types/battle';
+import { mods, registry } from '$lib/classes/services/plugin/mod-registry.svelte';
 import { getMilSymbolSVG, getMilSymbolAnchor } from './milsymbol-utils';
 
 /**

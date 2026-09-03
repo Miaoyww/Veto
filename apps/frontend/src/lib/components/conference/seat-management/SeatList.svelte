@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Seat, SeatGroup } from '$lib/types-delegate'
+  import type { Seat, SeatGroup } from '$lib/classes/types/delegate'
   import { seats, removeSeat } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'

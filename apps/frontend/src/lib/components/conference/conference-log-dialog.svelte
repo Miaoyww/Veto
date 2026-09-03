@@ -2,8 +2,8 @@
   import { ScrollText } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
-  import { ACTION_LABELS } from '$lib/types-conference'
-  import type { ConferenceEntry } from '$lib/types-conference'
+  import { ACTION_LABELS } from '$lib/classes/types/conference'
+  import type { ConferenceEntry } from '$lib/classes/types/conference'
 
   interface Props {
     open: boolean

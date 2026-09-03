@@ -15,7 +15,7 @@
 import type {
   ConferenceDisplayData,
   TimerTickData
-} from '$lib/classes/types-conference'
+} from '$lib/classes/types/conference'
 import type {
   SeatGroup,
   Directive,
@@ -24,7 +24,7 @@ import type {
   Seat,
   Capability,
   CabinetMode
-} from '$lib/classes/types-delegate'
+} from '$lib/classes/types/delegate'
 
 const DEFAULT_WS_PORT = 19527
 

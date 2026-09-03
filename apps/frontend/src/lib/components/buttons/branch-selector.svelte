@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Tabs } from 'bits-ui';
-	import { registry, mods } from '$lib/classes/registry/mod-registry.svelte';
-	import { cn } from '$lib/utils';
+	import { registry, mods } from '$lib/classes/services/plugin/mod-registry.svelte';
+	import { cn } from '$lib/classes/utils';
 
 	let {
 		value,

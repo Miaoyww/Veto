@@ -10,7 +10,7 @@ import {
   dbGetAllPlugins,
   installedPluginsRevision,
   ensureStorageInitialized
-} from '$lib/services/plugin-db'
+} from '$lib/classes/services/plugin/plugin-db'
 
 // ---- 类型 ----
 

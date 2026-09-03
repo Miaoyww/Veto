@@ -3,7 +3,7 @@
 	import type { ImageCropperPreviewProps } from './types';
 	import { useImageCropperPreview } from './image-cropper.svelte.js';
 	import UploadIcon from '@lucide/svelte/icons/upload';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '$lib/classes/utils.js';
 
 	let { child, class: className }: ImageCropperPreviewProps = $props();
 

@@ -3,7 +3,7 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
-  import { TimelineEngine, RATIO_PRESETS } from '$lib/classes/engine/timeline-engine.svelte'
+  import { TimelineEngine, RATIO_PRESETS } from '$lib/classes/services/engine/timeline-engine.svelte'
 
   interface Props {
     engine: TimelineEngine

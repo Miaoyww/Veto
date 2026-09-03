@@ -8,7 +8,7 @@
  *   destroyed > retreating > defending > attacking > moving > idle
  */
 
-import type { PlacedUnit } from '$lib/classes/types'
+import type { PlacedUnit } from '$lib/classes/types/battle'
 
 export interface StatusInputs {
   hp: number

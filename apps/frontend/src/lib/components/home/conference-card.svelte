@@ -11,18 +11,18 @@
     Mic,
     Bell
   } from '@lucide/svelte'
-  import type { Conference } from '$lib/types-conference'
+  import type { Conference } from '$lib/classes/types/conference'
   import {
     currentConferenceId,
     deleteConference,
     renameConference
   } from '$lib/classes/stores/conference/conference-store'
-  import { navigateToConference } from '$lib/utils'
+  import { navigateToConference } from '$lib/classes/utils'
   import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
-  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import { getCurrentSpeakerName, getPendingMotionCount } from './conference-status'
 
   let { conference }: { conference: Conference } = $props()

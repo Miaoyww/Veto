@@ -16,7 +16,7 @@
     resumeMeeting
   } from '$lib/classes/stores/conference/conference-store'
 
-  import { destroyAllTimers } from '$lib/classes/engine/conference-engine'
+  import { destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
 
   import {
     getDisplayBridge,
@@ -24,7 +24,7 @@
     initWsPort
   } from '$lib/classes/clients/conference-display-client'
 
-  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
 
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
 

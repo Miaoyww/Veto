@@ -6,7 +6,7 @@
 		parseDate,
 		getLocalTimeZone
 	} from '@internationalized/date';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '$lib/classes/utils.js';
 	import { Calendar } from '$lib/components/ui/calendar/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';

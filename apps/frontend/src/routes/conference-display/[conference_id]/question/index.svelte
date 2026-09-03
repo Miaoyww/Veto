@@ -4,8 +4,8 @@
    * ──────────────────────
    * 问题展示组件 —— 编辑阶段实时同步 + 提交后展示。
    */
-  import { POINT_LABELS } from '$lib/types-conference'
-  import type { ConferenceDisplayData } from '$lib/types-conference'
+  import { POINT_LABELS } from '$lib/classes/types/conference'
+  import type { ConferenceDisplayData } from '$lib/classes/types/conference'
   import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 

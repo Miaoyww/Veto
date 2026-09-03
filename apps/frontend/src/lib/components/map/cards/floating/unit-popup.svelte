@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { UnitTemplate, PlacedUnit, Faction } from '$lib/types';
-	import { mods } from '$lib/classes/registry/mod-registry.svelte';
+	import type { UnitTemplate, PlacedUnit, Faction } from '$lib/classes/types/battle';
+	import { mods } from '$lib/classes/services/plugin/mod-registry.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import {
 		Heart,

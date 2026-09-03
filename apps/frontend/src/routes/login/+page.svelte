@@ -21,7 +21,7 @@
   import DescContent from '$lib/components/login/desc-content.svelte'
   import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
   import favicon from '$lib/assets/favicon.png'
-  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import { setOffline } from '$lib/classes/stores/auth-store'
   import { setExternalWsUrl } from '$lib/classes/clients/conference-display-client'
 

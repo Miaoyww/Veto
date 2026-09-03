@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store'
-import { createTimer, getTimer } from '$lib/engine/conference-engine'
+import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
 
 // ── 类型 ──
 

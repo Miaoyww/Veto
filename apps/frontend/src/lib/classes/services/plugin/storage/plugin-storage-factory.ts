@@ -5,7 +5,7 @@
  * 渲染进程通过 IPC (window.veto) 访问。
  */
 
-import type { PluginStorage } from '../../plugin-storage/plugin-storage'
+import type { PluginStorage } from './plugin-storage'
 
 let storageInstance: PluginStorage | null = null
 
@@ -20,7 +20,7 @@ export async function initPluginStorage(): Promise<PluginStorage> {
   if (storageInstance) return storageInstance
 
   try {
-    const { IpcPluginStorage } = await import('../../plugin-storage/plugin-storage-ipc')
+    const { IpcPluginStorage } = await import('./plugin-storage-ipc')
     storageInstance = new IpcPluginStorage()
     console.log('[PluginStorage] Initialized with IPC filesystem backend')
   } catch (err) {

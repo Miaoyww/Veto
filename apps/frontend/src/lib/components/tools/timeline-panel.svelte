@@ -7,7 +7,7 @@
   import { timelines } from '$lib/classes/stores/timeline-store'
   import TimelineCard from '$lib/components/tools/timeline-card.svelte'
   import CreateTimelineDialog from '$lib/components/tools/create-timeline-dialog.svelte'
-  import { cn } from '$lib/utils.js'
+  import { cn } from '$lib/classes/utils.js'
   import { fly } from 'svelte/transition'
 
   interface Props {

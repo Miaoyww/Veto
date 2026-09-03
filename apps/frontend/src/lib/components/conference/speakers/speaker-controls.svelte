@@ -7,7 +7,7 @@
    */
   import { MicOff, Pause, Play, Users, ArrowRight, HelpCircle, MessageCircle } from '@lucide/svelte'
   import ShortcutButton from '$lib/components/ui/shortcut-button.svelte'
-  import type { YieldType } from '$lib/types-conference'
+  import type { YieldType } from '$lib/classes/types/conference'
 
   interface Props {
     isPaused?: boolean

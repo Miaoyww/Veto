@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Facility, FacilityType } from '$lib/types'
+  import type { Facility, FacilityType } from '$lib/classes/types/battle'
 
   let { facility }: { facility: Facility } = $props()
 

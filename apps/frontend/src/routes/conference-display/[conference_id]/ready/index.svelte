@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ConferenceDisplayData } from '$lib/types-conference'
+  import type { ConferenceDisplayData } from '$lib/classes/types/conference'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()

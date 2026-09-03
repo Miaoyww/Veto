@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { cn } from '$lib/utils.js'
-  import type { InstalledPlugin } from '$lib/classes/services/plugin-db'
+  import { cn } from '$lib/classes/utils.js'
+  import type { InstalledPlugin } from '$lib/classes/services/plugin/plugin-db'
 
   interface Props {
     plugin: InstalledPlugin

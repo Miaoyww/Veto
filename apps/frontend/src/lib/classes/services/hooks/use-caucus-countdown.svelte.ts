@@ -9,7 +9,7 @@
 
 import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
 import { saveConferencesNow } from '$lib/classes/stores/conference/conference-store'
-import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
+import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
 
 export interface CaucusCountdownOptions {
   /** 仅自由磋商（或 individual speech）时启用 */

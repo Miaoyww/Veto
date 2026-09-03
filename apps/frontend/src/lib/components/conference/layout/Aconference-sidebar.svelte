@@ -15,10 +15,10 @@
   import { goto } from '$app/navigation'
   import { currentConference } from '$lib/classes/stores/conference/conference-store'
   import { bindTimeline } from '$lib/classes/stores/conference/conference-store'
-  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import { Button } from '$lib/components/ui/button'
 
-  import { cn } from '$lib/utils.js'
+  import { cn } from '$lib/classes/utils.js'
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
 
 

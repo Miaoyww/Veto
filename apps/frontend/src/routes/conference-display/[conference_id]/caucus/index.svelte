@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ConferenceDisplayData } from '$lib/types-conference'
-  import { formatTime } from '$lib/utils'
+  import type { ConferenceDisplayData } from '$lib/classes/types/conference'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
   import { Coffee, User } from '@lucide/svelte'
   import SpeakerQueueDisplay from '$lib/components/conference-display/speaker-queue-display.svelte'
   import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'

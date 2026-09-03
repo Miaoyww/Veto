@@ -4,8 +4,8 @@
  * 在应用启动时调用此模块（import '$units'），将基础军种、大类、单位模板和 i18n
  * 注入全局 ModRegistry。之后通过 registry.* API 访问所有数据，无需硬编码。
  */
-import { registry } from '$lib/classes/registry/mod-registry.svelte';
-import type { ModData, ModMetadata } from '$lib/classes/services/engine/registry/types';
+import { registry } from '$lib/classes/services/plugin/mod-registry.svelte';
+import type { ModData, ModMetadata } from '$lib/classes/types/battle';
 
 import branchesJson from './base/branches.json';
 import categoriesJson from './base/categories.json';
@@ -37,4 +37,4 @@ const baseGameData: ModData = {
 registry.load(baseGameData);
 
 // 导出 registry 供组件直接使用
-export { registry } from '$lib/classes/registry/mod-registry.svelte';
+export { registry } from '$lib/classes/services/plugin/mod-registry.svelte';

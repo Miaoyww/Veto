@@ -3,8 +3,8 @@
  */
 import JSZip from 'jszip';
 import type { PluginManifest, InstalledPlugin } from './plugin-db';
-import { registry } from '$lib/classes/registry/mod-registry.svelte';
-import type { ModData, ModMetadata } from '$lib/classes/services/engine/registry/types';
+import { registry } from '$lib/classes/services/plugin/mod-registry.svelte';
+import type { ModData, ModMetadata } from '$lib/classes/types/battle';
 import { guessMime } from '$lib/classes/utils/mime';
 
 const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|gif|webp|svg)$/i;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Toggle as TogglePrimitive } from "bits-ui";
-  import { cn } from "$lib/utils.js";
+  import { cn } from "$lib/classes/utils.js";
   import { tv, type VariantProps } from "tailwind-variants";
   import type { Snippet } from "svelte";
 

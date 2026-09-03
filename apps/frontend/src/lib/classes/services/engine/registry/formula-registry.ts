@@ -8,7 +8,7 @@
  * 查找优先级：插件覆盖 > 默认公式
  */
 
-import type { ModCombatOverrides } from './types';
+import type { ModCombatOverrides } from '$lib/classes/types/battle';
 import { createLogger } from '$lib/classes/logger';
 
 const log = createLogger('FormulaRegistry')

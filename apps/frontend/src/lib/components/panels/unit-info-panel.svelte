@@ -5,8 +5,8 @@
     selectedPlacedUnit,
     runtimePositions
   } from '$lib/classes/stores/battle/battle-store'
-  import { mods } from '$lib/classes/registry/mod-registry.svelte'
-  import { getSensorDefinition } from '$lib/classes/registry/sensor-registry'
+  import { mods } from '$lib/classes/services/plugin/mod-registry.svelte'
+  import { getSensorDefinition } from '$lib/classes/services/engine/registry/sensor-registry'
   import {
     Heart,
     Zap,
@@ -26,7 +26,7 @@
   import * as Accordion from '$lib/components/ui/accordion'
   import { Badge } from '$lib/components/ui/badge'
   import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '$lib/components/ui/empty'
-  import type { UnitTemplate, Faction, PlacedUnit } from '$lib/types'
+  import type { UnitTemplate, Faction, PlacedUnit } from '$lib/classes/types/battle'
 
   // ── 拖拽 ──
   let panelX = $state(0)

@@ -11,8 +11,8 @@
    * - 主发言名单：下一个发言 + 后续队列
    */
   import { HelpCircle, Volume2, ArrowRight } from '@lucide/svelte'
-  import { formatTime } from '$lib/utils'
-  import type { ConferenceDisplayData } from '$lib/types-conference'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
+  import type { ConferenceDisplayData } from '$lib/classes/types/conference'
   import SpeakerQueueDisplay from '$lib/components/conference-display/speaker-queue-display.svelte'
   import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'

@@ -28,7 +28,7 @@ import {
   routeInsertMode,
   startPendingRoute
 } from '$lib/classes/stores/battle/route.store'
-import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/engine/game-clock.store'
+import { gameClock, TIME_SCALES, TIME_SCALE_LABELS } from '$lib/classes/services/engine/game-clock.store'
 import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
 import { get } from 'svelte/store'
 

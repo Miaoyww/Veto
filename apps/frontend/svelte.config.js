@@ -20,7 +20,7 @@ const config = {
     },
     alias: {
       $lib: 'src/lib',
-      $units: 'src/units'
+      $units: 'src/lib/assets/battle/base-mod'
     }
   }
 }

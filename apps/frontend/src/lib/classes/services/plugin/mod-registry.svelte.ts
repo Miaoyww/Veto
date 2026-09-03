@@ -5,8 +5,8 @@ import type {
 	ModData,
 	ModMetadata,
 	ModCombatOverrides
-} from '../engine/registry/types';
-import type { PluginManifest } from '$lib/services/plugin-db';
+} from '$lib/classes/types/battle';
+import type { PluginManifest } from '$lib/classes/services/plugin/plugin-db';
 import { registerStatusDefinitions } from '../engine/registry/status-registry';
 import { registerSensorDefinitions } from '../engine/registry/sensor-registry';
 import { createLogger } from '$lib/classes/logger';

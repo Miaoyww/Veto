@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
-	import { cn } from '$lib/utils';
+	import { cn } from '$lib/classes/utils';
 	export let title = '';
 	export let description = '';
 

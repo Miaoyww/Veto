@@ -18,7 +18,7 @@
     endCaucus
   } from '$lib/classes/stores/conference/conference-store'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
-  import type { Delegation } from '$lib/types-conference'
+  import type { Delegation } from '$lib/classes/types/conference'
 
   const conf = $derived($currentConference)
   const setup = $derived(conf?.caucusSetup ?? null)

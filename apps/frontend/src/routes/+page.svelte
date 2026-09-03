@@ -19,12 +19,12 @@
   import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
   import JoinConferenceDialog from '$lib/components/home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
-  import { PHASE_LABELS } from '$lib/classes/engine/conference-engine'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import {
     getCurrentSpeakerName,
     getPendingMotionCount
   } from '$lib/components/home/conference-status'
-  import { navigateToConference } from '$lib/utils'
+  import { navigateToConference } from '$lib/classes/utils'
   import { fly } from 'svelte/transition'
 
   let query = $state('')

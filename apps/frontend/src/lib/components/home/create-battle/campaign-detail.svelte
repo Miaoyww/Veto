@@ -3,7 +3,7 @@
   import ScaleIcon from '@lucide/svelte/icons/scale'
   import ExternalLinkIcon from '@lucide/svelte/icons/external-link'
   import { Badge } from '$lib/components/ui/badge/index.js'
-  import type { PluginManifest } from '$lib/classes/services/plugin-db'
+  import type { PluginManifest } from '$lib/classes/services/plugin/plugin-db'
 
   interface Props {
     manifest: PluginManifest

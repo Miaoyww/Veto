@@ -6,8 +6,8 @@
    * 基于 shadcn Command + ScrollArea，支持中文全称、简称、拼音全拼/首字母、fuse.js 容错匹配。
    */
   import { Command as CommandPrimitive } from 'bits-ui'
-  import { cn } from '$lib/utils.js'
-  import type { Delegation } from '$lib/types-conference'
+  import { cn } from '$lib/classes/utils.js'
+  import type { Delegation } from '$lib/classes/types/conference'
   import Fuse from 'fuse.js'
   import PinyinMatch from 'pinyin-match'
   import SearchIcon from '@lucide/svelte/icons/search'

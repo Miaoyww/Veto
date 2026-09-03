@@ -9,7 +9,7 @@
 		clearRoute,
 		addLog
 	} from '$lib/classes/stores/battle/battle-store';
-	import { gameClock } from '$lib/classes/engine/game-clock.store';
+	import { gameClock } from '$lib/classes/services/engine/game-clock.store';
 	import { leftBarPinned } from '$lib/classes/stores/battle/battle-ui-store';
 	import { startPendingRoute } from '$lib/classes/stores/battle/route.store';
 

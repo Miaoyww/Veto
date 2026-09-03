@@ -6,7 +6,7 @@
   import { Label } from '$lib/components/ui/label/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
-  import { formatTime } from '$lib/utils'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
   import {
     standaloneTimer,
     timerDialogOpen,

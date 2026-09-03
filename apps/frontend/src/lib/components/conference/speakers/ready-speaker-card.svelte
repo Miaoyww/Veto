@@ -6,7 +6,7 @@
    */
   import { Play, Trash2 } from '@lucide/svelte'
   import ShortcutButton from '$lib/components/ui/shortcut-button.svelte'
-  import { formatTime } from '$lib/utils'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
 
   interface Props {
     delegationName: string

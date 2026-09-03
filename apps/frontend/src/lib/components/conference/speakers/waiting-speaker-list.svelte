@@ -11,7 +11,7 @@
   import { Users, Trash2 } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
-  import { formatTime } from '$lib/utils'
+  import { formatTime } from '$lib/classes/formatters/time-formater'
 
   interface Speaker {
     id: string

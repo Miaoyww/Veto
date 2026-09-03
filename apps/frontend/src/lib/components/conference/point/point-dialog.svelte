@@ -9,8 +9,8 @@
     pointDraft,
     proposePoint
   } from '$lib/classes/stores/conference/conference-store'
-  import { POINT_LABELS } from '$lib/types-conference'
-  import type { Delegation, PointType } from '$lib/types-conference'
+  import { POINT_LABELS } from '$lib/classes/types/conference'
+  import type { Delegation, PointType } from '$lib/classes/types/conference'
   import { goto } from '$app/navigation'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ToggleGroup as ToggleGroupPrimitive } from "bits-ui";
-  import { cn } from "$lib/utils.js";
+  import { cn } from "$lib/classes/utils.js";
   import type { Snippet } from "svelte";
 
   let {

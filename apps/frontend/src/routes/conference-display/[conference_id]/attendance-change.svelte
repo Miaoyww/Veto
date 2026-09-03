@@ -4,7 +4,7 @@
    * ──────────────────────────
    * Display 端出席状态变更 —— 全屏展示。
    */
-  import type { Attendance } from '$lib/types-conference'
+  import type { Attendance } from '$lib/classes/types/conference'
 
   let { delegationName, shortName, status }: {
     delegationName: string

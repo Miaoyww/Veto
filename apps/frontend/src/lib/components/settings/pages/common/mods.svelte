@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ExternalLink } from '@lucide/svelte'
   import * as Tabs from '$lib/components/ui/tabs/index.js'
-  import { registry } from '$lib/classes/registry/mod-registry.svelte'
+  import { registry } from '$lib/classes/services/plugin/mod-registry.svelte'
   import AllMods from './mods/all.svelte'
   import ExistingMods from './mods/existing.svelte'
   import InstallMod from './mods/install.svelte'

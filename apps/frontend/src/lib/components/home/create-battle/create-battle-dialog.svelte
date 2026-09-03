@@ -11,8 +11,8 @@
   import { Badge } from '$lib/components/ui/badge/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import * as Card from '$lib/components/ui/card/index.js'
-  import type { InstalledPlugin } from '$lib/classes/services/plugin-db'
-  import { dbGetAllPlugins } from '$lib/classes/services/plugin-db'
+  import type { InstalledPlugin } from '$lib/classes/services/plugin/plugin-db'
+  import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
   import CampaignModeDialog from './campaign-mode-dialog.svelte'
   import FreeModeForm from './free-mode-form.svelte'
 

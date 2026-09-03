@@ -7,7 +7,7 @@
  * 模式完全对齐 status-registry.ts。
  */
 
-import type { SensorDefinition, Contact } from '$lib/classes/types';
+import type { SensorDefinition, Contact } from '$lib/classes/types/battle';
 import { createLogger } from '$lib/classes/logger';
 
 const log = createLogger('SensorRegistry')

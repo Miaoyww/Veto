@@ -26,12 +26,12 @@
     handleYield,
     saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
-  import { destroyTimer } from '$lib/classes/engine/conference-engine'
+  import { destroyTimer } from '$lib/classes/services/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
-  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/hooks/use-speaker-timer.svelte'
-  import { usePausedStateRestore } from '$lib/classes/hooks/use-paused-state-restore.svelte'
-  import type { ConferenceEngine } from '$lib/classes/engine/ConferenceEngine.svelte'
-  import type { Delegation, YieldType, SpeakerDisplayEntry } from '$lib/types-conference'
+  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
+  import { usePausedStateRestore } from '$lib/classes/services/hooks/use-paused-state-restore.svelte'
+  import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+  import type { Delegation, YieldType, SpeakerDisplayEntry } from '$lib/classes/types/conference'
 
   // ── 发言队列数据 ──────────────────────────────────────────────
   const conf = $derived($currentConference)

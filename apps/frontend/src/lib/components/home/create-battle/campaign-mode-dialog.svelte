@@ -12,7 +12,7 @@
   import * as Empty from '$lib/components/ui/empty/index.js'
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import PackageIcon from '@lucide/svelte/icons/package'
-  import type { InstalledPlugin } from '$lib/classes/services/plugin-db'
+  import type { InstalledPlugin } from '$lib/classes/services/plugin/plugin-db'
   import CampaignListItem from './campaign-list-item.svelte'
   import CampaignDetail from './campaign-detail.svelte'
 

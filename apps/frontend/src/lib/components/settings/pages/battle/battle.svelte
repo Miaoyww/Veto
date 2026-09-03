@@ -9,7 +9,7 @@
 		getBattleById
 	} from '$lib/classes/stores/battle/battle-store';
 	import { showConfirm } from '$lib/classes/stores/app/global-ui-store';
-	import SettingCard from '$lib/components/cards/settings/settings-card.svelte';
+	import SettingCard from '$lib/components/settings/cards/settings-card.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import DatePicker from '$lib/components/ui/date-picker.svelte';
@@ -17,7 +17,7 @@
 	import { Download, Trash2, ScrollText, Zap } from '@lucide/svelte';
 	import { parseDate } from '@internationalized/date';
 	import type { DateValue } from '@internationalized/date';
-	import type { EventSetting } from '$lib/types';
+	import type { EventSetting } from '$lib/classes/types/battle';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';

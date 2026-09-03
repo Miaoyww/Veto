@@ -1,4 +1,4 @@
-import type { Capability, News, SituationUpdate } from './types-delegate'
+import type { Capability, News, SituationUpdate } from './delegate'
 
 export interface RoleTemplate {
   id: string

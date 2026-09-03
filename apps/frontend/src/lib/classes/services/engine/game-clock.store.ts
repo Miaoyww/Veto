@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { Battle } from '$lib/classes/types';
+import type { Battle } from '$lib/classes/types/battle';
 
 export interface GameClockState {
 	/** 推演当前时刻 */

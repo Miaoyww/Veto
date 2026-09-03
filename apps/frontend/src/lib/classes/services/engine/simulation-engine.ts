@@ -29,9 +29,9 @@ import {
 	moveToFallen
 } from '../../stores/battle/battle-store';
 import type { RuntimeUnitPosition } from '../../stores/battle/battle-store';
-import type { Contact } from '$lib/classes/types';
-import { mods } from '$lib/classes/registry/mod-registry.svelte';
-import type { ModCombatOverrides } from '$lib/classes/services/engine/registry/types';
+import type { Contact } from '$lib/classes/types/battle';
+import { mods } from '$lib/classes/services/plugin/mod-registry.svelte';
+import type { ModCombatOverrides } from '$lib/classes/types/battle';
 import { getFormula, getEffectiveOverrides } from '$lib/classes/services/engine/registry/formula-registry';
 import type { CombatContext } from '$lib/classes/services/engine/registry/formula-registry';
 import {
