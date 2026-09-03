@@ -6,11 +6,11 @@
   import { standaloneTimer, timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import { timelines } from '$lib/classes/stores/timeline-store'
-  import { currentConference, bindTimeline } from '$lib/classes/stores/conference/conference-store'
+  import { currentConferenceRecord, bindTimeline } from '$lib/classes/stores/conference/conference-store'
 
   // ─── 时间线数据 ──────────────────────────────────────────────────────
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentConferenceRecord)
   const timelineId = $derived(conf?.timelineId ?? null)
   const timeline = $derived(timelineId ? $timelines.find((t) => t.id === timelineId) : null)
   const timelineItems = $derived($timelines.map((t) => ({ value: t.id, label: t.name })))

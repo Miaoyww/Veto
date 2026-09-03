@@ -1,4 +1,4 @@
-import type { Capability, News, SituationUpdate } from './delegate'
+import type { Capability } from './delegate'
 
 export interface RoleTemplate {
   id: string
@@ -6,17 +6,4 @@ export interface RoleTemplate {
   description?: string
   capabilities: Capability[]
   builtIn?: boolean
-}
-
-export interface ConferenceEvent {
-  id: string
-  name: string
-  description?: string
-  organizer?: string
-  createdAt: number
-  updatedAt: number
-  conferenceIds: string[]
-  roleTemplates: RoleTemplate[]
-  news: News[]
-  situationUpdates: SituationUpdate[]
 }

@@ -5,9 +5,9 @@
   import { buttonVariants } from '$lib/components/ui/button'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
-  import type { MeetingDraft } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
+  import type { CommitteeDraft } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
 
-  let { meeting }: { meeting: MeetingDraft } = $props()
+  let { committee }: { committee: CommitteeDraft } = $props()
 
   let open = $state(true)
 </script>
@@ -15,8 +15,8 @@
 <Collapsible.Root bind:open>
   <article class="rounded-lg border p-4">
     <div class="flex items-center gap-3">
-      <h3 class="min-w-0 flex-1 truncate text-sm font-semibold">{meeting.name}</h3>
-      <Badge variant="outline">{meeting.seats.length} 个席位</Badge>
+      <h3 class="min-w-0 flex-1 truncate text-sm font-semibold">{committee.name}</h3>
+      <Badge variant="outline">{committee.seats.length} 个席位</Badge>
       <Collapsible.Trigger
         aria-label={open ? '收起席位' : '展开席位'}
         title={open ? '收起席位' : '展开席位'}
@@ -33,7 +33,7 @@
 
     <Collapsible.Content>
       <ul class="mt-3 flex flex-col gap-2 text-sm">
-        {#each meeting.seats as seat (seat.id)}
+        {#each committee.seats as seat (seat.id)}
           <li class="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
             <span class="min-w-0 flex-1 truncate">{seat.name}</span>
             <span class="shrink-0 text-xs text-muted-foreground">

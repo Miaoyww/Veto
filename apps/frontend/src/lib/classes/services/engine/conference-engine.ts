@@ -6,7 +6,7 @@
  */
 
 import type {
-  Conference,
+  Committee,
   ConferencePhase,
   Delegation,
   VoteBallot,
@@ -19,10 +19,13 @@ import type {
 
 export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {
   preamble: ['roll_call'],
-  roll_call: ['general_debate', 'preamble'],
+  roll_call: ['pending_speakers_list', 'preamble'],
+  pending_speakers_list: ['general_debate', 'suspended', 'closed'],
   general_debate: ['caucus', 'voting', 'suspended', 'closed'],
   caucus: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
   voting: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
+  motion: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
+  caucus_setup: ['caucus', 'general_debate', 'suspended', 'closed'],
   suspended: ['general_debate', 'closed'],
   closed: []
 }
@@ -32,7 +35,7 @@ export function canTransition(from: ConferencePhase, to: ConferencePhase): boole
 }
 
 export function transitionPhase(
-  _conf: Conference,
+  _committee: Committee,
   from: ConferencePhase,
   to: ConferencePhase
 ): ConferencePhase | Error {

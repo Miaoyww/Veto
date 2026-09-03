@@ -11,6 +11,7 @@
 import { writable, derived, get } from 'svelte/store'
 import type {
   Conference,
+  Committee,
   ConferenceDisplayData,
   Delegation,
   AgendaItem,
@@ -38,17 +39,12 @@ const STORE_DOMAIN = 'conferences'
 
 // ---- 引擎注册表 ----------------------------------------------------------
 
-/** 所有会议引擎实例（按 ID 索引） */
+/** 所有委员会引擎实例（按委员会 ID 索引） */
 const _engines = new Map<string, ConferenceEngine>()
-
-/** 获取引擎 */
-function getEngine(id: string): ConferenceEngine | undefined {
-  return _engines.get(id)
-}
 
 /** 获取当前会议引擎（便捷方法） */
 function getCurrentEngine(): ConferenceEngine | undefined {
-  const id = get(currentConferenceId)
+  const id = get(currentCommitteeId)
   if (!id) return undefined
   return _engines.get(id)
 }
@@ -65,7 +61,56 @@ function unregisterEngine(id: string): void {
 
 /** 将引擎当前状态同步到 conferences writable store（用于持久化） */
 function syncEngine(engine: ConferenceEngine): void {
-  conferences.update((list) => list.map((c) => (c.id === engine.id ? engine.toJSON() : c)))
+  conferences.update((list) =>
+    list.map((conference) =>
+      conference.committees.some((committee) => committee.id === engine.id)
+        ? {
+            ...conference,
+            updatedAt: Date.now(),
+            committees: conference.committees.map((committee) =>
+              committee.id === engine.id ? engine.toJSON() : committee
+            )
+          }
+        : conference
+    )
+  )
+}
+
+/** 将当前委员会引擎的变更写回其所属大会。 */
+export function syncCurrentCommittee(): void {
+  const engine = getCurrentEngine()
+  if (engine) syncEngine(engine)
+}
+
+/** 从大会内的所有委员会移除属于指定席位组的席位，并同步已缓存的引擎。 */
+export function removeSeatsForSeatGroup(seatGroupId: string): void {
+  const conference = get(currentConferenceRecord)
+  if (!conference) return
+
+  for (const committee of conference.committees) {
+    const engine = _engines.get(committee.id)
+    if (!engine) continue
+    for (const seat of engine.seats.filter((item) => item.seatGroupId === seatGroupId)) {
+      engine.removeSeat(seat.id)
+    }
+  }
+
+  conferences.update((items) =>
+    items.map((item) =>
+      item.id === conference.id
+        ? {
+            ...item,
+            updatedAt: Date.now(),
+            committees: item.committees.map((committee) => {
+              const engine = _engines.get(committee.id)
+              return engine
+                ? engine.toJSON()
+                : { ...committee, seats: committee.seats.filter((seat) => seat.seatGroupId !== seatGroupId) }
+            })
+          }
+        : item
+    )
+  )
 }
 
 // ---- 文件持久化（双重写入：localStorage + 文件）--------------------------
@@ -79,8 +124,9 @@ function loadConferencesFromStorage(): Conference[] {
     // 清理过期状态 & 注册引擎（由 ConferenceEngine.fromJSON() 统一处理）
     for (const conf of list) {
       // 过期清理统一由 ConferenceEngine.fromJSON() 处理
-      const engine = ConferenceEngine.fromJSON(conf)
-      registerEngine(engine)
+      for (const committee of conf.committees) {
+        registerEngine(ConferenceEngine.fromJSON(committee))
+      }
     }
     return list
   } catch {
@@ -124,8 +170,9 @@ export const conferencesReady: Promise<void> = bootstrapStore<Conference[]>(STOR
   (data) => {
     for (const conf of data) {
       // 过期清理统一由 ConferenceEngine.fromJSON() 处理
-      const engine = ConferenceEngine.fromJSON(conf)
-      registerEngine(engine)
+      for (const committee of conf.committees) {
+        registerEngine(ConferenceEngine.fromJSON(committee))
+      }
     }
     conferences.set(data)
   }
@@ -146,21 +193,39 @@ lastOpenedConferenceId.subscribe((id) => {
   else localStorage.removeItem(LAST_OPENED_KEY)
 })
 
-/** 当前大会（派生，向后兼容） */
-export const currentConference = derived(
+/** 当前大会记录。 */
+export const currentConferenceRecord = derived(
   [conferences, currentConferenceId],
   ([$conferences, $id]) => $conferences.find((c) => c.id === $id) ?? null
 )
 
+/** 当前委员会 ID。委员会的议事操作必须显式绑定到此 ID。 */
+export const currentCommitteeId = writable<string | null>(null)
+
+/** 当前委员会。 */
+export const currentCommittee = derived(
+  [currentConferenceRecord, currentCommitteeId],
+  ([$conference, $committeeId]) =>
+    $conference?.committees.find((committee) => committee.id === $committeeId) ?? null
+)
+
+/**
+ * 当前委员会的兼容导出。
+ * 新代码应使用 currentCommittee；保留此名称以避免现有会场组件与插件断裂。
+ */
+export const currentConference = currentCommittee
+
 /** 当前大会引擎（派生，供需要直接访问引擎的组件使用） */
-export const currentEngine = derived([conferences, currentConferenceId], ([$conferences, $id]) => {
-  if (!$id) return null
+export const currentEngine = derived([conferences, currentCommitteeId], ([$conferences, $committeeId]) => {
+  if (!$committeeId) return null
   // 从引擎注册表获取，如果不存在则从 store 数据创建
-  let engine = _engines.get($id)
+  let engine = _engines.get($committeeId)
   if (!engine) {
-    const conf = $conferences.find((c) => c.id === $id)
-    if (conf) {
-      engine = ConferenceEngine.fromJSON(conf)
+    const committee = $conferences.flatMap((conference) => conference.committees).find(
+      (item) => item.id === $committeeId
+    )
+    if (committee) {
+      engine = ConferenceEngine.fromJSON(committee)
       registerEngine(engine)
     }
   }
@@ -177,15 +242,15 @@ export const pointDraft = writable<ConferenceDisplayData['pointDraft'] | null>(n
 
 export function createConference(
   name: string,
-  venue: string,
+  committeeName: string,
   agendaItems: { title: string; description?: string }[],
   delegations: { name: string; shortName?: string; vetoPower?: boolean }[],
   options?: {
     id?: string
     defaultSpeakingTimeSec?: number
-    eventId?: string
     seatGroups?: SeatGroup[]
     seats?: Seat[]
+    committees?: Committee[]
   }
 ): string {
   // 从创建向导等流程传入 id 时沿用该 id，否则自动生成
@@ -207,13 +272,9 @@ export function createConference(
     sortOrder: i
   }))
 
-  const conf: Conference = {
-    id,
-    eventId: options?.eventId,
-    name,
-    venue,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+  const initialCommittee: Committee = {
+    id: crypto.randomUUID(),
+    name: committeeName,
     phase: 'preamble',
     delegations: delegationList,
     agenda: agendaList,
@@ -229,27 +290,41 @@ export function createConference(
     defaultSpeakingTimeSec: options?.defaultSpeakingTimeSec ?? 120,
     activeCaucus: null,
     activeSpeaker: null,
+    seats: options?.seats ?? []
+  }
+  const committees = options?.committees ?? [initialCommittee]
+
+  const conference: Conference = {
+    id,
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    committees,
+    roleTemplates: [],
     seatGroups: options?.seatGroups ?? [],
-    seats: options?.seats ?? [],
     news: [],
     situationUpdates: []
   }
 
-  // 创建并注册引擎
-  const engine = new ConferenceEngine(conf)
-  engine.addConferenceEntry('conference_created', `大会创建: ${name}（${venue}）`)
-  engine.addConferenceEntry('phase_changed', '进入阶段: 会前准备')
-  registerEngine(engine)
-
-  conferences.update((list) => [...list, engine.toJSON()])
+  const firstCommittee = committees[0]
+  if (firstCommittee) {
+    const engine = new ConferenceEngine(firstCommittee)
+    engine.addConferenceEntry('conference_created', `大会创建: ${name}（${committeeName}）`)
+    engine.addConferenceEntry('phase_changed', '进入阶段: 会前准备')
+    registerEngine(engine)
+    conference.committees = [engine.toJSON(), ...committees.slice(1)]
+  }
+  conferences.update((list) => [...list, conference])
   currentConferenceId.set(id)
+  currentCommitteeId.set(firstCommittee?.id ?? null)
   lastOpenedConferenceId.set(id)
   return id
 }
 
 export function deleteConference(id: string): void {
+  const conference = getConferenceById(id)
   conferences.update((list) => list.filter((c) => c.id !== id))
-  unregisterEngine(id)
+  for (const committee of conference?.committees ?? []) unregisterEngine(committee.id)
   if (get(currentConferenceId) === id) {
     currentConferenceId.set(null)
   }
@@ -258,35 +333,33 @@ export function deleteConference(id: string): void {
 export function renameConference(id: string, name: string): void {
   const trimmed = name.trim()
   if (!trimmed) return
-  const engine = getEngine(id)
-  if (engine) {
-    engine.name = trimmed
-    syncEngine(engine)
-  } else {
-    conferences.update((list) =>
-      list.map((c) => (c.id === id ? { ...c, name: trimmed, updatedAt: Date.now() } : c))
+  conferences.update((list) =>
+    list.map((conference) =>
+      conference.id === id ? { ...conference, name: trimmed, updatedAt: Date.now() } : conference
     )
-  }
+  )
 }
 
 export function bindTimeline(conferenceId: string, timelineId: string | null): void {
-  const engine = getEngine(conferenceId)
-  if (engine) {
-    engine.timelineId = timelineId
-    syncEngine(engine)
-  }
+  conferences.update((list) =>
+    list.map((conference) => conference.id === conferenceId ? { ...conference, timelineId } : conference)
+  )
 }
 
-export function loadConference(id: string): void {
+export function loadConference(id: string, committeeId?: string): void {
   const conf = getConferenceById(id)
   if (conf) {
     currentConferenceId.set(id)
+    currentCommitteeId.set(committeeId && conf.committees.some((item) => item.id === committeeId)
+      ? committeeId
+      : (conf.committees[0]?.id ?? null))
     lastOpenedConferenceId.set(id)
   }
 }
 
 export function unloadConference(): void {
   currentConferenceId.set(null)
+  currentCommitteeId.set(null)
 }
 
 export function getConferenceById(id: string): Conference | null {

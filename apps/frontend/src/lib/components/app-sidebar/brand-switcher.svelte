@@ -6,15 +6,19 @@
   import { resolve } from '$app/paths'
   import favicon from '$lib/assets/favicon.png'
   import { VETO_NAME } from '$lib/classes/const'
-  import { currentConference } from '$lib/classes/stores/conference/conference-store'
+  import {
+    currentCommittee,
+    currentConferenceRecord
+  } from '$lib/classes/stores/conference/conference-store'
 
   let { hasConf = false, confPrefix = '/conference' }: { hasConf?: boolean; confPrefix?: string } =
     $props()
 
-  const conf = $derived($currentConference)
+  const conference = $derived($currentConferenceRecord)
+  const committee = $derived($currentCommittee)
 
-  let title = $derived(conf ? `${conf.name}` : VETO_NAME)
-  let subTitle = $derived(conf ? `${conf.venue}` : '会议系统')
+  let title = $derived(committee?.name ?? conference?.name ?? VETO_NAME)
+  let subTitle = $derived(committee && conference ? conference.name : '会议系统')
 </script>
 
 <Sidebar.Menu>

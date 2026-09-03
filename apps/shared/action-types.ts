@@ -14,6 +14,7 @@ export type ConferenceActionType =
   | 'roll_call_completed'
   | 'roll_call_reset'
   | 'speaker_ready'
+  | 'speaker_cancelled'
   | 'speaker_started'
   | 'speaker_finished'
   | 'yield'
@@ -63,6 +64,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   roll_call_completed: '点名完成',
   roll_call_reset: '重新点名',
   speaker_ready: '准备发言',
+  speaker_cancelled: '取消准备发言',
   speaker_started: '开始发言',
   speaker_finished: '发言结束',
   yield: '让渡时间',

@@ -1,4 +1,4 @@
-import type { Conference } from '$lib/classes/types/conference'
+import type { Committee } from '$lib/classes/types/conference'
 
 /**
  * 首页与会议卡片共享的会议状态派生工具。
@@ -6,7 +6,7 @@ import type { Conference } from '$lib/classes/types/conference'
  */
 
 /** 获取当前正在发言的代表团名称（主发言名单优先，其次磋商） */
-export function getCurrentSpeakerName(conf: Conference): string | null {
+export function getCurrentSpeakerName(conf: Committee): string | null {
   const nameById = (id: string): string | null =>
     conf.delegations.find((d) => d.id === id)?.name ?? null
 
@@ -33,6 +33,6 @@ export function getCurrentSpeakerName(conf: Conference): string | null {
 }
 
 /** 待处理动议数量 */
-export function getPendingMotionCount(conf: Conference): number {
+export function getPendingMotionCount(conf: Committee): number {
   return conf.motions.filter((m) => m.status === 'pending').length
 }

@@ -6,10 +6,6 @@
   import { Button, buttonVariants } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { ChevronDown, KeyRound, Newspaper, ShieldCheck } from '@lucide/svelte'
-  import {
-    conferenceEvents,
-    conferenceEventsReady
-  } from '$lib/classes/stores/conference/conference-event-store'
   import { conferences, unloadConference } from '$lib/classes/stores/conference/conference-store'
   import ConferenceCard from './conference-card.svelte'
   import * as Collapsible from '$lib/components/ui/collapsible'
@@ -18,17 +14,13 @@
   let copied = $state('')
   let conferencesOpen = $state(true)
 
-  // settings 挂在 [conference_id] 路由下：由当前小会议反查其所属大会
+  // 大会总览直接由 conference_id 定位 Conference 根实体。
   const conferenceId = $derived($page.params.conference_id ?? '')
   const event = $derived.by(() => {
-    const conference = $conferences.find((item) => item.id === conferenceId)
-    if (!conference?.eventId) return null
-    return $conferenceEvents.find((item) => item.id === conference.eventId) ?? null
+    return $conferences.find((conference) => conference.id === conferenceId) ?? null
   })
-  const eventConferences = $derived(
-    event ? $conferences.filter((conference) => conference.eventId === event.id) : []
-  )
-  const seatCount = $derived(eventConferences.reduce((sum, item) => sum + item.seats.length, 0))
+  const committees = $derived(event?.committees ?? [])
+  const seatCount = $derived(event?.committees.reduce((sum, committee) => sum + committee.seats.length, 0) ?? 0)
 
   async function copyText(text: string, marker: string): Promise<void> {
     await navigator.clipboard.writeText(text)
@@ -39,20 +31,18 @@
   }
 
   function allKeys(): string {
-    return eventConferences
-      .flatMap((conference) =>
-        conference.seats.map(
-          (seat) => `${conference.name},${seat.name},${seat.role ?? ''},${seat.inviteCode}`
+    return event?.committees
+      .flatMap((committee) =>
+        committee.seats.map(
+          (seat) => `${committee.name},${seat.name},${seat.role ?? ''},${seat.inviteCode}`
         )
       )
-      .join('\n')
+      .join('\n') ?? ''
   }
 
   onMount(() => {
     unloadConference()
-    void conferenceEventsReady.then(() => {
-      ready = true
-    })
+    ready = true
   })
 </script>
 
@@ -75,7 +65,7 @@
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <Badge variant="outline">{eventConferences.length} 场小会议</Badge>
+          <Badge variant="outline">{committees.length} 场小会议</Badge>
           <Badge variant="outline">{seatCount} 个席位</Badge>
           <Button
             variant="outline"
@@ -112,8 +102,8 @@
             </div>
             <Collapsible.Content>
               <div class="grid gap-4 xl:grid-cols-2">
-                {#each eventConferences as conference (conference.id)}
-                  <ConferenceCard {conference} {copied} {copyText} />
+                {#each committees as committee (committee.id)}
+                  <ConferenceCard conferenceId={event.id} {committee} {copied} {copyText} />
                 {:else}
                   <p
                     class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"

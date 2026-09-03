@@ -31,9 +31,6 @@
         markPluginsReady()
       }),
       import('$lib/classes/stores/conference/conference-store').then((m) => m.conferencesReady),
-      import('$lib/classes/stores/conference/conference-event-store').then(
-        (m) => m.conferenceEventsReady
-      ),
       import('$lib/classes/stores/battle/battle-store').then((m) => m.battlesReady),
       import('$lib/classes/stores/timeline-store').then((m) => m.timelinesReady)
     ])

@@ -12,49 +12,40 @@
     mpc: 'MPC'
   }
 
-  const showNoMeetings = $derived(wizard.attempted && wizard.meetings.length === 0)
+  const showNoCommittees = $derived(wizard.attempted && wizard.committees.length === 0)
 </script>
 
 <section class="flex flex-col gap-4">
-  {#if showNoMeetings}
-    <Field.FieldError>至少添加一场小会议</Field.FieldError>
+  {#if showNoCommittees}
+    <Field.FieldError>至少添加一个委员会</Field.FieldError>
   {/if}
 
-  {#each wizard.meetings as meeting (meeting.id)}
-    {@const showNameError = wizard.attempted && meeting.name.trim().length === 0}
+  {#each wizard.committees as committee (committee.id)}
+    {@const showNameError = wizard.attempted && committee.name.trim().length === 0}
     <article class="rounded-lg border p-4">
       <div
-        class="grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem_auto]"
+        class="grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]"
       >
         <Field.Field data-invalid={showNameError}>
-          <Field.FieldLabel for={`meeting-name-${meeting.id}`}>会议名称</Field.FieldLabel>
+          <Field.FieldLabel for={`committee-name-${committee.id}`}>委员会名称</Field.FieldLabel>
           <Input
-            id={`meeting-name-${meeting.id}`}
-            bind:value={meeting.name}
+            id={`committee-name-${committee.id}`}
+            bind:value={committee.name}
             aria-invalid={showNameError || undefined}
-            aria-describedby={showNameError ? `meeting-name-error-${meeting.id}` : undefined}
+            aria-describedby={showNameError ? `committee-name-error-${committee.id}` : undefined}
           />
           {#if showNameError}
-            <Field.FieldError id={`meeting-name-error-${meeting.id}`}
-              >请输入会议名称</Field.FieldError
+            <Field.FieldError id={`committee-name-error-${committee.id}`}
+              >请输入委员会名称</Field.FieldError
             >
           {/if}
         </Field.Field>
 
         <Field.Field>
-          <Field.FieldLabel for={`meeting-venue-${meeting.id}`}>会场</Field.FieldLabel>
-          <Input
-            id={`meeting-venue-${meeting.id}`}
-            bind:value={meeting.venue}
-            placeholder="会场地址或房间"
-          />
-        </Field.Field>
-
-        <Field.Field>
-          <Field.FieldLabel for={`meeting-type-${meeting.id}`}>类型</Field.FieldLabel>
-          <Select.Select type="single" bind:value={meeting.type}>
-            <Select.SelectTrigger id={`meeting-type-${meeting.id}`} class="w-full">
-              {typeLabels[meeting.type]}
+          <Field.FieldLabel for={`committee-type-${committee.id}`}>类型</Field.FieldLabel>
+          <Select.Select type="single" bind:value={committee.type}>
+            <Select.SelectTrigger id={`committee-type-${committee.id}`} class="w-full">
+              {typeLabels[committee.type]}
             </Select.SelectTrigger>
             <Select.SelectContent>
               <Select.SelectItem value="cabinet" label="内阁 / 委员会" />
@@ -67,8 +58,8 @@
           <Button
             variant="ghost"
             size="icon"
-            title="删除会议"
-            onclick={() => wizard.removeMeeting(meeting.id)}
+            title="删除委员会"
+            onclick={() => wizard.removeCommittee(committee.id)}
           >
             <Trash2 class="text-destructive" />
           </Button>
@@ -77,8 +68,8 @@
     </article>
   {/each}
 
-  <Button variant="outline" class="w-fit" onclick={() => wizard.addMeeting()}>
+  <Button variant="outline" class="w-fit" onclick={() => wizard.addCommittee()}>
     <Plus data-icon="inline-start" />
-    添加分会议
+    添加委员会
   </Button>
 </section>

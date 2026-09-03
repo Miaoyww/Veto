@@ -36,7 +36,9 @@
       ? $conferences.filter(
           (c) =>
             c.name.toLowerCase().includes(query.trim().toLowerCase()) ||
-            c.venue.toLowerCase().includes(query.trim().toLowerCase())
+            c.committees.some((committee) =>
+              committee.name.toLowerCase().includes(query.trim().toLowerCase())
+            )
         )
       : $conferences
   )
@@ -46,8 +48,11 @@
       ? ($conferences.find((c) => c.id === $lastOpenedConferenceId) ?? null)
       : null
   )
-  const currentSpeaker = $derived(lastOpened ? getCurrentSpeakerName(lastOpened) : null)
-  const pendingCount = $derived(lastOpened ? getPendingMotionCount(lastOpened) : 0)
+  const lastOpenedCommittee = $derived(lastOpened?.committees[0] ?? null)
+  const currentSpeaker = $derived(
+    lastOpenedCommittee ? getCurrentSpeakerName(lastOpenedCommittee) : null
+  )
+  const pendingCount = $derived(lastOpenedCommittee ? getPendingMotionCount(lastOpenedCommittee) : 0)
 
   onMount(() => {
     unloadConference()
@@ -134,14 +139,17 @@
                       {lastOpened.name}
                     </span>
                     <Badge variant="outline" class="shrink-0 text-[10px]">
-                      {PHASE_LABELS[lastOpened.phase] ?? lastOpened.phase}
+                      {lastOpenedCommittee
+                        ? (PHASE_LABELS[lastOpenedCommittee.phase] ?? lastOpenedCommittee.phase)
+                        : '尚未创建会场'}
                     </Badge>
                   </div>
                   <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span class="flex items-center gap-1">
                       <Users class="size-3" />
-                      {getPresentCount(lastOpened.delegations)}/{lastOpened.delegations.length}
-                      出席
+                      {lastOpenedCommittee
+                        ? `${getPresentCount(lastOpenedCommittee.delegations)}/${lastOpenedCommittee.delegations.length} 出席`
+                        : '暂无会场'}
                     </span>
                     {#if currentSpeaker}
                       <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">

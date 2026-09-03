@@ -7,7 +7,7 @@
   import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { getConferenceEventById } from '$lib/classes/stores/conference/conference-event-store'
+  import { getCreatedConferenceById } from '$lib/classes/stores/conference/conference-event-store'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import { wizardSteps } from './steps'
   import { resolve } from '$app/paths'
@@ -65,10 +65,11 @@
     if (wizard.creating) return
     const eventId = await wizard.submit()
     if (!eventId) return
-    // 落地大会总览页（settings：小会议与 Key）；取第一个小会议作为路由上下文
-    const event = getConferenceEventById(eventId)
+    // 落地大会总览页，并进入第一个委员会。
+    const event = getCreatedConferenceById(eventId)
     wizard.reset()
-    void goto(resolve(event?.conferenceIds[0] ? `/conference/${event.conferenceIds[0]}/` : '/'))
+    const committeeId = event?.committees[0]?.id
+    void goto(resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}` : '/'))
   }
 </script>
 
@@ -76,7 +77,7 @@
   <header class="flex shrink-0 items-center justify-between gap-4 border-b px-8 py-5">
     <div>
       <h1 class="text-xl font-semibold">创建大会</h1>
-      <p class="mt-1 text-sm text-muted-foreground">配置大会、小会议、角色权限与席位</p>
+      <p class="mt-1 text-sm text-muted-foreground">配置大会、委员会、角色权限与席位</p>
     </div>
     <Badge variant="outline" class="shrink-0">步骤 {currentIndex + 1}/{wizardSteps.length}</Badge>
   </header>

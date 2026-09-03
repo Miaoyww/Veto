@@ -26,7 +26,7 @@
     if (conferenceId) {
       const alreadyLoaded = $currentConferenceId === conferenceId
       if (!alreadyLoaded) {
-        loadConference(conferenceId)
+        loadConference(conferenceId, committeeId ?? undefined)
       }
     }
     initWsPort().then((p) => (wsPort = p))

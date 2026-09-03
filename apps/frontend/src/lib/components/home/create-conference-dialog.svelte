@@ -24,7 +24,7 @@
 
   // ---- Form state ----
   let name = $state('')
-  let venue = $state('')
+  let committeeName = $state('')
   let defaultSpeakingTimeSec = $state(120)
 
   // 代表团文本
@@ -75,7 +75,7 @@
     const parsedDelegations = parseDelegations()
     if (parsedDelegations.length === 0) return
 
-    const id = createConference(trimmedName, venue.trim() || '未指定会场', [], parsedDelegations, {
+    const id = createConference(trimmedName, committeeName.trim(), [], parsedDelegations, {
       defaultSpeakingTimeSec
     })
 
@@ -86,7 +86,7 @@
 
   function resetForm(): void {
     name = ''
-    venue = ''
+    committeeName = ''
     defaultSpeakingTimeSec = 120
     delegationsText = ''
   }
@@ -105,7 +105,9 @@
   }
 
   const parsedDelegationsCount = $derived(parseDelegations().length)
-  const canCreate = $derived(name.trim().length > 0 && parsedDelegationsCount > 0)
+  const canCreate = $derived(
+    name.trim().length > 0 && committeeName.trim().length > 0 && parsedDelegationsCount > 0
+  )
 
   // ---- 插件预设 ----
   let presetLoaded = $state(false)
@@ -143,7 +145,7 @@
           新建大会
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          设定会场与参与代表团，创建后进入模拟流程。
+          设定首个委员会与参与代表团，创建后进入模拟流程。
         </Dialog.Description>
 
         <div class="rounded-md borderpx-3 py-2 text-xs text-gray-400">
@@ -165,16 +167,16 @@
             />
           </section>
 
-          <!-- 会场 -->
+          <!-- 首个委员会 -->
           <section>
-            <Label for="conf-venue" class="mb-2 block text-xs text-muted-foreground"
-              >会场 / 委员会</Label
+            <Label for="committee-name" class="mb-2 block text-xs text-muted-foreground"
+              >首个委员会名称</Label
             >
             <Input
-              id="conf-venue"
-              bind:value={venue}
+              id="committee-name"
+              bind:value={committeeName}
               class="h-9"
-              placeholder="例如：安全理事会、人权理事会"
+              placeholder="例如：安全理事会"
             />
           </section>
 

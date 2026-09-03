@@ -171,6 +171,11 @@ export interface AbstractMotion {
   status: MotionStatus
 }
 
+/** 开启主发言名单 */
+export interface OpenSpeakersListMotion extends AbstractMotion {
+  type: 'open_speakers_list'
+}
+
 /** 有主持核心磋商 */
 export interface ModeratedCaucusMotion extends AbstractMotion {
   type: 'moderated_caucus'
@@ -252,6 +257,7 @@ export interface IndividualSpeechMotion extends AbstractMotion {
 }
 
 export type Motion =
+  | OpenSpeakersListMotion
   | ModeratedCaucusMotion
   | UnmoderatedCaucusMotion
   | ModifySpeakingTimeMotion
@@ -341,6 +347,8 @@ export interface VotingSession {
 
 // 从共享类型重导出（新名称），确保 main + renderer 进程使用同一份操作类型定义
 import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../../../shared/action-types'
+import type { News, Seat, SeatGroup, SituationUpdate } from './delegate'
+import type { RoleTemplate } from './event'
 import { ACTION_LABELS } from '../../../../../shared/action-types'
 export type { ConferenceActionType, Entry, ConferenceEntry }
 export { ACTION_LABELS }
@@ -351,32 +359,18 @@ export type ProposerPosition = 'first' | 'last'
 
 export type CaucusType = 'moderated' | 'unmoderated' | 'individual'
 
-export interface Conference {
+export interface Committee {
   id: string
-  /** 所属大会 ID；旧数据可为空，由迁移或列表兜底展示 */
-  eventId?: string
-  /** 大会名称，如 "凡尔登战役地缘政治联动体系" */
+  /** 委员会名称 */
   name: string
-  /** 大会描述/背景 */
-  description?: string
-  /** 会场/委员会名称（standing 模式下的委员会名称，如 "联合国安全理事会"） */
-  venue: string
-  createdAt: number
-  updatedAt: number
   /** 当前阶段 */
   phase: ConferencePhase
   /** 代表团列表 */
   delegations: Delegation[]
   /** 议题列表 */
   agenda: AgendaItem[]
-  /** 席位组列表（内阁/委员会、MPC、学团 IPC） */
-  seatGroups: import('./delegate').SeatGroup[]
-  /** 席位列表 */
-  seats: import('./delegate').Seat[]
-  /** 新闻列表 */
-  news: import('./delegate').News[]
-  /** 局势更新列表 */
-  situationUpdates: import('./delegate').SituationUpdate[]
+  /** 席位列表；席位是委员会中的代表身份 */
+  seats: Seat[]
   /** 主发言名单 */
   speakerLists?: SpeakerListData
   /** 所有动议 */
@@ -448,7 +442,26 @@ export interface Conference {
   /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
   yieldPending?: YieldPendingState | null
 
-  /** 绑定的时间线 ID（TODO: JCC 多时间轴支持时改为 string[]，支持快轴/慢轴/停轴） */
+}
+
+/** 大会根实体：大会级资源与委员会集合。 */
+export interface Conference {
+  id: string
+  name: string
+  description?: string
+  organizer?: string
+  createdAt: number
+  updatedAt: number
+  committees: Committee[]
+  /** 大会级角色模板 */
+  roleTemplates: RoleTemplate[]
+  /** 大会级席位组（内阁/委员会、MPC、学团 IPC） */
+  seatGroups: SeatGroup[]
+  /** 大会级新闻 */
+  news: News[]
+  /** 大会级局势更新 */
+  situationUpdates: SituationUpdate[]
+  /** 绑定的时间线 ID（TODO: 支持多个时间线） */
   timelineId?: string | null
 }
 

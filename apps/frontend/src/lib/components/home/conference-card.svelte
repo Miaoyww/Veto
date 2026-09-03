@@ -27,8 +27,9 @@
 
   let { conference }: { conference: Conference } = $props()
 
-  const currentSpeaker = $derived(getCurrentSpeakerName(conference))
-  const pendingCount = $derived(getPendingMotionCount(conference))
+  const primaryCommittee = $derived(conference.committees[0] ?? null)
+  const currentSpeaker = $derived(primaryCommittee ? getCurrentSpeakerName(primaryCommittee) : null)
+  const pendingCount = $derived(primaryCommittee ? getPendingMotionCount(primaryCommittee) : 0)
 
   let editing = $state(false)
   let editName = $state('')
@@ -154,7 +155,7 @@
     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <span class="flex items-center gap-1">
         <Building2 class="size-3" />
-        {conference.venue}
+        {conference.committees.length} 个会场
       </span>
       <span class="flex items-center gap-1">
         <CalendarDays class="size-3" />
@@ -162,10 +163,10 @@
       </span>
       <span class="flex items-center gap-1">
         <Users class="size-3" />
-        {conference.delegations.length} 个代表团
+        {conference.committees.reduce((count, committee) => count + committee.delegations.length, 0)} 个代表团
       </span>
       <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-        {PHASE_LABELS[conference.phase] ?? conference.phase}
+        {primaryCommittee ? (PHASE_LABELS[primaryCommittee.phase] ?? primaryCommittee.phase) : '尚未创建会场'}
       </span>
       {#if currentSpeaker}
         <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">

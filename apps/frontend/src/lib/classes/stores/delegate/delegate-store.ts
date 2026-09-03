@@ -13,9 +13,16 @@ import type {
   SeatGroup,
   Seat,
   Capability,
-  CabinetMode
+  CabinetMode,
+  News
 } from '$lib/classes/types/delegate'
-import { currentEngine } from '../conference/conference-store'
+import {
+  conferences,
+  currentConferenceRecord,
+  currentEngine,
+  removeSeatsForSeatGroup,
+  syncCurrentCommittee
+} from '../conference/conference-store'
 import { getDelegateBridge } from '$lib/classes/clients/delegate-client'
 
 // ---- 辅助：获取当前引擎 -------------------------------------------------
@@ -31,25 +38,62 @@ function getEng() {
 
 // ---- 席位组 ---------------------------------------------------------------
 
-export const seatGroups = derived(currentEngine, ($engine) => $engine?.seatGroups ?? [])
+export const seatGroups = derived(currentConferenceRecord, ($conference) => $conference?.seatGroups ?? [])
 
 export function addSeatGroup(name: string, type: SeatGroup['type'], defaultCapabilities: Capability[] = []): string {
-  const engine = getEng()
-  if (!engine) return ''
-  const id = engine.addSeatGroup(name, type, defaultCapabilities)
+  const conference = get(currentConferenceRecord)
+  if (!conference) return ''
+  const id = crypto.randomUUID()
+  conferences.update((items) => items.map((item) => item.id === conference.id ? {
+    ...item,
+    updatedAt: Date.now(),
+    seatGroups: [...item.seatGroups, {
+      id,
+      name,
+      type,
+      defaultCapabilities,
+      mode: type === 'cabinet' ? 'standing' : undefined,
+      sortOrder: item.seatGroups.length
+    }]
+  } : item))
   return id
 }
 
+function updateCurrentConference(
+  updater: (conference: NonNullable<ReturnType<typeof getCurrentConference>>) => NonNullable<ReturnType<typeof getCurrentConference>>
+): void {
+  const conference = getCurrentConference()
+  if (!conference) return
+  conferences.update((items) =>
+    items.map((item) =>
+      item.id === conference.id ? { ...updater(item), updatedAt: Date.now() } : item
+    )
+  )
+}
+
+function getCurrentConference() {
+  return get(currentConferenceRecord)
+}
+
 export function updateSeatGroup(id: string, updates: Partial<SeatGroup>): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.updateSeatGroup(id, updates)
+  const conference = get(currentConferenceRecord)
+  if (!conference) return
+  conferences.update((items) => items.map((item) => item.id === conference.id ? {
+    ...item,
+    updatedAt: Date.now(),
+    seatGroups: item.seatGroups.map((group) => group.id === id ? { ...group, ...updates } : group)
+  } : item))
 }
 
 export function removeSeatGroup(id: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.removeSeatGroup(id)
+  const conference = get(currentConferenceRecord)
+  if (!conference) return
+  conferences.update((items) => items.map((item) => item.id === conference.id ? {
+    ...item,
+    updatedAt: Date.now(),
+    seatGroups: item.seatGroups.filter((group) => group.id !== id)
+  } : item))
+  removeSeatsForSeatGroup(id)
 }
 
 // ---- 席位 -----------------------------------------------------------------
@@ -65,6 +109,7 @@ export function addSeat(
   const engine = getEng()
   if (!engine) return ''
   const id = engine.addSeat(name, seatGroupId, role, capabilityOverrides)
+  syncCurrentCommittee()
   return id
 }
 
@@ -72,32 +117,41 @@ export function updateSeat(id: string, updates: Partial<Seat>): void {
   const engine = getEng()
   if (!engine) return
   engine.updateSeat(id, updates)
+  syncCurrentCommittee()
 }
 
 export function setSeatPassword(seatId: string, passwordHash: string, salt: string): void {
   const engine = getEng()
   if (!engine) return
   engine.setSeatPassword(seatId, passwordHash, salt)
+  syncCurrentCommittee()
 }
 
 export function removeSeat(id: string): void {
   const engine = getEng()
   if (!engine) return
   engine.removeSeat(id)
+  syncCurrentCommittee()
 }
 
 export function resolveCapabilities(seatId: string): Capability[] {
   const engine = getEng()
-  if (!engine) return []
-  return engine.resolveCapabilities(seatId)
+  const conference = get(currentConferenceRecord)
+  if (!engine || !conference) return []
+  const seat = engine.seats.find((item) => item.id === seatId)
+  const group = conference.seatGroups.find((item) => item.id === seat?.seatGroupId)
+  if (!seat || !group) return []
+  return group.defaultCapabilities.filter((capability) => seat.capabilityOverrides[capability] !== false)
+    .concat(Object.entries(seat.capabilityOverrides)
+      .filter(([, enabled]) => enabled)
+      .map(([capability]) => capability as Capability)
+      .filter((capability) => !group.defaultCapabilities.includes(capability)))
 }
 
 // ---- 模式切换 -------------------------------------------------------------
 
 export function setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.setCabinetMode(seatGroupId, mode)
+  updateSeatGroup(seatGroupId, { mode })
   // 通过 WS 广播模式切换
   getDelegateBridge().sendModeChange(seatGroupId, mode)
 }
@@ -106,9 +160,8 @@ export function setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
 
 /** 当前会议的所有指令 */
 export const directives = derived(currentEngine, ($engine) => {
-  // Directives are managed through the engine's news/situation pattern
-  // For now, return empty; directives are stored in-memory via the engine
-  return $engine?.news ?? []
+  void $engine
+  return []
 })
 
 export function createDirective(data: {
@@ -120,15 +173,14 @@ export function createDirective(data: {
   content: string
   cabinetId: string
 }): string {
-  const engine = getEng()
-  if (!engine) return ''
-  return engine.createDirective(data)
+  void data
+  return ''
 }
 
 // ---- 新闻 -----------------------------------------------------------------
 
 /** 当前会议的所有新闻 */
-export const newsList = derived(currentEngine, ($engine) => $engine?.news ?? [])
+export const newsList = derived(currentConferenceRecord, ($conference) => $conference?.news ?? [])
 
 export function createNews(data: {
   title: string
@@ -137,52 +189,75 @@ export function createNews(data: {
   authorId: string
   seatGroupId: string
 }): string {
-  const engine = getEng()
-  if (!engine) return ''
-  const id = engine.createNews(data)
+  const id = crypto.randomUUID()
+  updateCurrentConference((conference) => ({
+    ...conference,
+    news: [...conference.news, { ...data, id, status: 'draft', createdAt: Date.now() }]
+  }))
   return id
 }
 
 export function submitNews(newsId: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.submitNews(newsId)
+  updateCurrentConference((conference) => ({
+    ...conference,
+    news: conference.news.map((news) =>
+      news.id === newsId ? { ...news, status: 'submitted' } : news
+    )
+  }))
 }
 
 export function publishNews(newsId: string, reviewerId: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.publishNews(newsId, reviewerId)
+  let updated: News | undefined
+  updateCurrentConference((conference) => ({
+    ...conference,
+    news: conference.news.map((news) => {
+      if (news.id !== newsId) return news
+      updated = { ...news, status: 'published', reviewerId, publishedAt: Date.now() }
+      return updated
+    })
+  }))
   // 通过 WS 通知 Delegate
-  const newsItem = engine.news.find((n) => n.id === newsId)
-  if (newsItem) {
-    getDelegateBridge().sendNewsUpdated(newsItem)
+  if (updated) {
+    getDelegateBridge().sendNewsUpdated(updated)
   }
 }
 
 export function rejectNews(newsId: string, reviewerId: string, reviewComment: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.rejectNews(newsId, reviewerId, reviewComment)
-  const newsItem = engine.news.find((n) => n.id === newsId)
-  if (newsItem) {
-    getDelegateBridge().sendNewsUpdated(newsItem)
+  let updated: News | undefined
+  updateCurrentConference((conference) => ({
+    ...conference,
+    news: conference.news.map((news) => {
+      if (news.id !== newsId) return news
+      updated = { ...news, status: 'rejected', reviewerId, reviewComment }
+      return updated
+    })
+  }))
+  if (updated) {
+    getDelegateBridge().sendNewsUpdated(updated)
   }
 }
 
 export function retractNews(newsId: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.retractNews(newsId)
-  const newsItem = engine.news.find((n) => n.id === newsId)
-  if (newsItem) {
-    getDelegateBridge().sendNewsUpdated(newsItem)
+  let updated: News | undefined
+  updateCurrentConference((conference) => ({
+    ...conference,
+    news: conference.news.map((news) => {
+      if (news.id !== newsId) return news
+      updated = { ...news, status: 'retracted', retractedAt: Date.now() }
+      return updated
+    })
+  }))
+  if (updated) {
+    getDelegateBridge().sendNewsUpdated(updated)
   }
 }
 
 // ---- 局势更新 -------------------------------------------------------------
 
-export const situationUpdates = derived(currentEngine, ($engine) => $engine?.situationUpdates ?? [])
+export const situationUpdates = derived(
+  currentConferenceRecord,
+  ($conference) => $conference?.situationUpdates ?? []
+)
 
 export function createSituationUpdate(data: {
   title: string
@@ -193,13 +268,13 @@ export function createSituationUpdate(data: {
   relatedBattleId?: string
   relatedLocation?: { lat: number; lng: number; label?: string }
 }): string {
-  const engine = getEng()
-  if (!engine) return ''
-  const id = engine.createSituationUpdate(data)
+  const id = crypto.randomUUID()
+  const update = { ...data, id, createdAt: Date.now() }
+  updateCurrentConference((conference) => ({
+    ...conference,
+    situationUpdates: [...conference.situationUpdates, update]
+  }))
   // 通过 WS 通知 Delegate
-  const update = engine.situationUpdates.find((s) => s.id === id)
-  if (update) {
-    getDelegateBridge().sendSituationCreated(update)
-  }
+  getDelegateBridge().sendSituationCreated(update)
   return id
 }

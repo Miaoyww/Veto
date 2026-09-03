@@ -1,47 +1,27 @@
-import { get, writable } from 'svelte/store'
-import type { ConferenceEvent, RoleTemplate } from '$lib/classes/types/event'
+/**
+ * 大会创建适配层。
+ *
+ * 大会创建适配层。文件名为兼容已有导入保留，持久化实体只有 Conference。
+ */
+import { get } from 'svelte/store'
+import type { Committee, Conference } from '$lib/classes/types/conference'
+import type { RoleTemplate } from '$lib/classes/types/event'
 import type { Capability, Seat, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
-import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
-import { createConference, saveConferencesNow } from './conference-store'
+import { conferences, createConference, saveConferencesNow } from './conference-store'
 
-const STORAGE_KEY = 'veto_conference_events'
-const STORE_DOMAIN = 'events'
-
-export interface ConferenceEventConferenceDraft {
-  /** 小会议 id（创建向导中生成，持久化时沿用，作为小会议的唯一标识） */
+export interface CommitteeDraft {
   id: string
   name: string
-  venue?: string
   type: SeatGroupType
-  seats: Array<{
-    name: string
-    roleId: string
-  }>
+  seats: Array<{ name: string; roleId: string }>
 }
 
-export interface CreateConferenceEventInput {
+export interface CreateConferenceInput {
   name: string
   description?: string
   organizer?: string
   roleTemplates: RoleTemplate[]
-  conferences: ConferenceEventConferenceDraft[]
-}
-
-function loadEventsFromStorage(): ConferenceEvent[] {
-  if (typeof localStorage === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as ConferenceEvent[]) : []
-  } catch {
-    return []
-  }
-}
-
-function saveEvents(events: ConferenceEvent[]): void {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events))
-  }
-  void saveToStore(STORE_DOMAIN, events)
+  committees: CommitteeDraft[]
 }
 
 function createId(): string {
@@ -57,9 +37,7 @@ function randomKeyCharacters(length: number): string {
 
 function createSeatKey(existing: Set<string>): string {
   let key = `${randomKeyCharacters(4)}-${randomKeyCharacters(4)}-${randomKeyCharacters(4)}`
-  while (existing.has(key)) {
-    key = `${randomKeyCharacters(4)}-${randomKeyCharacters(4)}-${randomKeyCharacters(4)}`
-  }
+  while (existing.has(key)) key = `${randomKeyCharacters(4)}-${randomKeyCharacters(4)}-${randomKeyCharacters(4)}`
   existing.add(key)
   return key
 }
@@ -68,94 +46,92 @@ function capabilityOverrides(capabilities: Capability[]): Seat['capabilityOverri
   return Object.fromEntries(capabilities.map((capability) => [capability, true]))
 }
 
-export const conferenceEvents = writable<ConferenceEvent[]>(loadEventsFromStorage())
-
-export const conferenceEventsReady: Promise<void> = bootstrapStore<ConferenceEvent[]>(
-  STORE_DOMAIN,
-  []
-).then((data) => {
-  conferenceEvents.set(data)
-})
-
-conferenceEvents.subscribe(saveEvents)
-
-export function getConferenceEventById(id: string): ConferenceEvent | null {
-  return get(conferenceEvents).find((event) => event.id === id) ?? null
+function createCommittee(id: string, name: string, seats: Seat[]): Committee {
+  return {
+    id,
+    name,
+    phase: 'preamble',
+    delegations: [],
+    agenda: [],
+    seats,
+    speakerLists: { id: 'main', name: '主发言名单', entries: [] },
+    motions: [],
+    dismissedResolvedMotionIds: [],
+    points: [],
+    dismissedPointIds: [],
+    draftResolutions: [],
+    documentNames: [],
+    votingSessions: [],
+    minutes: [],
+    defaultSpeakingTimeSec: 120,
+    activeCaucus: null,
+    activeSpeaker: null
+  }
 }
 
-export async function createConferenceEvent(
-  input: CreateConferenceEventInput
-): Promise<string | null> {
-  const eventName = input.name.trim()
-  if (!eventName || input.conferences.length === 0) return null
+export function getCreatedConferenceById(id: string): Conference | null {
+  return get(conferences).find((conference) => conference.id === id) ?? null
+}
 
-  const roleTemplates = input.roleTemplates.map((role) => ({
-    ...role,
-    name: role.name.trim()
-  }))
-  const roleById = new Map(roleTemplates.map((role) => [role.id, role]))
+/** Creates one Conference with all of the requested Committee records. */
+export async function createConferenceFromDraft(input: CreateConferenceInput): Promise<string | null> {
+  const name = input.name.trim()
+  if (!name || input.committees.length === 0) return null
+
+  const roleTemplates = input.roleTemplates.map((role) => ({ ...role, name: role.name.trim() }))
+  const roles = new Map(roleTemplates.map((role) => [role.id, role]))
   const existingKeys = new Set<string>()
-  const conferenceIds: string[] = []
-  const eventId = createId()
+  const seatGroups: SeatGroup[] = []
+  const committees: Committee[] = []
 
-  for (const draft of input.conferences) {
-    const seatGroupId = createId()
-    const seatGroup: SeatGroup = {
-      id: seatGroupId,
+  for (const [index, draft] of input.committees.entries()) {
+    const groupId = createId()
+    seatGroups.push({
+      id: groupId,
       name: draft.name.trim(),
       type: draft.type,
       defaultCapabilities: [],
       mode: draft.type === 'cabinet' ? 'standing' : undefined,
-      sortOrder: 0
-    }
-
-    const seats: Seat[] = draft.seats.map((seatDraft) => {
-      const role = roleById.get(seatDraft.roleId)
+      sortOrder: index
+    })
+    const seats = draft.seats.map((draftSeat) => {
+      const role = roles.get(draftSeat.roleId)
       return {
         id: createId(),
-        name: seatDraft.name.trim(),
-        seatGroupId,
+        name: draftSeat.name.trim(),
+        seatGroupId: groupId,
         capabilityOverrides: capabilityOverrides(role?.capabilities ?? []),
         inviteCode: createSeatKey(existingKeys),
         passwordHash: '',
         role: role?.name,
-        roleId: seatDraft.roleId
+        roleId: draftSeat.roleId
       }
     })
-
-    const conferenceId = createConference(
-      draft.name.trim(),
-      draft.venue?.trim() || draft.name.trim(),
-      [],
-      [],
-      {
-        id: draft.id,
-        eventId,
-        seatGroups: [seatGroup],
-        seats
-      }
-    )
-    if (!conferenceId) continue
-    conferenceIds.push(conferenceId)
+    committees.push(createCommittee(draft.id, draft.name.trim(), seats))
   }
 
-  if (conferenceIds.length === 0) return null
-
+  const conferenceId = createConference(name, committees[0].name, [], [], {
+    id: createId(),
+    seatGroups,
+    committees
+  })
   const now = Date.now()
-  const event: ConferenceEvent = {
-    id: eventId,
-    name: eventName,
-    description: input.description?.trim() || undefined,
-    organizer: input.organizer?.trim() || undefined,
-    createdAt: now,
-    updatedAt: now,
-    conferenceIds,
-    roleTemplates,
-    news: [],
-    situationUpdates: []
-  }
-
-  conferenceEvents.update((events) => [...events, event])
+  conferences.update((items) =>
+    items.map((conference) =>
+      conference.id === conferenceId
+        ? {
+            ...conference,
+            name,
+            description: input.description?.trim() || undefined,
+            organizer: input.organizer?.trim() || undefined,
+            createdAt: now,
+            updatedAt: now,
+            roleTemplates,
+            seatGroups
+          }
+        : conference
+    )
+  )
   await saveConferencesNow()
-  return event.id
+  return conferenceId
 }

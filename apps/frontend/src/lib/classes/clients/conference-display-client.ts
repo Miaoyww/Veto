@@ -13,6 +13,7 @@
 import type {
   ConferenceDisplayData,
   Delegation,
+  SpeakerEntryStatus,
   SpeakerTransitionReason,
   CaucusSpeakerStatus,
   TimerTickData
@@ -294,17 +295,17 @@ export function setDisplayBridge(bridge: ConferenceDisplayBridge): void {
 
 // ---- 辅助：从 Conference / ConferenceEngine 构建 DisplayData -----------------
 
-import type { Conference } from '$lib/classes/types/conference'
+import type { Committee } from '$lib/classes/types/conference'
 import { tallyVotes } from '$lib/classes/stores/conference/conference-store'
 import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
 import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
 
 /**
  * 构建 Display 窗口数据。
- * 接受 ConferenceEngine（优先，可直接使用 delegation 引用）或 Conference JSON。
+ * 接受 ConferenceEngine（优先）或 Committee JSON。
  */
 export function buildDisplayData(
-  source: Conference | ConferenceEngine,
+  source: Committee | ConferenceEngine,
   extra?: {
     rollCall?: ConferenceDisplayData['rollCall']
     motionDraft?: ConferenceDisplayData['motionDraft']
@@ -313,8 +314,8 @@ export function buildDisplayData(
     speakerTransition?: SpeakerTransitionReason
   }
 ): ConferenceDisplayData {
-  // 统一为 Conference JSON 格式
-  const conf: Conference = 'toJSON' in source ? source.toJSON() : source
+  // 统一为 Committee JSON 格式
+  const conf: Committee = 'toJSON' in source ? source.toJSON() : source
 
   // 如果传入的是引擎，则使用引擎方法获取 delegation 信息以优化查找
   const engine: ConferenceEngine | null = 'toJSON' in source ? source : null
@@ -329,8 +330,7 @@ export function buildDisplayData(
       (s) => s.id === conf.activeSpeaker!.entryId
     )
     if (engineEntry) {
-      currentSpeakerDelegation =
-        engineEntry.delegation ?? conf.delegations.find((d) => d.id === engineEntry.delegationId)
+      currentSpeakerDelegation = conf.delegations.find((d) => d.id === engineEntry.delegationId)
       currentSpeakerAllocatedSec = engineEntry.allocatedTimeSec
     } else {
       // 回退：从 conf 数据查找
@@ -438,28 +438,35 @@ export function buildDisplayData(
           const delegation = conf.delegations.find((d) => d.id === s.delegationId)
           return delegation
             ? {
-                delegationName: s.delegationName,
+                delegationName: delegation.name,
                 delegation,
                 status: s.status as CaucusSpeakerStatus,
                 allocatedTimeSec: s.allocatedTimeSec
               }
             : null
         })
-        .filter(Boolean),
+        .filter(
+          (speaker): speaker is {
+            delegationName: string
+            delegation: Delegation
+            status: CaucusSpeakerStatus
+            allocatedTimeSec: number
+          } => speaker !== null
+        ),
       currentSpeakerIndex: conf.activeCaucus.currentSpeakerIndex,
       speakerTransition: extra?.speakerTransition
     }
   }
 
   // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
-  const effectivePhase: Conference['phase'] | 'motion' = hasActiveMotionPhase
+  const effectivePhase: Committee['phase'] | 'motion' = hasActiveMotionPhase
     ? 'motion'
     : conf.phase
 
   return {
     conferenceId: conf.id,
     phase: effectivePhase,
-    venue: conf.venue,
+    venue: conf.name,
     name: conf.name,
     presentCount: conf.delegations.filter((d) => d.attendance === 'present').length,
     votingCount: conf.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false)
@@ -482,11 +489,8 @@ export function buildDisplayData(
       // 优先从引擎获取（带 delegation 引用）
       const engineReady = engine?.readySpeaker
       if (engineReady) {
-        return {
-          delegation:
-            engineReady.delegation ??
-            conf.delegations.find((d) => d.id === engineReady.delegationId)
-        }
+        const delegation = conf.delegations.find((d) => d.id === engineReady.delegationId)
+        return delegation ? { delegation } : undefined
       }
       // 回退：从 conf 数据查找
       const ready = conf.speakerLists?.entries.find((s) => s.status === 'ready')
@@ -497,19 +501,26 @@ export function buildDisplayData(
     speakersList: (() => {
       // 优先从引擎获取
       if (engine) {
-        return engine.speakerList.entries.map((s) => ({
-          delegation: s.delegation ?? conf.delegations.find((d) => d.id === s.delegationId),
-          status: s.status
-        }))
+        return engine.speakerList.entries
+          .map((s) => ({
+            delegation: conf.delegations.find((d) => d.id === s.delegationId),
+            status: s.status
+          }))
+          .filter(
+            (speaker): speaker is { delegation: Delegation; status: SpeakerEntryStatus } =>
+              speaker.delegation !== undefined
+          )
       }
       // 回退：从 conf 数据查找
-      return (conf.speakerLists?.entries ?? []).map((s) => {
-        const d = conf.delegations.find((del) => del.id === s.delegationId)
-        return {
-          delegation: d,
+      return (conf.speakerLists?.entries ?? [])
+        .map((s) => ({
+          delegation: conf.delegations.find((del) => del.id === s.delegationId),
           status: s.status
-        }
-      })
+        }))
+        .filter(
+          (speaker): speaker is { delegation: Delegation; status: SpeakerEntryStatus } =>
+            speaker.delegation !== undefined
+        )
     })(),
     votingSession: votingData,
     activeMotion: displayMotion
@@ -577,7 +588,13 @@ export function buildDisplayData(
             speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
               (id) =>
                 engine?.getDelegation(id) ??
-                conf.delegations.find((d) => d.id === id) ?? { id, name: id }
+                conf.delegations.find((d) => d.id === id) ?? {
+                  id,
+                  name: id,
+                  attendance: 'absent' as const,
+                  vetoPower: false,
+                  sortOrder: Number.MAX_SAFE_INTEGER
+                }
             )
           }
         })()

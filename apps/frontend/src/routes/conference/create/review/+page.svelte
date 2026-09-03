@@ -7,7 +7,7 @@
   import { buttonVariants } from '$lib/components/ui/button'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
-  import MeetingCard from './meeting-card.svelte'
+  import CommitteeCard from './meeting-card.svelte'
 
   const capabilityLabel = (capability: Capability): string =>
     CAPABILITY_LABELS[capability] ?? capability
@@ -20,8 +20,8 @@
     <h2 class="truncate text-sm font-semibold">{wizard.eventName || '未命名大会'}</h2>
     <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-3">
       <div>
-        <dt class="text-xs text-muted-foreground">小会议</dt>
-        <dd class="mt-1 font-medium">{wizard.meetings.length}</dd>
+        <dt class="text-xs text-muted-foreground">委员会</dt>
+        <dd class="mt-1 font-medium">{wizard.committees.length}</dd>
       </div>
       <div>
         <dt class="text-xs text-muted-foreground">角色模板</dt>
@@ -35,8 +35,8 @@
   </article>
 
   <div class="grid gap-4 lg:grid-cols-2">
-    {#each wizard.meetings as meeting (meeting.id)}
-      <MeetingCard {meeting} />
+    {#each wizard.committees as committee (committee.id)}
+      <CommitteeCard {committee} />
     {/each}
   </div>
 

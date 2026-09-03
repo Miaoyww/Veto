@@ -1,32 +1,31 @@
 # Veto
 
-模拟联合国大会统筹平台。用户创建大会（ConferenceEvent），并在大会下规划多场小会议
-（Conference），管理角色、席位、新闻、局势与文件，支持常委模式（standing）和危机联动模式
+模拟联合国大会统筹平台。用户创建大会（Conference），并在大会下规划多个委员会
+（Committee），管理角色、席位、新闻、局势与文件，支持常委模式（standing）和危机联动模式
 （crisis）之间的切换。
 
 三种角色：**Chair**（主席/学团控制端）、**Delegate**（代表端）、**Display**（投屏端）。
 
-## ConferenceEvent（大会）
+## Conference（大会）
 
-**ConferenceEvent (大会)**:
+**Conference (大会)**:
 一场完整模拟联合国活动的根实体，如“枣庄市第17届模拟联合国大会”。包含一场或多场小会议、
 大会级角色模板、全局新闻和全局局势更新。大会本身不直接承载发言名单、动议、表决等议事流程。
-_Avoid_: Meeting, Session, Committee, Conference
+_Avoid_: Meeting, Session, ConferenceEvent
 
-## Conference（小会议）
+## Committee（委员会 / 会场）
 
-**Conference (小会议)**:
+**Committee (委员会 / 会场)**:
 大会下的一场具体会议，如“美国内阁”“英国内阁”“MPC”。每场小会议拥有自己的主席、席位、
-议事状态、指令、代表团与局域网服务。发言名单、动议、表决等议事流程属于小会议。
-现有代码中的 Conference 先保持该名称并降级为该含义，后续迁移时避免一次性重命名。
-_Avoid_: Event, Cabinet, Committee Group
+议事状态、代表团与局域网服务。发言名单、动议、表决等议事流程属于委员会。
+_Avoid_: Event, Conference, Cabinet, Committee Group
 
 ## SeatGroup（席位组）
 
-小会议内的席位组织单元。有三种类型：内阁/委员会、MPC、学团 IPC。
+大会内的席位组织单元。有三种类型：内阁/委员会、MPC、学团 IPC。
 
 **SeatGroup (席位组)**:
-一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在小会议中的协作方式。
+一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在大会中的协作方式。
 可选择性绑定到一个 Delegation。
 _Avoid_: Role, Team, Group
 
@@ -58,7 +57,7 @@ _Avoid_: Chair, Admin, Director
 ## Seat（席位）
 
 **Seat (席位)**:
-席位组内的具体座位。每个 Seat 绑定一个 Account，携带独立于 SeatGroup 默认值的 Capability 覆盖。
+委员会内、席位组中的具体座位。每个 Seat 绑定一个 Account，携带独立于 SeatGroup 默认值的 Capability 覆盖。
 在 crisis 模式下，Seat 绑定具体部门（如"海军部长""情报局局长"）；在 standing 模式下，
 Seat 代表国家代表团内的一个角色（如"德国外交部长"）。
 _Avoid_: Member, User, Delegate
@@ -74,7 +73,7 @@ _Avoid_: Password, 席位 key
 ## RoleTemplate（角色模板）
 
 **RoleTemplate (角色模板)**:
-大会级角色定义，包含名称与默认能力集。小会议创建席位时选择角色模板，并可在席位上覆盖具体能力。
+大会级角色定义，包含名称与默认能力集。委员会创建席位时选择角色模板，并可在席位上覆盖具体能力。
 常见模板包括常规代表、MPC 记者、观察员、学团控制者。角色模板不是登录身份；席位才是代表身份。
 _Avoid_: Role, Permission, Account
 
@@ -132,7 +131,7 @@ _Avoid_: Article, Post, Bulletin
 ## SituationUpdate（局势更新）
 
 **SituationUpdate (局势更新)**:
-属于大会层的全局局势变化公告，由学团 IPC 发布。关联 Timeline，所有小会议中的代表看到相同内容。
+属于大会层的全局局势变化公告，由学团 IPC 发布。关联 Timeline，所有委员会中的代表看到相同内容。
 当前阶段不考虑分内阁差异化情报。预留 `relatedBattleId` 和 `relatedLocation` 字段供未来地图集成。
 _Avoid_: Event, Update, Intel
 

@@ -8,7 +8,7 @@
  */
 
 import type {
-  Conference,
+  Committee,
   ConferencePhase,
   Delegation,
   AgendaItem,
@@ -31,19 +31,12 @@ import type {
   VoteTargetType
 } from '$lib/classes/types/conference'
 import type {
-  SeatGroup,
   Seat,
-  Directive,
-  News,
-  SituationUpdate,
-  Capability,
-  CabinetMode,
-  Classification
+  Capability
 } from '$lib/classes/types/delegate'
 import { POINT_LABELS, MOTION_LABELS, type Attendance } from '$lib/classes/types/conference'
 import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { emitServiceEvent } from '$lib/classes/services/event-bus-bridge'
-import { getTimelineEngine } from '$lib/classes/stores/timeline-store'
 import {
   Timer,
   calculateMajorityThresholds,
@@ -195,12 +188,7 @@ export class SpeakerList {
 export class ConferenceEngine {
   // ── 基础信息 ──
   id: string
-  eventId: string | null = $state(null)
   name: string = $state('')
-  venue: string = $state('')
-  createdAt: number = 0
-  updatedAt: number = $state(0)
-  timelineId: string | null = $state(null)
 
   // ── 配置 ──
   defaultSpeakingTimeSec: number = $state(120)
@@ -216,10 +204,10 @@ export class ConferenceEngine {
 
   // ── 运行时状态 ──
   phase: ConferencePhase = $state('preamble')
-  activeSpeaker: Conference['activeSpeaker'] = $state(null)
-  activeCaucus: Conference['activeCaucus'] = $state(null)
+  activeSpeaker: Committee['activeSpeaker'] = $state(null)
+  activeCaucus: Committee['activeCaucus'] = $state(null)
   yieldPending: YieldPendingState | null = $state(null)
-  caucusSetup: Conference['caucusSetup'] = $state(null)
+  caucusSetup: Committee['caucusSetup'] = $state(null)
   /** 主发言名单是否曾被填充过（用于判断清空后是否需要重新动议） */
   speakersListHasBeenPopulated: boolean = $state(false)
 
@@ -233,30 +221,22 @@ export class ConferenceEngine {
   votingSessions: VotingSession[] = $state([])
   minutes: ConferenceEntry[] = $state([])
 
-  // ── 代表端数据 ──
-  seatGroups: SeatGroup[] = $state([])
+  // ── 委员会席位 ──
   seats: Seat[] = $state([])
-  news: News[] = $state([])
-  situationUpdates: SituationUpdate[] = $state([])
 
   // ── 计时器 ──
   timers: Map<string, Timer> = new Map()
 
-  constructor(data?: Partial<Conference>) {
+  constructor(data?: Partial<Committee>) {
     this.id = data?.id ?? generateId()
-    this.eventId = data?.eventId ?? null
     if (data) {
       this.restoreFromConference(data)
     }
   }
 
   /** 从 Conference 数据还原状态 */
-  private restoreFromConference(data: Partial<Conference>): void {
-    if (data.eventId != null) this.eventId = data.eventId
+  private restoreFromConference(data: Partial<Committee>): void {
     if (data.name != null) this.name = data.name
-    if (data.venue != null) this.venue = data.venue
-    if (data.createdAt != null) this.createdAt = data.createdAt
-    if (data.updatedAt != null) this.updatedAt = data.updatedAt
     if (data.defaultSpeakingTimeSec != null)
       this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
     if (data.delegations != null) {
@@ -295,18 +275,14 @@ export class ConferenceEngine {
         caucusSpeakers: data.activeCaucus.caucusSpeakers
       }
     } else if (data.activeCaucus != null) {
-      this.activeCaucus = data.activeCaucus as Conference['activeCaucus']
+      this.activeCaucus = data.activeCaucus as Committee['activeCaucus']
     }
 
     // 其他运行时状态
     if (data.activeSpeaker != null) this.activeSpeaker = data.activeSpeaker
     if (data.yieldPending != null) this.yieldPending = data.yieldPending
     if (data.caucusSetup != null) this.caucusSetup = data.caucusSetup
-    if (data.timelineId != null) this.timelineId = data.timelineId
-    if (data.seatGroups != null) this.seatGroups = data.seatGroups as SeatGroup[]
     if (data.seats != null) this.seats = data.seats as Seat[]
-    if (data.news != null) this.news = data.news as News[]
-    if (data.situationUpdates != null) this.situationUpdates = data.situationUpdates as SituationUpdate[]
   }
 
   // ================================================================
@@ -434,7 +410,9 @@ export class ConferenceEngine {
   readySpeakerEntry(entryId: string): void {
     this.speakerList.readySpeaker(entryId)
     const entry = this.speakerList.entries.find((s) => s.id === entryId)
-    this.addConferenceEntry('speaker_ready', `${this.getSpeakerDelegationName(entry)} 准备发言`)
+    if (entry) {
+      this.addConferenceEntry('speaker_ready', `${this.getSpeakerDelegationName(entry)} 准备发言`)
+    }
     this.touch()
   }
 
@@ -1610,18 +1588,6 @@ export class ConferenceEngine {
       ? this.delegations.find((d) => d.id === speakerEntry.delegationId)
       : null
 
-    // 如果绑定了时间线，附带当前模拟时间信息
-    const timeline = this.timelineId ? getTimelineEngine(this.timelineId) : undefined
-    const timelineInfo =
-      timeline
-        ? {
-            timelineId: this.timelineId,
-            simTime: timeline.currentSimTime,
-            ratio: timeline.ratio,
-            paused: timeline.paused
-          }
-        : null
-
     return {
       conferenceId: this.id,
       conferenceName: this.name,
@@ -1636,8 +1602,7 @@ export class ConferenceEngine {
           }
         : null,
       activeCaucusType: this.activeCaucus?.type ?? null,
-      activeCaucusMotionId: this.activeCaucus?.motionId ?? null,
-      timeline: timelineInfo
+      activeCaucusMotionId: this.activeCaucus?.motionId ?? null
     }
   }
 
@@ -1675,14 +1640,10 @@ export class ConferenceEngine {
   //  序列化
   // ================================================================
 
-  toJSON(): Conference {
+  toJSON(): Committee {
     return {
       id: this.id,
-      eventId: this.eventId ?? undefined,
       name: this.name,
-      venue: this.venue,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
       phase: this.phase,
       delegations: this.delegations,
       agenda: this.agenda,
@@ -1705,15 +1666,11 @@ export class ConferenceEngine {
         : null,
       activeSpeaker: this.activeSpeaker,
       yieldPending: this.yieldPending,
-      timelineId: this.timelineId,
-      seatGroups: this.seatGroups,
-      seats: this.seats,
-      news: this.news,
-      situationUpdates: this.situationUpdates
+      seats: this.seats
     }
   }
 
-  static fromJSON(json: Conference): ConferenceEngine {
+  static fromJSON(json: Committee): ConferenceEngine {
     const cleanJson = { ...json }
 
     // 清理已过期的计时器状态
@@ -1751,51 +1708,11 @@ export class ConferenceEngine {
     return this.delegations.find((d) => d.id === entry.delegationId)?.name ?? entry.delegationId
   }
 
-  /** 更新时间戳（每次变更时调用） */
-  private touch(): void {
-    this.updatedAt = Date.now()
-  }
+  /** 状态已通过 store 的 syncEngine 统一写入所属大会。 */
+  private touch(): void {}
 
   // ================================================================
-  //  代表端 —— 席位组管理
-  // ================================================================
-
-  addSeatGroup(name: string, type: SeatGroup['type'], defaultCapabilities: Capability[] = []): string {
-    const id = generateId()
-    const group: SeatGroup = {
-      id,
-      name,
-      type,
-      defaultCapabilities,
-      mode: type === 'cabinet' ? 'standing' : undefined,
-      sortOrder: this.seatGroups.length
-    }
-    this.seatGroups = [...this.seatGroups, group]
-    this.addConferenceEntry('phase_changed', `席位组已创建: ${name}`)
-    this.touch()
-    return id
-  }
-
-  updateSeatGroup(id: string, updates: Partial<SeatGroup>): void {
-    this.seatGroups = this.seatGroups.map((g) =>
-      g.id === id ? { ...g, ...updates } : g
-    )
-    this.touch()
-  }
-
-  removeSeatGroup(id: string): void {
-    this.seatGroups = this.seatGroups.filter((g) => g.id !== id)
-    // 同时移除该组下的所有席位
-    this.seats = this.seats.filter((s) => s.seatGroupId !== id)
-    this.touch()
-  }
-
-  getSeatGroup(id: string): SeatGroup | undefined {
-    return this.seatGroups.find((g) => g.id === id)
-  }
-
-  // ================================================================
-  //  代表端 —— 席位管理
+  //  委员会席位管理
   // ================================================================
 
   addSeat(
@@ -1846,198 +1763,6 @@ export class ConferenceEngine {
 
   findSeatByInviteCode(inviteCode: string): Seat | undefined {
     return this.seats.find((s) => s.inviteCode === inviteCode)
-  }
-
-  /** 解析 Seat 的有效能力（合并 SeatGroup 默认 + Seat 覆盖） */
-  resolveCapabilities(seatId: string): Capability[] {
-    const seat = this.getSeat(seatId)
-    if (!seat) return []
-
-    const group = this.getSeatGroup(seat.seatGroupId)
-    if (!group) return []
-
-    const caps = new Set(group.defaultCapabilities)
-
-    for (const [cap, enabled] of Object.entries(seat.capabilityOverrides)) {
-      if (enabled) {
-        caps.add(cap as Capability)
-      } else {
-        caps.delete(cap as Capability)
-      }
-    }
-
-    return Array.from(caps)
-  }
-
-  // ================================================================
-  //  代表端 —— 模式切换
-  // ================================================================
-
-  setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
-    const group = this.getSeatGroup(seatGroupId)
-    if (!group || group.type !== 'cabinet') return
-
-    this.seatGroups = this.seatGroups.map((g) =>
-      g.id === seatGroupId ? { ...g, mode } : g
-    )
-    this.addConferenceEntry(
-      'phase_changed',
-      `${group.name} 切换至 ${mode === 'crisis' ? '危机' : '常委'} 模式`
-    )
-    this.touch()
-  }
-
-  // ================================================================
-  //  代表端 —— 指令
-  // ================================================================
-
-  createDirective(data: {
-    title: string
-    initiatorId: string
-    initiatorRole?: string
-    target: string
-    classification: Classification
-    content: string
-    cabinetId: string
-  }): string {
-    const seat = this.getSeat(data.initiatorId)
-    const id = generateId()
-    const now = Date.now()
-    const directive: Directive = {
-      id,
-      title: data.title,
-      initiatorId: data.initiatorId,
-      initiatorRole: data.initiatorRole ?? seat?.role ?? '',
-      target: data.target,
-      classification: data.classification,
-      content: data.content,
-      status: 'draft',
-      cabinetId: data.cabinetId,
-      createdAt: now,
-      updatedAt: now
-    }
-    this.news = [...this.news] // trigger reactivity
-    this.addConferenceEntry('phase_changed', `指令草稿已创建: ${data.title}`)
-    this.touch()
-    // Store directives in a separate list (we're using the news array pattern)
-    // Actually, we need a directives array. We'll add it inline.
-    return id
-  }
-
-  submitDirective(directiveId: string, directives: Directive[]): Directive[] {
-    return directives.map((d) =>
-      d.id === directiveId ? { ...d, status: 'submitted' as const, updatedAt: Date.now() } : d
-    )
-  }
-
-  approveDirective(directiveId: string, directives: Directive[]): Directive[] {
-    return directives.map((d) =>
-      d.id === directiveId
-        ? { ...d, status: 'approved' as const, updatedAt: Date.now() }
-        : d
-    )
-  }
-
-  rejectDirective(directiveId: string, reviewComment: string, directives: Directive[]): Directive[] {
-    return directives.map((d) =>
-      d.id === directiveId
-        ? { ...d, status: 'rejected' as const, reviewComment, updatedAt: Date.now() }
-        : d
-    )
-  }
-
-  // ================================================================
-  //  代表端 —— 新闻
-  // ================================================================
-
-  createNews(data: {
-    title: string
-    content: string
-    source: string
-    authorId: string
-    seatGroupId: string
-  }): string {
-    const id = generateId()
-    const now = Date.now()
-    const newsItem: News = {
-      id,
-      title: data.title,
-      content: data.content,
-      source: data.source,
-      authorId: data.authorId,
-      seatGroupId: data.seatGroupId,
-      status: 'draft',
-      createdAt: now
-    }
-    this.news = [...this.news, newsItem]
-    this.addConferenceEntry('phase_changed', `新闻草稿已创建: ${data.title}`)
-    this.touch()
-    return id
-  }
-
-  submitNews(newsId: string): void {
-    this.news = this.news.map((n) =>
-      n.id === newsId ? { ...n, status: 'submitted' as const } : n
-    )
-    this.touch()
-  }
-
-  publishNews(newsId: string, reviewerId: string): void {
-    this.news = this.news.map((n) =>
-      n.id === newsId
-        ? { ...n, status: 'published' as const, reviewerId, publishedAt: Date.now() }
-        : n
-    )
-    this.addConferenceEntry('phase_changed', `新闻已发布: ${this.news.find((n) => n.id === newsId)?.title ?? newsId}`)
-    this.touch()
-  }
-
-  rejectNews(newsId: string, reviewerId: string, reviewComment: string): void {
-    this.news = this.news.map((n) =>
-      n.id === newsId
-        ? { ...n, status: 'rejected' as const, reviewerId, reviewComment }
-        : n
-    )
-    this.touch()
-  }
-
-  retractNews(newsId: string): void {
-    this.news = this.news.map((n) =>
-      n.id === newsId ? { ...n, status: 'retracted' as const, retractedAt: Date.now() } : n
-    )
-    this.addConferenceEntry('phase_changed', `新闻已撤回: ${this.news.find((n) => n.id === newsId)?.title ?? newsId}`)
-    this.touch()
-  }
-
-  // ================================================================
-  //  代表端 —— 局势更新
-  // ================================================================
-
-  createSituationUpdate(data: {
-    title: string
-    content: string
-    publisherId: string
-    authorId: string
-    timelineId: string
-    relatedBattleId?: string
-    relatedLocation?: { lat: number; lng: number; label?: string }
-  }): string {
-    const id = generateId()
-    const update: SituationUpdate = {
-      id,
-      title: data.title,
-      content: data.content,
-      publisherId: data.publisherId,
-      authorId: data.authorId,
-      timelineId: data.timelineId,
-      relatedBattleId: data.relatedBattleId,
-      relatedLocation: data.relatedLocation,
-      createdAt: Date.now()
-    }
-    this.situationUpdates = [...this.situationUpdates, update]
-    this.addConferenceEntry('phase_changed', `局势更新已发布: ${data.title}`)
-    this.touch()
-    return id
   }
 
   // ================================================================

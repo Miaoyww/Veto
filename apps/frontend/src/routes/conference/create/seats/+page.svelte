@@ -10,26 +10,26 @@
   const showInvalidRole = $derived(
     wizard.attempted &&
       wizard.roles.length > 0 &&
-      wizard.meetings.some((meeting) =>
-        meeting.seats.some((seat) => !wizard.roles.some((role) => role.id === seat.roleId))
+      wizard.committees.some((committee) =>
+        committee.seats.some((seat) => !wizard.roles.some((role) => role.id === seat.roleId))
       )
   )
 </script>
 
 <section class="flex flex-col gap-4">
-  {#each wizard.meetings as meeting (meeting.id)}
-    {@const showNoSeats = wizard.attempted && meeting.seats.length === 0}
+  {#each wizard.committees as committee (committee.id)}
+    {@const showNoSeats = wizard.attempted && committee.seats.length === 0}
     <article class="rounded-lg border p-4">
       <div class="flex items-center justify-between gap-3">
-        <h2 class="truncate text-sm font-semibold">{meeting.name || '未命名会议'}</h2>
-        <Button variant="outline" size="sm" onclick={() => wizard.addSeat(meeting.id)}>
+        <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
+        <Button variant="outline" size="sm" onclick={() => wizard.addSeat(committee.id)}>
           <Plus data-icon="inline-start" />
           添加席位
         </Button>
       </div>
 
       <div class="mt-3 flex flex-col gap-2">
-        {#each meeting.seats as seat (seat.id)}
+        {#each committee.seats as seat (seat.id)}
           {@const showSeatNameError = wizard.attempted && seat.name.trim().length === 0}
           <div class="flex flex-col gap-1">
             <div class="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]">
@@ -53,7 +53,7 @@
                 variant="ghost"
                 size="icon"
                 title="删除席位"
-                onclick={() => wizard.removeSeat(meeting.id, seat.id)}
+                onclick={() => wizard.removeSeat(committee.id, seat.id)}
               >
                 <Trash2 class="text-destructive" />
               </Button>
@@ -70,7 +70,7 @@
       </div>
 
       {#if showNoSeats}
-        <Field.FieldError class="mt-1">每个小会议至少分配一个席位</Field.FieldError>
+        <Field.FieldError class="mt-1">每个委员会至少分配一个席位</Field.FieldError>
       {/if}
       {#if showInvalidRole}
         <Field.FieldError class="mt-1">存在未匹配到角色的席位，请重新选择角色</Field.FieldError>
