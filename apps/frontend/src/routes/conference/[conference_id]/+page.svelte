@@ -1,20 +1,22 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
+  import { cn } from '$lib/classes/utils'
   import { Badge } from '$lib/components/ui/badge'
-  import { Button } from '$lib/components/ui/button'
+  import { Button, buttonVariants } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { KeyRound, Newspaper, Play, ShieldCheck } from '@lucide/svelte'
+  import { ChevronDown, KeyRound, Newspaper, ShieldCheck } from '@lucide/svelte'
   import {
     conferenceEvents,
     conferenceEventsReady
   } from '$lib/classes/stores/conference/conference-event-store'
   import { conferences, unloadConference } from '$lib/classes/stores/conference/conference-store'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { navigateToConference } from '$lib/classes/utils'
+  import ConferenceCard from './conference-card.svelte'
+  import * as Collapsible from '$lib/components/ui/collapsible'
 
   let ready = $state(false)
   let copied = $state('')
+  let conferencesOpen = $state(true)
 
   // settings 挂在 [conference_id] 路由下：由当前小会议反查其所属大会
   const conferenceId = $derived($page.params.conference_id ?? '')
@@ -91,74 +93,38 @@
 
     <ScrollArea class="min-h-0 flex-1">
       <div class="space-y-6 px-8 py-6">
-        <section class="space-y-3">
-          <h2 class="text-sm font-semibold">小会议</h2>
-          <div class="grid gap-4 xl:grid-cols-2">
-            {#each eventConferences as conference (conference.id)}
-              <article class="rounded-lg border p-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div class="min-w-0">
-                    <h3 class="truncate text-base font-semibold">{conference.name}</h3>
-                    <p class="mt-1 text-xs text-muted-foreground">
-                      {conference.venue} · {PHASE_LABELS[conference.phase] ?? conference.phase}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    class="gap-2"
-                    onclick={() => navigateToConference(conference.id)}
-                  >
-                    <Play class="size-4" />
-                    进入会议
-                  </Button>
-                </div>
-
-                <div class="mt-4 overflow-hidden rounded-md border">
-                  <table class="w-full text-sm">
-                    <thead class="bg-muted/50 text-xs text-muted-foreground">
-                      <tr>
-                        <th class="px-3 py-2 text-left font-medium">席位</th>
-                        <th class="px-3 py-2 text-left font-medium">角色</th>
-                        <th class="px-3 py-2 text-left font-medium">Key</th>
-                        <th class="w-20 px-3 py-2" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {#each conference.seats as seat (seat.id)}
-                        <tr class="border-t">
-                          <td class="px-3 py-2">{seat.name}</td>
-                          <td class="px-3 py-2 text-muted-foreground">{seat.role ?? '-'}</td>
-                          <td class="px-3 py-2 font-mono text-xs">{seat.inviteCode}</td>
-                          <td class="px-3 py-2 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onclick={() => void copyText(seat.inviteCode, seat.id)}
-                            >
-                              {copied === seat.id ? '已复制' : '复制'}
-                            </Button>
-                          </td>
-                        </tr>
-                      {:else}
-                        <tr class="border-t">
-                          <td class="px-3 py-4 text-center text-muted-foreground" colspan="4">
-                            无席位
-                          </td>
-                        </tr>
-                      {/each}
-                    </tbody>
-                  </table>
-                </div>
-              </article>
-            {:else}
-              <p
-                class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
+        <Collapsible.Root bind:open={conferencesOpen}>
+          <section class="space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-sm font-semibold">小会议</h2>
+              <Collapsible.Trigger
+                aria-label={conferencesOpen ? '收起小会议列表' : '展开小会议列表'}
+                title={conferencesOpen ? '收起小会议列表' : '展开小会议列表'}
+                class={cn(
+                  buttonVariants({ variant: 'ghost', size: 'icon' }),
+                  'transition-transform',
+                  conferencesOpen && 'rotate-180'
+                )}
               >
-                暂无小会议
-              </p>
-            {/each}
-          </div>
-        </section>
+                <ChevronDown />
+                <span class="sr-only">{conferencesOpen ? '收起小会议列表' : '展开小会议列表'}</span>
+              </Collapsible.Trigger>
+            </div>
+            <Collapsible.Content>
+              <div class="grid gap-4 xl:grid-cols-2">
+                {#each eventConferences as conference (conference.id)}
+                  <ConferenceCard {conference} {copied} {copyText} />
+                {:else}
+                  <p
+                    class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
+                  >
+                    暂无小会议
+                  </p>
+                {/each}
+              </div>
+            </Collapsible.Content>
+          </section>
+        </Collapsible.Root>
 
         <section class="grid gap-4 lg:grid-cols-2">
           <article class="rounded-lg border p-4">
