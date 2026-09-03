@@ -156,6 +156,18 @@
       <Sidebar.Content>
         <Sidebar.Menu class="p-3">
           {#if !hasConf}
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                onclick={() => {
+                  goto(resolve('/'))
+                }}
+                class="cursor-pointer"
+              >
+                <House size={18} />
+                <span>首页</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
             <!-- 未加入大会：操作按钮 -->
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
