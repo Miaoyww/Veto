@@ -5,7 +5,7 @@
   import { Tabs, TabsList, TabsTrigger, TabsContent } from '$lib/components/ui/tabs/index.js'
   import { cn, type WithElementRef } from '$lib/utils.js'
   import type { HTMLFormAttributes } from 'svelte/elements'
-  import { login, getMe } from '$lib/classes/services/api-client'
+  import { login, getMe } from '$lib/classes/clients/api-client'
   import { authStore } from '$lib/classes/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'

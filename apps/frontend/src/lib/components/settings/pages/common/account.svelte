@@ -6,7 +6,7 @@
   import * as Avatar from '$lib/components/ui/avatar/index.js'
   import * as ImageCropper from '$lib/components/ui/image-cropper/index.js'
   import { authStore } from '$lib/classes/stores/auth-store'
-  import { patchMe } from '$lib/classes/services/api-client'
+  import { patchMe } from '$lib/classes/clients/api-client'
   import { toast } from 'svelte-sonner'
   import { User, Camera } from '@lucide/svelte'
   import { fly } from 'svelte/transition'

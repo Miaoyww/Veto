@@ -3,7 +3,7 @@
   import { Input } from '$lib/components/ui/input/index.js'
   import { Label } from '$lib/components/ui/label/index.js'
   import * as ImageCropper from '$lib/components/ui/image-cropper/index.js'
-  import { sendVerificationCode, verifyCode, register, getMe } from '$lib/classes/services/api-client'
+  import { sendVerificationCode, verifyCode, register, getMe } from '$lib/classes/clients/api-client'
   import { authStore } from '$lib/classes/stores/auth-store'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
