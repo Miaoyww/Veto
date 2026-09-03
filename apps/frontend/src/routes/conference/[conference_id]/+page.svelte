@@ -178,7 +178,7 @@
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 模拟大会</title>
+  <title>{VETO_NAME}</title>
 </svelte:head>
 
 <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">

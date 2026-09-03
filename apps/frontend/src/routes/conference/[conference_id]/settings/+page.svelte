@@ -19,8 +19,13 @@
   let ready = $state(false)
   let copied = $state('')
 
-  const eventId = $derived($page.params.event_id ?? '')
-  const event = $derived($conferenceEvents.find((item) => item.id === eventId) ?? null)
+  // settings 挂在 [conference_id] 路由下：由当前小会议反查其所属大会
+  const conferenceId = $derived($page.params.conference_id ?? '')
+  const event = $derived.by(() => {
+    const conference = $conferences.find((item) => item.id === conferenceId)
+    if (!conference?.eventId) return null
+    return $conferenceEvents.find((item) => item.id === conference.eventId) ?? null
+  })
   const eventConferences = $derived(
     event ? $conferences.filter((conference) => conference.eventId === event.id) : []
   )

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-  import { resolve } from '$app/paths'
 
   import { Search, Plus, Users, Monitor, UserPlus, Play, Mic, Bell, Clock } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
@@ -75,7 +74,7 @@
             </p>
           </div>
           <div class="flex gap-3">
-            <Button size="lg" class="gap-2" onclick={() => goto(resolve('/conference-events/new'))}>
+            <Button size="lg" class="gap-2" onclick={() => goto('/conference/create')}>
               <Plus size={18} />
               创建新大会
             </Button>
@@ -103,7 +102,7 @@
         </InputGroup.Root>
 
         <div class="flex justify-end">
-          <Button class="gap-2" onclick={() => goto(resolve('/conference-events/new'))}>
+          <Button class="gap-2" onclick={() => goto('/conference/create')}>
             <Plus size={16} />
             创建大会
           </Button>

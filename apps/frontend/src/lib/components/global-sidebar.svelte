@@ -168,10 +168,7 @@
             </Sidebar.MenuItem>
 
             <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                onclick={() => goTo('/conference-events/new')}
-                class="cursor-pointer"
-              >
+              <Sidebar.MenuButton onclick={() => goTo('/conference/create')} class="cursor-pointer">
                 <Plus size={18} />
                 <span>创建大会</span>
               </Sidebar.MenuButton>

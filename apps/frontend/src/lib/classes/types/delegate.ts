@@ -23,10 +23,31 @@ export type Capability =
   | 'control_conference'
   | 'draft_resolution'
 
+/** 能力中文标签（与 CONTEXT.md 术语表一致，全库唯一真源，条目须覆盖全部 Capability） */
+export const CAPABILITY_LABELS: Record<Capability, string> = {
+  view_conference: '查看会议状态',
+  view_situation: '查看全局局势',
+  view_news: '查看全局新闻',
+  view_files: '查看文件',
+  draft_news: '起草新闻草稿',
+  review_news: '审核新闻',
+  submit_directive: '提交指令',
+  process_directive: '处理指令',
+  send_files: '发送文件',
+  publish_situation: '发布局势更新',
+  control_conference: '控制会议流程',
+  draft_resolution: '起草决议'
+}
+
+/** 能力选项（顺序即 UI 展示顺序），由 CAPABILITY_LABELS 派生，禁止另立清单 */
+export const CAPABILITY_OPTIONS: Array<{ value: Capability; label: string }> = Object.entries(
+  CAPABILITY_LABELS
+).map(([value, label]) => ({ value: value as Capability, label }))
+
 // ---- 席位组 ---------------------------------------------------------------
 
 /** 席位组类型 */
-export type SeatGroupType = 'cabinet' | 'mpc' | 'ipc'
+export type SeatGroupType = 'cabinet' | 'mpc'
 
 /** 内阁/委员会运行模式 */
 export type CabinetMode = 'standing' | 'crisis'

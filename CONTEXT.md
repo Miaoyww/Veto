@@ -63,6 +63,14 @@ _Avoid_: Chair, Admin, Director
 Seat 代表国家代表团内的一个角色（如"德国外交部长"）。
 _Avoid_: Member, User, Delegate
 
+## inviteCode（邀请码 / Key）
+
+**inviteCode（邀请码 / Key）**:
+Seat 创建时自动生成的 4-4-4 登录凭证（代码字段 `inviteCode`，UI 中称"Key"）。
+创建向导不配置它；Chair 端在 settings/席位管理中查看与批量复制。
+代表凭"邀请码 + 密码"连接对应席位。
+_Avoid_: Password, 席位 key
+
 ## RoleTemplate（角色模板）
 
 **RoleTemplate (角色模板)**:
