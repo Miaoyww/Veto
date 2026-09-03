@@ -6,7 +6,7 @@
   import { Button, buttonVariants } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { ChevronDown, KeyRound, Newspaper, ShieldCheck } from '@lucide/svelte'
-  import { conferences, unloadConference } from '$lib/classes/stores/conference/conference-store'
+  import { conferences, openConference } from '$lib/classes/stores/conference/conference-store'
   import ConferenceCard from './conference-card.svelte'
   import * as Collapsible from '$lib/components/ui/collapsible'
 
@@ -41,7 +41,7 @@
   }
 
   onMount(() => {
-    unloadConference()
+    openConference(conferenceId)
     ready = true
   })
 </script>

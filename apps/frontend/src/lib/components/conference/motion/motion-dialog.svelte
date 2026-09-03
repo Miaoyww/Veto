@@ -18,7 +18,7 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js'
   import {
-    currentConference,
+    currentCommittee,
     motionDraft,
     proposeMotion,
     approveMotion,
@@ -34,7 +34,7 @@
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
   const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
 
@@ -206,7 +206,7 @@
     // 判断是否需要表决：需表决 → 导航到动议表决页；否则直接通过执行
     const resolution = resolveMotion(selectedType)
     if (!resolution.requiresVoting || resolution.autoApprove) {
-      const updatedConf = $currentConference
+      const updatedConf = $currentCommittee
       const newMotion = updatedConf?.motions[updatedConf.motions.length - 1]
       if (newMotion) {
         approveMotion(newMotion.id)

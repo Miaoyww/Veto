@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SeatGroup, Seat } from '$lib/classes/types/delegate'
-  import { currentConference } from '$lib/classes/stores/conference/conference-store'
+  import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import SeatGroupList from './SeatGroupList.svelte'
   import SeatGroupEditor from './SeatGroupEditor.svelte'
   import SeatList from './SeatList.svelte'
@@ -82,7 +82,7 @@
   {#if inviteSeat}
     <InviteCodeDisplay
       seat={inviteSeat}
-      conferenceId={$currentConference?.id ?? ''}
+      conferenceId={$currentCommittee?.id ?? ''}
       onClose={() => { inviteSeat = null }}
     />
   {/if}

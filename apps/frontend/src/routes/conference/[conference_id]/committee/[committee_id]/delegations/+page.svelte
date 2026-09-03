@@ -28,7 +28,7 @@
   } from '$lib/components/ui/alert-dialog'
   import { cn } from '$lib/classes/utils.js'
   import {
-    currentConference,
+    currentCommittee,
     currentConferenceId,
     loadConference,
     changeDelegationAttendance,
@@ -62,7 +62,7 @@
     destroyAllTimers()
   })
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
   const sortedDelegations = $derived(
     conf ? [...conf.delegations].sort((a, b) => a.sortOrder - b.sortOrder) : []
   )

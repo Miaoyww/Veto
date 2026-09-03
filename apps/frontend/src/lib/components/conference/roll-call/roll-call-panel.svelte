@@ -2,14 +2,14 @@
   import { Check, X, Users, Flag } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import {
-    currentConference,
+    currentCommittee,
     changeDelegationAttendance,
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import { cn } from '$lib/classes/utils.js'
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   // 按 sortOrder 排序的代表团列表
   const sortedDelegations = $derived(

@@ -7,7 +7,7 @@
   import { VETO_NAME } from '$lib/classes/const'
 
   import {
-    currentConference,
+    currentCommittee,
     loadConference,
     currentConferenceId,
     pointDraft,
@@ -49,7 +49,7 @@
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
@@ -86,7 +86,7 @@
 
   // 自动同步 Display 窗口
   $effect(() => {
-    const conference = $currentConference
+    const conference = $currentCommittee
 
     if (conference) {
       getDisplayBridge().sendUpdate(

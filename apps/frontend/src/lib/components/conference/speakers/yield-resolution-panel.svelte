@@ -21,10 +21,10 @@
     resolveYieldToQuestion,
     resolveYieldToComment
   } from '$lib/classes/stores/conference/conference-store'
-  import type { Conference, YieldPendingState } from '$lib/classes/types/conference'
+  import type { Committee, YieldPendingState } from '$lib/classes/types/conference'
 
   interface Props {
-    conference: Conference
+    conference: Committee
     yieldPending: YieldPendingState
   }
 

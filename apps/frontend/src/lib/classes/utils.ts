@@ -2,7 +2,11 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { getConferenceById, loadConference } from '$lib/classes/stores/conference/conference-store'
+import {
+  getConferenceById,
+  loadConference,
+  openConference
+} from '$lib/classes/stores/conference/conference-store'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -15,8 +19,14 @@ export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, 'childre
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null }
 
-/** 加载会议并导航到会议页面 */
-export function navigateToConference(id: string, committeeId?: string): void {
+/** Open the conference overview. */
+export function navigateToConference(id: string): void {
+  openConference(id)
+  goto(resolve(`/conference/${id}`))
+}
+
+/** Load a committee and navigate to its workspace. */
+export function navigateToCommittee(id: string, committeeId?: string): void {
   const conference = getConferenceById(id)
   const selectedCommitteeId = committeeId && conference?.committees.some((committee) => committee.id === committeeId)
     ? committeeId

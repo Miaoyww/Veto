@@ -8,7 +8,7 @@
  */
 
 import type {
-  Committee,
+  Committee as CommitteeDTO,
   ConferencePhase,
   Delegation,
   AgendaItem,
@@ -185,7 +185,7 @@ export class SpeakerList {
 //  ConferenceEngine —— 会议引擎
 // ====================================================================
 
-export class ConferenceEngine {
+export class Committee {
   // ── 基础信息 ──
   id: string
   name: string = $state('')
@@ -204,10 +204,10 @@ export class ConferenceEngine {
 
   // ── 运行时状态 ──
   phase: ConferencePhase = $state('preamble')
-  activeSpeaker: Committee['activeSpeaker'] = $state(null)
-  activeCaucus: Committee['activeCaucus'] = $state(null)
+  activeSpeaker: CommitteeDTO['activeSpeaker'] = $state(null)
+  activeCaucus: CommitteeDTO['activeCaucus'] = $state(null)
   yieldPending: YieldPendingState | null = $state(null)
-  caucusSetup: Committee['caucusSetup'] = $state(null)
+  caucusSetup: CommitteeDTO['caucusSetup'] = $state(null)
   /** 主发言名单是否曾被填充过（用于判断清空后是否需要重新动议） */
   speakersListHasBeenPopulated: boolean = $state(false)
 
@@ -227,7 +227,7 @@ export class ConferenceEngine {
   // ── 计时器 ──
   timers: Map<string, Timer> = new Map()
 
-  constructor(data?: Partial<Committee>) {
+  constructor(data?: Partial<CommitteeDTO>) {
     this.id = data?.id ?? generateId()
     if (data) {
       this.restoreFromConference(data)
@@ -235,7 +235,7 @@ export class ConferenceEngine {
   }
 
   /** 从 Conference 数据还原状态 */
-  private restoreFromConference(data: Partial<Committee>): void {
+  private restoreFromConference(data: Partial<CommitteeDTO>): void {
     if (data.name != null) this.name = data.name
     if (data.defaultSpeakingTimeSec != null)
       this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
@@ -275,7 +275,7 @@ export class ConferenceEngine {
         caucusSpeakers: data.activeCaucus.caucusSpeakers
       }
     } else if (data.activeCaucus != null) {
-      this.activeCaucus = data.activeCaucus as Committee['activeCaucus']
+      this.activeCaucus = data.activeCaucus as CommitteeDTO['activeCaucus']
     }
 
     // 其他运行时状态
@@ -303,6 +303,10 @@ export class ConferenceEngine {
 
   get waitingSpeakers(): SpeakerEntry[] {
     return this.speakerList.waiting
+  }
+
+  get speakerLists(): SpeakerListData {
+    return this.speakerList.toJSON()
   }
 
   // ================================================================
@@ -1573,7 +1577,7 @@ export class ConferenceEngine {
     this.minutes = [...this.minutes, entry]
 
     // 自动触发对应的插件服务事件（与日志写入同一调用点，确保同步）
-    const serviceEventType = ConferenceEngine.CONFERENCE_ACTION_TO_SERVICE_EVENT[actionType]
+    const serviceEventType = Committee.CONFERENCE_ACTION_TO_SERVICE_EVENT[actionType]
     if (serviceEventType) {
       emitServiceEvent(serviceEventType, this.buildEventContext())
     }
@@ -1640,7 +1644,7 @@ export class ConferenceEngine {
   //  序列化
   // ================================================================
 
-  toJSON(): Committee {
+  toJSON(): CommitteeDTO {
     return {
       id: this.id,
       name: this.name,
@@ -1670,7 +1674,7 @@ export class ConferenceEngine {
     }
   }
 
-  static fromJSON(json: Committee): ConferenceEngine {
+  static fromJSON(json: CommitteeDTO): Committee {
     const cleanJson = { ...json }
 
     // 清理已过期的计时器状态
@@ -1694,7 +1698,7 @@ export class ConferenceEngine {
       cleanJson.activeCaucus = null
     }
 
-    return new ConferenceEngine(cleanJson)
+    return new Committee(cleanJson)
   }
 
   // ================================================================
@@ -1777,3 +1781,8 @@ export class ConferenceEngine {
     this.timers.clear()
   }
 }
+
+/**
+ * Keep the old export during migration so plugins and display bridges can move independently.
+ */
+export { Committee as ConferenceEngine }

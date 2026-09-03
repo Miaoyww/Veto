@@ -5,7 +5,7 @@
   import { Separator } from '$lib/components/ui/separator/index.js'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import {
-    currentConference,
+    currentCommittee,
     pointDraft,
     proposePoint
   } from '$lib/classes/stores/conference/conference-store'
@@ -18,7 +18,7 @@
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
   const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
 

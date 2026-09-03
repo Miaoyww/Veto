@@ -199,7 +199,8 @@ _Avoid_: War, Scenario, Game
 **File (文件)**:
 大会中产出的所有文档。包括决议草案（DraftResolution）、工作文件（Working Paper）、
 修正案（Amendment）、主席团公告、会议记录（minutes）、代表立场文件（Position Paper）。
-按类型分类，与会议议程平行，随时可访问。
+文件由大会统一存储，并带有来源委员会等标签。委员会通过大会请求属于自己的文件视图；
+默认不能看到其他委员会来源的文件。按类型分类，与会议议程平行，随时可访问。
 _Avoid_: Document, Archive
 
 ## Plugin System（插件系统）

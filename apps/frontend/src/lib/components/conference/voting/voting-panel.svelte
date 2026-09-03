@@ -10,7 +10,7 @@
     CardDescription
   } from '$lib/components/ui/card/index.js'
   import {
-    currentConference,
+    currentCommittee,
     castVote,
     closeVotingSession,
     tallyVotes
@@ -19,7 +19,7 @@
   import { cn } from '$lib/classes/utils.js'
   import PanelHeader from '../common/panel-header.svelte'
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   // 找到当前进行中的投票；若无则回退到最近一次已结束的投票（展示结果）
   const activeSession = $derived(

@@ -6,7 +6,7 @@
   import { ArrowLeft, Check, X, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
     import {
-    currentConference,
+    currentCommittee,
     currentConferenceId,
     loadConference,
     changeDelegationAttendance,
@@ -47,7 +47,7 @@
   // 用 rAF 合并同一帧内的多次更新，避免重复构建/发送
   let _sendRaf = 0
   $effect(() => {
-    const c = $currentConference
+    const c = $currentCommittee
     if (!c) return
 
     // 在此处读取所有响应式值，确保 Svelte 正确追踪依赖
@@ -78,7 +78,7 @@
     bridge.sendUpdate(buildDisplayData(conf))
   }
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   const sortedDelegations = $derived(
     conf ? [...conf.delegations].sort((a, b) => a.sortOrder - b.sortOrder) : []

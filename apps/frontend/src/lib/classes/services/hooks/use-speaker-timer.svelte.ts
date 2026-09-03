@@ -9,7 +9,7 @@
 
 import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
 import { saveConferencesNow } from '$lib/classes/stores/conference/conference-store'
-import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+import type { Committee } from '$lib/classes/domain/committee.svelte'
 
 /** 发言计时器共享运行时状态（per-speaker timer 与 paused-state-restore 共用） */
 export class SpeakerTimerState {
@@ -27,7 +27,7 @@ export interface PerSpeakerTimerOptions {
   /** tick 间隔（ms），一般性辩论 100ms，有主持磋商 1000ms */
   tickMs: number
   /** 获取当前 engine 实例（通过 getter 避免闭包过期） */
-  getEngine: () => ConferenceEngine | null | undefined
+  getEngine: () => Committee | null | undefined
   /** 计时器自然到期回调（一般性辩论: endSpeaker, 磋商: advanceCaucusSpeaker） */
   onExpire: () => void
   /** 每 tick 额外回调（用于触发增量 Display 同步） */

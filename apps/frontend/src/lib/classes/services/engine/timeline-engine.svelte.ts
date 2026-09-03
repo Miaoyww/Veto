@@ -7,7 +7,7 @@
  * 每个时间线实例独立管理自己的状态和 RAF 循环。
  * 持久化由 timeline-store 统一处理，引擎通过 _onStateChange 回调通知 store。
  *
- * 使用 Svelte 5 $state rune 实现响应式，与 ConferenceEngine 模式一致。
+ * 使用 Svelte 5 $state rune 实现响应式，与 Committee 模式一致。
  */
 
 // ─── 类型定义 ──────────────────────────────────────────────────────────

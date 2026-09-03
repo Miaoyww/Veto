@@ -9,7 +9,7 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
-  import { currentConference } from '$lib/classes/stores/conference/conference-store'
+  import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import {
     setCaucusProposerPosition,
     addToCaucusSpeakers,
@@ -20,7 +20,7 @@
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
   import type { Delegation } from '$lib/classes/types/conference'
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
   const setup = $derived(conf?.caucusSetup ?? null)
   const motion = $derived(setup ? conf?.motions.find((m) => m.id === setup.motionId) : null)
   const proposerDel = $derived(motion?.proposedBy ?? null)

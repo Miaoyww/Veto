@@ -21,14 +21,18 @@
   import { Button } from '$lib/components/ui/button'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { currentConferenceId, conferences } from '$lib/classes/stores/conference/conference-store'
+  import {
+    currentConferenceId,
+    currentCommitteeId,
+    conferences
+  } from '$lib/classes/stores/conference/conference-store'
   import { page } from '$app/stores'
   import { navigateToConference } from '$lib/classes/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
   import NavUser from './app-sidebar/nav-user.svelte'
   import DynamicIsland from './dynamic-island.svelte'
-  import { currentConference } from '$lib/classes/stores/conference/conference-store'
+  import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import { cn } from '$lib/classes/utils.js'
   import JoinConferenceDialog from './home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from './conference/display-only-dialog.svelte'
@@ -43,10 +47,18 @@
   > = $props()
 
   const confId = $derived($currentConferenceId)
+  const committeeId = $derived($currentCommitteeId)
   const hasConf = $derived(confId != null)
   const routeId = $derived($page.url.pathname ?? '/')
 
-  const confPrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
+  const confPrefix = $derived(
+    hasConf && committeeId
+      ? `/conference/${confId}/committee/${committeeId}`
+      : hasConf
+        ? `/conference/${confId}`
+        : '/conference'
+  )
+  const conferencePrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
 
   const isStandaloneRoute = $derived(
     $page.url.pathname === '/login' ||
@@ -121,9 +133,9 @@
     {
       title: '军事推演',
       icon: Swords,
-      url: `${confPrefix}/battle`,
+      url: `${conferencePrefix}/battle`,
       needsConf: true,
-      isActive: routeId === `${confPrefix}/battle`
+      isActive: routeId === `${conferencePrefix}/battle`
     },
     {
       title: '代表管理',
@@ -134,7 +146,7 @@
     }
   ])
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   const presentCount = $derived(
     conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0

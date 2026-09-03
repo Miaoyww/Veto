@@ -11,8 +11,7 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import {
-    currentConference,
-    currentEngine,
+    currentCommittee,
     saveConferencesNow,
     endCaucus,
     pauseCaucus,
@@ -22,12 +21,12 @@
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
   import { useCaucusCountdown } from '$lib/classes/services/hooks/use-caucus-countdown.svelte'
-  import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+  import type { Committee } from '$lib/classes/domain/committee.svelte'
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
-  function getEngine(): ConferenceEngine | null | undefined {
-    return get(currentEngine)
+  function getEngine(): Committee | null | undefined {
+    return get(currentCommittee)
   }
 
   function syncDisplay(): void {

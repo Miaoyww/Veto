@@ -293,19 +293,19 @@ export function setDisplayBridge(bridge: ConferenceDisplayBridge): void {
   currentBridge = bridge
 }
 
-// ---- 辅助：从 Conference / ConferenceEngine 构建 DisplayData -----------------
+// ---- 辅助：从 Conference / Committee 构建 DisplayData -----------------
 
-import type { Committee } from '$lib/classes/types/conference'
+import type { Committee as CommitteeDTO } from '$lib/classes/types/conference'
 import { tallyVotes } from '$lib/classes/stores/conference/conference-store'
 import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
-import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+import type { Committee } from '$lib/classes/domain/committee.svelte'
 
 /**
  * 构建 Display 窗口数据。
- * 接受 ConferenceEngine（优先）或 Committee JSON。
+ * 接受 Committee（优先）或 Committee JSON。
  */
 export function buildDisplayData(
-  source: Committee | ConferenceEngine,
+  source: Committee | CommitteeDTO,
   extra?: {
     rollCall?: ConferenceDisplayData['rollCall']
     motionDraft?: ConferenceDisplayData['motionDraft']
@@ -315,10 +315,10 @@ export function buildDisplayData(
   }
 ): ConferenceDisplayData {
   // 统一为 Committee JSON 格式
-  const conf: Committee = 'toJSON' in source ? source.toJSON() : source
+  const conf: CommitteeDTO = 'toJSON' in source ? source.toJSON() : source
 
   // 如果传入的是引擎，则使用引擎方法获取 delegation 信息以优化查找
-  const engine: ConferenceEngine | null = 'toJSON' in source ? source : null
+  const engine: Committee | null = 'toJSON' in source ? source : null
 
   // 当前发言人
   let currentSpeakerDelegation: Delegation | undefined
@@ -459,7 +459,7 @@ export function buildDisplayData(
   }
 
   // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
-  const effectivePhase: Committee['phase'] | 'motion' = hasActiveMotionPhase
+  const effectivePhase: CommitteeDTO['phase'] | 'motion' = hasActiveMotionPhase
     ? 'motion'
     : conf.phase
 

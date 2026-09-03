@@ -19,7 +19,7 @@ import type {
 import {
   conferences,
   currentConferenceRecord,
-  currentEngine,
+  currentCommittee,
   removeSeatsForSeatGroup,
   syncCurrentCommittee
 } from '../conference/conference-store'
@@ -28,7 +28,7 @@ import { getDelegateBridge } from '$lib/classes/clients/delegate-client'
 // ---- 辅助：获取当前引擎 -------------------------------------------------
 
 function getEng() {
-  const engine = get(currentEngine)
+  const engine = get(currentCommittee)
   if (!engine) {
     console.warn('[delegate-store] No current engine')
     return null
@@ -44,31 +44,23 @@ export function addSeatGroup(name: string, type: SeatGroup['type'], defaultCapab
   const conference = get(currentConferenceRecord)
   if (!conference) return ''
   const id = crypto.randomUUID()
-  conferences.update((items) => items.map((item) => item.id === conference.id ? {
-    ...item,
-    updatedAt: Date.now(),
-    seatGroups: [...item.seatGroups, {
-      id,
-      name,
-      type,
-      defaultCapabilities,
-      mode: type === 'cabinet' ? 'standing' : undefined,
-      sortOrder: item.seatGroups.length
-    }]
-  } : item))
+  conference.addSeatGroup({
+    id,
+    name,
+    type,
+    defaultCapabilities,
+    mode: type === 'cabinet' ? 'standing' : undefined,
+    sortOrder: conference.seatGroups.length
+  })
+  conferences.update((items) => [...items])
   return id
 }
 
-function updateCurrentConference(
-  updater: (conference: NonNullable<ReturnType<typeof getCurrentConference>>) => NonNullable<ReturnType<typeof getCurrentConference>>
-): void {
+function updateCurrentConference(updater: (conference: NonNullable<ReturnType<typeof getCurrentConference>>) => void): void {
   const conference = getCurrentConference()
   if (!conference) return
-  conferences.update((items) =>
-    items.map((item) =>
-      item.id === conference.id ? { ...updater(item), updatedAt: Date.now() } : item
-    )
-  )
+  updater(conference)
+  conferences.update((items) => [...items])
 }
 
 function getCurrentConference() {
@@ -78,27 +70,21 @@ function getCurrentConference() {
 export function updateSeatGroup(id: string, updates: Partial<SeatGroup>): void {
   const conference = get(currentConferenceRecord)
   if (!conference) return
-  conferences.update((items) => items.map((item) => item.id === conference.id ? {
-    ...item,
-    updatedAt: Date.now(),
-    seatGroups: item.seatGroups.map((group) => group.id === id ? { ...group, ...updates } : group)
-  } : item))
+  conference.updateSeatGroup(id, updates)
+  conferences.update((items) => [...items])
 }
 
 export function removeSeatGroup(id: string): void {
   const conference = get(currentConferenceRecord)
   if (!conference) return
-  conferences.update((items) => items.map((item) => item.id === conference.id ? {
-    ...item,
-    updatedAt: Date.now(),
-    seatGroups: item.seatGroups.filter((group) => group.id !== id)
-  } : item))
+  conference.updateSeatGroups((groups) => groups.filter((group) => group.id !== id))
+  conferences.update((items) => [...items])
   removeSeatsForSeatGroup(id)
 }
 
 // ---- 席位 -----------------------------------------------------------------
 
-export const seats = derived(currentEngine, ($engine) => $engine?.seats ?? [])
+export const seats = derived(currentCommittee, ($engine) => $engine?.seats ?? [])
 
 export function addSeat(
   name: string,
@@ -159,7 +145,7 @@ export function setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
 // ---- 指令 -----------------------------------------------------------------
 
 /** 当前会议的所有指令 */
-export const directives = derived(currentEngine, ($engine) => {
+export const directives = derived(currentCommittee, ($engine) => {
   void $engine
   return []
 })
@@ -190,32 +176,27 @@ export function createNews(data: {
   seatGroupId: string
 }): string {
   const id = crypto.randomUUID()
-  updateCurrentConference((conference) => ({
-    ...conference,
-    news: [...conference.news, { ...data, id, status: 'draft', createdAt: Date.now() }]
-  }))
+  updateCurrentConference((conference) =>
+    conference.addNews({ ...data, id, status: 'draft', createdAt: Date.now() })
+  )
   return id
 }
 
 export function submitNews(newsId: string): void {
-  updateCurrentConference((conference) => ({
-    ...conference,
-    news: conference.news.map((news) =>
+  updateCurrentConference((conference) =>
+    conference.updateNews((items) => items.map((news) =>
       news.id === newsId ? { ...news, status: 'submitted' } : news
-    )
-  }))
+    ))
+  )
 }
 
 export function publishNews(newsId: string, reviewerId: string): void {
   let updated: News | undefined
-  updateCurrentConference((conference) => ({
-    ...conference,
-    news: conference.news.map((news) => {
+  updateCurrentConference((conference) => conference.updateNews((items) => items.map((news) => {
       if (news.id !== newsId) return news
       updated = { ...news, status: 'published', reviewerId, publishedAt: Date.now() }
       return updated
-    })
-  }))
+    })))
   // 通过 WS 通知 Delegate
   if (updated) {
     getDelegateBridge().sendNewsUpdated(updated)
@@ -224,14 +205,11 @@ export function publishNews(newsId: string, reviewerId: string): void {
 
 export function rejectNews(newsId: string, reviewerId: string, reviewComment: string): void {
   let updated: News | undefined
-  updateCurrentConference((conference) => ({
-    ...conference,
-    news: conference.news.map((news) => {
+  updateCurrentConference((conference) => conference.updateNews((items) => items.map((news) => {
       if (news.id !== newsId) return news
       updated = { ...news, status: 'rejected', reviewerId, reviewComment }
       return updated
-    })
-  }))
+    })))
   if (updated) {
     getDelegateBridge().sendNewsUpdated(updated)
   }
@@ -239,14 +217,11 @@ export function rejectNews(newsId: string, reviewerId: string, reviewComment: st
 
 export function retractNews(newsId: string): void {
   let updated: News | undefined
-  updateCurrentConference((conference) => ({
-    ...conference,
-    news: conference.news.map((news) => {
+  updateCurrentConference((conference) => conference.updateNews((items) => items.map((news) => {
       if (news.id !== newsId) return news
       updated = { ...news, status: 'retracted', retractedAt: Date.now() }
       return updated
-    })
-  }))
+    })))
   if (updated) {
     getDelegateBridge().sendNewsUpdated(updated)
   }
@@ -270,10 +245,7 @@ export function createSituationUpdate(data: {
 }): string {
   const id = crypto.randomUUID()
   const update = { ...data, id, createdAt: Date.now() }
-  updateCurrentConference((conference) => ({
-    ...conference,
-    situationUpdates: [...conference.situationUpdates, update]
-  }))
+  updateCurrentConference((conference) => conference.addSituationUpdate(update))
   // 通过 WS 通知 Delegate
   getDelegateBridge().sendSituationCreated(update)
   return id

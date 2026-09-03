@@ -4,7 +4,7 @@
   import { Button, buttonVariants } from '$lib/components/ui/button'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { navigateToConference } from '$lib/classes/utils'
+  import { navigateToCommittee } from '$lib/classes/utils'
   import type { Committee } from '$lib/classes/types/conference'
 
   let {
@@ -44,7 +44,7 @@
           <ChevronDown />
           <span class="sr-only">{open ? '收起席位' : '展开席位'}</span>
         </Collapsible.Trigger>
-        <Button size="sm" class="gap-2" onclick={() => navigateToConference(conferenceId, committee.id)}>
+        <Button size="sm" class="gap-2" onclick={() => navigateToCommittee(conferenceId, committee.id)}>
           <Play class="size-4" />
           进入会议
         </Button>

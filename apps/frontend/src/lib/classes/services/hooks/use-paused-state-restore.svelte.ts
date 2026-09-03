@@ -7,14 +7,14 @@
  * timer 不会在 per-speaker effect 中启动，需要此 composable 恢复 UI 显示状态。
  */
 
-import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+import type { Committee } from '$lib/classes/domain/committee.svelte'
 import { SpeakerTimerState } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
 
 export interface PausedStateRestoreOptions {
   /** 与 per-speaker timer 相同的 enabled 条件 */
   enabled: boolean
   /** 获取当前 engine 实例 */
-  getEngine: () => ConferenceEngine | null | undefined
+  getEngine: () => Committee | null | undefined
   /** caucus 模式下排除自由磋商 */
   isExcludedCaucus?: boolean
 }

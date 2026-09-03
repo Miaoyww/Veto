@@ -52,7 +52,9 @@
   const currentSpeaker = $derived(
     lastOpenedCommittee ? getCurrentSpeakerName(lastOpenedCommittee) : null
   )
-  const pendingCount = $derived(lastOpenedCommittee ? getPendingMotionCount(lastOpenedCommittee) : 0)
+  const pendingCount = $derived(
+    lastOpenedCommittee ? getPendingMotionCount(lastOpenedCommittee) : 0
+  )
 
   onMount(() => {
     unloadConference()
@@ -80,7 +82,7 @@
             </p>
           </div>
           <div class="flex gap-3">
-            <Button size="lg" class="gap-2" onclick={() => goto('/conference/create')}>
+            <Button size="lg" class="gap-2" onclick={() => goto(resolve('/conference/create'))}>
               <Plus size={18} />
               创建新大会
             </Button>

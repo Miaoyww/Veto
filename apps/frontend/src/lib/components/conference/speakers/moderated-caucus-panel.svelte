@@ -14,8 +14,7 @@
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
 
   import {
-    currentConference,
-    currentEngine,
+    currentCommittee,
     saveConferencesNow,
     pauseSpeaker,
     resumeSpeaker,
@@ -28,11 +27,11 @@
   import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
   import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
   import { usePausedStateRestore } from '$lib/classes/services/hooks/use-paused-state-restore.svelte'
-  import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+  import type { Committee } from '$lib/classes/domain/committee.svelte'
   import type { SpeakerDisplayEntry } from '$lib/classes/types/conference'
 
   // ── 发言队列数据 ──────────────────────────────────────────────
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
   const activeCaucus = $derived(conf?.activeCaucus ?? null)
 
   const speakers = $derived<SpeakerDisplayEntry[]>(
@@ -62,8 +61,8 @@
   // ── 计时器 ────────────────────────────────────────────────────
   const timerState = new SpeakerTimerState()
 
-  function getEngine(): ConferenceEngine | null | undefined {
-    return get(currentEngine)
+  function getEngine(): Committee | null | undefined {
+    return get(currentCommittee)
   }
 
   function syncDisplay(): void {

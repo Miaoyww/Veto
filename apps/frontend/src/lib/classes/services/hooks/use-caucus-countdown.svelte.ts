@@ -9,7 +9,7 @@
 
 import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
 import { saveConferencesNow } from '$lib/classes/stores/conference/conference-store'
-import type { ConferenceEngine } from '$lib/classes/services/engine/ConferenceEngine.svelte'
+import type { Committee } from '$lib/classes/domain/committee.svelte'
 
 export interface CaucusCountdownOptions {
   /** 仅自由磋商（或 individual speech）时启用 */
@@ -17,7 +17,7 @@ export interface CaucusCountdownOptions {
   /** 唯一 timer ID */
   timerId: string
   /** 获取当前 engine 实例 */
-  getEngine: () => ConferenceEngine | null | undefined
+  getEngine: () => Committee | null | undefined
   /** 到期回调（endCaucus） */
   onExpire: () => void
   /** 每 tick 额外回调（用于触发增量 Display 同步） */

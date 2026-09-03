@@ -11,7 +11,7 @@
   import { AlertTriangle, HelpCircle, User, ArrowLeft } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import {
-    currentConference,
+    currentCommittee,
     currentConferenceId,
     loadConference,
     dismissLatestPoint
@@ -33,7 +33,7 @@
     }
   })
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   const latestPoint = $derived(
     conf && conf.points.length > 0 ? conf.points[conf.points.length - 1] : null

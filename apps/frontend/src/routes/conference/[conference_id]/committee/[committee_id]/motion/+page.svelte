@@ -26,7 +26,7 @@
   import { Button } from '$lib/components/ui/button'
   import { Separator } from '$lib/components/ui/separator'
   import {
-    currentConference,
+    currentCommittee,
     currentConferenceId,
     loadConference,
     approveMotion,
@@ -50,7 +50,7 @@
     }
   })
 
-  const conf = $derived($currentConference)
+  const conf = $derived($currentCommittee)
 
   const MOTION_ICONS: Record<string, typeof Presentation> = {
     open_speakers_list: Presentation,

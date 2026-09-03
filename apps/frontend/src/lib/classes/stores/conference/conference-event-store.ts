@@ -7,7 +7,7 @@ import { get } from 'svelte/store'
 import type { Committee, Conference } from '$lib/classes/types/conference'
 import type { RoleTemplate } from '$lib/classes/types/event'
 import type { Capability, Seat, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
-import { conferences, createConference, saveConferencesNow } from './conference-store'
+import { conferences, createConference, saveConferencesNow, getConferenceById } from './conference-store'
 
 export interface CommitteeDraft {
   id: string
@@ -115,23 +115,14 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
     seatGroups,
     committees
   })
-  const now = Date.now()
-  conferences.update((items) =>
-    items.map((conference) =>
-      conference.id === conferenceId
-        ? {
-            ...conference,
-            name,
-            description: input.description?.trim() || undefined,
-            organizer: input.organizer?.trim() || undefined,
-            createdAt: now,
-            updatedAt: now,
-            roleTemplates,
-            seatGroups
-          }
-        : conference
-    )
-  )
+  const conference = getConferenceById(conferenceId)
+  if (!conference) return null
+  conference.rename(name)
+  conference.description = input.description?.trim() || undefined
+  conference.organizer = input.organizer?.trim() || undefined
+  conference.updateSeatGroups(() => seatGroups)
+  conference.setRoleTemplates(roleTemplates)
+  conferences.update((items) => [...items])
   await saveConferencesNow()
   return conferenceId
 }
