@@ -181,13 +181,15 @@ export function createConference(
   agendaItems: { title: string; description?: string }[],
   delegations: { name: string; shortName?: string; vetoPower?: boolean }[],
   options?: {
+    id?: string
     defaultSpeakingTimeSec?: number
     eventId?: string
     seatGroups?: SeatGroup[]
     seats?: Seat[]
   }
 ): string {
-  const id = crypto.randomUUID()
+  // 从创建向导等流程传入 id 时沿用该 id，否则自动生成
+  const id = options?.id ?? crypto.randomUUID()
 
   const delegationList: Delegation[] = delegations.map((d, i) => ({
     id: crypto.randomUUID(),

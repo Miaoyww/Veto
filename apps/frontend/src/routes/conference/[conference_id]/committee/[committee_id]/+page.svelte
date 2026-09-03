@@ -47,6 +47,7 @@
   import { Button } from '$lib/components/ui/button/index.js'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   const conf = $derived($currentConference)
 
@@ -131,7 +132,7 @@
 
     setPhase('roll_call')
 
-    const route = `/conference/${conf.id}/roll-call` as `/conference/${string}/roll-call`
+    const route = `/conference/${conferenceId}/committee/${committeeId}/roll-call` as `/conference/${string}/committee/${string}/roll-call`
     goto(resolve(route))
   }
 

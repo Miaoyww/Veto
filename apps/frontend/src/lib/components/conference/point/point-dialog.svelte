@@ -12,11 +12,15 @@
   import { POINT_LABELS } from '$lib/classes/types/conference'
   import type { Delegation, PointType } from '$lib/classes/types/conference'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { page } from '$app/stores'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   const conf = $derived($currentConference)
+  const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   const pointTypes: PointType[] = [
     'point_of_order',
@@ -68,7 +72,7 @@
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
-    goto(`/conference/${conf.id}/question`)
+    goto(resolve(`/conference/${conferenceId}/committee/${committeeId}/question`))
 
     open = false
     resetForm()

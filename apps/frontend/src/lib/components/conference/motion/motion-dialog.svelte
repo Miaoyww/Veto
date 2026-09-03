@@ -26,6 +26,8 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { resolveMotion, calcMaxSpeakers } from '$lib/classes/services/engine/conference-engine'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { page } from '$app/stores'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
   import type { MotionType, Attendance, Delegation } from '$lib/classes/types/conference'
   import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
@@ -33,6 +35,8 @@
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   const conf = $derived($currentConference)
+  const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   // Proposer
   let selectedProposer: Delegation | null = $state(null)
@@ -218,7 +222,7 @@
         }
       }
     } else {
-      goto(`/conference/${conf.id}/motion`)
+      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}/motion`))
     }
 
     open = false

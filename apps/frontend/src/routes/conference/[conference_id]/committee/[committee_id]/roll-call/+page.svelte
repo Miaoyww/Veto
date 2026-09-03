@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/stores'
   import { ArrowLeft, Check, X, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
@@ -17,6 +18,7 @@
   import type { Delegation, Attendance } from '$lib/classes/types/conference'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   let wsPort = $state<number | null>(null)
 
@@ -161,11 +163,11 @@
 
   function handleComplete(): void {
     completeRollCall()
-    goto(`/conference/${conferenceId}`)
+    goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
   }
 
   function handleBackToConference(): void {
-    goto(`/conference/${conferenceId}`)
+    goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
   }
 
   function handleKeydown(e: KeyboardEvent): void {

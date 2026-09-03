@@ -46,6 +46,7 @@
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   onMount(() => {
     if (conferenceId) {
@@ -132,7 +133,7 @@
             onclick={() => {
               resetRollCall()
               showResetConfirm = false
-              goto(`/conference/${conferenceId}/roll-call`)
+              goto(resolve(`/conference/${conferenceId}/committee/${committeeId}/roll-call`))
             }}
           >
             确认重新点名

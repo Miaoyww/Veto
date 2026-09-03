@@ -8,6 +8,8 @@ const STORAGE_KEY = 'veto_conference_events'
 const STORE_DOMAIN = 'events'
 
 export interface ConferenceEventConferenceDraft {
+  /** 小会议 id（创建向导中生成，持久化时沿用，作为小会议的唯一标识） */
+  id: string
   name: string
   venue?: string
   type: SeatGroupType
@@ -127,6 +129,7 @@ export async function createConferenceEvent(
       [],
       [],
       {
+        id: draft.id,
         eventId,
         seatGroups: [seatGroup],
         seats

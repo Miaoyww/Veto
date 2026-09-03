@@ -6,6 +6,7 @@
    */
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/stores'
   import { AlertTriangle, HelpCircle, User, ArrowLeft } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
@@ -21,6 +22,7 @@
   import { VETO_NAME } from '$lib/classes/const'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   onMount(() => {
     if (conferenceId) {
@@ -68,14 +70,14 @@
 
   function goBack(): void {
     if (conf) {
-      goto(`/conference/${conf.id}`)
+      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
     }
   }
 
   // 如果没有最近的问题，自动返回
   $effect(() => {
     if (conf && !latestPoint) {
-      goto(`/conference/${conf.id}`)
+      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
     }
   })
 

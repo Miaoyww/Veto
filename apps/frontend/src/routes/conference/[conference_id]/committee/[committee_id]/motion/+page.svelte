@@ -8,6 +8,7 @@
    */
   import { onMount, onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/stores'
   import {
     Presentation,
@@ -38,6 +39,7 @@
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
 
   onMount(() => {
     if (conferenceId) {
@@ -85,7 +87,7 @@
 
   function goBack(): void {
     if (conf) {
-      goto(`/conference/${conf.id}`)
+      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
     }
   }
 
@@ -97,7 +99,7 @@
         (m) => m.status === 'approved' || m.status === 'rejected'
       )
       if (!hasProcessedMotion) {
-        goto(`/conference/${conf.id}`)
+        goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
       }
     }
   })
