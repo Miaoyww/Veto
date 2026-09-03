@@ -1,344 +1,201 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount } from 'svelte'
   import { page } from '$app/stores'
-  import { goto } from '$app/navigation'
-  import { resolve } from '$app/paths'
-
-  import { VETO_NAME } from '$lib/classes/const'
-
-  import {
-    currentConference,
-    loadConference,
-    currentConferenceId,
-    pointDraft,
-    saveConferencesNow,
-    setPhase,
-    resumeMeeting
-  } from '$lib/classes/stores/conference/conference-store'
-
-  import { destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
-
-  import {
-    getDisplayBridge,
-    buildDisplayData,
-    initWsPort
-  } from '$lib/classes/clients/conference-display-client'
-
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-
-  import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
-
-  import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
-  import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
-  import GeneralDebatePanel from '$lib/components/conference/speakers/general-debate-panel.svelte'
-  import ModeratedCaucusPanel from '$lib/components/conference/speakers/moderated-caucus-panel.svelte'
-  import FreeCaucusPanel from '$lib/components/conference/speakers/free-caucus-panel.svelte'
-  import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
-
-  import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
-  import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
-  import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
-
-  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
-
-  import { Gavel, Play, Users, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
-
+  import { Badge } from '$lib/components/ui/badge'
+  import { Button } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { Button } from '$lib/components/ui/button/index.js'
+  import { KeyRound, Newspaper, Play, ShieldCheck } from '@lucide/svelte'
+  import {
+    conferenceEvents,
+    conferenceEventsReady
+  } from '$lib/classes/stores/conference/conference-event-store'
+  import { conferences, unloadConference } from '$lib/classes/stores/conference/conference-store'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
+  import { navigateToConference } from '$lib/classes/utils'
 
-  const conferenceId = $derived($page.params.conference_id ?? null)
+  let ready = $state(false)
+  let copied = $state('')
 
-  const conf = $derived($currentConference)
-
-  let motionDialogOpen = $state(false)
-  let pointDialogOpen = $state(false)
-  let logDialogOpen = $state(false)
-  let wsPort = $state<number | null>(null)
-  let lanUrl = $state<string | null>(null)
-
-  onMount(async () => {
-    // 加载会议
-    if (conferenceId) {
-      const alreadyLoaded = $currentConferenceId === conferenceId
-
-      if (!alreadyLoaded) {
-        loadConference(conferenceId)
-      }
-    }
-
-    // 初始化显示端 WS
-    wsPort = await initWsPort()
-    if (window.veto?.lan) {
-      const serverInfo = await window.veto.lan.getServerInfo()
-      lanUrl = serverInfo.urls[0] ?? null
-    }
+  // settings 挂在 [conference_id] 路由下：由当前小会议反查其所属大会
+  const conferenceId = $derived($page.params.conference_id ?? '')
+  const event = $derived.by(() => {
+    const conference = $conferences.find((item) => item.id === conferenceId)
+    if (!conference?.eventId) return null
+    return $conferenceEvents.find((item) => item.id === conference.eventId) ?? null
   })
+  const eventConferences = $derived(
+    event ? $conferences.filter((conference) => conference.eventId === event.id) : []
+  )
+  const seatCount = $derived(eventConferences.reduce((sum, item) => sum + item.seats.length, 0))
 
-  $effect(() => {
-    if (!conf) return
-    void window.veto?.lan?.publishConference({
-      conferenceId: conf.id,
-      name: conf.name,
-      phase: conf.phase
-    })
-  })
+  async function copyText(text: string, marker: string): Promise<void> {
+    await navigator.clipboard.writeText(text)
+    copied = marker
+    setTimeout(() => {
+      if (copied === marker) copied = ''
+    }, 1600)
+  }
 
-  // 自动同步 Display 窗口
-  $effect(() => {
-    const conference = $currentConference
-
-    if (conference) {
-      getDisplayBridge().sendUpdate(
-        buildDisplayData(conference, {
-          pointDraft: $pointDraft ?? undefined
-        })
+  function allKeys(): string {
+    return eventConferences
+      .flatMap((conference) =>
+        conference.seats.map(
+          (seat) => `${conference.name},${seat.name},${seat.role ?? ''},${seat.inviteCode}`
+        )
       )
-    }
-  })
+      .join('\n')
+  }
 
-  $effect(() => {
-    console.log('当前会议状态更新:', {
-      phase: conf?.phase,
-      activeSpeaker: conf?.activeSpeaker,
-      caucusSetup: conf?.caucusSetup
+  onMount(() => {
+    unloadConference()
+    void conferenceEventsReady.then(() => {
+      ready = true
     })
   })
-
-  onDestroy(async () => {
-    // 离开页面保存状态
-    await saveConferencesNow()
-    await window.veto?.lan?.unpublishConference()
-
-    destroyAllTimers()
-  })
-
-  async function openDisplayWindow(): Promise<void> {
-    if (!conf) return
-
-    const bridge = getDisplayBridge()
-
-    const ok = await bridge.openDisplay(conf.id)
-
-    if (ok) {
-      await new Promise((r) => setTimeout(r, 500))
-
-      bridge.sendUpdate(buildDisplayData(conf))
-    }
-  }
-
-  function startRollCall(): void {
-    if (!conf) return
-
-    setPhase('roll_call')
-
-    const route = `/conference/${conf.id}/roll-call` as `/conference/${string}/roll-call`
-    goto(resolve(route))
-  }
-
-  function handlePrimaryAction(): void {
-    if (!conf) return
-
-    switch (conf.phase) {
-      case 'pending_speakers_list':
-      case 'general_debate':
-      case 'caucus':
-      case 'caucus_setup':
-      case 'voting':
-        motionDialogOpen = true
-        break
-
-      default:
-        break
-    }
-  }
-
-  const primaryActionLabel = $derived.by(() => {
-    if (!conf) return ''
-
-    switch (conf.phase) {
-      case 'pending_speakers_list':
-      case 'general_debate':
-      case 'caucus':
-      case 'caucus_setup':
-      case 'voting':
-        return '动议与程序'
-
-      default:
-        return ''
-    }
-  })
-
-  const isTimerActive = $derived(conf?.activeSpeaker != null)
-
-  const isMotionInProgress = $derived(conf?.phase === 'caucus' || conf?.phase === 'caucus_setup')
-
-  const canProposeMotion = $derived(!isTimerActive && !isMotionInProgress)
-
-  const canProposePoint = $derived(conf?.phase !== 'closed')
 </script>
 
-<svelte:head>
-  <title>{VETO_NAME}</title>
-</svelte:head>
-
-<div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
-  {#if conf}
-    <!-- 顶部横幅：阶段 + 控制 -->
-    <div class="flex items-center gap-3 border-b px-6 py-3">
-      <PanelHeader icon={Gavel} title={PHASE_LABELS[conf.phase] ?? conf.phase} />
-
-      <div class="ml-auto flex items-center gap-2">
-        {#if wsPort !== null}
-          <span
-            class="select-none text-[11px] text-muted-foreground/70"
-            title="WebSocket 端口：{wsPort}"
-          >
-            {#if lanUrl}
-              {lanUrl}
-            {:else}
-            WS :{wsPort}
-            {/if}
-          </span>
-        {/if}
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="打开显示窗口（投影/第二屏幕）"
-          onclick={openDisplayWindow}
-        >
-          <Monitor size={12} />
-          显示窗口
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="会议日志"
-          onclick={() => (logDialogOpen = true)}
-        >
-          <ScrollText size={12} />
-          日志
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="打开简易计时器"
-          onclick={() => {
-            timerDialogOpen.set(true)
-          }}
-        >
-          <Timer size={12} />
-          计时器
-        </Button>
-
-        {#if canProposePoint}
-          <Button
-            size="sm"
-            variant="outline"
-            class="h-8 gap-1.5 text-xs"
-            title="提出问题"
-            onclick={() => (pointDialogOpen = true)}
-          >
-            <HelpCircle size={12} />
-            问题
-          </Button>
-        {/if}
-
-        {#if primaryActionLabel}
-          <Button
-            size="sm"
-            class="h-8 gap-1.5 text-xs"
-            onclick={handlePrimaryAction}
-            disabled={!canProposeMotion}
-            title={isTimerActive
-              ? '发言计时进行中，无法提出动议'
-              : isMotionInProgress
-                ? '磋商进行中，无法提出新动议'
-                : ''}
-          >
-            <Play size={12} />
-            {primaryActionLabel}
-          </Button>
-        {/if}
-
-        {#if conf.phase === 'suspended'}
-          <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
-            <Play size={12} />
-            恢复会议
-          </Button>
-        {/if}
-      </div>
+<div class="flex h-screen min-h-0 flex-col bg-background">
+  {#if !ready}
+    <div class="flex flex-1 items-center justify-center text-sm text-muted-foreground">加载中</div>
+  {:else if !event}
+    <div class="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+      未找到大会
     </div>
-
-    <!-- 阶段对应内容 -->
-    <div class="flex flex-1 min-h-0 overflow-hidden p-6">
-      {#if conf.phase === 'preamble'}
-        <PlaceholderPage title="会前准备" subtitle="所有代表团已就位，准备开始点名" icon={Users}>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            开始点名
-          </Button>
-        </PlaceholderPage>
-      {:else if conf.phase === 'roll_call'}
-        <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立窗口中打开" icon={Users}>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            进入点名页面
-          </Button>
-        </PlaceholderPage>
-      {:else if conf.phase === 'pending_speakers_list'}
-        <PlaceholderPage
-          title="等待开启主发言名单"
-          subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论"
-          icon={Users}
-        />
-      {:else if conf.phase === 'general_debate'}
-        <ScrollArea class="flex-1">
-          <GeneralDebatePanel />
-        </ScrollArea>
-      {:else if conf.phase === 'caucus_setup'}
-        <ScrollArea class="flex-1">
-          <CaucusSetupPanel />
-        </ScrollArea>
-      {:else if conf.phase === 'caucus'}
-        <ScrollArea class="flex-1">
-          {#if conf.activeCaucus?.type === 'moderated'}
-            <ModeratedCaucusPanel />
-          {:else}
-            <FreeCaucusPanel />
-          {/if}
-        </ScrollArea>
-      {:else if conf.phase === 'voting'}
-        <ScrollArea class="flex-1">
-          <VotingPanel />
-        </ScrollArea>
-      {:else if conf.phase === 'suspended'}
-        <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续" icon={Gavel} />
-      {:else if conf.phase === 'closed'}
-        <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与" icon={Gavel} />
-      {/if}
-    </div>
-
-    <!-- Motion Dialog -->
-    {#key motionDialogOpen}
-      <MotionDialog bind:open={motionDialogOpen} />
-    {/key}
-
-    <!-- Point Dialog -->
-    {#key pointDialogOpen}
-      <PointDialog bind:open={pointDialogOpen} />
-    {/key}
-
-    <!-- Log Dialog -->
-    <ConferenceLogDialog bind:open={logDialogOpen} minutes={conf?.minutes ?? []} />
   {:else}
-    <div class="flex flex-1 items-center justify-center text-muted-foreground">
-      <p>请选择或创建一场大会</p>
-    </div>
+    <header class="shrink-0 border-b px-8 py-5">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h1 class="truncate text-xl font-semibold">{event.name}</h1>
+          <p class="mt-1 text-sm text-muted-foreground">
+            {event.organizer ?? '未指定主办方'} · {new Date(event.createdAt).toLocaleDateString(
+              'zh-CN'
+            )}
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <Badge variant="outline">{eventConferences.length} 场小会议</Badge>
+          <Badge variant="outline">{seatCount} 个席位</Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            class="gap-2"
+            disabled={seatCount === 0}
+            onclick={() => void copyText(allKeys(), 'all')}
+          >
+            <KeyRound class="size-4" />
+            {copied === 'all' ? '已复制' : '复制全部 key'}
+          </Button>
+        </div>
+      </div>
+    </header>
+
+    <ScrollArea class="min-h-0 flex-1">
+      <div class="space-y-6 px-8 py-6">
+        <section class="space-y-3">
+          <h2 class="text-sm font-semibold">小会议</h2>
+          <div class="grid gap-4 xl:grid-cols-2">
+            {#each eventConferences as conference (conference.id)}
+              <article class="rounded-lg border p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <h3 class="truncate text-base font-semibold">{conference.name}</h3>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                      {conference.venue} · {PHASE_LABELS[conference.phase] ?? conference.phase}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    class="gap-2"
+                    onclick={() => navigateToConference(conference.id)}
+                  >
+                    <Play class="size-4" />
+                    进入会议
+                  </Button>
+                </div>
+
+                <div class="mt-4 overflow-hidden rounded-md border">
+                  <table class="w-full text-sm">
+                    <thead class="bg-muted/50 text-xs text-muted-foreground">
+                      <tr>
+                        <th class="px-3 py-2 text-left font-medium">席位</th>
+                        <th class="px-3 py-2 text-left font-medium">角色</th>
+                        <th class="px-3 py-2 text-left font-medium">Key</th>
+                        <th class="w-20 px-3 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {#each conference.seats as seat (seat.id)}
+                        <tr class="border-t">
+                          <td class="px-3 py-2">{seat.name}</td>
+                          <td class="px-3 py-2 text-muted-foreground">{seat.role ?? '-'}</td>
+                          <td class="px-3 py-2 font-mono text-xs">{seat.inviteCode}</td>
+                          <td class="px-3 py-2 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onclick={() => void copyText(seat.inviteCode, seat.id)}
+                            >
+                              {copied === seat.id ? '已复制' : '复制'}
+                            </Button>
+                          </td>
+                        </tr>
+                      {:else}
+                        <tr class="border-t">
+                          <td class="px-3 py-4 text-center text-muted-foreground" colspan="4">
+                            无席位
+                          </td>
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            {:else}
+              <p
+                class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
+              >
+                暂无小会议
+              </p>
+            {/each}
+          </div>
+        </section>
+
+        <section class="grid gap-4 lg:grid-cols-2">
+          <article class="rounded-lg border p-4">
+            <div class="flex items-center gap-2">
+              <ShieldCheck class="size-4 text-primary" />
+              <h2 class="text-sm font-semibold">角色模板</h2>
+            </div>
+            <div class="mt-3 flex flex-col gap-2">
+              {#each event.roleTemplates as role (role.id)}
+                <div class="rounded-md border px-3 py-2">
+                  <div class="text-sm font-medium">{role.name}</div>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {role.capabilities.length} 项权限
+                  </p>
+                </div>
+              {/each}
+            </div>
+          </article>
+
+          <article class="rounded-lg border p-4">
+            <div class="flex items-center gap-2">
+              <Newspaper class="size-4 text-primary" />
+              <h2 class="text-sm font-semibold">全局内容</h2>
+            </div>
+            <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div class="rounded-md border px-3 py-2">
+                <dt class="text-xs text-muted-foreground">新闻</dt>
+                <dd class="mt-1 font-medium">{event.news.length}</dd>
+              </div>
+              <div class="rounded-md border px-3 py-2">
+                <dt class="text-xs text-muted-foreground">局势</dt>
+                <dd class="mt-1 font-medium">{event.situationUpdates.length}</dd>
+              </div>
+            </dl>
+          </article>
+        </section>
+      </div>
+    </ScrollArea>
   {/if}
 </div>

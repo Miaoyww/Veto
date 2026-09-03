@@ -68,9 +68,7 @@
     // 落地大会总览页（settings：小会议与 Key）；取第一个小会议作为路由上下文
     const event = getConferenceEventById(eventId)
     wizard.reset()
-    void goto(
-      resolve(event?.conferenceIds[0] ? `/conference/${event.conferenceIds[0]}/settings` : '/')
-    )
+    void goto(resolve(event?.conferenceIds[0] ? `/conference/${event.conferenceIds[0]}/` : '/'))
   }
 </script>
 

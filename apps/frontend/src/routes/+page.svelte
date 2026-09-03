@@ -25,6 +25,7 @@
   } from '$lib/components/home/conference-status'
   import { navigateToConference } from '$lib/classes/utils'
   import { fly } from 'svelte/transition'
+  import { resolve } from '$app/paths'
 
   let query = $state('')
   let joinDialogOpen = $state(false)
@@ -102,7 +103,7 @@
         </InputGroup.Root>
 
         <div class="flex justify-end">
-          <Button class="gap-2" onclick={() => goto('/conference/create')}>
+          <Button class="gap-2" onclick={() => goto(resolve('/conference/create'))}>
             <Plus size={16} />
             创建大会
           </Button>
