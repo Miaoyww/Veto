@@ -1,317 +1,309 @@
 <script lang="ts">
   import type { ComponentProps, Snippet } from 'svelte'
+  import { fade } from 'svelte/transition'
   import {
-    House,
+    ArrowLeft,
     CalendarRange,
-    Send,
-    Newspaper,
+    Files,
     Globe,
+    House,
+    Monitor,
+    Newspaper,
+    Plus,
+    Puzzle,
+    Send,
     Swords,
     UserPlus,
-    Puzzle,
-    Plus,
     UserRoundCheck,
-    ArrowLeft,
-    Wrench,
-    Files,
-    Monitor
+    Wrench
   } from '@lucide/svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
   import { Button } from '$lib/components/ui/button'
   import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { resolve } from '$app/paths'
   import {
-    currentConferenceId,
-    currentCommitteeId,
-    conferences
+    conferences,
+    currentCommittee
   } from '$lib/classes/stores/conference/conference-store'
-  import { page } from '$app/stores'
-  import { navigateToConference } from '$lib/classes/utils'
+  import { navigateToCommittee, navigateToConference } from '$lib/classes/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
   import DynamicIsland from './dynamic-island.svelte'
-  import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import { cn } from '$lib/classes/utils.js'
   import JoinConferenceDialog from './home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from './conference/display-only-dialog.svelte'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
+
+  type SidebarMode = 'root' | 'unauthenticated' | 'home' | 'conference' | 'committee'
+  type Icon = typeof House
+  type NavItem = { title: string; icon: Icon; url: string }
+
   let {
     className = '',
     collapsible = 'icon',
     children,
+    // 接入全局 auth store 后，由父级传入真实值；当前桌面端默认为已登录。
+    isAuthenticated = true,
     ...restProps
-  }: { className?: string; children: Snippet; collapsible?: 'offcanvas' | 'icon' | 'none' } & Omit<
-    ComponentProps<typeof Sidebar.Root>,
-    'children' | 'class'
-  > = $props()
+  }: {
+    className?: string
+    children: Snippet
+    collapsible?: 'offcanvas' | 'icon' | 'none'
+    isAuthenticated?: boolean
+  } & Omit<ComponentProps<typeof Sidebar.Root>, 'children' | 'class'> = $props()
 
-  const confId = $derived($currentConferenceId)
-  const committeeId = $derived($currentCommitteeId)
-  const hasConf = $derived(confId != null)
-  const routeId = $derived($page.url.pathname ?? '/')
-
-  const confPrefix = $derived(
-    hasConf && committeeId
-      ? `/conference/${confId}/committee/${committeeId}`
-      : hasConf
-        ? `/conference/${confId}`
-        : '/conference'
+  const routePath = $derived($page.url.pathname ?? '/')
+  const conferenceId = $derived($page.params.conference_id ?? null)
+  const committeeId = $derived($page.params.committee_id ?? null)
+  const currentConference = $derived(
+    conferenceId ? $conferences.find((conference) => conference.id === conferenceId) ?? null : null
   )
-  const conferencePrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
-
-  const isStandaloneRoute = $derived(
-    $page.url.pathname === '/connect' ||
-      $page.url.pathname.startsWith('/conference-display/') ||
-      $page.url.pathname.startsWith('/delegate/')
-  )
-
-  // 最近大会列表（按 id 倒序，取前 5 条）
   const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
-  $effect(() => {
-    console.log(routeId)
-  })
-  let displayOnlyDialogOpen = $state(false)
-  let joinBattleDialogOpen = $state(false)
-  function goTo(path: string): void {
-    // @ts-expect-error resolve 要求字面量路由类型，这里接受通用 string
-    goto(resolve(path))
-  }
 
-  type NavItem = {
-    title: string
-    icon: typeof House
-    url: string
-    needsConf: boolean
-    isActive: boolean
-  }
+  const sidebarMode = $derived<SidebarMode>(
+    routePath === '/'
+      ? 'root'
+      : !isAuthenticated
+        ? 'unauthenticated'
+        : !conferenceId
+          ? 'home'
+          : committeeId
+            ? 'committee'
+            : 'conference'
+  )
 
-  const items = $derived<NavItem[]>([
-    { title: '首页', icon: House, url: '/', needsConf: false, isActive: routeId === '/' },
-    {
-      title: '议程',
-      icon: CalendarRange,
-      url: confPrefix,
-      needsConf: true,
-      isActive: routeId === confPrefix
-    },
-    {
-      title: '指令',
-      icon: Send,
-      url: `${confPrefix}/directives`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/directives`
-    },
-    {
-      title: '新闻',
-      icon: Newspaper,
-      url: `${confPrefix}/news`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/news`
-    },
-    {
-      title: '局势',
-      icon: Globe,
-      url: `${confPrefix}/situation`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/situation`
-    },
-    {
-      title: '文件',
-      icon: Files,
-      url: `${confPrefix}/files`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/files`
-    },
-    {
-      title: '工具',
-      icon: Wrench,
-      url: `${confPrefix}/tools`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/tools`
-    },
-    {
-      title: '军事推演',
-      icon: Swords,
-      url: `${conferencePrefix}/battle`,
-      needsConf: true,
-      isActive: routeId === `${conferencePrefix}/battle`
-    },
-    {
-      title: '席位管理',
-      icon: UserRoundCheck,
-      url: `${confPrefix}/seats`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/seats`
-    },
-    {
-      title: '参会席位',
-      icon: UserPlus,
-      url: `${confPrefix}/participants`,
-      needsConf: true,
-      isActive: routeId === `${confPrefix}/participants`
-    }
-  ])
+  const conferencePrefix = $derived(conferenceId ? `/conference/${conferenceId}` : '/conference')
+  const committeePrefix = $derived(
+    conferenceId && committeeId
+      ? `/conference/${conferenceId}/committee/${committeeId}`
+      : conferencePrefix
+  )
+  const isStandaloneRoute = $derived(
+    routePath === '/connect' ||
+      routePath.startsWith('/conference-display/') ||
+      routePath.startsWith('/delegate/')
+  )
 
-  const conf = $derived($currentCommittee)
+  const committeeItems = $derived<NavItem[]>(
+    conferenceId && committeeId
+      ? [
+          { title: '议程', icon: CalendarRange, url: committeePrefix },
+          { title: '指令', icon: Send, url: `${committeePrefix}/directives` },
+          { title: '新闻', icon: Newspaper, url: `${committeePrefix}/news` },
+          { title: '局势', icon: Globe, url: `${committeePrefix}/situation` },
+          { title: '文件', icon: Files, url: `${committeePrefix}/files` },
+          { title: '工具', icon: Wrench, url: `${committeePrefix}/tools` },
+          { title: '军事推演', icon: Swords, url: `${conferencePrefix}/battle` },
+          { title: '席位管理', icon: UserRoundCheck, url: `${committeePrefix}/seats` },
+          { title: '参会席位', icon: UserPlus, url: `${committeePrefix}/participants` }
+        ]
+      : []
+  )
 
+  const conf = $derived(sidebarMode === 'committee' ? $currentCommittee : null)
   const presentCount = $derived(
-    conf?.seats.filter(isParticipantSeat).filter(
-      (seat) => seat.procedure.attendance === 'present'
-    ).length ?? 0
+    conf?.seats.filter(isParticipantSeat).filter((seat) => seat.procedure.attendance === 'present')
+      .length ?? 0
   )
   const votingCount = $derived(
-    conf?.seats.filter(isParticipantSeat).filter(
-      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-    ).length ?? 0
+    conf?.seats
+      .filter(isParticipantSeat)
+      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .length ?? 0
   )
   const simpleMajority = $derived(Math.floor(votingCount / 2) + 1)
   const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
+
+  let displayOnlyDialogOpen = $state(false)
+  let joinBattleDialogOpen = $state(false)
+
+  function toHref(path: string): string {
+    // @ts-expect-error resolve 要求字面量路由类型，这里接受动态路由
+    return resolve(path)
+  }
+
+  function goTo(path: string): void {
+    goto(toHref(path))
+  }
+
+  function isActive(path: string): boolean {
+    return routePath === path
+  }
 </script>
 
-{#if !isStandaloneRoute}
+{#if !isStandaloneRoute && sidebarMode !== 'root'}
   <Sidebar.Provider>
     <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
       <Sidebar.Header>
-        <BrandSwitcher {hasConf} {confPrefix} />
+        <BrandSwitcher hasConf={conferenceId != null} confPrefix={committeePrefix} />
       </Sidebar.Header>
 
       <Sidebar.Content>
-        <Sidebar.Menu class="p-3">
-          {#if !hasConf}
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                onclick={() => {
-                  goto(resolve('/'))
-                }}
-                class="cursor-pointer"
-              >
-                <House size={18} />
-                <span>首页</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-
-            <!-- 未加入大会：操作按钮 -->
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                onclick={() => (joinBattleDialogOpen = true)}
-                class="cursor-pointer"
-              >
-                <UserPlus size={18} />
-                <span>加入大会</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton onclick={() => goTo('/conference/create')} class="cursor-pointer">
-                <Plus size={18} />
-                <span>创建大会</span>
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-
-            <Sidebar.Separator class="my-1" />
-
-            <!-- 最近大会列表 -->
-            {#each recentConfs as conf (conf.id)}
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  onclick={() => navigateToConference(conf.id)}
-                  class="cursor-pointer"
-                >
-                  <Globe size={18} />
-                  <span class="truncate">{conf.name}</span>
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-            {/each}
-
-            {#if recentConfs.length === 0}
-              <div
-                class="px-2 py-3 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
-              >
-                暂无最近大会
-              </div>
-            {/if}
-          {:else}
-            <!-- 已加入大会：导航菜单 -->
-            {#each items as item, i (i)}
-              {#if i === 1}
-                <Sidebar.Separator class="my-1" />
-              {/if}
-              {#if !item.needsConf || hasConf}
+        {#key sidebarMode}
+          <div transition:fade={{ duration: 120 }}>
+            <Sidebar.Menu class="p-3">
+              {#if sidebarMode === 'unauthenticated'}
                 <Sidebar.MenuItem>
-                  <Sidebar.MenuButton
-                    onclick={() => goTo(item.url)}
-                    isActive={item.isActive}
-                    class="cursor-pointer"
-                  >
-                    <item.icon size={18} />
-                    <span>{item.title}</span>
+                  <Sidebar.MenuButton aria-disabled="true">
+                    <House />
+                    <span>请先登录</span>
                   </Sidebar.MenuButton>
                 </Sidebar.MenuItem>
-              {/if}
-            {/each}
-          {/if}
-          {#if conf}
-            <Sidebar.Separator class="my-1" />
+              {:else if sidebarMode === 'home'}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton isActive={isActive('/')} onclick={() => goTo('/')}>
+                    <House />
+                    <span>首页</span>
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
 
-            <!-- 参会席位列表 -->
-            <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
-              <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
-                <span class="text-[10px] text-muted-foreground/60">
-                  {presentCount}/{conf.participantSeats.length} 出席，{votingCount} 可投票
-                </span>
-              </div>
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton onclick={() => (joinBattleDialogOpen = true)}>
+                    <UserPlus />
+                    <span>加入大会</span>
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
 
-              <div class="px-3 pb-3">
-                {#each conf.participantSeats as seat (seat.id)}
-                  {@const isPresent = seat.procedure.attendance === 'present'}
-                  {@const isObserver = isPresent && !seat.procedure.hasVotingRights}
-                  {@const isVoter = isPresent && !isObserver}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton onclick={() => goTo('/conference/create')}>
+                    <Plus />
+                    <span>创建大会</span>
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+
+                <Sidebar.Separator class="my-1" />
+
+                {#each recentConfs as recentConference (recentConference.id)}
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton onclick={() => navigateToConference(recentConference.id)}>
+                      <Globe />
+                      <span>{recentConference.name}</span>
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                {/each}
+
+                {#if recentConfs.length === 0}
                   <div
-                    class={cn(
-                      'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
-                      isPresent ? '' : 'opacity-50'
-                    )}
+                    class="px-2 py-3 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
                   >
-                    <!-- 名称 -->
-                    <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                      {seat.name}
-                    </span>
-                    <!-- 出席状态 icon -->
-                    <span class="shrink-0 text-[10px]">
-                      {#if isVoter}
-                        <span class="text-emerald-500">●</span>
-                      {:else if isObserver}
-                        <span class="text-blue-500">●</span>
-                      {:else}
-                        <span class="text-muted-foreground/40">○</span>
-                      {/if}
+                    暂无最近大会
+                  </div>
+                {/if}
+              {:else if sidebarMode === 'conference'}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton>
+                    {#snippet child({ props })}
+                      <a href={toHref('/')} {...props}>
+                        <House />
+                        <span>首页</span>
+                      </a>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton isActive={isActive(conferencePrefix)}>
+                    {#snippet child({ props })}
+                      <a href={toHref(conferencePrefix)} {...props}>
+                        <Globe />
+                        <span>大会概览</span>
+                      </a>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+
+                <Sidebar.Separator class="my-1" />
+                {#each currentConference?.committees ?? [] as committee (committee.id)}
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton onclick={() => navigateToCommittee(conferenceId!, committee.id)}>
+                      <CalendarRange />
+                      <span>{committee.name}</span>
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                {/each}
+              {:else}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton>
+                    {#snippet child({ props })}
+                      <a href={toHref(conferencePrefix)} {...props}>
+                        <Globe />
+                        <span>大会概览</span>
+                      </a>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+
+                <Sidebar.Separator class="my-1" />
+                {#each committeeItems as item (item.url)}
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton isActive={isActive(item.url)}>
+                      {#snippet child({ props })}
+                        <a href={toHref(item.url)} {...props}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </a>
+                      {/snippet}
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                {/each}
+
+                <Sidebar.Separator class="my-1" />
+                <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
+                    <span class="text-[10px] text-muted-foreground/60">
+                      {presentCount}/{conf?.participantSeats.length ?? 0} 出席，{votingCount} 可投票
                     </span>
                   </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
-        </Sidebar.Menu>
-      </Sidebar.Content>
 
+                  <div class="px-3 pb-3">
+                    {#each conf?.participantSeats ?? [] as seat (seat.id)}
+                      {@const isPresent = seat.procedure.attendance === 'present'}
+                      {@const isObserver = isPresent && !seat.procedure.hasVotingRights}
+                      {@const isVoter = isPresent && !isObserver}
+                      <div
+                        class={cn(
+                          'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
+                          isPresent ? '' : 'opacity-50'
+                        )}
+                      >
+                        <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                          {seat.name}
+                        </span>
+                        <span class="shrink-0 text-[10px]">
+                          {#if isVoter}
+                            <span class="text-emerald-500">●</span>
+                          {:else if isObserver}
+                            <span class="text-blue-500">●</span>
+                          {:else}
+                            <span class="text-muted-foreground/40">○</span>
+                          {/if}
+                        </span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+            </Sidebar.Menu>
+          </div>
+        {/key}
+      </Sidebar.Content>
 
       <Sidebar.Rail />
     </Sidebar.Root>
 
     <Sidebar.Inset>
       <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
-        {#if conf}
-          <Button variant="ghost" size="icon" onclick={() => goto(resolve('/'))}>
-            <ArrowLeft size={14} />
+        {#if sidebarMode === 'committee'}
+          <Button variant="ghost" size="icon" onclick={() => goTo('/')}>
+            <ArrowLeft />
           </Button>
         {/if}
         <Sidebar.Trigger class="-ms-1" />
 
-        {#if conf}
+        {#if sidebarMode === 'committee'}
           <Separator orientation="vertical" class="me-2 h-4" />
-
-          <!-- 表决信息 -->
           <div class="pb-3">
             <div class="mt-1.5 grid grid-cols-2 gap-2">
               <div class="px-2.5 py-1.5">
@@ -325,33 +317,31 @@
             </div>
           </div>
         {/if}
-        <!-- 中：拖拽区域 -->
-        <div class="drag-region flex-1 h-full">
-          {#if conf}
+
+        <div class="drag-region flex h-full flex-1">
+          {#if sidebarMode === 'committee'}
             <DynamicIsland />
           {/if}
         </div>
 
-        <!-- 右：插件入口 / 用户 + 设置 + 窗口控制按钮 -->
-
         <Button
           variant="ghost"
           size="sm"
-          class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
           onclick={() => (displayOnlyDialogOpen = true)}
           title="显示窗口"
         >
-          <Monitor size={14} />
+          <Monitor />
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          class="no-drag flex items-center gap-1.5 px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-          onclick={() => goto(resolve('/tools'))}
+          class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          onclick={() => goTo('/tools')}
           title="插件"
         >
-          <Puzzle size={14} />
+          <Puzzle />
         </Button>
 
         <WindowControls />
@@ -365,8 +355,8 @@
 {:else}
   {@render children()}
 {/if}
-<DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
 
+<DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
 <JoinConferenceDialog bind:open={joinBattleDialogOpen} />
 
 <style>

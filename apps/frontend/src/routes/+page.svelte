@@ -1,206 +1,253 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-
-  import { Search, Plus, Users, Monitor, UserPlus, Play, Mic, Bell, Clock } from '@lucide/svelte'
-  import { Button } from '$lib/components/ui/button/index.js'
-  import { Badge } from '$lib/components/ui/badge/index.js'
-  import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
-  import * as InputGroup from '$lib/components/ui/input-group/index.js'
-  import * as Card from '$lib/components/ui/card/index.js'
-  import {
-    conferences,
-    lastOpenedConferenceId,
-    unloadConference,
-    getPresentCount
-  } from '$lib/classes/stores/conference/conference-store'
-  import ConferenceCard from '$lib/components/home/conference-card.svelte'
-  import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
-  import JoinConferenceDialog from '$lib/components/home/join-conference-dialog.svelte'
-  import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import {
-    getCurrentSpeakerName,
-    getPendingMotionCount
-  } from '$lib/components/home/conference-status'
-  import { navigateToConference } from '$lib/classes/utils'
-  import { fly } from 'svelte/transition'
   import { resolve } from '$app/paths'
+  import { fly } from 'svelte/transition'
+  import { Loader2, LogIn, MonitorPlay, Network, Plus, RefreshCw, Server } from '@lucide/svelte'
+  import { Button } from '$lib/components/ui/button'
+  import * as Card from '$lib/components/ui/card'
+  import { Input } from '$lib/components/ui/input'
+  import { Badge } from '$lib/components/ui/badge'
+  import { ScrollArea } from '$lib/components/ui/scroll-area'
+  import { Separator } from '$lib/components/ui/separator'
+  import DescContent from '$lib/components/connect/desc-content.svelte'
+  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
+  import favicon from '$lib/assets/favicon.png'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
+  import { setExternalWsUrl } from '$lib/classes/clients/conference-display-client'
 
-  let query = $state('')
-  let joinDialogOpen = $state(false)
-  let displayOnlyDialogOpen = $state(false)
-
-  const filteredConferences = $derived(
-    query.trim()
-      ? $conferences.filter(
-          (c) =>
-            c.name.toLowerCase().includes(query.trim().toLowerCase()) ||
-            c.committees.some((committee) =>
-              committee.name.toLowerCase().includes(query.trim().toLowerCase())
-            )
-        )
-      : $conferences
-  )
-
-  const lastOpened = $derived(
-    $lastOpenedConferenceId
-      ? ($conferences.find((c) => c.id === $lastOpenedConferenceId) ?? null)
-      : null
-  )
-  const lastOpenedCommittee = $derived(lastOpened?.committees[0] ?? null)
-  const currentSpeaker = $derived(
-    lastOpenedCommittee ? getCurrentSpeakerName(lastOpenedCommittee) : null
-  )
-  const pendingCount = $derived(
-    lastOpenedCommittee ? getPendingMotionCount(lastOpenedCommittee) : 0
-  )
-
-  onMount(() => {
-    unloadConference()
-  })
-
-  function formatActiveTime(ts: number): string {
-    return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+  interface LanMeeting {
+    conferenceId: string
+    name: string
+    phase: string
+    host: string
+    port: number
+    wsUrl: string
   }
+
+  let meetings = $state<LanMeeting[]>([])
+  let scanning = $state(false)
+  let scanError = $state('')
+  let manualAddress = $state('')
+  let manualBusy = $state(false)
+  let manualError = $state('')
+
+  async function scan(): Promise<void> {
+    scanning = true
+    scanError = ''
+
+    try {
+      if (!window.veto?.lan) {
+        scanError = '请通过 Veto Electron 客户端加入会议'
+        meetings = []
+        return
+      }
+      meetings = await window.veto.lan.scan()
+    } catch {
+      scanError = '扫描失败，请检查网络或使用手动连接'
+    } finally {
+      scanning = false
+    }
+  }
+
+  function join(meeting: LanMeeting): void {
+    if (!window.veto?.lan) {
+      scanError = '请通过 Veto Electron 客户端加入会议'
+      return
+    }
+
+    scanError = ''
+    setExternalWsUrl(meeting.wsUrl)
+    goto(
+      resolve('/conference-display/[conference_id]', {
+        conference_id: meeting.conferenceId
+      })
+    )
+  }
+
+  async function joinManual(event: Event): Promise<void> {
+    event.preventDefault()
+    const value = manualAddress.trim()
+    if (!value) return
+
+    manualBusy = true
+    manualError = ''
+
+    try {
+      if (!window.veto?.lan) {
+        manualError = '请通过 Veto Electron 客户端加入会议'
+        return
+      }
+
+      const meeting = await window.veto.lan.queryConference(value)
+      if (!meeting) {
+        manualError = '该地址上没有正在开放的会议'
+        return
+      }
+      join(meeting)
+    } catch {
+      manualError = '无法连接到该会议地址'
+    } finally {
+      manualBusy = false
+    }
+  }
+
+  function enterOrganizerMode(): void {
+    goto(resolve('/conference'))
+  }
+
+  onMount(scan)
 </script>
 
-<div class="flex h-full w-full flex-row" in:fly={{ y: 8, duration: 320, opacity: 0 }}>
-  <div
-    class="flex h-full min-w-0 flex-1 flex-col bg-background"
-    in:fly={{ y: 8, duration: 320, opacity: 0 }}
-  >
-    {#if $conferences.length === 0}
-      <!-- 空状态引导 -->
-      <div class="flex flex-1 items-center justify-center p-8">
-        <div class="flex flex-col items-center gap-6 text-center">
-          <Users size={56} class="opacity-30" />
-          <div>
-            <h2 class="text-2xl font-semibold text-foreground">开始你的第一场大会</h2>
-            <p class="mt-2 text-sm text-muted-foreground">
-              创建一场新大会，或通过邀请码加入已有大会
-            </p>
-          </div>
-          <div class="flex gap-3">
-            <Button size="lg" class="gap-2" onclick={() => goto(resolve('/conference/create'))}>
-              <Plus size={18} />
-              创建新大会
+<div class="relative min-h-svh overflow-hidden bg-background">
+  <div class="absolute inset-0 bg-linear-to-br from-primary/15 via-background to-background"></div>
+
+  <div class="absolute left-8 top-12 z-20 flex items-center gap-3 text-sm font-medium">
+    <div class="flex size-9 items-center justify-center">
+      <img src={favicon} alt="Veto" class="size-8" />
+    </div>
+    <span class="text-lg">Veto</span>
+  </div>
+
+  <div class="absolute left-0 right-0 top-0 z-20 flex h-9 items-center">
+    <div class="drag-region h-full flex-1"></div>
+    <WindowControls />
+  </div>
+
+  <div class="relative z-10 flex min-h-svh items-center justify-center">
+    <div class="flex w-full max-w-7xl items-center">
+      <DescContent />
+
+      <section class="flex w-full items-center justify-center px-6 py-12 lg:w-[560px]">
+        <Card.Root
+          class="w-full max-w-md rounded-2xl border bg-card/90 p-0 shadow-2xl backdrop-blur-xl"
+        >
+          <Card.Header class="p-6 pb-4">
+            <Card.Title class="text-2xl font-bold">加入会议</Card.Title>
+            <Card.Description class="text-sm text-muted-foreground">
+              局域网会议会自动出现在下方
+            </Card.Description>
+          </Card.Header>
+
+          <Card.Content class="px-6 pb-5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 text-sm font-medium">
+                <Network class="size-4 text-primary" />
+                附近的会议
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={scanning}
+                onclick={() => void scan()}
+                title="重新扫描"
+              >
+                {#if scanning}
+                  <Loader2 class="size-4 animate-spin" />
+                {:else}
+                  <RefreshCw class="size-4" />
+                {/if}
+              </Button>
+            </div>
+
+            <ScrollArea class="-mr-3 mt-3 h-44 pr-3">
+              {#if meetings.length > 0}
+                <div class="flex flex-col gap-2">
+                  {#each meetings as meeting (meeting.conferenceId)}
+                    <button
+                      type="button"
+                      class="flex w-full items-center gap-3 rounded-lg border bg-background/70 p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+                      onclick={() => join(meeting)}
+                    >
+                      <span
+                        class="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
+                      >
+                        <Server class="size-4" />
+                      </span>
+                      <span class="min-w-0 flex-1">
+                        <span class="block truncate text-sm font-medium">{meeting.name}</span>
+                        <span class="block truncate text-xs text-muted-foreground">
+                          {meeting.host}:{meeting.port}
+                        </span>
+                      </span>
+                      <Badge variant="outline" class="max-w-24 shrink-0 truncate text-[10px]">
+                        {PHASE_LABELS[meeting.phase as keyof typeof PHASE_LABELS] ?? meeting.phase}
+                      </Badge>
+                      <LogIn class="size-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  {/each}
+                </div>
+              {:else if scanning}
+                <div class="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                  <Loader2 class="mr-2 size-4 animate-spin" />
+                  正在扫描
+                </div>
+              {:else}
+                <div
+                  class="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-muted-foreground"
+                  in:fly={{ y: 4, duration: 180 }}
+                >
+                  <Network class="size-5 opacity-50" />
+                  {scanError || '暂无会议'}
+                </div>
+              {/if}
+            </ScrollArea>
+
+            <div class="relative mt-5 h-5">
+              <Separator class="absolute top-1/2" />
+              <span
+                class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground"
+              >
+                手动连接
+              </span>
+            </div>
+
+            <form class="mt-4 flex gap-2" onsubmit={joinManual}>
+              <Input
+                placeholder="192.168.1.10:19527"
+                bind:value={manualAddress}
+                disabled={manualBusy}
+              />
+              <Button type="submit" disabled={manualBusy || !manualAddress.trim()}>
+                {#if manualBusy}
+                  <Loader2 class="size-4 animate-spin" />
+                {:else}
+                  <LogIn class="size-4" />
+                {/if}
+                加入
+              </Button>
+            </form>
+            {#if manualError}
+              <p class="mt-2 text-xs text-destructive">{manualError}</p>
+            {/if}
+          </Card.Content>
+
+          <Card.Footer class="flex-col gap-3 border-t p-6">
+            <Button class="w-full gap-2" size="lg" onclick={enterOrganizerMode}>
+              <Plus class="size-4" />
+              组织者入口
             </Button>
             <Button
-              size="lg"
               variant="outline"
-              class="gap-2"
-              onclick={() => (joinDialogOpen = true)}
+              class="w-full gap-2"
+              size="lg"
+              onclick={() => {
+                if (meetings[0]) join(meetings[0])
+              }}
+              disabled={meetings.length === 0}
             >
-              <UserPlus size={18} />
-              加入已有大会
+              <MonitorPlay class="size-4" />
+              投屏端加入
             </Button>
-          </div>
-        </div>
-      </div>
-    {:else}
-      <!-- Header -->
-      <div class="grid grid-cols-3 items-center gap-6 border-b px-8 py-5">
-        <!-- 中间：搜索 -->
-        <InputGroup.Root>
-          <InputGroup.Input bind:value={query} placeholder="搜索大会..." />
-          <InputGroup.Addon>
-            <Search class="h-4 w-4" />
-          </InputGroup.Addon>
-        </InputGroup.Root>
-
-        <div class="flex justify-end">
-          <Button class="gap-2" onclick={() => goto(resolve('/conference/create'))}>
-            <Plus size={16} />
-            创建大会
-          </Button>
-        </div>
-      </div>
-
-      <!-- Conference List -->
-      <ScrollArea class="flex-1">
-        <div class="px-8 py-6">
-          {#if lastOpened && !query.trim()}
-            <!-- 继续上次横幅 -->
-            <Card.Root
-              class="group mb-4 cursor-pointer border-indigo-300/50 bg-card/80 shadow-sm transition-all hover:border-indigo-400 hover:shadow-md dark:border-indigo-800/60"
-              onclick={() => navigateToConference(lastOpened.id)}
-            >
-              <Card.Content class="flex items-center gap-4 p-5">
-                <div
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500"
-                >
-                  <Play size={22} />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    继续上次
-                  </p>
-                  <div class="mt-0.5 flex items-center gap-2">
-                    <span class="truncate text-base font-semibold text-foreground">
-                      {lastOpened.name}
-                    </span>
-                    <Badge variant="outline" class="shrink-0 text-[10px]">
-                      {lastOpenedCommittee
-                        ? (PHASE_LABELS[lastOpenedCommittee.phase] ?? lastOpenedCommittee.phase)
-                        : '尚未创建会场'}
-                    </Badge>
-                  </div>
-                  <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span class="flex items-center gap-1">
-                      <Users class="size-3" />
-                      {lastOpenedCommittee
-                        ? `${getPresentCount(lastOpenedCommittee.seats)}/${lastOpenedCommittee.seats.length} 出席`
-                        : '暂无会场'}
-                    </span>
-                    {#if currentSpeaker}
-                      <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
-                        <Mic class="size-3" />
-                        正在发言：{currentSpeaker}
-                      </span>
-                    {/if}
-                    {#if pendingCount > 0}
-                      <span class="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                        <Bell class="size-3" />
-                        {pendingCount} 个待处理动议
-                      </span>
-                    {/if}
-                    <span class="flex items-center gap-1">
-                      <Clock class="size-3" />
-                      {formatActiveTime(lastOpened.updatedAt)}
-                    </span>
-                  </div>
-                </div>
-                <div class="shrink-0">
-                  <Button class="gap-2">
-                    <Play size={15} />
-                    进入
-                  </Button>
-                </div>
-              </Card.Content>
-            </Card.Root>
-          {/if}
-
-          {#if filteredConferences.length === 0}
-            <Card.Root class="border-dashed bg-card/30 py-16 text-center shadow-none">
-              <Card.Content class="p-0">
-                <p class="text-muted-foreground">未找到匹配的大会</p>
-                <p class="mt-1 text-sm text-muted-foreground/70">试试其他关键词？</p>
-              </Card.Content>
-            </Card.Root>
-          {:else}
-            <div class="flex flex-col gap-3">
-              {#each filteredConferences as conf (conf.id)}
-                <ConferenceCard conference={conf} />
-              {/each}
-            </div>
-          {/if}
-        </div>
-      </ScrollArea>
-    {/if}
+          </Card.Footer>
+        </Card.Root>
+      </section>
+    </div>
   </div>
 </div>
 
-<JoinConferenceDialog bind:open={joinDialogOpen} />
-
-<DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
+<style>
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+</style>
