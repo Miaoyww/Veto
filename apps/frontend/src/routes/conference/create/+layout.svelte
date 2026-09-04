@@ -89,7 +89,8 @@
       <div class="flex flex-col gap-1">
         {#each wizardSteps as step, index (step.path)}
           {@const Icon = step.icon}
-          {@const completed = index < wizardSteps.length - 1 && wizard.isStepValid(index)}
+          {@const completed =
+            index <= currentIndex && index < wizardSteps.length - 1 && wizard.isStepValid(index)}
           <button
             type="button"
             class={cn(
