@@ -95,10 +95,13 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
       displayWindow.current = win
 
       const devUrl = process.env['ELECTRON_RENDERER_URL']
+      const displayPath = `/conference-display/${encodeURIComponent(conferenceId)}`
       if (isDev() && devUrl) {
-        win.loadURL(`${devUrl}#/conference-display/${conferenceId}`)
+        win.loadURL(`${devUrl}${displayPath}`)
       } else {
-        win.loadURL(`veto://app/index.html#/conference-display/${conferenceId}`)
+        // Use a real pathname so SvelteKit resolves the display route.
+        // The protocol handler falls back to index.html for this SPA route.
+        win.loadURL(`veto://app${displayPath}`)
       }
 
       // 等待页面加载完成再发送配置

@@ -30,7 +30,6 @@
       import('$lib/classes/stores/timeline-store').then((m) => m.timelinesReady)
     ])
   }
-
 </script>
 
 <svelte:head>

@@ -12,7 +12,7 @@
  */
 
 import { app, shell, BrowserWindow, protocol } from 'electron'
-import path, { join, extname } from 'path'
+import { join, extname } from 'path'
 import * as fs from 'fs'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
@@ -99,14 +99,14 @@ function createWindow(): void {
   if (is.dev) {
     mainWindow.loadURL('http://localhost:5173')
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    // The static SvelteKit build uses root-relative asset URLs (/_app/...).
+    // Load it through the registered protocol so those URLs resolve inside
+    // the renderer directory instead of the filesystem root under file://.
+    // Keep the browser pathname at `/` so SvelteKit resolves the home route.
+    // The protocol handler serves index.html for the root request.
+    mainWindow.loadURL('veto://app/')
   }
 
-  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-  //   mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  // } else {
-  //   mainWindow.loadURL('veto://app/index.html')
-  // }
 }
 
 // ═══════════════════════════════════════════════════════════════════

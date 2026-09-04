@@ -14,7 +14,8 @@
     "typecheck": "pnpm -r typecheck",
     "build:frontend": "pnpm --filter @vetoexpress/frontend build",
     "build:electron": "pnpm --filter @vetoexpress/electron build",
-    "build": "pnpm build:frontend && node scripts/copy-frontend.mjs && pnpm build:electron",
+    "build:win": "pnpm build:frontend && node scripts/copy-frontend.mjs && npm --prefix apps/electron run build:win",
+    "build": "pnpm build:win",
     "test": "vitest run",
     "sync-version": "tsx scripts/sync-version.ts",
     "test:watch": "vitest"
