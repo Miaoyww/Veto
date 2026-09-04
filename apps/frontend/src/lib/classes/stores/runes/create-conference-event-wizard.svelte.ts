@@ -12,6 +12,7 @@ import { createConferenceFromDraft } from '../conference/conference-event-store'
 export interface SeatDraft {
   id: string
   name: string
+  shortName: string
   roleId: string
 }
 
@@ -27,7 +28,7 @@ const IPC_ROLE_NAME = 'IPC'
 const STAFF_ROLE_NAME = 'Staff'
 
 function newSeat(roleId: string): SeatDraft {
-  return { id: crypto.randomUUID(), name: '', roleId }
+  return { id: crypto.randomUUID(), name: '', shortName: '', roleId }
 }
 
 function newCommittee(): CommitteeDraft {

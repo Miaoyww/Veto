@@ -17,10 +17,6 @@
 </script>
 
 <section class="flex flex-col gap-4">
-  <div class="rounded-lg border px-3 py-2 text-sm">
-    注意：会场仅支持常规、MPC和IPC三种类型；席位将按会场类型匹配对应角色，Staff为通用权限模板。
-  </div>
-
   {#if showNoCommittees}
     <Field.FieldError>至少添加一个会场</Field.FieldError>
   {/if}

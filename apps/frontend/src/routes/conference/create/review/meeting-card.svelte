@@ -35,7 +35,12 @@
       <ul class="mt-3 flex flex-col gap-2 text-sm">
         {#each committee.seats as seat (seat.id)}
           <li class="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-            <span class="min-w-0 flex-1 truncate">{seat.name}</span>
+            <div class="min-w-0 flex-1 truncate">
+              <span>{seat.name}</span>
+              {#if committee.type === 'cabinet' && seat.shortName.trim()}
+                <span class="ml-2 text-xs text-muted-foreground">({seat.shortName})</span>
+              {/if}
+            </div>
             <span class="shrink-0 text-xs text-muted-foreground">
               {wizard.roleName(seat.roleId)}
             </span>

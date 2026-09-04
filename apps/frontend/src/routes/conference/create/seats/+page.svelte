@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Plus, Trash2 } from '@lucide/svelte'
+  import { cn } from '$lib/classes/utils'
   import { Button } from '$lib/components/ui/button'
   import * as Field from '$lib/components/ui/field'
   import { Input } from '$lib/components/ui/input'
@@ -16,10 +17,6 @@
 </script>
 
 <section class="flex flex-col gap-4">
-  <div class="rounded-lg border px-3 py-2 text-sm">
-    注意：常规会场可分配常规代表、IPC和观察员；MPC会场可分配MPC记者和IPC；IPC会场只能分配IPC；Staff为通用权限模板。
-  </div>
-
   {#each wizard.committees as committee (committee.id)}
     {@const showNoSeats = wizard.attempted && committee.seats.length === 0}
     {@const showInvalidSpecialRole =
@@ -38,13 +35,27 @@
         {#each committee.seats as seat (seat.id)}
           {@const showSeatNameError = wizard.attempted && seat.name.trim().length === 0}
           <div class="flex flex-col gap-1">
-            <div class="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]">
+            <div
+              class={cn(
+                'grid items-center gap-2',
+                committee.type === 'cabinet'
+                  ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]'
+                  : 'md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]'
+              )}
+            >
               <Input
                 bind:value={seat.name}
                 placeholder="席位名称"
                 aria-label="席位名称"
                 aria-invalid={showSeatNameError || undefined}
               />
+              {#if committee.type === 'cabinet'}
+                <Input
+                  bind:value={seat.shortName}
+                  placeholder="席位简称（可选）"
+                  aria-label="席位简称"
+                />
+              {/if}
               <Select.Select type="single" bind:value={seat.roleId}>
                 <Select.SelectTrigger class="w-full" aria-label="角色">
                   {wizard.roleName(seat.roleId)}

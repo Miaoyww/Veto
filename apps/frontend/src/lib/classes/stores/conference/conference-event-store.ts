@@ -12,7 +12,7 @@ export interface CommitteeDraft {
   id: string
   name: string
   type: SeatGroupType
-  seats: Array<{ name: string; roleId: string }>
+  seats: Array<{ name: string; shortName?: string; roleId: string }>
 }
 
 export interface CreateConferenceInput {
@@ -113,7 +113,12 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
         roleId: draftSeat.roleId,
         procedure:
           draft.type === 'cabinet'
-            ? { attendance: 'absent', hasVotingRights: true, sortOrder }
+            ? {
+                shortName: draftSeat.shortName?.trim() || undefined,
+                attendance: 'absent',
+                hasVotingRights: true,
+                sortOrder
+              }
             : undefined
       }
       seatAccesses.push({ seatId: seat.id, inviteCode: generateInviteCode(existingKeys) })
