@@ -8,15 +8,19 @@
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
 
   const typeLabels: Record<SeatGroupType, string> = {
-    cabinet: '内阁 / 委员会',
+    cabinet: '常规',
     mpc: 'MPC',
-    ipc: '学团 IPC'
+    ipc: 'IPC'
   }
 
   const showNoCommittees = $derived(wizard.attempted && wizard.committees.length === 0)
 </script>
 
 <section class="flex flex-col gap-4">
+  <div class="rounded-lg border px-3 py-2 text-sm">
+    注意：会场仅支持常规、MPC和IPC三种类型；席位将按会场类型匹配对应角色，Staff为通用权限模板。
+  </div>
+
   {#if showNoCommittees}
     <Field.FieldError>至少添加一个会场</Field.FieldError>
   {/if}
@@ -47,9 +51,9 @@
               {typeLabels[committee.type]}
             </Select.SelectTrigger>
             <Select.SelectContent>
-              <Select.SelectItem value="cabinet" label="内阁 / 委员会" />
+              <Select.SelectItem value="cabinet" label="常规" />
               <Select.SelectItem value="mpc" label="MPC" />
-              <Select.SelectItem value="ipc" label="学团 IPC" />
+              <Select.SelectItem value="ipc" label="IPC" />
             </Select.SelectContent>
           </Select.Select>
         </Field.Field>

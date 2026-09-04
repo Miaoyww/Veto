@@ -53,7 +53,7 @@ export type CabinetMode = 'standing' | 'crisis'
 /** 席位组 */
 export interface SeatGroup {
   id: string
-  /** 显示名称，如 "美国内阁"、"MPC"、"学团 IPC" */
+  /** 显示名称，如 "常规"、"MPC"、"IPC" */
   name: string
   /** 席位组类型 */
   type: SeatGroupType
@@ -225,7 +225,7 @@ export interface SituationUpdate {
   title: string
   /** 正文（Markdown） */
   content: string
-  /** 发布方 SeatGroup ID（学团 IPC） */
+  /** 发布方 SeatGroup ID（IPC） */
   publisherId: string
   /** 发布人 Seat ID */
   authorId: string

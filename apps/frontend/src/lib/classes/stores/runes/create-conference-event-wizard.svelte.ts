@@ -23,7 +23,8 @@ export interface CommitteeDraft {
 }
 
 const MPC_REPORTER_ROLE_NAME = 'MPC记者'
-const IPC_ROLE_NAME = '学团IPC'
+const IPC_ROLE_NAME = 'IPC'
+const STAFF_ROLE_NAME = 'Staff'
 
 function newSeat(roleId: string): SeatDraft {
   return { id: crypto.randomUUID(), name: '', roleId }
@@ -33,7 +34,7 @@ function newCommittee(): CommitteeDraft {
   return { id: crypto.randomUUID(), name: '', type: 'cabinet', seats: [] }
 }
 
-/** 向导默认预置的四个角色模板（随 reset 每次重新生成 id） */
+/** 向导默认预置的五个角色模板（随 reset 每次重新生成 id） */
 const rolePresets: Array<Omit<RoleTemplate, 'id'>> = [
   {
     name: '常规代表',
@@ -59,7 +60,7 @@ const rolePresets: Array<Omit<RoleTemplate, 'id'>> = [
     builtIn: true
   },
   {
-    name: '学团IPC',
+    name: 'IPC',
     capabilities: [
       'view_conference',
       'view_situation',
@@ -69,6 +70,24 @@ const rolePresets: Array<Omit<RoleTemplate, 'id'>> = [
       'review_news',
       'publish_situation',
       'control_conference'
+    ],
+    builtIn: true
+  },
+  {
+    name: STAFF_ROLE_NAME,
+    capabilities: [
+      'view_conference',
+      'view_situation',
+      'view_news',
+      'view_files',
+      'draft_news',
+      'review_news',
+      'submit_directive',
+      'process_directive',
+      'send_files',
+      'publish_situation',
+      'control_conference',
+      'draft_resolution'
     ],
     builtIn: true
   }
@@ -132,7 +151,7 @@ export class ConferenceCreateWizard {
             (seat) =>
               seat.name.trim().length > 0 &&
               this.roles.some((role) => role.id === seat.roleId) &&
-              (committee.type === 'mpc' || !this.isMpcReporterRole(seat.roleId))
+              this.isRoleAllowedInCommittee(seat.roleId, committee.type)
           )
       )
     )
@@ -167,7 +186,12 @@ export class ConferenceCreateWizard {
     return this.roleName(roleId).replace(/\s+/g, '') === IPC_ROLE_NAME
   }
 
+  isStaffRole(roleId: string): boolean {
+    return this.roleName(roleId).trim() === STAFF_ROLE_NAME
+  }
+
   isRoleAllowedInCommittee(roleId: string, committeeType: SeatGroupType): boolean {
+    if (this.isStaffRole(roleId)) return true
     if (committeeType === 'mpc') return this.isMpcReporterRole(roleId) || this.isIpcRole(roleId)
     if (committeeType === 'ipc') return this.isIpcRole(roleId)
     return !this.isMpcReporterRole(roleId)

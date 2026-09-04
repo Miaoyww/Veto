@@ -68,18 +68,22 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
     roleTemplates.filter((role) => role.name.replace(/\s+/g, '') === 'MPC记者').map((role) => role.id)
   )
   const ipcRoleIds = new Set(
-    roleTemplates.filter((role) => role.name.replace(/\s+/g, '') === '学团IPC').map((role) => role.id)
+    roleTemplates.filter((role) => role.name.replace(/\s+/g, '') === 'IPC').map((role) => role.id)
+  )
+  const staffRoleIds = new Set(
+    roleTemplates.filter((role) => role.name.trim() === 'Staff').map((role) => role.id)
   )
   if (
     input.committees.some(
       (draft) =>
-        draft.seats.some((seat) =>
-          draft.type === 'mpc'
-            ? !mpcReporterRoleIds.has(seat.roleId) && !ipcRoleIds.has(seat.roleId)
-            : draft.type === 'ipc'
-              ? !ipcRoleIds.has(seat.roleId)
-              : mpcReporterRoleIds.has(seat.roleId)
-        )
+        draft.seats.some((seat) => {
+          if (staffRoleIds.has(seat.roleId)) return false
+          if (draft.type === 'mpc') {
+            return !mpcReporterRoleIds.has(seat.roleId) && !ipcRoleIds.has(seat.roleId)
+          }
+          if (draft.type === 'ipc') return !ipcRoleIds.has(seat.roleId)
+          return mpcReporterRoleIds.has(seat.roleId)
+        })
     )
   ) {
     return null

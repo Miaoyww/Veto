@@ -437,7 +437,7 @@ export interface Conference {
   seatAccesses: SeatAccess[]
   /** 大会级角色模板 */
   roleTemplates: RoleTemplate[]
-  /** 大会级席位组（内阁/委员会、MPC、学团 IPC） */
+  /** 大会级席位组（常规、MPC、IPC） */
   seatGroups: SeatGroup[]
   /** 大会级新闻 */
   news: News[]

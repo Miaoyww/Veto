@@ -16,6 +16,10 @@
 </script>
 
 <section class="flex flex-col gap-4">
+  <div class="rounded-lg border px-3 py-2 text-sm">
+    注意：常规会场可分配常规代表、IPC和观察员；MPC会场可分配MPC记者和IPC；IPC会场只能分配IPC；Staff为通用权限模板。
+  </div>
+
   {#each wizard.committees as committee (committee.id)}
     {@const showNoSeats = wizard.attempted && committee.seats.length === 0}
     {@const showInvalidSpecialRole =

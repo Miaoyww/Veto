@@ -15,9 +15,9 @@
   let { onEdit, onSelect, onCreateNew, selectedId }: Props = $props()
 
   const typeLabels: Record<string, string> = {
-    cabinet: '内阁/委员会',
+    cabinet: '常规',
     mpc: 'MPC',
-    ipc: '学团 IPC'
+    ipc: 'IPC'
   }
 
   const typeBadgeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {

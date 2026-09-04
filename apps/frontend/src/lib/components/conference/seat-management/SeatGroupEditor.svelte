@@ -22,9 +22,9 @@
   )
 
   const typeLabels: Record<SeatGroupType, string> = {
-    cabinet: '内阁 / 委员会',
+    cabinet: '常规',
     mpc: 'MPC（新闻中心）',
-    ipc: '学团 IPC（推演控制中心）'
+    ipc: 'IPC'
   }
 
   function toggleCapability(capability: Capability): void {
@@ -62,7 +62,7 @@
   <Field.FieldGroup class="gap-3">
     <Field.Field>
       <Field.FieldLabel for="sg-name">名称</Field.FieldLabel>
-      <Input id="sg-name" bind:value={name} placeholder="如：美国内阁、MPC、学团 IPC" />
+      <Input id="sg-name" bind:value={name} placeholder="如：常规、MPC、IPC" />
     </Field.Field>
 
     <Field.Field>
@@ -72,9 +72,9 @@
           {typeLabels[type]}
         </Select.SelectTrigger>
         <Select.SelectContent>
-          <Select.SelectItem value="cabinet" label="内阁 / 委员会" />
+          <Select.SelectItem value="cabinet" label="常规" />
           <Select.SelectItem value="mpc" label="MPC（新闻中心）" />
-          <Select.SelectItem value="ipc" label="学团 IPC（推演控制中心）" />
+          <Select.SelectItem value="ipc" label="IPC" />
         </Select.SelectContent>
       </Select.Select>
     </Field.Field>

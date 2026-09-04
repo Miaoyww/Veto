@@ -49,7 +49,7 @@
       <div class="empty-state">
         <Globe class="size-8 text-muted-foreground" />
         <p class="text-sm text-muted-foreground">暂无局势更新</p>
-        <p class="text-xs text-muted-foreground">等待学团 IPC 发布</p>
+        <p class="text-xs text-muted-foreground">等待 IPC 发布</p>
       </div>
     {/if}
   </div>

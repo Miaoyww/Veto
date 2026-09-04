@@ -69,7 +69,9 @@
     const event = getCreatedConferenceById(eventId)
     wizard.reset()
     const committeeId = event?.committees[0]?.id
-    void goto(resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}` : '/'))
+    void goto(
+      resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}` : '/')
+    )
   }
 </script>
 

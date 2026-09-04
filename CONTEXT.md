@@ -4,7 +4,7 @@
 （Committee），管理角色、席位、新闻、局势与文件，支持常委模式（standing）和危机联动模式
 （crisis）之间的切换。
 
-三种角色：**Chair**（主席/学团控制端）、**Delegate**（代表端）、**Display**（投屏端）。
+三种角色：**Chair**（主席）、**Delegate**（代表端）、**Display**（投屏端）。
 
 ## Conference（大会）
 
@@ -23,7 +23,7 @@ _Avoid_: Event, Conference, Cabinet, Committee Group
 
 ## SeatGroup（席位组）
 
-大会内的席位组织单元。有三种类型：内阁/委员会、MPC、学团 IPC。
+大会内的席位组织单元。有三种类型：常规、MPC、IPC。
 
 **SeatGroup (席位组)**:
 一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在大会中的协作方式。
@@ -33,11 +33,11 @@ _Avoid_: Role, Team, Group
 
 | 类型 | 模式 | 说明 |
 |---|---|---|
-| 内阁/委员会 (Cabinet) | standing ↔ crisis 可切换 | 议事会场 |
+| 常规 (Cabinet) | standing ↔ crisis 可切换 | 议事会场 |
 | MPC | 固定 | 主新闻中心 |
-| 学团 IPC | 固定 | 推演控制中心 |
+| IPC | 固定 | 推演控制中心 |
 
-**内阁/委员会 (Cabinet)**:
+**常规 (Cabinet)**:
 既可指危机模式下的国家内阁，也可指常委模式下的多国委员会。两种模式中途可切换。
 - **危机模式 (crisis)**：Seat 独立运作，各自绑定部门（海军部、情报局等），直接发送指令。
 - **常委模式 (standing)**：内阁统一为国家立场，通过会议机制（发言名单、动议、表决）产出国家文件。
@@ -45,11 +45,11 @@ _Avoid_: Role, Team, Group
 _Avoid_: Committee, Council
 
 **MPC (主新闻中心)**:
-新闻的生产方。成员起草新闻草稿，提交学团审核后发布。已发布新闻可被学团撤回（从全局列表移除）。
+新闻的生产方。成员起草新闻草稿，提交 IPC 审核后发布。已发布新闻可被 IPC 撤回（从全局列表移除）。
 内部可细分多家通讯社（通过 source 字段标识）。
 _Avoid_: Press, Media
 
-**学团 IPC (推演控制中心)**:
+**IPC (推演控制中心)**:
 大会侧的推演控制会议。成员能力独立灵活分配（某人处理指令、某人审核新闻、某人发布局势、某人控制会议）。
 _Avoid_: Chair, Admin, Director
 
@@ -66,7 +66,7 @@ _Avoid_: Member, User, Delegate, Delegation
 
 **Procedure（议事状态）**:
 Seat 上可选的议事参与状态，包含简称、旗帜、出席状态、投票权与议事排序。参与议事的 Seat 拥有
-Procedure；MPC 和学团 IPC 的 Seat 不拥有 Procedure。
+Procedure；MPC 和 IPC 的 Seat 不拥有 Procedure。
 _Avoid_: Delegation, Voting Seat
 
 **SeatView（席位视图）**:
@@ -109,7 +109,7 @@ _Avoid_: Password, 席位 key
 
 **RoleTemplate (角色模板)**:
 大会级角色定义，包含名称与默认能力集。委员会创建席位时选择角色模板，并可在席位上覆盖具体能力。
-常见模板包括常规代表、MPC 记者、观察员、学团控制者。角色模板不是登录身份；席位才是代表身份。
+常见模板包括常规代表、MPC 记者、IPC、观察员和 Staff。角色模板不是登录身份；席位才是代表身份。
 _Avoid_: Role, Permission, Account
 
 ## Capability（能力）
@@ -149,8 +149,8 @@ _Avoid_: Order, Command, Request
 ## News（新闻）
 
 **News (新闻)**:
-属于大会层的全局新闻稿，由 MPC 成员起草、学团审核后发布。生命周期：
-draft → submitted → review（学团审核）→ published / rejected。
+属于大会层的全局新闻稿，由 MPC 成员起草、IPC 审核后发布。生命周期：
+draft → submitted → review（IPC审核）→ published / rejected。
 驳回后可修改重交。已发布新闻可被撤回（从全局新闻列表移除，非软删除）。
 包含 source 字段标识通讯社名称，为 MPC 内部细分预留。
 _Avoid_: Article, Post, Bulletin
@@ -158,13 +158,13 @@ _Avoid_: Article, Post, Bulletin
 ## SituationUpdate（局势更新）
 
 **SituationUpdate (局势更新)**:
-属于大会层的全局局势变化公告，由学团 IPC 发布。关联 Timeline，所有委员会中的代表看到相同内容。
+属于大会层的全局局势变化公告，由 IPC 发布。关联 Timeline，所有委员会中的代表看到相同内容。
 当前阶段不考虑分内阁差异化情报。预留 `relatedBattleId` 和 `relatedLocation` 字段供未来地图集成。
 _Avoid_: Event, Update, Intel
 
 ## 角色（Role）
 
-**Chair (主席/学团控制端)**:
+**Chair (主席)**:
 大会创建者和管理者。控制会议流程、处理指令、审核新闻、发布局势更新、
 管理 SeatGroup/Seat 配置、控制模式切换。运行内置 WS 服务端供代表端和投屏端连接。
 

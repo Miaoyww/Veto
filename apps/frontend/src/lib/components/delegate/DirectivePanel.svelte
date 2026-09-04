@@ -119,7 +119,7 @@
       </div>
       <div class="form-field">
         <Label for="dir-target">接收方</Label>
-        <Input id="dir-target" bind:value={target} placeholder="如：学团 IPC、俄罗斯内阁" />
+        <Input id="dir-target" bind:value={target} placeholder="如：IPC、俄罗斯内阁" />
       </div>
       <div class="form-field">
         <Label for="dir-content">正文</Label>
