@@ -18,6 +18,9 @@
 <section class="flex flex-col gap-4">
   {#each wizard.committees as committee (committee.id)}
     {@const showNoSeats = wizard.attempted && committee.seats.length === 0}
+    {@const showInvalidSpecialRole =
+      wizard.attempted &&
+      committee.seats.some((seat) => !wizard.isRoleAllowedInCommittee(seat.roleId, committee.type))}
     <article class="rounded-lg border p-4">
       <div class="flex items-center justify-between gap-3">
         <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
@@ -44,7 +47,9 @@
                 </Select.SelectTrigger>
                 <Select.SelectContent>
                   {#each wizard.roles as role (role.id)}
-                    <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
+                    {#if wizard.isRoleAllowedInCommittee(role.id, committee.type)}
+                      <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
+                    {/if}
                   {/each}
                 </Select.SelectContent>
               </Select.Select>
@@ -75,6 +80,9 @@
       {/if}
       {#if showInvalidRole}
         <Field.FieldError class="mt-1">存在未匹配到角色的席位，请重新选择角色</Field.FieldError>
+      {/if}
+      {#if showInvalidSpecialRole}
+        <Field.FieldError class="mt-1">当前席位的角色与会场类型不匹配，请重新选择角色或调整会场类型</Field.FieldError>
       {/if}
     </article>
   {/each}

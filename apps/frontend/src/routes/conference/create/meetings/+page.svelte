@@ -9,7 +9,8 @@
 
   const typeLabels: Record<SeatGroupType, string> = {
     cabinet: '内阁 / 委员会',
-    mpc: 'MPC'
+    mpc: 'MPC',
+    ipc: '学团 IPC'
   }
 
   const showNoCommittees = $derived(wizard.attempted && wizard.committees.length === 0)
@@ -17,17 +18,15 @@
 
 <section class="flex flex-col gap-4">
   {#if showNoCommittees}
-    <Field.FieldError>至少添加一个委员会</Field.FieldError>
+    <Field.FieldError>至少添加一个会场</Field.FieldError>
   {/if}
 
   {#each wizard.committees as committee (committee.id)}
     {@const showNameError = wizard.attempted && committee.name.trim().length === 0}
     <article class="rounded-lg border p-4">
-      <div
-        class="grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]"
-      >
+      <div class="grid items-start gap-x-4 gap-y-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]">
         <Field.Field data-invalid={showNameError}>
-          <Field.FieldLabel for={`committee-name-${committee.id}`}>委员会名称</Field.FieldLabel>
+          <Field.FieldLabel for={`committee-name-${committee.id}`}>会场名称</Field.FieldLabel>
           <Input
             id={`committee-name-${committee.id}`}
             bind:value={committee.name}
@@ -36,7 +35,7 @@
           />
           {#if showNameError}
             <Field.FieldError id={`committee-name-error-${committee.id}`}
-              >请输入委员会名称</Field.FieldError
+              >会场名称不能为空</Field.FieldError
             >
           {/if}
         </Field.Field>
@@ -50,6 +49,7 @@
             <Select.SelectContent>
               <Select.SelectItem value="cabinet" label="内阁 / 委员会" />
               <Select.SelectItem value="mpc" label="MPC" />
+              <Select.SelectItem value="ipc" label="学团 IPC" />
             </Select.SelectContent>
           </Select.Select>
         </Field.Field>
@@ -70,6 +70,6 @@
 
   <Button variant="outline" class="w-fit" onclick={() => wizard.addCommittee()}>
     <Plus data-icon="inline-start" />
-    添加委员会
+    添加会场
   </Button>
 </section>

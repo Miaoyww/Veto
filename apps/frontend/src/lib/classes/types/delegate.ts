@@ -45,7 +45,7 @@ export const CAPABILITY_OPTIONS: Array<{ value: Capability; label: string }> = O
 // ---- 席位组 ---------------------------------------------------------------
 
 /** 席位组类型 */
-export type SeatGroupType = 'cabinet' | 'mpc'
+export type SeatGroupType = 'cabinet' | 'mpc' | 'ipc'
 
 /** 内阁/委员会运行模式 */
 export type CabinetMode = 'standing' | 'crisis'

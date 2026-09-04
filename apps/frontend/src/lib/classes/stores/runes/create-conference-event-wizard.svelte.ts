@@ -22,6 +22,9 @@ export interface CommitteeDraft {
   seats: SeatDraft[]
 }
 
+const MPC_REPORTER_ROLE_NAME = 'MPC记者'
+const IPC_ROLE_NAME = '学团IPC'
+
 function newSeat(roleId: string): SeatDraft {
   return { id: crypto.randomUUID(), name: '', roleId }
 }
@@ -127,7 +130,9 @@ export class ConferenceCreateWizard {
           committee.seats.length > 0 &&
           committee.seats.every(
             (seat) =>
-              seat.name.trim().length > 0 && this.roles.some((role) => role.id === seat.roleId)
+              seat.name.trim().length > 0 &&
+              this.roles.some((role) => role.id === seat.roleId) &&
+              (committee.type === 'mpc' || !this.isMpcReporterRole(seat.roleId))
           )
       )
     )
@@ -152,6 +157,20 @@ export class ConferenceCreateWizard {
 
   roleName(roleId: string): string {
     return this.roles.find((role) => role.id === roleId)?.name || '未指定角色'
+  }
+
+  isMpcReporterRole(roleId: string): boolean {
+    return this.roleName(roleId).replace(/\s+/g, '') === MPC_REPORTER_ROLE_NAME
+  }
+
+  isIpcRole(roleId: string): boolean {
+    return this.roleName(roleId).replace(/\s+/g, '') === IPC_ROLE_NAME
+  }
+
+  isRoleAllowedInCommittee(roleId: string, committeeType: SeatGroupType): boolean {
+    if (committeeType === 'mpc') return this.isMpcReporterRole(roleId) || this.isIpcRole(roleId)
+    if (committeeType === 'ipc') return this.isIpcRole(roleId)
+    return !this.isMpcReporterRole(roleId)
   }
 
   reset(): void {
@@ -198,9 +217,11 @@ export class ConferenceCreateWizard {
   addSeat(committeeId: string): void {
     this.committees = this.committees.map((committee) => {
       if (committee.id !== committeeId) return committee
+      const roleId =
+        this.roles.find((role) => this.isRoleAllowedInCommittee(role.id, committee.type))?.id ?? ''
       return {
         ...committee,
-        seats: [...committee.seats, newSeat(this.roles[0]?.id ?? '')]
+        seats: [...committee.seats, newSeat(roleId)]
       }
     })
   }

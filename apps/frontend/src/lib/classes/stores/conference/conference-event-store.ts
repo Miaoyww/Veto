@@ -64,6 +64,26 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
 
   const roleTemplates = input.roleTemplates.map((role) => ({ ...role, name: role.name.trim() }))
   const roles = new Map(roleTemplates.map((role) => [role.id, role]))
+  const mpcReporterRoleIds = new Set(
+    roleTemplates.filter((role) => role.name.replace(/\s+/g, '') === 'MPC记者').map((role) => role.id)
+  )
+  const ipcRoleIds = new Set(
+    roleTemplates.filter((role) => role.name.replace(/\s+/g, '') === '学团IPC').map((role) => role.id)
+  )
+  if (
+    input.committees.some(
+      (draft) =>
+        draft.seats.some((seat) =>
+          draft.type === 'mpc'
+            ? !mpcReporterRoleIds.has(seat.roleId) && !ipcRoleIds.has(seat.roleId)
+            : draft.type === 'ipc'
+              ? !ipcRoleIds.has(seat.roleId)
+              : mpcReporterRoleIds.has(seat.roleId)
+        )
+    )
+  ) {
+    return null
+  }
   const existingKeys = new Set(get(conferences).flatMap((conference) => conference.seatAccesses.map((access) => access.inviteCode)))
   const seatGroups: SeatGroup[] = []
   const seatAccesses: SeatAccess[] = []

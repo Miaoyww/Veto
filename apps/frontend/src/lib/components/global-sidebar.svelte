@@ -23,10 +23,7 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import { resolve } from '$app/paths'
-  import {
-    conferences,
-    currentCommittee
-  } from '$lib/classes/stores/conference/conference-store'
+  import { conferences, currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import { navigateToCommittee, navigateToConference } from '$lib/classes/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
@@ -58,7 +55,9 @@
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
   const currentConference = $derived(
-    conferenceId ? $conferences.find((conference) => conference.id === conferenceId) ?? null : null
+    conferenceId
+      ? ($conferences.find((conference) => conference.id === conferenceId) ?? null)
+      : null
   )
   const recentConfs = $derived([...$conferences].reverse().slice(0, 5))
 
@@ -153,7 +152,7 @@
                 </Sidebar.MenuItem>
               {:else if sidebarMode === 'home'}
                 <Sidebar.MenuItem>
-                  <Sidebar.MenuButton isActive={isActive('/')} onclick={() => goTo('/')}>
+                  <Sidebar.MenuButton isActive={isActive('/')} onclick={() => goTo('/conference')}>
                     <House />
                     <span>首页</span>
                   </Sidebar.MenuButton>
@@ -217,7 +216,9 @@
                 <Sidebar.Separator class="my-1" />
                 {#each currentConference?.committees ?? [] as committee (committee.id)}
                   <Sidebar.MenuItem>
-                    <Sidebar.MenuButton onclick={() => navigateToCommittee(conferenceId!, committee.id)}>
+                    <Sidebar.MenuButton
+                      onclick={() => navigateToCommittee(conferenceId!, committee.id)}
+                    >
                       <CalendarRange />
                       <span>{committee.name}</span>
                     </Sidebar.MenuButton>

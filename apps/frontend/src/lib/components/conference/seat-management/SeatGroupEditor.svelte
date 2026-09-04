@@ -23,7 +23,8 @@
 
   const typeLabels: Record<SeatGroupType, string> = {
     cabinet: '内阁 / 委员会',
-    mpc: 'MPC（新闻中心）'
+    mpc: 'MPC（新闻中心）',
+    ipc: '学团 IPC（推演控制中心）'
   }
 
   function toggleCapability(capability: Capability): void {
@@ -73,6 +74,7 @@
         <Select.SelectContent>
           <Select.SelectItem value="cabinet" label="内阁 / 委员会" />
           <Select.SelectItem value="mpc" label="MPC（新闻中心）" />
+          <Select.SelectItem value="ipc" label="学团 IPC（推演控制中心）" />
         </Select.SelectContent>
       </Select.Select>
     </Field.Field>
