@@ -208,6 +208,10 @@ export function createConference(
   const delegationList: Delegation[] = delegations.map((d, i) => ({
     id: crypto.randomUUID(),
     name: d.name,
+    seatGroupId: '',
+    capabilityOverrides: {},
+    inviteCode: crypto.randomUUID(),
+    passwordHash: '',
     shortName: d.shortName,
     attendance: 'absent' as const,
     vetoPower: d.vetoPower ?? true,
@@ -239,7 +243,7 @@ export function createConference(
     defaultSpeakingTimeSec: options?.defaultSpeakingTimeSec ?? 120,
     activeCaucus: null,
     activeSpeaker: null,
-    seats: options?.seats ?? []
+    seats: options?.seats ?? delegationList
   }
   const committees = options?.committees ?? [initialCommittee]
 

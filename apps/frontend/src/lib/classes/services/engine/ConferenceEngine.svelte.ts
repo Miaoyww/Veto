@@ -239,12 +239,24 @@ export class Committee {
     if (data.name != null) this.name = data.name
     if (data.defaultSpeakingTimeSec != null)
       this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
+    if (data.seats != null) this.seats = data.seats as Seat[]
     if (data.delegations != null) {
-      // 向后兼容：旧数据可能没有 vetoPower 字段，默认为 true
-      this.delegations = data.delegations.map((d) => ({
-        ...d,
-        vetoPower: d.vetoPower ?? true
-      }))
+      // 向后兼容：旧代表团数据尚未继承 Seat，从同 ID 席位补齐席位字段。
+      this.delegations = data.delegations.map((delegation, sortOrder) => {
+        const legacyDelegation = delegation as Partial<Delegation> & Pick<Delegation, 'id' | 'name'>
+        const seat = this.seats.find((item) => item.id === legacyDelegation.id)
+        return {
+          seatGroupId: '',
+          capabilityOverrides: {},
+          inviteCode: '',
+          passwordHash: '',
+          ...seat,
+          ...legacyDelegation,
+          attendance: legacyDelegation.attendance ?? 'absent',
+          vetoPower: legacyDelegation.vetoPower ?? true,
+          sortOrder: legacyDelegation.sortOrder ?? sortOrder
+        }
+      })
     }
     if (data.agenda != null) this.agenda = data.agenda
     if (data.phase != null) this.phase = data.phase
@@ -282,7 +294,6 @@ export class Committee {
     if (data.activeSpeaker != null) this.activeSpeaker = data.activeSpeaker
     if (data.yieldPending != null) this.yieldPending = data.yieldPending
     if (data.caucusSetup != null) this.caucusSetup = data.caucusSetup
-    if (data.seats != null) this.seats = data.seats as Seat[]
   }
 
   // ================================================================
@@ -360,23 +371,30 @@ export class Committee {
   addDelegation(name: string, shortName?: string): string {
     const id = generateId()
     const sortOrder = this.delegations.length
+    const delegation: Delegation = {
+      id,
+      name,
+      seatGroupId: '',
+      capabilityOverrides: {},
+      inviteCode: generateInviteCode(),
+      passwordHash: '',
+      shortName: shortName || undefined,
+      attendance: 'absent',
+      vetoPower: true,
+      sortOrder
+    }
     this.delegations = [
       ...this.delegations,
-      {
-        id,
-        name,
-        shortName: shortName || undefined,
-        attendance: 'absent',
-        vetoPower: true,
-        sortOrder
-      }
+      delegation
     ]
+    this.seats = [...this.seats, delegation]
     this.touch()
     return id
   }
 
   removeDelegation(id: string): void {
     this.delegations = this.delegations.filter((d) => d.id !== id)
+    this.seats = this.seats.filter((seat) => seat.id !== id)
     this.touch()
   }
 
@@ -1743,21 +1761,27 @@ export class Committee {
   }
 
   updateSeat(id: string, updates: Partial<Seat>): void {
-    this.seats = this.seats.map((s) =>
-      s.id === id ? { ...s, ...updates } : s
-    )
+    let updatedSeat: Seat | undefined
+    this.seats = this.seats.map((seat) => {
+      if (seat.id !== id) return seat
+      updatedSeat = { ...seat, ...updates }
+      return updatedSeat
+    })
+    if (updatedSeat) {
+      this.delegations = this.delegations.map((delegation) =>
+        delegation.id === id ? { ...delegation, ...updatedSeat } : delegation
+      )
+    }
     this.touch()
   }
 
   setSeatPassword(seatId: string, passwordHash: string, salt: string): void {
-    this.seats = this.seats.map((s) =>
-      s.id === seatId ? { ...s, passwordHash, passwordSalt: salt } : s
-    )
-    this.touch()
+    this.updateSeat(seatId, { passwordHash, passwordSalt: salt })
   }
 
   removeSeat(id: string): void {
     this.seats = this.seats.filter((s) => s.id !== id)
+    this.delegations = this.delegations.filter((delegation) => delegation.id !== id)
     this.touch()
   }
 

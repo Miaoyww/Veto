@@ -2,6 +2,8 @@
 // types-conference.ts — 模拟大会（Model UN Conference）领域模型
 // ============================================================
 
+import type { Seat } from './delegate'
+
 // ---- 会议阶段 -----------------------------------------------------------
 
 export type ConferencePhase =
@@ -20,10 +22,7 @@ export type ConferencePhase =
 
 export type Attendance = 'present' | 'absent'
 
-export interface Delegation {
-  id: string
-  /** 国家/组织全名，如 "中华人民共和国" */
-  name: string
+export interface Delegation extends Seat {
   /** 简称，如 "中国"。用于 UI badge 和模糊搜索匹配 */
   shortName?: string
   /** 国旗 emoji 或图片 URL（可选） */
@@ -347,7 +346,7 @@ export interface VotingSession {
 
 // 从共享类型重导出（新名称），确保 main + renderer 进程使用同一份操作类型定义
 import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../../../shared/action-types'
-import type { News, Seat, SeatGroup, SituationUpdate } from './delegate'
+import type { News, SeatGroup, SituationUpdate } from './delegate'
 import type { RoleTemplate } from './event'
 import { ACTION_LABELS } from '../../../../../shared/action-types'
 export type { ConferenceActionType, Entry, ConferenceEntry }

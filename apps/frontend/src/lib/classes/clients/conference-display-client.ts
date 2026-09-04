@@ -568,6 +568,10 @@ export function buildDisplayData(
           ({
             id: latestPoint.proposedByDelegationId,
             name: latestPoint.proposedByDelegationId,
+            seatGroupId: '',
+            capabilityOverrides: {},
+            inviteCode: '',
+            passwordHash: '',
             attendance: 'present' as const,
             vetoPower: false,
             sortOrder: 0
@@ -591,6 +595,10 @@ export function buildDisplayData(
                 conf.delegations.find((d) => d.id === id) ?? {
                   id,
                   name: id,
+                  seatGroupId: '',
+                  capabilityOverrides: {},
+                  inviteCode: '',
+                  passwordHash: '',
                   attendance: 'absent' as const,
                   vetoPower: false,
                   sortOrder: Number.MAX_SAFE_INTEGER

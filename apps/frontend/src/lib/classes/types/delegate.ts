@@ -4,8 +4,6 @@
 // SeatGroup、Seat、Account、Directive、News、SituationUpdate 等
 // 代表端核心类型定义。
 
-import type { Delegation } from './conference'
-
 // ---- 能力系统 -------------------------------------------------------------
 
 /** Seat 可执行的操作能力 */

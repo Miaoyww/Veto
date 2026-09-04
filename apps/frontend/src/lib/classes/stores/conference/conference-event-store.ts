@@ -51,7 +51,12 @@ function createCommittee(id: string, name: string, seats: Seat[]): Committee {
     id,
     name,
     phase: 'preamble',
-    delegations: [],
+    delegations: seats.map((seat, sortOrder) => ({
+      ...seat,
+      attendance: 'absent',
+      vetoPower: true,
+      sortOrder
+    })),
     agenda: [],
     seats,
     speakerLists: { id: 'main', name: '主发言名单', entries: [] },
