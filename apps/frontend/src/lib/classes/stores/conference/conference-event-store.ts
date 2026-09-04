@@ -1,13 +1,12 @@
 /**
- * 大会创建适配层。
- *
- * 大会创建适配层。文件名为兼容已有导入保留，持久化实体只有 Conference。
+ * 大会创建适配层，持久化实体只有 Conference。
  */
 import { get } from 'svelte/store'
 import type { Committee, Conference } from '$lib/classes/types/conference'
 import type { RoleTemplate } from '$lib/classes/types/event'
-import type { Capability, Seat, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
+import type { Capability, Seat, SeatAccess, SeatGroup, SeatGroupType } from '$lib/classes/types/delegate'
 import { conferences, createConference, saveConferencesNow, getConferenceById } from './conference-store'
+import { generateInviteCode } from '$lib/classes/services/seat-access'
 
 export interface CommitteeDraft {
   id: string
@@ -28,20 +27,6 @@ function createId(): string {
   return crypto.randomUUID()
 }
 
-function randomKeyCharacters(length: number): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const bytes = new Uint8Array(length)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')
-}
-
-function createSeatKey(existing: Set<string>): string {
-  let key = `${randomKeyCharacters(4)}-${randomKeyCharacters(4)}-${randomKeyCharacters(4)}`
-  while (existing.has(key)) key = `${randomKeyCharacters(4)}-${randomKeyCharacters(4)}-${randomKeyCharacters(4)}`
-  existing.add(key)
-  return key
-}
-
 function capabilityOverrides(capabilities: Capability[]): Seat['capabilityOverrides'] {
   return Object.fromEntries(capabilities.map((capability) => [capability, true]))
 }
@@ -51,12 +36,6 @@ function createCommittee(id: string, name: string, seats: Seat[]): Committee {
     id,
     name,
     phase: 'preamble',
-    delegations: seats.map((seat, sortOrder) => ({
-      ...seat,
-      attendance: 'absent',
-      vetoPower: true,
-      sortOrder
-    })),
     agenda: [],
     seats,
     speakerLists: { id: 'main', name: '主发言名单', entries: [] },
@@ -85,8 +64,9 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
 
   const roleTemplates = input.roleTemplates.map((role) => ({ ...role, name: role.name.trim() }))
   const roles = new Map(roleTemplates.map((role) => [role.id, role]))
-  const existingKeys = new Set<string>()
+  const existingKeys = new Set(get(conferences).flatMap((conference) => conference.seatAccesses.map((access) => access.inviteCode)))
   const seatGroups: SeatGroup[] = []
+  const seatAccesses: SeatAccess[] = []
   const committees: Committee[] = []
 
   for (const [index, draft] of input.committees.entries()) {
@@ -99,18 +79,22 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       mode: draft.type === 'cabinet' ? 'standing' : undefined,
       sortOrder: index
     })
-    const seats = draft.seats.map((draftSeat) => {
+    const seats = draft.seats.map((draftSeat, sortOrder) => {
       const role = roles.get(draftSeat.roleId)
-      return {
+      const seat: Seat = {
         id: createId(),
         name: draftSeat.name.trim(),
         seatGroupId: groupId,
         capabilityOverrides: capabilityOverrides(role?.capabilities ?? []),
-        inviteCode: createSeatKey(existingKeys),
-        passwordHash: '',
         role: role?.name,
-        roleId: draftSeat.roleId
+        roleId: draftSeat.roleId,
+        procedure:
+          draft.type === 'cabinet'
+            ? { attendance: 'absent', hasVotingRights: true, sortOrder }
+            : undefined
       }
+      seatAccesses.push({ seatId: seat.id, inviteCode: generateInviteCode(existingKeys) })
+      return seat
     })
     committees.push(createCommittee(draft.id, draft.name.trim(), seats))
   }
@@ -118,6 +102,7 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
   const conferenceId = createConference(name, committees[0].name, [], [], {
     id: createId(),
     seatGroups,
+    seatAccesses,
     committees
   })
   const conference = getConferenceById(conferenceId)

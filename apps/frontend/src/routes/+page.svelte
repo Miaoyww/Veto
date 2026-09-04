@@ -150,7 +150,7 @@
                     <span class="flex items-center gap-1">
                       <Users class="size-3" />
                       {lastOpenedCommittee
-                        ? `${getPresentCount(lastOpenedCommittee.delegations)}/${lastOpenedCommittee.delegations.length} 出席`
+                        ? `${getPresentCount(lastOpenedCommittee.seats)}/${lastOpenedCommittee.seats.length} 出席`
                         : '暂无会场'}
                     </span>
                     {#if currentSpeaker}

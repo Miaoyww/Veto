@@ -91,8 +91,8 @@ export interface InstalledPlugin {
   installedAt: number
   /** 战役资源文件内容（type='campaign' 时有效） */
   campaignFiles?: Record<string, string>
-  /** 代表团预设 JSON 字符串（任何类型都可提供） */
-  delegations?: string | null
+  /** 席位预设 JSON 字符串（任何类型都可提供） */
+  seats?: string | null
 }
 
 /**
@@ -105,7 +105,7 @@ export interface PluginDetail {
   definitions: string | null
   i18n: Record<string, string>
   campaignFiles?: Record<string, string>
-  delegations?: string | null
+  seats?: string | null
   disabled: boolean
   incompatible: boolean
   hasService: boolean
@@ -134,8 +134,8 @@ export interface PluginManifest {
   license?: string
   /** 战役 / 剧本头图 URL 或资源路径 */
   banner?: string
-  /** 会议：代表团预设文件路径 */
-  delegations?: string
+  /** 会议：席位预设文件路径 */
+  seats?: string
 }
 
 /** Blob 资源条目（图片、地图底图等） */

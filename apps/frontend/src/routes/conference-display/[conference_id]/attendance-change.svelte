@@ -6,8 +6,8 @@
    */
   import type { Attendance } from '$lib/classes/types/conference'
 
-  let { delegationName, shortName, status }: {
-    delegationName: string
+  let { seatName, shortName, status }: {
+    seatName: string
     shortName?: string
     status: Attendance
   } = $props()
@@ -15,10 +15,10 @@
 
 <div class="flex h-full w-full items-center justify-center bg-[#0a0e14]">
   <div class="flex flex-col items-center gap-12">
-    <!-- 代表团名 -->
+    <!-- 席位名 -->
     <div class="flex flex-col items-center gap-2">
       <h1 class="text-9xl font-semibold tracking-[0.04em] text-white">
-        {delegationName}
+        {seatName}
       </h1>
       {#if shortName}
         <p class="text-4xl tracking-[0.08em] text-white/25">

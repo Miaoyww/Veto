@@ -14,11 +14,6 @@
   import { injectToRegistry } from '$lib/classes/services/plugin/plugin-registry'
   import { markPluginsReady } from '$lib/classes/services/plugin/mod-registry.svelte'
 
-  import { page } from '$app/stores'
-  import { goto } from '$app/navigation'
-  import { resolve } from '$app/paths'
-  import { authStore } from '$lib/classes/stores/auth-store'
-
   let { children } = $props()
 
   // 从主进程文件系统恢复用户已安装的插件 + 加载应用数据
@@ -36,35 +31,6 @@
     ])
   }
 
-  const isPublicRoute = $derived(
-    $page.url.pathname === '/login' ||
-      $page.url.pathname.startsWith('/conference-display/') ||
-      $page.url.pathname.startsWith('/delegate/')
-  )
-
-  // 认证守卫：未登录则跳转到登录页（等 bootstrap 完成后才生效）
-  $effect(() => {
-    // 跳过服务端渲染
-    if (typeof window === 'undefined') return
-
-    let unsub: (() => void) | null = null
-
-    authStore.ready.then(() => {
-      // 主动检查一次：bootstrap 完成时若仍未登录，跳转
-      if (!authStore.isLoggedIn() && !isPublicRoute) {
-        goto(resolve('/login'))
-      }
-
-      // 监听状态变化（登录/登出时触发）
-      unsub = authStore.subscribe((state) => {
-        if (!state.isLoggedIn && !isPublicRoute) {
-          goto(resolve('/login'))
-        }
-      })
-    })
-
-    return () => unsub?.()
-  })
 </script>
 
 <svelte:head>
@@ -99,8 +65,8 @@
           <ConferenceMotionPage />
         {:else if routeId === '/conference/[conference_id]/question'}
           <ConferenceQuestionPage />
-        {:else if routeId === '/conference/[conference_id]/delegations'}
-          <ConferenceDelegationsPage />
+        {:else if routeId === '/conference/[conference_id]/seats'}
+          <ConferenceSeatsPage />
         {:else if routeId === '/conference/[conference_id]/seats'}
           <ConferenceSeatsPage />
         {:else if routeId === '/conference/[conference_id]'}

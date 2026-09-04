@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Capability, Seat } from '$lib/classes/types/delegate'
   import { CAPABILITY_OPTIONS } from '$lib/classes/types/delegate'
-  import { addSeat, updateSeat, setSeatPassword } from '$lib/classes/stores/delegate/delegate-store'
+  import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Checkbox } from '$lib/components/ui/checkbox'
   import * as Field from '$lib/components/ui/field'
@@ -17,9 +17,6 @@
 
   let name = $state(editingSeat?.name ?? '')
   let role = $state(editingSeat?.role ?? '')
-  let password = $state('')
-  let passwordConfirm = $state('')
-  let passwordError = $state('')
 
   // 能力覆盖：勾选 = 强制开启；未勾选 = 不写入覆盖（沿用席位组默认）
   let selectedCapabilities = $state<Set<Capability>>(
@@ -54,13 +51,6 @@
     const nameTrimmed = name.trim()
     if (!nameTrimmed) return
 
-    // Validate password if set
-    if (password && password !== passwordConfirm) {
-      passwordError = '两次密码不一致'
-      return
-    }
-    passwordError = ''
-
     const capabilityOverrides = overridesFromSelection()
 
     if (editingSeat) {
@@ -69,15 +59,8 @@
         role: role.trim() || undefined,
         capabilityOverrides
       })
-      if (password) {
-        // Simple client-side hash - in production this would use the main process crypto
-        setSeatPassword(editingSeat.id, password, '')
-      }
     } else {
-      const seatId = addSeat(nameTrimmed, seatGroupId, role.trim() || undefined, capabilityOverrides)
-      if (password && seatId) {
-        setSeatPassword(seatId, password, '')
-      }
+      addSeat(nameTrimmed, seatGroupId, role.trim() || undefined, capabilityOverrides)
     }
     onClose()
   }
@@ -121,35 +104,6 @@
       {/each}
     </div>
   </Field.FieldSet>
-
-  {#if !editingSeat}
-    <Field.FieldGroup class="gap-3">
-      <Field.Field>
-        <Field.FieldLabel for="seat-password">密码（可选）</Field.FieldLabel>
-        <Input
-          id="seat-password"
-          type="password"
-          bind:value={password}
-          placeholder="设置代表登录密码"
-        />
-      </Field.Field>
-      {#if password}
-        <Field.Field>
-          <Field.FieldLabel for="seat-password-confirm">确认密码</Field.FieldLabel>
-          <Input
-            id="seat-password-confirm"
-            type="password"
-            bind:value={passwordConfirm}
-            placeholder="再次输入密码"
-            aria-invalid={passwordError ? true : undefined}
-          />
-          {#if passwordError}
-            <Field.FieldError>{passwordError}</Field.FieldError>
-          {/if}
-        </Field.Field>
-      {/if}
-    </Field.FieldGroup>
-  {/if}
 
   <div class="flex justify-end gap-2">
     <Button variant="outline" onclick={onClose}>取消</Button>

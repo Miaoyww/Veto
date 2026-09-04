@@ -67,7 +67,11 @@
 
   const resolution = $derived(pendingMotion ? resolveMotion(pendingMotion.type) : null)
 
-  const proposerDel = $derived(pendingMotion?.proposedBy ?? null)
+  const proposerDel = $derived(
+    pendingMotion
+      ? conf?.seats.find((seat) => seat.id === pendingMotion.proposedBySeatId) ?? null
+      : null
+  )
 
   const majorityLabel = $derived(
     resolution?.votingMajority === 'simple_majority' ? '简单多数' : '2/3多数'
@@ -205,7 +209,7 @@
 
         <!-- 主席裁决 -->
         <div class="text-center">
-          <p class="text-base font-medium text-foreground">请支持该动议的代表团高举国家牌</p>
+          <p class="text-base font-medium text-foreground">请支持该动议的席位高举国家牌</p>
           <p class="mt-1 text-sm text-muted-foreground">主席团观察举牌后手动裁决</p>
         </div>
 

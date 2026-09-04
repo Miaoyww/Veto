@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * delegation-name-display.svelte
+   * seat-name-display.svelte
    * ──────────────────────────────
-   * Display 端代表团名称展示：全称 + 简称。用于发言人卡片、发言名单等场景。
+   * Display 端席位名称展示：全称 + 简称。用于发言人卡片、发言名单等场景。
    */
   let {
     name,

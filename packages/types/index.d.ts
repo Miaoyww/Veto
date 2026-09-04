@@ -159,7 +159,7 @@ declare module 'veto' {
     readonly phase: string
     readonly presentCount: number
     readonly votingCount: number
-    readonly currentSpeaker?: { delegation: string; remaining: number }
+    readonly currentSpeaker?: { seat: string; remaining: number }
     readonly timelineId?: string | null
   }
 
@@ -185,7 +185,7 @@ declare module 'veto' {
     phase?: string
     presentCount?: number
     votingCount?: number
-    currentSpeaker?: { delegation: string; remaining: number } | null
+    currentSpeaker?: { seat: string; remaining: number } | null
     timelineId?: string | null
   }
 

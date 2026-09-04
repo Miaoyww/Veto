@@ -182,19 +182,19 @@ export async function processModPackage(
 		}
 	}
 
-	// 3. 读取代表团预设（如果存在）
-	let delegations: string | null = null
-	if (manifest.delegations) {
-		const delPath = typeof manifest.delegations === 'string' ? manifest.delegations : 'delegations.json'
+	// 3. 读取席位预设（如果存在）
+	let seats: string | null = null
+	if (manifest.seats) {
+		const delPath = typeof manifest.seats === 'string' ? manifest.seats : 'seats.json'
 		const delFile = zip.file(delPath)
 		if (delFile) {
-			try { delegations = await delFile.async('string') } catch { /* ignore */ }
+			try { seats = await delFile.async('string') } catch { /* ignore */ }
 		}
 	}
-	if (!delegations) {
-		const delFile = zip.file('delegations.json') ?? zip.file('assets/delegations.json')
+	if (!seats) {
+		const delFile = zip.file('seats.json') ?? zip.file('assets/seats.json')
 		if (delFile) {
-			try { delegations = await delFile.async('string') } catch { /* ignore */ }
+			try { seats = await delFile.async('string') } catch { /* ignore */ }
 		}
 	}
 
@@ -207,7 +207,7 @@ export async function processModPackage(
 		definitions,
 		i18n: i18nRecord,
 		assets,
-		delegations
+		seats
 	});
 
 	if (!result.success) {
@@ -222,7 +222,7 @@ export async function processModPackage(
 		i18n: i18nRecord,
 		assetKeys: assets.map((a) => `${manifest.id}/${a.path}`),
 		installedAt: Date.now(),
-		delegations
+		seats
 	};
 	injectToRegistry(record);
 

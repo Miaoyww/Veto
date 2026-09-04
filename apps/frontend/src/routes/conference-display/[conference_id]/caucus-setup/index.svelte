@@ -39,10 +39,10 @@
 
       <!-- 发言名单 -->
       <SpeakerQueueDisplay
-        speakers={setup.speakerNames.map((d) => ({ delegation: d }))}
+        speakers={setup.speakerNames.map((d) => ({ seat: d }))}
         max={DISPLAY_MAX_SPEAKERS}
         onlyList={true}
-        emptyText="等待主席团添加发言代表团"
+        emptyText="等待主席团添加发言席位"
       />
     </div>
   {/if}

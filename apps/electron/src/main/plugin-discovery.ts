@@ -52,8 +52,8 @@ export interface FactionManifest extends BaseManifest {
     events?: string
     ui?: string
   }
-  /** 代表团预设文件路径 */
-  delegations?: string
+  /** 席位预设文件路径 */
+  seats?: string
 }
 
 /** campaign 插件：提供战役/推演场景 */
@@ -65,7 +65,7 @@ export interface CampaignManifest extends BaseManifest {
   deployments?: string
   facilities?: string
   events?: string
-  delegations?: string
+  seats?: string
   injects?: {
     formulas?: string
     events?: string
@@ -87,11 +87,11 @@ export interface DependencyManifest extends BaseManifest {
   type: 'dependency'
 }
 
-/** preset 插件：预置配置/代表团模板 */
+/** preset 插件：预置配置/席位模板 */
 export interface PresetManifest extends BaseManifest {
   type: 'preset'
   definitions?: string | Record<string, string>
-  delegations?: string
+  seats?: string
 }
 
 /** 所有插件清单的联合类型 */
@@ -124,8 +124,8 @@ export interface PluginInstance {
     facilities?: string
     /** 战役：events.json 绝对路径 */
     events?: string
-    /** 会议：delegations.json 绝对路径 */
-    delegations?: string
+    /** 会议：seats.json 绝对路径 */
+    seats?: string
     /** 服务插件：service.mjs 绝对路径 */
     service?: string
   }
@@ -222,7 +222,7 @@ function resolveInstancePaths(
     deployments: undefined as string | undefined,
     facilities: undefined as string | undefined,
     events: undefined as string | undefined,
-    delegations: undefined as string | undefined,
+    seats: undefined as string | undefined,
     service: undefined as string | undefined,
   }
 
@@ -256,14 +256,14 @@ function resolveInstancePaths(
     base.events = resolveCampaignFile(pluginDir, manifest.events, 'events.json')
   }
 
-  // 处理代表团预设（faction / campaign / preset）
+  // 处理席位预设（faction / campaign / preset）
   if (
     manifest.type === 'faction' ||
     manifest.type === 'campaign' ||
     manifest.type === 'preset'
   ) {
-    const delegationsFile = 'delegations' in manifest ? manifest.delegations : undefined
-    base.delegations = resolveCampaignFile(pluginDir, delegationsFile, 'delegations.json')
+    const seatsFile = 'seats' in manifest ? manifest.seats : undefined
+    base.seats = resolveCampaignFile(pluginDir, seatsFile, 'seats.json')
   }
 
   return base
@@ -292,7 +292,7 @@ function resolveDefinitions(
   return null
 }
 
-/** 解析战役/代表团文件路径 */
+/** 解析战役/席位文件路径 */
 function resolveCampaignFile(
   pluginDir: string,
   manifestPath: string | undefined,

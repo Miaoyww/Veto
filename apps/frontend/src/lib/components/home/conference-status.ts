@@ -5,15 +5,15 @@ import type { Committee } from '$lib/classes/types/conference'
  * 从 Conference JSON 直接计算，不依赖引擎实例，可在列表场景安全使用。
  */
 
-/** 获取当前正在发言的代表团名称（主发言名单优先，其次磋商） */
+/** 获取当前正在发言的席位名称（主发言名单优先，其次磋商） */
 export function getCurrentSpeakerName(conf: Committee): string | null {
   const nameById = (id: string): string | null =>
-    conf.delegations.find((d) => d.id === id)?.name ?? null
+    conf.seats.find((d) => d.id === id)?.name ?? null
 
   if (conf.activeSpeaker) {
     const entry = conf.speakerLists?.entries?.find((s) => s.id === conf.activeSpeaker!.entryId)
     if (entry) {
-      const name = nameById(entry.delegationId)
+      const name = nameById(entry.seatId)
       if (name) return name
     }
   }
@@ -23,7 +23,7 @@ export function getCurrentSpeakerName(conf: Committee): string | null {
     if (idx != null) {
       const entry = conf.activeCaucus.caucusSpeakers?.[idx]
       if (entry) {
-        const name = nameById(entry.delegationId)
+        const name = nameById(entry.seatId)
         if (name) return name
       }
     }

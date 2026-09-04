@@ -6,7 +6,7 @@
    */
   import { Vote } from '@lucide/svelte'
   import type { ConferenceDisplayData } from '$lib/classes/types/conference'
-  import DelegationRoster, { type RosterEntry } from '$lib/components/conference-display/delegation-roster.svelte'
+  import SeatRoster, { type RosterEntry } from '$lib/components/conference-display/seat-roster.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 
@@ -17,8 +17,8 @@
 
   const rosterEntries = $derived<RosterEntry[]>(
     vs.ballots.map((b) => ({
-      id: b.delegationId,
-      name: b.delegationName,
+      id: b.seatId,
+      name: b.seatName,
       shortName: b.shortName,
       vote: b.vote
     }))
@@ -71,16 +71,16 @@
       </div>
     </div>
 
-    <!-- 投票进行中：代表团状态网格 -->
+    <!-- 投票进行中：席位状态网格 -->
     {#if !vs.result}
       <div class="flex flex-col items-center gap-4">
         <div class="text-xs tracking-[0.1em] text-white/20 uppercase">
           {vs.round === 2 ? 'ROUND 2 · SECOND CALL' : 'ROLL CALL VOTE'}
         </div>
-        <DelegationRoster
+        <SeatRoster
           entries={rosterEntries}
           mode="voting"
-          currentId={vs.currentDelegationId}
+          currentId={vs.currentSeatId}
           gridCols={5}
         />
       </div>

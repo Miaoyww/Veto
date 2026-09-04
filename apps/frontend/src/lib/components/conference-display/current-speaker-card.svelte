@@ -2,20 +2,20 @@
   /**
    * current-speaker-card.svelte
    * ────────────────────────────
-   * Display 端当前发言人卡片：状态标题栏 + 代表团全称/简称 + 发言倒计时。
+   * Display 端当前发言人卡片：状态标题栏 + 席位全称/简称 + 发言倒计时。
    */
   import { Mic } from '@lucide/svelte'
   import { formatTime } from '$lib/classes/formatters/time-formater'
-  import type { Delegation } from '$lib/classes/types/conference'
+  import type { SeatView } from '$lib/classes/types/conference'
   import DisplaySectionHeader from './display-section-header.svelte'
-  import DelegationNameDisplay from './delegation-name-display.svelte'
+  import SeatNameDisplay from './seat-name-display.svelte'
 
   let {
-    delegation,
+    seat,
     remainingSec,
     status
   }: {
-    delegation: Delegation
+    seat: SeatView
     remainingSec: number
     status: 'playing' | 'paused'
   } = $props()
@@ -31,7 +31,7 @@
     colorClass={accentColor}
   />
 
-  <DelegationNameDisplay name={delegation.name} shortName={delegation.shortName} />
+  <SeatNameDisplay name={seat.name} shortName={seat.procedure?.shortName} />
 
   <!-- 倒计时 -->
   <div

@@ -20,10 +20,10 @@ import {
   conferences,
   currentConferenceRecord,
   currentCommittee,
-  removeSeatsForSeatGroup,
   syncCurrentCommittee
 } from '../conference/conference-store'
 import { getDelegateBridge } from '$lib/classes/clients/delegate-client'
+import { generateInviteCode } from '$lib/classes/services/seat-access'
 
 // ---- 辅助：获取当前引擎 -------------------------------------------------
 
@@ -74,14 +74,6 @@ export function updateSeatGroup(id: string, updates: Partial<SeatGroup>): void {
   conferences.update((items) => [...items])
 }
 
-export function removeSeatGroup(id: string): void {
-  const conference = get(currentConferenceRecord)
-  if (!conference) return
-  conference.updateSeatGroups((groups) => groups.filter((group) => group.id !== id))
-  conferences.update((items) => [...items])
-  removeSeatsForSeatGroup(id)
-}
-
 // ---- 席位 -----------------------------------------------------------------
 
 export const seats = derived(currentCommittee, ($engine) => $engine?.seats ?? [])
@@ -93,30 +85,53 @@ export function addSeat(
   capabilityOverrides: Partial<Record<Capability, boolean>> = {}
 ): string {
   const engine = getEng()
-  if (!engine) return ''
-  const id = engine.addSeat(name, seatGroupId, role, capabilityOverrides)
+  const conference = get(currentConferenceRecord)
+  if (!engine || !conference) return ''
+  const group = conference.seatGroups.find((item) => item.id === seatGroupId)
+  const procedure = group?.type === 'cabinet'
+    ? {
+        attendance: 'absent' as const,
+        hasVotingRights: true,
+        sortOrder: engine.participantSeats.length
+      }
+    : undefined
+  const id = engine.addSeat(name, seatGroupId, role, capabilityOverrides, procedure)
+  const existingCodes = new Set(
+    get(conferences).flatMap((item) => item.seatAccesses.map((access) => access.inviteCode))
+  )
+  const inviteCode = generateInviteCode(existingCodes)
+  conference.setSeatAccesses([...conference.seatAccesses, { seatId: id, inviteCode }])
   syncCurrentCommittee()
   return id
+}
+
+export function rotateSeatInviteCode(seatId: string): string {
+  const conference = get(currentConferenceRecord)
+  if (!conference) return ''
+  const existingCodes = new Set(
+    get(conferences).flatMap((item) => item.seatAccesses.map((access) => access.inviteCode))
+  )
+  const inviteCode = generateInviteCode(existingCodes)
+  const accesses = conference.seatAccesses.filter((access) => access.seatId !== seatId)
+  conference.setSeatAccesses([...accesses, { seatId, inviteCode }])
+  conferences.update((items) => [...items])
+  return inviteCode
+}
+
+export function resetSeatUser(seatId: string): void {
+  const engine = getEng()
+  const conference = get(currentConferenceRecord)
+  const seat = engine?.getSeat(seatId)
+  if (!engine || !conference || !seat?.userId) return
+  conference.setUsers(conference.users.filter((user) => user.id !== seat.userId))
+  engine.updateSeat(seatId, { userId: undefined })
+  syncCurrentCommittee()
 }
 
 export function updateSeat(id: string, updates: Partial<Seat>): void {
   const engine = getEng()
   if (!engine) return
   engine.updateSeat(id, updates)
-  syncCurrentCommittee()
-}
-
-export function setSeatPassword(seatId: string, passwordHash: string, salt: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.setSeatPassword(seatId, passwordHash, salt)
-  syncCurrentCommittee()
-}
-
-export function removeSeat(id: string): void {
-  const engine = getEng()
-  if (!engine) return
-  engine.removeSeat(id)
   syncCurrentCommittee()
 }
 

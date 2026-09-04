@@ -3,42 +3,47 @@
   import { Button } from '$lib/components/ui/button/index.js'
   import {
     currentCommittee,
-    changeDelegationAttendance,
+    changeSeatAttendance,
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import { cn } from '$lib/classes/utils.js'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
 
   const conf = $derived($currentCommittee)
 
-  // 按 sortOrder 排序的代表团列表
-  const sortedDelegations = $derived(
-    conf ? [...conf.delegations].sort((a, b) => a.sortOrder - b.sortOrder) : []
+  // 按 sortOrder 排序的参会席位列表
+  const sortedSeats = $derived(
+    conf
+      ? conf.seats
+          .filter(isParticipantSeat)
+          .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
+      : []
   )
 
-  // 当前正在点名的代表团的索引（0-based）
+  // 当前正在点名的席位索引（0-based）
   let currentIndex = $state(0)
 
-  const currentDelegation = $derived(sortedDelegations[currentIndex] ?? null)
-  const isComplete = $derived(currentIndex >= sortedDelegations.length)
+  const currentSeat = $derived(sortedSeats[currentIndex] ?? null)
+  const isComplete = $derived(currentIndex >= sortedSeats.length)
 
   // 实时统计
   const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.delegations) : null
+    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
   )
   const presentCount = $derived(thresholds?.presentCount ?? 0)
   const totalCount = $derived(thresholds?.totalCount ?? 0)
   const progress = $derived(totalCount > 0 ? Math.round((currentIndex / totalCount) * 100) : 0)
 
   function markPresent(): void {
-    if (!currentDelegation) return
-    changeDelegationAttendance(currentDelegation.id, 'present', { silent: true })
+    if (!currentSeat) return
+    changeSeatAttendance(currentSeat.id, 'present', { silent: true })
     currentIndex++
   }
 
   function markAbsent(): void {
-    if (!currentDelegation) return
-    changeDelegationAttendance(currentDelegation.id, 'absent', { silent: true })
+    if (!currentSeat) return
+    changeSeatAttendance(currentSeat.id, 'absent', { silent: true })
     currentIndex++
   }
 
@@ -90,25 +95,25 @@
           </div>
         </div>
 
-        <!-- 当前代表团卡片 -->
-        {#if currentDelegation}
+        <!-- 当前席位卡片 -->
+        {#if currentSeat}
           <div class="flex w-full flex-col items-center gap-6 rounded-2xl border-2 border-indigo-200 bg-card p-12 shadow-lg dark:border-indigo-800">
             <!-- 国旗/色块 -->
             <div
               class="flex h-24 w-24 items-center justify-center rounded-full border-4 border-border text-3xl font-bold text-foreground shadow-inner bg-muted"
             >
-              {#if currentDelegation.flagUrl}
-                <img src={currentDelegation.flagUrl} alt="" class="h-full w-full rounded-full object-cover" />
+              {#if currentSeat.procedure.flagUrl}
+                <img src={currentSeat.procedure.flagUrl} alt="" class="h-full w-full rounded-full object-cover" />
               {:else}
-                {currentDelegation.shortName?.charAt(0) ?? currentDelegation.name.charAt(0)}
+                {currentSeat.procedure.shortName?.charAt(0) ?? currentSeat.name.charAt(0)}
               {/if}
             </div>
 
             <!-- 名称 -->
             <div class="text-center">
-              <div class="text-3xl font-bold text-foreground">{currentDelegation.name}</div>
-              {#if currentDelegation.shortName}
-                <div class="mt-1 text-lg text-muted-foreground">{currentDelegation.shortName}</div>
+              <div class="text-3xl font-bold text-foreground">{currentSeat.name}</div>
+              {#if currentSeat.procedure.shortName}
+                <div class="mt-1 text-lg text-muted-foreground">{currentSeat.procedure.shortName}</div>
               {/if}
             </div>
 
@@ -175,11 +180,11 @@
         <!-- 点名结果摘要 -->
         <div class="w-full rounded-xl border bg-card">
           <div class="divide-y px-6">
-            {#each sortedDelegations as delegation (delegation.id)}
-              {@const isPresent = delegation.attendance === 'present'}
+            {#each sortedSeats as seat (seat.id)}
+              {@const isPresent = seat.procedure.attendance === 'present'}
               <div class="flex items-center gap-3 py-2.5">
                 <span class={cn('flex-1 text-sm', isPresent ? 'text-foreground' : 'text-muted-foreground/50 line-through')}>
-                  {delegation.name}
+                  {seat.name}
                 </span>
                 <span class={cn('text-xs font-medium', isPresent ? 'text-emerald-600' : 'text-muted-foreground')}>
                   {isPresent ? '出席' : '缺席'}

@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { Seat, SeatGroup } from '$lib/classes/types/delegate'
-  import { seats, removeSeat } from '$lib/classes/stores/delegate/delegate-store'
+  import { seats, resetSeatUser } from '$lib/classes/stores/delegate/delegate-store'
+  import { currentConferenceRecord } from '$lib/classes/stores/conference/conference-store'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'
-  import { Trash2, Edit3, UserPlus, Copy, Eye } from '@lucide/svelte'
+  import { Edit3, UserPlus, Eye, UserRoundX } from '@lucide/svelte'
   import { derived } from 'svelte/store'
 
   interface Props {
@@ -35,6 +36,8 @@
 
   <div class="seats">
     {#each $filteredSeats as seat (seat.id)}
+      {@const access = $currentConferenceRecord?.seatAccesses.find((item) => item.seatId === seat.id)}
+      {@const user = $currentConferenceRecord?.users.find((item) => item.id === seat.userId)}
       <div class="seat-card">
         <div class="seat-info">
           <div class="seat-name">
@@ -45,8 +48,13 @@
           </div>
           <div class="seat-meta">
             <span class="text-xs text-muted-foreground">
-              邀请码: <code class="invite-code">{seat.inviteCode}</code>
+              邀请码: <code class="invite-code">{access?.inviteCode ?? '未生成'}</code>
             </span>
+            {#if user}
+              <Badge variant="outline" class="text-xs">{user.name}</Badge>
+            {:else}
+              <Badge variant="secondary" class="text-xs">未认领</Badge>
+            {/if}
             <button class="copy-btn" onclick={() => onShowInvite(seat)} title="查看邀请信息">
               <Eye class="size-3" />
             </button>
@@ -56,9 +64,16 @@
           <Button size="icon-sm" variant="ghost" onclick={() => onEdit(seat)}>
             <Edit3 class="size-4" />
           </Button>
-          <Button size="icon-sm" variant="ghost" onclick={() => removeSeat(seat.id)}>
-            <Trash2 class="size-4 text-destructive" />
-          </Button>
+          {#if seat.userId}
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              title="重置使用者"
+              onclick={() => resetSeatUser(seat.id)}
+            >
+              <UserRoundX class="size-4 text-destructive" />
+            </Button>
+          {/if}
         </div>
       </div>
     {/each}

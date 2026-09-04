@@ -6,7 +6,7 @@
   import { Loader2, LogIn } from '@lucide/svelte'
 
   interface Props {
-    onAuthenticate: (inviteCode: string, password: string) => void
+    onAuthenticate: (inviteCode: string, name: string, password?: string) => void
     error?: string
     connecting: boolean
   }
@@ -14,13 +14,14 @@
   let { onAuthenticate, error, connecting }: Props = $props()
 
   let inviteCode = $state('')
+  let name = $state('')
   let password = $state('')
 
   function handleSubmit(e: Event): void {
     e.preventDefault()
     const code = inviteCode.trim().toUpperCase()
-    if (!code || !password) return
-    onAuthenticate(code, password)
+    if (!code || !name.trim()) return
+    onAuthenticate(code, name.trim(), password || undefined)
   }
 </script>
 
@@ -29,7 +30,7 @@
     <div class="login-header">
       <h2 class="text-xl font-bold">加入会议</h2>
       <p class="text-sm text-muted-foreground">
-        输入邀请码和密码以加入会议
+        输入邀请码和姓名。首次连接时可选择设置密码。
       </p>
     </div>
 
@@ -45,20 +46,30 @@
         <Input
           id="invite-code"
           bind:value={inviteCode}
-          placeholder="6位邀请码"
-          maxlength={6}
+          placeholder="XXXX-XXXX-XXXX"
+          maxlength={14}
           class="invite-code-input"
           disabled={connecting}
         />
       </div>
 
       <div class="form-field">
-        <Label for="password">密码</Label>
+        <Label for="name">姓名</Label>
+        <Input
+          id="name"
+          bind:value={name}
+          placeholder="代表姓名"
+          disabled={connecting}
+        />
+      </div>
+
+      <div class="form-field">
+        <Label for="password">密码（可选）</Label>
         <Input
           id="password"
           type="password"
           bind:value={password}
-          placeholder="输入密码"
+          placeholder="首次连接可留空"
           disabled={connecting}
         />
       </div>
@@ -66,7 +77,7 @@
       <Button
         type="submit"
         class="w-full"
-        disabled={connecting || !inviteCode.trim() || !password}
+        disabled={connecting || !inviteCode.trim() || !name.trim()}
       >
         {#if connecting}
           <Loader2 class="size-4 mr-2 animate-spin" />

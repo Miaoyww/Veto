@@ -1,5 +1,5 @@
 <script lang="ts">
-  import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
+  import SeatNameDisplay from '$lib/components/conference-display/seat-name-display.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
   /**
    * roll-call/index.svelte
@@ -8,8 +8,8 @@
    *
    * 视图逻辑：
    * - isComplete          → 仅显示汇总（出席/简单多数/2/3多数）
-   * - 进行中 + lastMarked → 显示代表团名/进度条/统计，叠加 PRESENT/ABSENT badge
-   * - 进行中（无标记）     → 仅显示代表团名/进度条/统计
+   * - 进行中 + lastMarked → 显示席位名/进度条/统计，叠加 PRESENT/ABSENT badge
+   * - 进行中（无标记）     → 仅显示席位名/进度条/统计
    */
   import type { ConferenceDisplayData } from '$lib/classes/types/conference'
 
@@ -59,10 +59,10 @@
       {:else}
         <!-- ===== 进行中 ===== -->
         <div class="flex flex-col items-center gap-6">
-          {#if rc.currentDelegation}
-            <DelegationNameDisplay
-              name={rc.currentDelegation.name}
-              shortName={rc.currentDelegation.shortName ?? ''}
+          {#if rc.currentSeat}
+            <SeatNameDisplay
+              name={rc.currentSeat.name}
+              shortName={rc.currentSeat.procedure?.shortName ?? ''}
             />
           {/if}
         </div>

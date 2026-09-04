@@ -63,7 +63,7 @@ function makeConference(overrides: Partial<ConferenceEntry> = {}): ConferenceEnt
         timestamp: 1000,
         type: 'speaker_started',
         title: 'Speaker started',
-        detail: 'Delegation A begins',
+        detail: 'Seat A begins',
       },
       {
         id: 'min-2',
@@ -229,20 +229,20 @@ describe('Conference data layer', () => {
       eventBus.on('conference:speaker_started', handler)
 
       updateConference('conf-1', {
-        currentSpeaker: { delegation: 'USA', remaining: 120 },
+        currentSpeaker: { seat: 'USA', remaining: 120 },
       })
 
       expect(handler).toHaveBeenCalledTimes(1)
       expect(handler.mock.calls[0][0].data).toMatchObject({
         conferenceId: 'conf-1',
-        delegation: 'USA',
+        seat: 'USA',
         remaining: 120,
       })
     })
 
     it('移除 currentSpeaker（传 null）→ emit conference:speaker_finished', () => {
       storeData.set('conferences', [
-        makeConference({ currentSpeaker: { delegation: 'USA', remaining: 60 } }),
+        makeConference({ currentSpeaker: { seat: 'USA', remaining: 60 } }),
       ])
 
       const handler = vi.fn()

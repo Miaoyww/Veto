@@ -1,24 +1,19 @@
 <script lang="ts">
-  import { Settings, Info, X, Puzzle, Map, BadgeCheck, User } from '@lucide/svelte'
+  import { Settings, Info, X, Puzzle, Map } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Separator from '$lib/components/ui/separator/index.js'
-  import * as Avatar from '$lib/components/ui/avatar/index.js'
   import GeneralPage from './pages/common/general.svelte'
   import ModsPage from './pages/common/mods.svelte'
   import AboutPage from '../settings/pages/common/about.svelte'
   import VenuePage from './pages/common/venue.svelte'
-  import AccountPage from './pages/common/account.svelte'
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
   import { settingsDialogOpen, activeSettingsSection } from '$lib/classes/stores/app/global-ui-store'
-  import { authStore } from '$lib/classes/stores/auth-store'
   const version = __APP_VERSION__
 
   let activeSection = $state<Section>('general')
-  type Section = 'general' | 'mods' | 'venue' | 'about' | 'account'
-
-  const user = $derived($authStore.user)
+  type Section = 'general' | 'mods' | 'venue' | 'about'
 
   interface NavItem {
     key: Section
@@ -41,7 +36,7 @@
     if (wasClosed) {
       // 打开时读取指定的 section，否则默认 general
       const target = $activeSettingsSection
-      if (target) {
+      if (target && target !== 'account') {
         activeSection = target
         activeSettingsSection.set(null)
       } else {
@@ -149,7 +144,6 @@
               {#if activeSection === 'mods'}<ModsPage />{/if}
               {#if activeSection === 'venue'}<VenuePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
-              {#if activeSection === 'account'}<AccountPage />{/if}
             </div>
           </ScrollArea>
         </div>

@@ -15,7 +15,7 @@
 
   interface Speaker {
     id: string
-    delegationName: string
+    seatName: string
     allocatedTimeSec: number
   }
 
@@ -55,7 +55,7 @@
           {#if showIndex}
             <span class="w-6 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
           {/if}
-          <span class="min-w-0 flex-1 text-sm text-foreground">{entry.delegationName}</span>
+          <span class="min-w-0 flex-1 text-sm text-foreground">{entry.seatName}</span>
           <Badge variant="secondary" class="ml-auto text-[10px]">{formatTime(entry.allocatedTimeSec)}</Badge>
           {#if showDelete}
             <Button

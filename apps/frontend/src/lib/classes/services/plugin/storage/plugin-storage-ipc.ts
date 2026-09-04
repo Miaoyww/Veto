@@ -23,7 +23,7 @@ interface PluginListItem {
   hasDefinitions: boolean
   hasI18n: boolean
   hasAssets: boolean
-  hasDelegations: boolean
+  hasSeats: boolean
   hasService: boolean
 }
 
@@ -37,8 +37,8 @@ function shouldLoadPlugin(item: PluginListItem): boolean {
   if (typeNeedsDefinitions(item.type)) {
     return item.hasDefinitions || item.hasI18n
   }
-  // utility / dependency：有 delegations 或 service 入口即可
-  return item.hasDelegations || item.hasService
+  // utility / dependency：有 seats 或 service 入口即可
+  return item.hasSeats || item.hasService
 }
 
 /** 将 IPC 返回的 detail 转换为 InstalledPlugin */
@@ -51,7 +51,7 @@ function detailToPlugin(data: PluginDetail): InstalledPlugin {
     assetKeys: [],
     installedAt: 0,
     campaignFiles: data.campaignFiles,
-    delegations: data.delegations
+    seats: data.seats
   }
 }
 
@@ -72,7 +72,7 @@ export class IpcPluginStorage implements PluginStorage {
       definitions: plugin.definitions,
       i18n: plugin.i18n,
       assets,
-      delegations: plugin.delegations
+      seats: plugin.seats
     })
 
     if (!result.success) {
@@ -103,7 +103,7 @@ export class IpcPluginStorage implements PluginStorage {
       const hasContent =
         typeNeedsDefinitions(type)
           ? !!data.definitions
-          : (!!data.delegations || !!data.hasService)
+          : (!!data.seats || !!data.hasService)
 
       if (hasContent) {
         plugins.push(detailToPlugin(data))

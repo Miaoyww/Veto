@@ -5,14 +5,14 @@
   import { navigateToConference } from '$lib/classes/utils'
   import { createConference } from '$lib/classes/stores/conference/conference-store'
   import {
-    delegationPresets,
+    seatPresets,
     presetsLoading,
     presetsLoaded,
-    loadDelegationPresets,
+    loadSeatPresets,
     startAutoRefresh,
     formatPresetAsText,
-    type DelegationPreset
-  } from '$lib/classes/stores/conference/delegation-preset-store'
+    type SeatPreset
+  } from '$lib/classes/stores/conference/seat-preset-store'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { Input } from '$lib/components/ui/input/index.js'
@@ -27,8 +27,8 @@
   let committeeName = $state('')
   let defaultSpeakingTimeSec = $state(120)
 
-  // 代表团文本
-  let delegationsText = $state('')
+  // 参会席位文本
+  let seatsText = $state('')
 
   // 常用五常模板
   const P5_TEMPLATE = `中华人民共和国,中国
@@ -38,31 +38,31 @@
 俄罗斯联邦,俄罗斯`
 
   function insertP5(): void {
-    if (delegationsText.trim()) {
-      delegationsText = delegationsText.trim() + '\n' + P5_TEMPLATE
+    if (seatsText.trim()) {
+      seatsText = seatsText.trim() + '\n' + P5_TEMPLATE
     } else {
-      delegationsText = P5_TEMPLATE
+      seatsText = P5_TEMPLATE
     }
   }
 
-  function parseDelegations(): {
+  function parseSeats(): {
     name: string
     shortName?: string
-    vetoPower?: boolean
+    hasVotingRights?: boolean
   }[] {
-    return delegationsText
+    return seatsText
       .split('\n')
       .map((line) => {
         const parts = line.split(',').map((s) => s.trim())
         if (parts.length < 1 || !parts[0]) return null
-        const vetoPower =
+        const hasVotingRights =
           parts[2]?.toLowerCase() === 'observer' || parts[2]?.toLowerCase() === '观察员'
             ? false
             : undefined
         return {
           name: parts[0],
           shortName: parts[1] || undefined,
-          ...(vetoPower !== undefined ? { vetoPower } : {})
+          ...(hasVotingRights !== undefined ? { hasVotingRights } : {})
         }
       })
       .filter((d): d is NonNullable<typeof d> => d !== null)
@@ -72,10 +72,10 @@
     const trimmedName = name.trim()
     if (!trimmedName) return
 
-    const parsedDelegations = parseDelegations()
-    if (parsedDelegations.length === 0) return
+    const parsedSeats = parseSeats()
+    if (parsedSeats.length === 0) return
 
-    const id = createConference(trimmedName, committeeName.trim(), [], parsedDelegations, {
+    const id = createConference(trimmedName, committeeName.trim(), [], parsedSeats, {
       defaultSpeakingTimeSec
     })
 
@@ -88,7 +88,7 @@
     name = ''
     committeeName = ''
     defaultSpeakingTimeSec = 120
-    delegationsText = ''
+    seatsText = ''
   }
 
   function handleOpenChange(value: boolean): void {
@@ -104,9 +104,9 @@
     }
   }
 
-  const parsedDelegationsCount = $derived(parseDelegations().length)
+  const parsedSeatsCount = $derived(parseSeats().length)
   const canCreate = $derived(
-    name.trim().length > 0 && committeeName.trim().length > 0 && parsedDelegationsCount > 0
+    name.trim().length > 0 && committeeName.trim().length > 0 && parsedSeatsCount > 0
   )
 
   // ---- 插件预设 ----
@@ -116,19 +116,19 @@
     if (open && !presetLoaded) {
       presetLoaded = true
       startAutoRefresh()
-      loadDelegationPresets()
+      loadSeatPresets()
     }
     if (!open) {
       presetLoaded = false
     }
   })
 
-  function insertPreset(preset: DelegationPreset): void {
+  function insertPreset(preset: SeatPreset): void {
     const text = formatPresetAsText(preset)
-    if (delegationsText.trim()) {
-      delegationsText = delegationsText.trim() + '\n' + text
+    if (seatsText.trim()) {
+      seatsText = seatsText.trim() + '\n' + text
     } else {
-      delegationsText = text
+      seatsText = text
     }
   }
 </script>
@@ -145,7 +145,7 @@
           新建大会
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          设定首个委员会与参与代表团，创建后进入模拟流程。
+          设定首个委员会与参会席位，创建后进入模拟流程。
         </Dialog.Description>
 
         <div class="rounded-md borderpx-3 py-2 text-xs text-gray-400">
@@ -222,18 +222,18 @@
             <div class="mb-2 flex items-center justify-between">
               <span class="text-xs font-medium text-muted-foreground">
                 国家/组织列表
-                {#if parsedDelegationsCount > 0}
+                {#if parsedSeatsCount > 0}
                   <Badge variant="outline" class="ml-2 text-[10px]"
-                    >{parsedDelegationsCount} 个</Badge
+                    >{parsedSeatsCount} 个</Badge
                   >
                 {/if}
               </span>
             </div>
 
             <!-- 插件预设按钮 -->
-            {#if $presetsLoaded && $delegationPresets.length > 0}
+            {#if $presetsLoaded && $seatPresets.length > 0}
               <div class="mb-2 flex flex-wrap gap-1.5">
-                {#each $delegationPresets as preset (preset.pluginId + '/' + preset.presetId)}
+                {#each $seatPresets as preset (preset.pluginId + '/' + preset.presetId)}
                   <Button
                     variant="outline"
                     size="sm"
@@ -244,7 +244,7 @@
                     <PuzzleIcon size={12} />
                     {preset.presetName}
                     <span class="text-[10px] text-muted-foreground"
-                      >({preset.delegations.length})</span
+                      >({preset.seats.length})</span
                     >
                   </Button>
                 {/each}
@@ -265,7 +265,7 @@
             {/if}
 
             <Textarea
-              bind:value={delegationsText}
+              bind:value={seatsText}
               class="h-80 font-mono text-xs"
               placeholder="格式：全称,简称&#10;中华人民共和国,中国&#10;美利坚合众国,美国"
             />

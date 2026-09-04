@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * delegation-roster.svelte
+   * seat-roster.svelte
    * ──────────────────────────
-   * 可复用的代表团名单组件，统一使用网格布局，支持两种显示模式：
+   * 可复用的席位名单组件，统一使用网格布局，支持两种显示模式：
    *
    * - voting : 彩色圆点（赞成/反对/弃权/跳过/未投）+ 名称 + 当前高亮
    * - list   : 序号 + 名称，超出上限显示 "还有 N 位代表"
@@ -12,9 +12,9 @@
   export interface RosterEntry {
     /** 唯一标识（用于 key 和 currentId 匹配） */
     id: string
-    /** 代表团名称 */
+    /** 席位名称 */
     name: string
-    /** 代表团简称（可选） */
+    /** 席位简称（可选） */
     shortName?: string
     /** 投票状态（voting 模式使用） */
     vote?: string | null
@@ -26,12 +26,12 @@
     currentId = null,
     max = Infinity,
     gridCols = 5,
-    emptyText = '暂无代表团'
+    emptyText = '暂无席位'
   }: {
     entries: RosterEntry[]
     /** 显示模式：voting = 表决状态, list = 顺序名单 */
     mode?: 'voting' | 'list'
-    /** voting 模式下高亮的代表团 ID */
+    /** voting 模式下高亮的席位 ID */
     currentId?: string | null
     /** list 模式最大显示数量，超出显示溢出提示 */
     max?: number

@@ -9,13 +9,13 @@
   import { formatTime } from '$lib/classes/formatters/time-formater'
 
   interface Props {
-    delegationName: string
+    seatName: string
     allocatedTimeSec: number
     onstart?: () => void
     oncancel?: () => void
   }
 
-  let { delegationName, allocatedTimeSec, onstart, oncancel }: Props = $props()
+  let { seatName, allocatedTimeSec, onstart, oncancel }: Props = $props()
 </script>
 
 <div
@@ -23,7 +23,7 @@
 >
   <div class="text-sm font-medium text-amber-700 dark:text-amber-400">即将发言</div>
   <div class="mt-1 text-2xl font-bold text-foreground">
-    {delegationName}
+    {seatName}
   </div>
   <div class="mt-1 font-mono text-lg text-muted-foreground">
     {formatTime(allocatedTimeSec)}

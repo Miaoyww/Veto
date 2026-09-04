@@ -10,11 +10,12 @@
     proposePoint
   } from '$lib/classes/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/classes/types/conference'
-  import type { Delegation, PointType } from '$lib/classes/types/conference'
+  import type { ParticipantSeat, PointType } from '$lib/classes/types/conference'
+  import { toSeatView } from '$lib/classes/types/delegate'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
-  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
+  import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
@@ -42,7 +43,7 @@
 
   // ---- Form state ----
   let selectedType = $state<PointType | null>(null)
-  let selectedProposer: Delegation | null = $state(null)
+  let selectedProposer = $state<ParticipantSeat | null>(null)
 
   const isTimerActive = $derived(conf?.activeSpeaker != null)
   const canPropose = $derived(selectedType !== null && selectedProposer != null)
@@ -63,12 +64,12 @@
   function handlePropose(): void {
     if (!selectedType || !conf) return
 
-    const proposerDel = selectedProposer || conf.delegations[0]
+    const proposerDel = selectedProposer || conf.participantSeats[0]
     if (!proposerDel) return
 
     proposePoint({
       type: selectedType,
-      proposedByDelegationId: proposerDel.id
+      proposedBySeatId: proposerDel.id
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
@@ -97,7 +98,7 @@
     }
     const proposerDel = selectedProposer
     pointDraft.set({
-      proposedBy: proposerDel ?? undefined,
+      proposedBy: proposerDel ? toSeatView(proposerDel) : undefined,
       type: selectedType ?? undefined
     })
   })
@@ -122,8 +123,8 @@
         {#if conf}
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">问题提出方</Label>
-            <DelegationSelector
-              delegations={conf.delegations}
+            <SeatSelector
+              seats={conf.participantSeats}
               bind:value={selectedProposer}
               presentOnly={true}
             />

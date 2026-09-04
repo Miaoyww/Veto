@@ -41,7 +41,7 @@
 
   const proposerDel = $derived(
     latestPoint
-      ? conf?.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
+      ? conf?.seats.find((d) => d.id === latestPoint.proposedBySeatId)
       : null
   )
 
@@ -128,7 +128,7 @@
               {POINT_LABELS[latestPoint.type]}
             </div>
             <div class="text-base text-muted-foreground">
-              由 <span class="font-semibold text-foreground">{proposerDel?.name ?? latestPoint.proposedByDelegationId}</span> 提出
+              由 <span class="font-semibold text-foreground">{proposerDel?.name ?? latestPoint.proposedBySeatId}</span> 提出
             </div>
           </div>
         </div>

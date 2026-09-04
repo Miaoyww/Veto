@@ -29,8 +29,9 @@
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
-  import type { MotionType, Attendance, Delegation } from '$lib/classes/types/conference'
-  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
+  import type { MotionType, Attendance, ParticipantSeat } from '$lib/classes/types/conference'
+  import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
+  import { toSeatView } from '$lib/classes/types/delegate'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
@@ -39,12 +40,12 @@
   const committeeId = $derived($page.params.committee_id ?? null)
 
   // Proposer
-  let selectedProposer: Delegation | null = $state(null)
+  let selectedProposer = $state<ParticipantSeat | null>(null)
 
-  // 常用动议列表——根据当前阶段和选中代表团的出席状态动态调整
+  // 常用动议列表——根据当前阶段和选中席位的出席状态动态调整
   const motionTypes = $derived.by((): MotionType[] => {
-    // 缺席的代表团只能提出"更改出席状态"动议
-    if (selectedProposer && selectedProposer.attendance === 'absent') {
+    // 缺席的席位只能提出"更改出席状态"动议
+    if (selectedProposer && selectedProposer.procedure.attendance === 'absent') {
       return ['change_attendance']
     }
 
@@ -127,7 +128,7 @@
   let committedDocumentName = $state('')
   // Change Attendance —— 由当前出席状态决定，只能选相反状态
   let newAttendance = $derived<Attendance>(
-    selectedProposer?.attendance === 'present' ? 'absent' : 'present'
+    selectedProposer?.procedure.attendance === 'present' ? 'absent' : 'present'
   )
   // Individual Speech
   let isDurationSec = $state(120)
@@ -165,13 +166,13 @@
   function handlePropose(): void {
     if (!selectedType || !conf) return
 
-    const proposerDel = selectedProposer || conf.delegations[0]
+    const proposerDel = selectedProposer || conf.participantSeats[0]
     if (!proposerDel) return
 
     // 使用 committed 值（onblur 已提交），保证 Display 端动画已完整播放
     let motionData: any = {
       type: selectedType,
-      proposedBy: proposerDel
+      proposedBySeatId: proposerDel.id
     }
 
     switch (selectedType) {
@@ -254,7 +255,7 @@
       case 'substantive_vote':
         return documentName !== committedDocumentName
       case 'change_attendance':
-        return false // no debounce needed for delegation selector
+        return false // no debounce needed for seat selector
       default:
         return false
     }
@@ -281,20 +282,20 @@
     }
     const proposerDel = selectedProposer
     motionDraft.set({
-      proposedBy: proposerDel ?? undefined,
+      proposedBy: proposerDel ? toSeatView(proposerDel) : undefined,
       type: selectedType ?? undefined,
       isRequestingVote: selectedType ? resolveMotion(selectedType).requiresVoting : undefined,
       topic: selectedType === 'moderated_caucus' ? committedTopic.trim() || undefined : undefined,
       totalTimeSec:
         selectedType === 'moderated_caucus'
-          ? committedMcTotalSec
+          ? (committedMcTotalSec ?? undefined)
           : selectedType === 'unmoderated_caucus'
             ? committedUcDurationMin * 60
             : selectedType === 'individual_speech'
               ? committedIsDurationSec
               : undefined,
       speakingTimePerPersonSec:
-        selectedType === 'moderated_caucus' ? committedMcSpeakerSec : undefined,
+        selectedType === 'moderated_caucus' ? (committedMcSpeakerSec ?? undefined) : undefined,
       newTimeSec: selectedType === 'modify_speaking_time' ? committedNewTimeSec : undefined,
       documentName:
         selectedType === 'substantive_vote' ? committedDocumentName.trim() || undefined : undefined
@@ -321,7 +322,7 @@
         {#if conf}
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">动议提出方</Label>
-            <DelegationSelector delegations={conf.delegations} bind:value={selectedProposer} />
+            <SeatSelector seats={conf.participantSeats} bind:value={selectedProposer} />
           </div>
         {/if}
 
@@ -506,7 +507,7 @@
               {newAttendance === 'present' ? '出席' : '缺席'}
             </div>
             <p class="mt-1 text-[10px] text-muted-foreground">
-              当前为{selectedProposer?.attendance === 'present'
+              当前为{selectedProposer?.procedure.attendance === 'present'
                 ? '出席'
                 : '缺席'}，只能变更为相反状态
             </p>

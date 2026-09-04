@@ -2,7 +2,8 @@
 // types-conference.ts — 模拟大会（Model UN Conference）领域模型
 // ============================================================
 
-import type { Seat } from './delegate'
+import type { Attendance, Seat, SeatAccess, SeatView, User } from './delegate'
+export type { Attendance, ParticipantSeat, Seat, SeatView } from './delegate'
 
 // ---- 会议阶段 -----------------------------------------------------------
 
@@ -17,23 +18,6 @@ export type ConferencePhase =
   | 'caucus_setup' // 磋商发言名单设置
   | 'suspended' // 暂时休会
   | 'closed' // 闭幕
-
-// ---- 代表团（替代 Faction）-----------------------------------------------
-
-export type Attendance = 'present' | 'absent'
-
-export interface Delegation extends Seat {
-  /** 简称，如 "中国"。用于 UI badge 和模糊搜索匹配 */
-  shortName?: string
-  /** 国旗 emoji 或图片 URL（可选） */
-  flagUrl?: string
-  /** 点名出勤状态 */
-  attendance: Attendance
-  /** 是否拥有投票权（默认 true，false 即为观察员） */
-  vetoPower: boolean
-  /** 排序权重（越小越靠前） */
-  sortOrder: number
-}
 
 // ---- 议题 ---------------------------------------------------------------
 
@@ -60,31 +44,28 @@ export type CaucusSpeakerStatus = 'waiting' | 'ready' | 'speaking'
 
 export interface YieldChoice {
   type: YieldType
-  /** 当 type='delegate' 时，让渡给的代表团 ID */
-  delegationId?: string
-  /** 当 type='question'/'comment' 时，提问/评论方的代表团 ID */
-  fromDelegationId?: string
+  /** 当 type='delegate' 时，让渡给的席位 ID */
+  seatId?: string
+  /** 当 type='question'/'comment' 时，提问/评论方的席位 ID */
+  fromSeatId?: string
 }
 
 /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
 export interface YieldPendingState {
   originalEntryId: string
-  originalDelegationId: string
-  originalDelegation: Delegation
+  originalSeatId: string
   yieldType: YieldType
   /** 让渡时的剩余秒数 */
   remainingSec: number
   /** 原发言人分配的总时长 */
   allocatedSec: number
-  /** 提问方代表团 ID（question 类型专用） */
-  questionerDelegationId?: string
-  /** 提问方代表团（question 类型专用） */
-  questionerDelegation?: Delegation
+  /** 提问方席位 ID（question 类型专用） */
+  questionerSeatId?: string
 }
 
 export interface SpeakerEntry {
   id: string
-  delegationId: string
+  seatId: string
   /** 分配的发言时间（秒），默认 120 */
   allocatedTimeSec: number
   /** 暂停/中断时剩余时间 */
@@ -102,8 +83,8 @@ export interface SpeakerEntry {
  */
 export interface SpeakerDisplayEntry {
   id: string
-  delegationId: string
-  delegationName: string
+  seatId: string
+  seatName: string
   status: string
   allocatedTimeSec: number
 }
@@ -164,8 +145,8 @@ export type MotionStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 export interface AbstractMotion {
   id: string
   type: MotionType
-  /** 动议提出代表团 */
-  proposedBy: Delegation
+  /** 动议提出席位 */
+  proposedBySeatId: string
   proposedAt: number
   status: MotionStatus
 }
@@ -290,8 +271,8 @@ export const MOTION_LABELS: Record<MotionType, string> = {
 export interface Point {
   id: string
   type: PointType
-  /** 问题提出代表团 ID */
-  proposedByDelegationId: string
+  /** 问题提出席位 ID */
+  proposedBySeatId: string
   proposedAt: number
 }
 
@@ -300,9 +281,9 @@ export interface Point {
 export interface DraftResolution {
   id: string
   title: string
-  /** 起草国代表团 ID 列表 */
+  /** 起草席位 ID 列表 */
   sponsors: string[]
-  /** 附议国代表团 ID 列表 */
+  /** 附议席位 ID 列表 */
   signatories: string[]
   /** 决议正文（自由文本，后续可改为结构化段落） */
   content: string
@@ -320,7 +301,7 @@ export type MajorityRule = 'simple_majority' | 'two_thirds'
 export type VoteTargetType = 'motion' | 'resolution'
 
 export interface VoteBallot {
-  delegationId: string
+  seatId: string
   vote: VoteValue
 }
 
@@ -336,9 +317,9 @@ export interface VotingSession {
   startedAt: number
   endedAt?: number
   result?: 'passed' | 'failed'
-  /** 当前正在投票的代表团 ID（唱名表决顺序控制）；null 表示全部投完 */
-  currentDelegationId: string | null
-  /** 当前轮次：1 = 第一轮，2 = 第二轮（跳过代表团补投） */
+  /** 当前正在投票的席位 ID（唱名表决顺序控制）；null 表示全部投完 */
+  currentSeatId: string | null
+  /** 当前轮次：1 = 第一轮，2 = 第二轮（跳过席位补投） */
   round: number
 }
 
@@ -364,11 +345,9 @@ export interface Committee {
   name: string
   /** 当前阶段 */
   phase: ConferencePhase
-  /** 代表团列表 */
-  delegations: Delegation[]
   /** 议题列表 */
   agenda: AgendaItem[]
-  /** 席位列表；席位是委员会中的代表身份 */
+  /** 席位列表；拥有 procedure 的席位参与议事 */
   seats: Seat[]
   /** 主发言名单 */
   speakerLists?: SpeakerListData
@@ -398,8 +377,8 @@ export interface Committee {
     motionId: string
     /** 动议国发言位置：标首（第一个）还是标尾（最后一个） */
     proposerPosition: ProposerPosition
-    /** 已加入的代表团 ID 列表（有序） */
-    speakerDelegationIds: string[]
+    /** 已加入的席位 ID 列表（有序） */
+    speakerSeatIds: string[]
     /** 名单耗尽后重回 setup 时的剩余秒数 */
     remainingSec?: number
   } | null
@@ -421,7 +400,7 @@ export interface Committee {
     /** 用于同步和恢复 */
     updatedAt?: number
 
-    /** 有主持磋商发言顺序（复用 SpeakerEntry，运行时 delegation 引用由引擎还原） */
+    /** 有主持磋商发言顺序 */
     caucusSpeakers?: SpeakerEntry[]
     /** 当前发言人在 caucusSpeakers 中的索引 */
     currentSpeakerIndex?: number
@@ -452,6 +431,10 @@ export interface Conference {
   createdAt: number
   updatedAt: number
   committees: Committee[]
+  /** 大会内与席位一对一的本地用户 */
+  users: User[]
+  /** 邀请码到席位的访问入口 */
+  seatAccesses: SeatAccess[]
   /** 大会级角色模板 */
   roleTemplates: RoleTemplate[]
   /** 大会级席位组（内阁/委员会、MPC、学团 IPC） */
@@ -468,8 +451,8 @@ export interface Conference {
 
 /** 动议编辑草稿 —— 实时同步到 Display 窗口 */
 export interface MotionDraft {
-  /** 动议提出方代表团 */
-  proposedBy?: Delegation
+  /** 动议提出席位 */
+  proposedBy?: SeatView
   /** 动议类型 */
   type?: MotionType
   /** 是否需要表决（false = 特殊动议，直接生效，不展示表决 UI） */
@@ -488,8 +471,8 @@ export interface MotionDraft {
 
 /** 问题编辑草稿 —— 实时同步到 Display 窗口 */
 export interface PointDraft {
-  /** 问题提出方代表团 */
-  proposedBy?: Delegation
+  /** 问题提出席位 */
+  proposedBy?: SeatView
   /** 问题类型 */
   type?: PointType
 }
@@ -510,7 +493,7 @@ export interface TimerTickData {
 }
 
 export interface ConferenceDisplaySpeaker {
-  delegation: Delegation
+  seat: SeatView
   remainingSec: number
   allocatedSec: number
   /** 计时状态 */
@@ -522,21 +505,21 @@ export interface ConferenceDisplayData {
   phase: ConferencePhase
   venue: string
   name: string
-  /** 当前出席的代表团数量（点名结束后持久可用） */
+  /** 当前出席席位数量（点名结束后持久可用） */
   presentCount: number
-  /** 拥有投票权的出席代表人数（排除观察员，即 vetoPower === false） */
+  /** 拥有投票权的出席席位数量 */
   votingCount: number
   /** 动议编辑草稿（编辑中实时同步） */
   motionDraft?: MotionDraft
   /** 问题编辑草稿（编辑中实时同步） */
   pointDraft?: PointDraft
   currentSpeaker?: ConferenceDisplaySpeaker
-  /** 预发言状态（ready 阶段，即将发言的代表团） */
+  /** 预发言状态（ready 阶段） */
   readySpeaker?: {
-    delegation: Delegation
+    seat: SeatView
   }
   speakersList: Array<{
-    delegation: Delegation
+    seat: SeatView
     status: string
   }>
   votingSession?: {
@@ -546,12 +529,12 @@ export interface ConferenceDisplayData {
     result?: string
     /** 当前轮次 */
     round: number
-    /** 当前正在投票的代表团 ID */
-    currentDelegationId: string | null
-    /** 每个出席代表团的投票状态，按投票顺序排列 */
+    /** 当前正在投票的席位 ID */
+    currentSeatId: string | null
+    /** 每个出席席位的投票状态，按投票顺序排列 */
     ballots: Array<{
-      delegationId: string
-      delegationName: string
+      seatId: string
+      seatName: string
       shortName?: string
       vote: string | null
     }>
@@ -560,7 +543,7 @@ export interface ConferenceDisplayData {
     type: MotionType
     topic?: string
     status: string
-    proposedBy: Delegation
+    proposedBy: SeatView
     motionId: string
     /** 总时长（秒），moderated_caucus / unmoderated_caucus */
     totalTimeSec?: number
@@ -573,15 +556,15 @@ export interface ConferenceDisplayData {
   }
   activePoint?: {
     type: PointType
-    proposedBy: Delegation
+    proposedBy: SeatView
     pointId: string
   }
   caucusSetup?: {
     topic?: string
     proposerName?: string
     proposerPosition: ProposerPosition
-    speakerDelegationIds: string[]
-    speakerNames: Delegation[]
+    speakerSeatIds: string[]
+    speakerNames: SeatView[]
   }
   caucusTimer?: {
     remainingSec: number
@@ -592,9 +575,8 @@ export interface ConferenceDisplayData {
     topic?: string
     /** 有主持磋商发言顺序 */
     caucusSpeakers?: Array<{
-      delegationName: string
-      /** Display 组件用的 delegation 快照 */
-      delegation: Delegation
+      seatName: string
+      seat: SeatView
       status: CaucusSpeakerStatus
       allocatedTimeSec: number
     }>
@@ -610,23 +592,23 @@ export interface ConferenceDisplayData {
   /** 让渡处理中状态（Display 端展示让渡流程） */
   yieldPending?: {
     yieldType: YieldType
-    originalDelegation: Delegation
-    questionerDelegation?: Delegation
+    originalSeat: SeatView
+    questionerSeat?: SeatView
     remainingSec: number
   }
-  /** 出席状态变更通知（独立于 rollCall，由 changeDelegationAttendance 统一触发） */
-  attendanceChange?: Delegation
+  /** 出席状态变更通知 */
+  attendanceChange?: SeatView
   /** 点名进度（roll_call 阶段使用） */
   rollCall?: {
     currentIndex: number
     totalCount: number
-    currentDelegation?: Delegation
+    currentSeat?: SeatView
     presentCount: number
     simpleMajorityThreshold: number
     twoThirdsThreshold: number
-    /** 刚刚标记的代表团结果（供 Display 端展示确认动画） */
+    /** 刚刚标记的席位结果（供 Display 端展示确认动画） */
     lastMarked?: {
-      delegation: Delegation
+      seat: SeatView
       status: Attendance
       index: number
     }

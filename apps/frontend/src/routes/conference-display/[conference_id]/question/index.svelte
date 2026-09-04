@@ -6,7 +6,7 @@
    */
   import { POINT_LABELS } from '$lib/classes/types/conference'
   import type { ConferenceDisplayData } from '$lib/classes/types/conference'
-  import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
+  import SeatNameDisplay from '$lib/components/conference-display/seat-name-display.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
@@ -25,7 +25,7 @@
 <DisplayPage>
   {#if proposer}
     <div class="text-center">
-      <DelegationNameDisplay name={proposer.name} shortName={proposer.shortName ?? ''} />
+      <SeatNameDisplay name={proposer.name} shortName={proposer.procedure?.shortName ?? ''} />
       {#if hasType}
         <div class="mt-4 text-4xl tracking-wide text-white/40">
           提出 {label}

@@ -10,14 +10,15 @@
 
 **Conference (大会)**:
 一场完整模拟联合国活动的根实体，如“枣庄市第17届模拟联合国大会”。包含一场或多场小会议、
-大会级角色模板、全局新闻和全局局势更新。大会本身不直接承载发言名单、动议、表决等议事流程。
+大会级 User、SeatAccess、角色模板、全局新闻和全局局势更新。大会本身不直接承载发言名单、
+动议、表决等议事流程。
 _Avoid_: Meeting, Session, ConferenceEvent
 
 ## Committee（委员会 / 会场）
 
 **Committee (委员会 / 会场)**:
 大会下的一场具体会议，如“美国内阁”“英国内阁”“MPC”。每场小会议拥有自己的主席、席位、
-议事状态、代表团与局域网服务。发言名单、动议、表决等议事流程属于委员会。
+议事状态与局域网服务。发言名单、动议、表决等议事流程属于委员会。
 _Avoid_: Event, Conference, Cabinet, Committee Group
 
 ## SeatGroup（席位组）
@@ -26,16 +27,15 @@ _Avoid_: Event, Conference, Cabinet, Committee Group
 
 **SeatGroup (席位组)**:
 一组 Seats 的集合，带有默认能力集（Capability）。类型决定了其在大会中的协作方式。
-可选择性绑定到一个 Delegation。
 _Avoid_: Role, Team, Group
 
 **SeatGroup 类型**:
 
-| 类型 | 绑定 Delegation | 模式 | 说明 |
-|---|---|---|---|
-| 内阁/委员会 (Cabinet) | 是 | standing ↔ crisis 可切换 | 代表国家或政治实体 |
-| MPC | 否 | 固定 | 主新闻中心 |
-| 学团 IPC | 否（可临时绑定） | 固定 | 推演控制中心 |
+| 类型 | 模式 | 说明 |
+|---|---|---|
+| 内阁/委员会 (Cabinet) | standing ↔ crisis 可切换 | 议事会场 |
+| MPC | 固定 | 主新闻中心 |
+| 学团 IPC | 固定 | 推演控制中心 |
 
 **内阁/委员会 (Cabinet)**:
 既可指危机模式下的国家内阁，也可指常委模式下的多国委员会。两种模式中途可切换。
@@ -51,23 +51,58 @@ _Avoid_: Press, Media
 
 **学团 IPC (推演控制中心)**:
 大会侧的推演控制会议。成员能力独立灵活分配（某人处理指令、某人审核新闻、某人发布局势、某人控制会议）。
-可随时绑定/取消绑定到 Delegation。
 _Avoid_: Chair, Admin, Director
 
 ## Seat（席位）
 
 **Seat (席位)**:
-委员会内、席位组中的具体座位。每个 Seat 绑定一个 Account，携带独立于 SeatGroup 默认值的 Capability 覆盖。
+委员会内、席位组中的具体参与位置，也是点名、发言、动议和投票的主体。Seat 独立于使用它的人存在，
+可以通过 User ID 分配给 User，并携带独立于 SeatGroup 默认值的 Capability 覆盖。Seat 名称始终描述
+会场席位而非使用它的代表姓名。每个 Seat 至多分配给一个 User，分配后不交接。Conference 创建后
+禁止删除 Seat，但可以改名。议事数据通过 Seat ID 引用它。
 在 crisis 模式下，Seat 绑定具体部门（如"海军部长""情报局局长"）；在 standing 模式下，
-Seat 代表国家代表团内的一个角色（如"德国外交部长"）。
-_Avoid_: Member, User, Delegate
+Seat 代表一个国家或政治实体（如"德国"）。
+_Avoid_: Member, User, Delegate, Delegation
+
+**Procedure（议事状态）**:
+Seat 上可选的议事参与状态，包含简称、旗帜、出席状态、投票权与议事排序。参与议事的 Seat 拥有
+Procedure；MPC 和学团 IPC 的 Seat 不拥有 Procedure。
+_Avoid_: Delegation, Voting Seat
+
+**SeatView（席位视图）**:
+供界面、投屏和网络同步使用的安全席位投影，仅包含相应场景需要展示的席位信息，不包含邀请码、
+密码摘要或 User 信息。
+_Avoid_: PublicSeat, Seat DTO
+
+**AuthenticatedSeatSession（已认证席位会话）**:
+代表端成功认证后获得的临时连接上下文，包含 Conference、SeatView、SeatGroup、UserView 和最终解析出的
+Capability。它不持久化，也不包含邀请码、密码摘要或完整 Seat。
+_Avoid_: DelegateSession, User Session, SeatAccess
+
+## User（用户）
+
+**User (用户)**:
+大会内由 Veto 识别的自然人身份，与一个 Seat 严格一对一。User 保存自主设置的登录密码；User 不等同于
+其使用的 Seat，当前也不要求跨大会或跨设备延续。User 包含代表姓名，密码为可选；未设置密码时，
+邀请码本身就是完整认证凭证。主席可以在误认领或遗忘密码时重置 Seat 的 User，允许重新认领。
+User 由 Conference 持有，只能在认领 Seat 时创建；重置 Seat 时直接删除原 User。
+_Avoid_: Account, Seat, Delegate
+
+## SeatAccess（席位访问入口）
+
+**SeatAccess (席位访问入口)**:
+通过唯一邀请码指向一个 Seat 的本地访问入口。SeatAccess 只持有邀请码，不持有密码；首次使用邀请码时
+为该 Seat 创建 User。主席可以轮换邀请码，旧邀请码随即失效，而 Seat、User 与议事记录保持不变。
+SeatAccess 由 Conference 持有，邀请码在同一主席端保存的所有 Conference 中全局唯一。
+_Avoid_: User, Account, Credential
 
 ## inviteCode（邀请码 / Key）
 
 **inviteCode（邀请码 / Key）**:
-Seat 创建时自动生成的 4-4-4 登录凭证（代码字段 `inviteCode`，UI 中称"Key"）。
+授予持有者进入指定 Seat 权限的 4-4-4 登录凭证（代码字段 `inviteCode`，UI 中称"Key"）。
 创建向导不配置它；Chair 端在 settings/席位管理中查看与批量复制。
-代表凭"邀请码 + 密码"连接对应席位。
+邀请码首次使用时确定该 Seat 的 User，由 User 自主设置密码；后续使用"邀请码 + User 密码"连接席位。
+密码可以留空；此时后续仅凭邀请码即可连接。邀请码只定位并授予 Seat 访问入口，密码属于 User。
 _Avoid_: Password, 席位 key
 
 ## RoleTemplate（角色模板）
@@ -76,14 +111,6 @@ _Avoid_: Password, 席位 key
 大会级角色定义，包含名称与默认能力集。委员会创建席位时选择角色模板，并可在席位上覆盖具体能力。
 常见模板包括常规代表、MPC 记者、观察员、学团控制者。角色模板不是登录身份；席位才是代表身份。
 _Avoid_: Role, Permission, Account
-
-## Account（账号）
-
-**Account (账号)**:
-本地管理的登录凭证。一人一码（邀请码），一个账号只能在一个大会中占据一个 Seat。
-先做本地管理（Chair 端预设），预留迁移至云服务的接口。
-通过"邀请码 + 密码"连接会议，邀请码预先绑定 SeatGroup 和 Seat。
-_Avoid_: User, Login
 
 ## Capability（能力）
 
@@ -151,15 +178,6 @@ _Avoid_: Client, Member
 只读投影窗口（已有）。通过 WebSocket 连接 Chair，不维护自身计时器（见 ADR-0002）。
 _Avoid_: Projector, Screen
 
-## Delegation（代表团）
-
-（保留，重新定位）
-
-**Delegation (代表团)**:
-代表一个国家或政治实体的抽象概念。SeatGroup（内阁/委员会类型）可选择绑定到 Delegation。
-在 standing 模式下，Delegation 是传统会议机制中的参与者（发言、投票）。
-_Avoid_: Faction, Country, Nation, Team
-
 ## SpeakerList / Motion / Voting / Caucus 等
 
 （保留原定义，略）
@@ -176,6 +194,10 @@ _Avoid_: Faction, Country, Nation, Team
 - **DraftResolution (决议草案)** — 起草国+附议国，需表决
 - **VotingSession (表决)** — 唱名表决，simple_majority / two_thirds
 - **RollCall (点名)** — 会议出席确认
+
+**Participants（参会席位）**:
+一个 Committee 中所有拥有 Procedure 的 Seats；它们共同构成点名、发言、动议和投票的参与者集合。
+_Avoid_: Delegations, Members
 
 ## Timeline（时间线）
 

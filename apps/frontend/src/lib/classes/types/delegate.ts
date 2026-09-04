@@ -1,7 +1,7 @@
 // ============================================================
 // types-delegate.ts — 代表端领域模型
 // ============================================================
-// SeatGroup、Seat、Account、Directive、News、SituationUpdate 等
+// SeatGroup、Seat、User、Directive、News、SituationUpdate 等
 // 代表端核心类型定义。
 
 // ---- 能力系统 -------------------------------------------------------------
@@ -57,8 +57,6 @@ export interface SeatGroup {
   name: string
   /** 席位组类型 */
   type: SeatGroupType
-  /** 绑定的 Delegation ID（可选；MPC 不绑定，IPC 可临时绑定） */
-  delegationId?: string
   /** 默认能力集（Seat 级别可覆盖） */
   defaultCapabilities: Capability[]
   /** 内阁/委员会类型时有效 */
@@ -69,6 +67,17 @@ export interface SeatGroup {
 
 // ---- 席位 -----------------------------------------------------------------
 
+export type Attendance = 'present' | 'absent'
+
+/** 仅议事席位具有的程序状态 */
+export interface SeatProcedure {
+  shortName?: string
+  flagUrl?: string
+  attendance: Attendance
+  hasVotingRights: boolean
+  sortOrder: number
+}
+
 /** 席位 */
 export interface Seat {
   id: string
@@ -76,35 +85,70 @@ export interface Seat {
   name: string
   /** 所属 SeatGroup ID */
   seatGroupId: string
-  /** 绑定的 Delegation ID（可选，用于覆盖 SeatGroup 级别绑定） */
-  delegationId?: string
+  /** 当前使用者；席位尚未被认领时为空 */
+  userId?: string
   /** 能力覆盖（只存与 SeatGroup 默认值不同的项） */
   capabilityOverrides: Partial<Record<Capability, boolean>>
-  /** 邀请码（一人一码） */
-  inviteCode: string
-  /** 密码哈希（本地 Chair 端管理） */
-  passwordHash: string
-  /** 密码盐值 */
-  passwordSalt?: string
   /** 角色/职务描述，如 "外交部长" */
   role?: string
   /** 引用的大会级角色模板 */
   roleId?: string
+  /** 点名、发言和投票状态；MPC/IPC 席位没有该字段 */
+  procedure?: SeatProcedure
 }
 
-// ---- 账号 -----------------------------------------------------------------
+export type ParticipantSeat = Seat & { procedure: SeatProcedure }
 
-/** 本地账号 */
-export interface Account {
+export function isParticipantSeat(seat: Seat): seat is ParticipantSeat {
+  return seat.procedure != null
+}
+
+/** 界面、投屏和网络同步使用的安全席位投影 */
+export interface SeatView {
   id: string
-  /** 账号名 */
-  username: string
-  /** 当前绑定的 Seat ID */
-  seatId?: string
-  /** 当前连接的 Conference ID */
-  conferenceId?: string
-  /** 预留：未来迁移云服务的用户标识 */
-  cloudUserId?: string
+  name: string
+  role?: string
+  procedure?: SeatProcedure
+}
+
+export function toSeatView(seat: Seat): SeatView {
+  return {
+    id: seat.id,
+    name: seat.name,
+    role: seat.role,
+    procedure: seat.procedure ? { ...seat.procedure } : undefined
+  }
+}
+
+// ---- 用户与访问 -----------------------------------------------------------
+
+/** 大会内与一个席位一对一的本地用户 */
+export interface User {
+  id: string
+  name: string
+  passwordHash?: string
+  passwordSalt?: string
+}
+
+/** 通过邀请码定位席位的访问入口 */
+export interface SeatAccess {
+  seatId: string
+  inviteCode: string
+}
+
+export interface UserView {
+  id: string
+  name: string
+  hasPassword: boolean
+}
+
+/** 代表端认证后使用的临时连接上下文，不持久化 */
+export interface AuthenticatedSeatSession {
+  conferenceId: string
+  seat: SeatView
+  seatGroupId: string
+  capabilities: Capability[]
+  user: UserView
 }
 
 // ---- 指令 -----------------------------------------------------------------
@@ -124,7 +168,7 @@ export interface Directive {
   initiatorId: string
   /** 发起人职务 */
   initiatorRole: string
-  /** 接收方（Delegation ID、SeatGroup ID 或 "ipc"） */
+  /** 接收方（Seat ID、SeatGroup ID 或 "ipc"） */
   target: string
   /** 保密等级 */
   classification: Classification

@@ -5,7 +5,7 @@
  * 封装 IPC 调用 + localStorage 同步 + 首次迁移。
  */
 
-type StoreDomain = 'conferences' | 'events' | 'battles' | 'settings' | 'tools' | 'auth'
+type StoreDomain = 'conferences' | 'events' | 'battles' | 'settings' | 'tools'
 
 /** 数据域 → localStorage key 映射 */
 const LS_KEYS: Record<StoreDomain, string> = {
@@ -13,8 +13,7 @@ const LS_KEYS: Record<StoreDomain, string> = {
   events: 'veto_conference_events',
   battles: 'wars_battles',
   settings: 'veto_global_settings',
-  tools: 'veto_timeline',
-  auth: 'veto_auth'
+  tools: 'veto_timeline'
 }
 
 /**

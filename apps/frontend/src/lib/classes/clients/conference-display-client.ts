@@ -12,12 +12,12 @@
 
 import type {
   ConferenceDisplayData,
-  Delegation,
   SpeakerEntryStatus,
   SpeakerTransitionReason,
   CaucusSpeakerStatus,
   TimerTickData
 } from '$lib/classes/types/conference'
+import { isParticipantSeat, toSeatView, type Seat, type SeatView } from '$lib/classes/types/delegate'
 
 const DEFAULT_WS_PORT = 19527
 
@@ -317,34 +317,40 @@ export function buildDisplayData(
   // 统一为 Committee JSON 格式
   const conf: CommitteeDTO = 'toJSON' in source ? source.toJSON() : source
 
-  // 如果传入的是引擎，则使用引擎方法获取 delegation 信息以优化查找
+  // 如果传入的是引擎，则使用引擎方法获取 seat 信息以优化查找
   const engine: Committee | null = 'toJSON' in source ? source : null
+  const findSeat = (seatId: string): Seat | undefined =>
+    engine?.getSeat(seatId) ?? conf.seats.find((seat) => seat.id === seatId)
+  const findSeatView = (seatId: string): SeatView | undefined => {
+    const seat = findSeat(seatId)
+    return seat ? toSeatView(seat) : undefined
+  }
 
   // 当前发言人
-  let currentSpeakerDelegation: Delegation | undefined
+  let currentSpeakerSeat: Seat | undefined
   let currentSpeakerAllocatedSec = 120
 
   if (conf.activeSpeaker) {
-    // 优先从引擎获取（带 delegation 引用）
+    // 优先从引擎获取（带 seat 引用）
     const engineEntry = engine?.speakerList.entries.find(
       (s) => s.id === conf.activeSpeaker!.entryId
     )
     if (engineEntry) {
-      currentSpeakerDelegation = conf.delegations.find((d) => d.id === engineEntry.delegationId)
+      currentSpeakerSeat = conf.seats.find((d) => d.id === engineEntry.seatId)
       currentSpeakerAllocatedSec = engineEntry.allocatedTimeSec
     } else {
       // 回退：从 conf 数据查找
       const entry = conf.speakerLists?.entries.find((s) => s.id === conf.activeSpeaker!.entryId)
       if (entry) {
-        const del = conf.delegations.find((d) => d.id === entry.delegationId)
-        currentSpeakerDelegation = del
+        const del = conf.seats.find((d) => d.id === entry.seatId)
+        currentSpeakerSeat = del
         currentSpeakerAllocatedSec = entry.allocatedTimeSec
       } else if (conf.activeCaucus?.caucusSpeakers) {
         const cs = conf.activeCaucus.caucusSpeakers.find(
-          (s) => s.delegationId === conf.activeSpeaker!.entryId && s.status === 'speaking'
+          (s) => s.seatId === conf.activeSpeaker!.entryId && s.status === 'speaking'
         )
         if (cs) {
-          currentSpeakerDelegation = conf.delegations.find((d) => d.id === cs.delegationId)
+          currentSpeakerSeat = conf.seats.find((d) => d.id === cs.seatId)
           currentSpeakerAllocatedSec = cs.allocatedTimeSec
         }
       }
@@ -363,19 +369,20 @@ export function buildDisplayData(
   let votingData: ConferenceDisplayData['votingSession'] | undefined
   if (activeVoting) {
     const tally = tallyVotes(activeVoting.ballots)
-    const thresholds = calculateMajorityThresholds(conf.delegations)
+    const participantSeats = conf.seats.filter(isParticipantSeat)
+    const thresholds = calculateMajorityThresholds(participantSeats)
 
-    // 构建每个有投票权的出席代表团的投票状态（排除观察员）
-    const presentDelegations = [...conf.delegations]
-      .filter((d) => d.attendance === 'present' && d.vetoPower !== false)
-      .sort((a, b) => a.sortOrder - b.sortOrder)
+    // 构建每个有投票权的出席席位的投票状态（排除观察员）
+    const presentSeats = participantSeats
+      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
 
-    const ballotsDisplay = presentDelegations.map((d) => {
-      const ballot = activeVoting.ballots.find((b) => b.delegationId === d.id)
+    const ballotsDisplay = presentSeats.map((d) => {
+      const ballot = activeVoting.ballots.find((b) => b.seatId === d.id)
       return {
-        delegationId: d.id,
-        delegationName: d.name,
-        shortName: d.shortName,
+        seatId: d.id,
+        seatName: d.name,
+        shortName: d.procedure.shortName,
         vote: ballot?.vote ?? null
       }
     })
@@ -386,7 +393,7 @@ export function buildDisplayData(
       tally: { ...tally, present: thresholds.presentCount },
       result: activeVoting.result,
       round: activeVoting.round ?? 1,
-      currentDelegationId: activeVoting.currentDelegationId ?? null,
+      currentSeatId: activeVoting.currentSeatId ?? null,
       ballots: ballotsDisplay
     }
   }
@@ -430,16 +437,18 @@ export function buildDisplayData(
           const motion = conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)
           if (!motion) return undefined
           if (motion.type === 'moderated_caucus') return (motion as any).topic as string | undefined
-          if (motion.type === 'individual_speech') return motion.proposedBy.name
+          if (motion.type === 'individual_speech') {
+            return conf.seats.find((seat) => seat.id === motion.proposedBySeatId)?.name
+          }
           return undefined
         })(),
       caucusSpeakers: conf.activeCaucus.caucusSpeakers
         ?.map((s) => {
-          const delegation = conf.delegations.find((d) => d.id === s.delegationId)
-          return delegation
+          const seat = conf.seats.find((d) => d.id === s.seatId)
+          return seat
             ? {
-                delegationName: delegation.name,
-                delegation,
+                seatName: seat.name,
+                seat: toSeatView(seat),
                 status: s.status as CaucusSpeakerStatus,
                 allocatedTimeSec: s.allocatedTimeSec
               }
@@ -447,8 +456,8 @@ export function buildDisplayData(
         })
         .filter(
           (speaker): speaker is {
-            delegationName: string
-            delegation: Delegation
+            seatName: string
+            seat: SeatView
             status: CaucusSpeakerStatus
             allocatedTimeSec: number
           } => speaker !== null
@@ -468,114 +477,112 @@ export function buildDisplayData(
     phase: effectivePhase,
     venue: conf.name,
     name: conf.name,
-    presentCount: conf.delegations.filter((d) => d.attendance === 'present').length,
-    votingCount: conf.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false)
-      .length,
+    presentCount: conf.seats.filter(isParticipantSeat).filter(
+      (seat) => seat.procedure.attendance === 'present'
+    ).length,
+    votingCount: conf.seats.filter(isParticipantSeat).filter(
+      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    ).length,
     currentSpeaker: (() => {
-      if (!currentSpeakerDelegation) return undefined
+      if (!currentSpeakerSeat) return undefined
       const remainingSec = conf.activeSpeaker
         ? Math.max(0, conf.activeSpeaker.totalSec - conf.activeSpeaker.elapsedSec)
         : 0
       const status =
         conf.activeSpeaker?.paused ? ('paused' as const) : ('playing' as const)
       return {
-        delegation: currentSpeakerDelegation,
+        seat: toSeatView(currentSpeakerSeat),
         remainingSec,
         allocatedSec: currentSpeakerAllocatedSec,
         status
       }
     })(),
     readySpeaker: (() => {
-      // 优先从引擎获取（带 delegation 引用）
+      // 优先从引擎获取（带 seat 引用）
       const engineReady = engine?.readySpeaker
       if (engineReady) {
-        const delegation = conf.delegations.find((d) => d.id === engineReady.delegationId)
-        return delegation ? { delegation } : undefined
+        const seat = conf.seats.find((d) => d.id === engineReady.seatId)
+        return seat ? { seat: toSeatView(seat) } : undefined
       }
       // 回退：从 conf 数据查找
       const ready = conf.speakerLists?.entries.find((s) => s.status === 'ready')
       if (!ready) return undefined
-      const d = conf.delegations.find((del) => del.id === ready.delegationId)
-      return d ? { delegation: d } : undefined
+      const d = conf.seats.find((del) => del.id === ready.seatId)
+      return d ? { seat: toSeatView(d) } : undefined
     })(),
     speakersList: (() => {
       // 优先从引擎获取
       if (engine) {
         return engine.speakerList.entries
           .map((s) => ({
-            delegation: conf.delegations.find((d) => d.id === s.delegationId),
+            seat: conf.seats.find((d) => d.id === s.seatId),
             status: s.status
           }))
           .filter(
-            (speaker): speaker is { delegation: Delegation; status: SpeakerEntryStatus } =>
-              speaker.delegation !== undefined
+            (speaker): speaker is { seat: Seat; status: SpeakerEntryStatus } =>
+              speaker.seat !== undefined
           )
+          .map((speaker) => ({ ...speaker, seat: toSeatView(speaker.seat) }))
       }
       // 回退：从 conf 数据查找
       return (conf.speakerLists?.entries ?? [])
         .map((s) => ({
-          delegation: conf.delegations.find((del) => del.id === s.delegationId),
+          seat: conf.seats.find((del) => del.id === s.seatId),
           status: s.status
         }))
         .filter(
-          (speaker): speaker is { delegation: Delegation; status: SpeakerEntryStatus } =>
-            speaker.delegation !== undefined
+          (speaker): speaker is { seat: Seat; status: SpeakerEntryStatus } =>
+            speaker.seat !== undefined
         )
+        .map((speaker) => ({ ...speaker, seat: toSeatView(speaker.seat) }))
     })(),
     votingSession: votingData,
     activeMotion: displayMotion
-      ? {
-          type: displayMotion.type,
-          topic:
-            displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
-          status: displayMotion.status,
-          proposedBy: displayMotion.proposedBy,
-          motionId: displayMotion.id,
-          totalTimeSec:
-            displayMotion.type === 'moderated_caucus'
-              ? (displayMotion as any).totalTimeSec
-              : displayMotion.type === 'unmoderated_caucus'
-                ? (displayMotion as any).durationSec
-                : displayMotion.type === 'individual_speech'
+      ? (() => {
+          const proposedBy = findSeatView(displayMotion.proposedBySeatId)
+          if (!proposedBy) return undefined
+          return {
+            type: displayMotion.type,
+            topic:
+              displayMotion.type === 'moderated_caucus'
+                ? (displayMotion as any).topic
+                : undefined,
+            status: displayMotion.status,
+            proposedBy,
+            motionId: displayMotion.id,
+            totalTimeSec:
+              displayMotion.type === 'moderated_caucus'
+                ? (displayMotion as any).totalTimeSec
+                : displayMotion.type === 'unmoderated_caucus'
                   ? (displayMotion as any).durationSec
-                  : undefined,
-          speakingTimePerPersonSec:
-            displayMotion.type === 'moderated_caucus'
-              ? (displayMotion as any).speakingTimePerPersonSec
-              : undefined,
-          newTimeSec:
-            displayMotion.type === 'modify_speaking_time'
-              ? (displayMotion as any).newTimeSec
-              : undefined,
-          documentName:
-            displayMotion.type === 'substantive_vote'
-              ? (displayMotion as any).documentName
-              : undefined
-        }
+                  : displayMotion.type === 'individual_speech'
+                    ? (displayMotion as any).durationSec
+                    : undefined,
+            speakingTimePerPersonSec:
+              displayMotion.type === 'moderated_caucus'
+                ? (displayMotion as any).speakingTimePerPersonSec
+                : undefined,
+            newTimeSec:
+              displayMotion.type === 'modify_speaking_time'
+                ? (displayMotion as any).newTimeSec
+                : undefined,
+            documentName:
+              displayMotion.type === 'substantive_vote'
+                ? (displayMotion as any).documentName
+                : undefined
+          }
+        })()
       : undefined,
     activePoint: (() => {
       const latestPoint = conf.points?.length > 0 ? conf.points[conf.points.length - 1] : undefined
       if (!latestPoint) return undefined
       if (conf.dismissedPointIds?.includes(latestPoint.id)) return undefined
       if (Date.now() - latestPoint.proposedAt > 8000) return undefined
-      const pointDel =
-        engine?.getDelegation(latestPoint.proposedByDelegationId) ??
-        conf.delegations.find((d) => d.id === latestPoint.proposedByDelegationId)
+      const proposedBy = findSeatView(latestPoint.proposedBySeatId)
+      if (!proposedBy) return undefined
       return {
         type: latestPoint.type,
-        proposedBy:
-          pointDel ??
-          ({
-            id: latestPoint.proposedByDelegationId,
-            name: latestPoint.proposedByDelegationId,
-            seatGroupId: '',
-            capabilityOverrides: {},
-            inviteCode: '',
-            passwordHash: '',
-            attendance: 'present' as const,
-            vetoPower: false,
-            sortOrder: 0
-          } as Delegation),
+        proposedBy,
         pointId: latestPoint.id
       }
     })(),
@@ -583,27 +590,15 @@ export function buildDisplayData(
     caucusSetup: conf.caucusSetup
       ? (() => {
           const csMotion = conf.motions.find((m) => m.id === conf.caucusSetup!.motionId) as any
-          const proposerDel = csMotion?.proposedBy
+          const proposer = conf.seats.find((seat) => seat.id === csMotion?.proposedBySeatId)
           return {
             topic: csMotion?.topic,
-            proposerName: proposerDel?.name,
+            proposerName: proposer?.name,
             proposerPosition: conf.caucusSetup!.proposerPosition,
-            speakerDelegationIds: conf.caucusSetup!.speakerDelegationIds,
-            speakerNames: conf.caucusSetup!.speakerDelegationIds.map(
-              (id) =>
-                engine?.getDelegation(id) ??
-                conf.delegations.find((d) => d.id === id) ?? {
-                  id,
-                  name: id,
-                  seatGroupId: '',
-                  capabilityOverrides: {},
-                  inviteCode: '',
-                  passwordHash: '',
-                  attendance: 'absent' as const,
-                  vetoPower: false,
-                  sortOrder: Number.MAX_SAFE_INTEGER
-                }
-            )
+            speakerSeatIds: conf.caucusSetup!.speakerSeatIds,
+            speakerNames: conf.caucusSetup!.speakerSeatIds
+              .map(findSeatView)
+              .filter((seat): seat is SeatView => seat !== undefined)
           }
         })()
       : undefined,
@@ -613,12 +608,18 @@ export function buildDisplayData(
       description: m.description
     })),
     yieldPending: conf.yieldPending
-      ? {
-          yieldType: conf.yieldPending.yieldType,
-          originalDelegation: conf.yieldPending.originalDelegation,
-          remainingSec: Math.round(conf.yieldPending.remainingSec),
-          questionerDelegation: conf.yieldPending.questionerDelegation
-        }
+      ? (() => {
+          const originalSeat = findSeatView(conf.yieldPending!.originalSeatId)
+          if (!originalSeat) return undefined
+          return {
+            yieldType: conf.yieldPending.yieldType,
+            originalSeat,
+            remainingSec: Math.round(conf.yieldPending.remainingSec),
+            questionerSeat: conf.yieldPending.questionerSeatId
+              ? findSeatView(conf.yieldPending.questionerSeatId)
+              : undefined
+          }
+        })()
       : undefined,
     rollCall: extra?.rollCall,
     attendanceChange: extra?.attendanceChange,

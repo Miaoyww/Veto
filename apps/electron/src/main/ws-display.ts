@@ -11,10 +11,11 @@
  */
 
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http'
+import { BrowserWindow } from 'electron'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createLogger } from './logger'
-import { randomBytes, timingSafeEqual, scryptSync } from 'crypto'
-import { loadStore } from './data/store'
+import { randomBytes, randomUUID, timingSafeEqual, scryptSync } from 'crypto'
+import { loadStore, saveStore } from './data/store'
 import { getAdvertisedConference } from './lan-service'
 
 const log = createLogger('SessionWS')
@@ -71,15 +72,64 @@ export interface WsMessage {
   [key: string]: any
 }
 
-/** 用于 auth 解析的回调：根据 inviteCode 查找 Seat → 验证密码 */
+interface StoredUser {
+  id: string
+  name: string
+  passwordHash?: string
+  passwordSalt?: string
+}
+
+interface StoredSeat {
+  id: string
+  name: string
+  seatGroupId: string
+  userId?: string
+  role?: string
+  procedure?: {
+    shortName?: string
+    flagUrl?: string
+    attendance: 'present' | 'absent'
+    hasVotingRights: boolean
+    sortOrder: number
+  }
+  capabilityOverrides: Record<string, boolean | undefined>
+}
+
+interface StoredConference {
+  id: string
+  users: StoredUser[]
+  seatAccesses: Array<{ seatId: string; inviteCode: string }>
+  seatGroups: Array<{ id: string; defaultCapabilities: string[] }>
+  committees: Array<{ seats: StoredSeat[] }>
+}
+
+interface AuthenticatedSeatSession {
+  conferenceId: string
+  seat: {
+    id: string
+    name: string
+    role?: string
+    procedure?: StoredSeat['procedure']
+  }
+  seatGroupId: string
+  capabilities: string[]
+  user: { id: string; name: string; hasPassword: boolean }
+}
+
+function notifyRenderers(event: string, data: Record<string, unknown>): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('veto:event', { event, data })
+  }
+}
+
+/** 用于 auth 解析的回调：根据 inviteCode 认领席位或验证其 User。 */
 export type AuthResolver = (
   inviteCode: string,
-  password: string
+  name: string,
+  password?: string
 ) => Promise<{
   valid: boolean
-  seatId?: string
-  seatGroupId?: string
-  conferenceId?: string
+  session?: AuthenticatedSeatSession
   error?: string
 } | null>
 
@@ -100,66 +150,78 @@ let _authResolver: AuthResolver | null = null
  * 默认 auth 解析器：从文件存储加载会议数据，查找 Seat 并验证密码。
  * 当外部未设置 auth resolver 时使用。
  */
-async function defaultAuthResolver(
+export async function defaultAuthResolver(
   inviteCode: string,
-  password: string
+  name: string,
+  password?: string
 ): Promise<{
   valid: boolean
-  seatId?: string
-  seatGroupId?: string
-  conferenceId?: string
+  session?: AuthenticatedSeatSession
   error?: string
 } | null> {
   try {
-    const conferences = loadStore<Array<{
-      id: string
-      seats?: Array<{
-        id: string
-        inviteCode: string
-        passwordHash: string
-        passwordSalt?: string
-        seatGroupId: string
-      }>
-    }>>('conferences')
+    const conferences = loadStore<StoredConference[]>('conferences')
 
     if (!conferences || !Array.isArray(conferences)) return null
 
     for (const conf of conferences) {
-      if (!conf.seats) continue
-      const seat = conf.seats.find(
-        (s: { inviteCode: string }) => s.inviteCode === inviteCode
-      )
+      const access = conf.seatAccesses.find((item) => item.inviteCode === inviteCode)
+      if (!access) continue
+      const seat = conf.committees.flatMap((committee) => committee.seats)
+        .find((item) => item.id === access.seatId)
       if (!seat) continue
 
-      // 验证密码
-      if (!seat.passwordHash) {
-        // 未设置密码的席位：允许任何密码
-        return {
-          valid: true,
-          seatId: seat.id,
-          seatGroupId: seat.seatGroupId,
-          conferenceId: conf.id
+      let user: StoredUser
+      if (seat.userId) {
+        const assignedUser = conf.users.find((item) => item.id === seat.userId)
+        if (!assignedUser) return { valid: false, error: '席位使用者数据无效，请联系主席重置' }
+        user = assignedUser
+      } else {
+        const userName = name.trim()
+        if (!userName) return { valid: false, error: '首次连接需要填写姓名' }
+        const passwordData = password ? hashPassword(password) : undefined
+        user = {
+          id: randomUUID(),
+          name: userName,
+          passwordHash: passwordData?.hash,
+          passwordSalt: passwordData?.salt
         }
+        conf.users.push(user)
+        seat.userId = user.id
+        saveStore('conferences', conferences)
+        notifyRenderers('conference:user-claimed', {
+          conferenceId: conf.id,
+          seatId: seat.id,
+          user
+        })
+      }
+      if (
+        user.passwordHash &&
+        (!password || !verifyPassword(password, user.passwordHash, user.passwordSalt ?? ''))
+      ) {
+        return { valid: false, error: '密码错误' }
       }
 
-      const isValid = verifyPassword(
-        password,
-        seat.passwordHash,
-        seat.passwordSalt ?? ''
-      )
-
-      if (isValid) {
-        return {
-          valid: true,
-          seatId: seat.id,
-          seatGroupId: seat.seatGroupId,
-          conferenceId: conf.id
-        }
+      const group = conf.seatGroups.find((item) => item.id === seat.seatGroupId)
+      const capabilities = new Set(group?.defaultCapabilities ?? [])
+      for (const [capability, enabled] of Object.entries(seat.capabilityOverrides ?? {})) {
+        if (enabled) capabilities.add(capability)
+        else capabilities.delete(capability)
       }
-
       return {
-        valid: false,
-        error: '密码错误'
+        valid: true,
+        session: {
+          conferenceId: conf.id,
+          seat: {
+            id: seat.id,
+            name: seat.name,
+            role: seat.role,
+            procedure: seat.procedure ? { ...seat.procedure } : undefined
+          },
+          seatGroupId: seat.seatGroupId,
+          capabilities: [...capabilities],
+          user: { id: user.id, name: user.name, hasPassword: Boolean(user.passwordHash) }
+        }
       }
     }
 
@@ -363,12 +425,6 @@ async function handleMessage(
     return
   }
 
-  // Until seat credentials are implemented, remote clients are read-only.
-  if (!client.isLocal) {
-    sendError(ws, 'READ_ONLY', '当前会议仅允许主席端写入')
-    return
-  }
-
   // ── 消息路由 ──
   switch (msg.type) {
     // Chair → Delegate/Display: 会议状态全量同步
@@ -428,7 +484,7 @@ async function handleAuth(
   client: AuthenticatedClient,
   msg: WsMessage
 ): Promise<void> {
-  const { inviteCode, password, clientType } = msg
+  const { inviteCode, name, password, clientType } = msg
 
   // Chair 端自助认证（不需要 inviteCode）
   if (clientType === 'chair') {
@@ -458,16 +514,16 @@ async function handleAuth(
     return
   }
 
-  // Delegate: 验证邀请码+密码
-  if (!inviteCode || !password) {
-    sendError(ws, 'AUTH_REQUIRED', '需要邀请码和密码')
+  // Delegate: 邀请码定位席位，首次连接时创建 User。
+  if (!inviteCode || typeof name !== 'string' || !name.trim()) {
+    sendError(ws, 'AUTH_REQUIRED', '需要邀请码和姓名')
     return
   }
 
   const resolver = getAuthResolver()
-  const result = await resolver(inviteCode, password)
+  const result = await resolver(inviteCode, name, typeof password === 'string' ? password : undefined)
 
-  if (!result || !result.valid) {
+  if (!result?.valid || !result.session) {
     sendTo(ws, {
       type: 'auth_result',
       success: false,
@@ -477,9 +533,9 @@ async function handleAuth(
   }
 
   client.clientType = 'delegate'
-  client.seatId = result.seatId
-  client.seatGroupId = result.seatGroupId
-  client.conferenceId = result.conferenceId
+  client.seatId = result.session.seat.id
+  client.seatGroupId = result.session.seatGroupId
+  client.conferenceId = result.session.conferenceId
   client.authenticated = true
 
   _clients.set(ws, client)
@@ -488,13 +544,11 @@ async function handleAuth(
     type: 'auth_result',
     success: true,
     clientType: 'delegate',
-    seatId: result.seatId,
-    seatGroupId: result.seatGroupId,
-    conferenceId: result.conferenceId
+    session: result.session
   })
 
   log.info(
-    `Delegate client authenticated: seat=${result.seatId}, seatGroup=${result.seatGroupId}, conf=${result.conferenceId}`
+    `Delegate client authenticated: seat=${client.seatId}, seatGroup=${client.seatGroupId}, conf=${client.conferenceId}`
   )
 }
 

@@ -2,11 +2,9 @@
   import { onMount, onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
-  import { ArrowLeft, Users, Plus, Trash2, UserRoundCheck, RotateCcw } from '@lucide/svelte'
+  import { Users, RotateCcw } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
-  import { Input } from '$lib/components/ui/input'
-  import { Label } from '$lib/components/ui/label'
-  import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+  import { Card, CardContent } from '$lib/components/ui/card'
   import * as Select from '$lib/components/ui/select'
   import {
     Empty,
@@ -31,17 +29,15 @@
     currentCommittee,
     currentConferenceId,
     loadConference,
-    changeDelegationAttendance,
-    setDelegationVetoPower,
-    addDelegation,
-    removeDelegation,
+    changeSeatAttendance,
+    setSeatVotingRights,
     resetRollCall,
     saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds, destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
   import { VETO_NAME } from '$lib/classes/const'
   import type { Attendance } from '$lib/classes/types/conference'
-  import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { resolve } from '$app/paths'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
 
@@ -63,68 +59,59 @@
   })
 
   const conf = $derived($currentCommittee)
-  const sortedDelegations = $derived(
-    conf ? [...conf.delegations].sort((a, b) => a.sortOrder - b.sortOrder) : []
+  const sortedSeats = $derived(
+    conf
+      ? conf.seats
+          .filter(isParticipantSeat)
+          .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
+      : []
   )
-  const thresholds = $derived(conf ? calculateMajorityThresholds(conf.delegations) : null)
-
-  // ---- 添加代表团表单 ----
-  let showAddForm = $state(false)
-  let newName = $state('')
-  let newShortName = $state('')
+  const thresholds = $derived(
+    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
+  )
 
   // ---- 重新点名确认 ----
   let showResetConfirm = $state(false)
 
-  function handleAdd(): void {
-    const name = newName.trim()
-    if (!name) return
-    addDelegation(name, newShortName.trim() || undefined)
-    newName = ''
-    newShortName = ''
-    showAddForm = false
+  function handleAttendanceChange(seatId: string, value: string): void {
+    changeSeatAttendance(seatId, value as Attendance)
   }
 
-  function handleRemove(id: string): void {
-    removeDelegation(id)
-  }
-
-  function handleAttendanceChange(delegationId: string, value: string): void {
-    changeDelegationAttendance(delegationId, value as Attendance)
-  }
-
-  function handleVetoPowerToggle(delegationId: string, vetoPower: boolean): void {
-    setDelegationVetoPower(delegationId, vetoPower)
+  function handleVotingRightsToggle(seatId: string, hasVotingRights: boolean): void {
+    setSeatVotingRights(seatId, hasVotingRights)
   }
 </script>
 
 <svelte:head>
-  <title>{VETO_NAME} - 代表管理</title>
+  <title>{VETO_NAME} - 参会席位</title>
 </svelte:head>
 
 <!-- 顶部栏 -->
 <div class="flex items-center gap-4 border-b px-6 py-3">
-  <PanelHeader icon={Users} title="代表管理" />
+  <PanelHeader icon={Users} title="参会席位" />
   <span class="text-xs text-muted-foreground">{conf?.name}</span>
 
   <div class="ml-auto flex items-center gap-2">
-    <AlertDialog open={showResetConfirm} onopenchange={(v: boolean) => (showResetConfirm = v)}>
-      <AlertDialogTrigger asChild>
+    <AlertDialog bind:open={showResetConfirm}>
+      <AlertDialogTrigger>
+        {#snippet child({ props })}
         <Button
+          {...props}
           size="sm"
           variant="outline"
           class="h-8 gap-1.5 text-xs"
-          disabled={!conf || sortedDelegations.length === 0}
+          disabled={!conf || sortedSeats.length === 0}
         >
           <RotateCcw size={12} />
           重新点名
         </Button>
+        {/snippet}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>重新点名</AlertDialogTitle>
           <AlertDialogDescription>
-            此操作将把所有代表团的出席状态重置为"缺席"，并将大会阶段回退到"点名"阶段。确定要继续吗？
+            此操作将把所有参会席位的出席状态重置为"缺席"，并将大会阶段回退到"点名"阶段。确定要继续吗？
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -141,16 +128,6 @@
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-
-    <Button
-      size="sm"
-      class="h-8 gap-1.5 text-xs"
-      onclick={() => (showAddForm = true)}
-      disabled={showAddForm}
-    >
-      <Plus size={12} />
-      添加代表团
-    </Button>
   </div>
 </div>
 
@@ -187,81 +164,22 @@
         </Card>
       </div>
 
-      <!-- 添加代表团表单 -->
-      {#if showAddForm}
-        <Card class="mb-6 border-indigo-200 dark:border-indigo-800">
-          <CardHeader class="pb-3">
-            <CardTitle class="text-sm">添加代表团</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div class="grid grid-cols-[1fr_1fr_auto] gap-4">
-              <div class="flex flex-col gap-1.5">
-                <Label for="new-name" class="text-xs">名称</Label>
-                <Input
-                  id="new-name"
-                  bind:value={newName}
-                  placeholder="国家/组织全名"
-                  class="h-9 text-sm"
-                  onkeydown={(e: KeyboardEvent) => {
-                    if (e.key === 'Enter') handleAdd()
-                  }}
-                />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <Label for="new-short-name" class="text-xs"
-                  >简称 <span class="text-muted-foreground/60">（可选）</span></Label
-                >
-                <Input
-                  id="new-short-name"
-                  bind:value={newShortName}
-                  placeholder="如：中国"
-                  class="h-9 text-sm"
-                  onkeydown={(e: KeyboardEvent) => {
-                    if (e.key === 'Enter') handleAdd()
-                  }}
-                />
-              </div>
-              <div class="flex items-end justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  class="h-8 text-xs"
-                  onclick={() => (showAddForm = false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  size="sm"
-                  class="h-8 text-xs"
-                  onclick={handleAdd}
-                  disabled={!newName.trim()}
-                >
-                  <Plus size={12} />
-                  添加
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      {/if}
-
-      <!-- 代表团列表 -->
+      <!-- 参会席位列表 -->
       <Card>
         <CardContent class="p-0">
           <!-- 表头 -->
           <div
             class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground"
           >
-            <div class="flex-1">代表团</div>
+            <div class="flex-1">席位</div>
             <div class="w-28 text-center">出席状态</div>
             <div class="w-20 text-center">投票权</div>
-            <div class="w-12"></div>
           </div>
 
           <div class="divide-y">
-            {#each sortedDelegations as delegation (delegation.id)}
-              {@const isPresent = delegation.attendance === 'present'}
-              {@const isObserver = isPresent && delegation.vetoPower === false}
+            {#each sortedSeats as seat (seat.id)}
+              {@const isPresent = seat.procedure.attendance === 'present'}
+              {@const isObserver = isPresent && !seat.procedure.hasVotingRights}
               <div class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30">
                 <!-- 名称 -->
                 <div class="flex min-w-0 flex-1 flex-col">
@@ -272,11 +190,11 @@
                       isObserver && 'text-blue-600 dark:text-blue-400'
                     )}
                   >
-                    {delegation.name}
+                    {seat.name}
                   </span>
-                  {#if delegation.shortName}
+                  {#if seat.procedure.shortName}
                     <span class="truncate text-xs text-muted-foreground"
-                      >{delegation.shortName}</span
+                      >{seat.procedure.shortName}</span
                     >
                   {/if}
                 </div>
@@ -285,11 +203,11 @@
                 <div class="w-28">
                   <Select.Root
                     type="single"
-                    value={delegation.attendance}
-                    onValueChange={(v: string) => handleAttendanceChange(delegation.id, v)}
+                    value={seat.procedure.attendance}
+                    onValueChange={(v: string) => handleAttendanceChange(seat.id, v)}
                   >
                     <Select.Trigger class="h-8 w-full text-xs">
-                      {delegation.attendance === 'present' ? '出席' : '缺席'}
+                      {seat.procedure.attendance === 'present' ? '出席' : '缺席'}
                     </Select.Trigger>
                     <Select.Content>
                       <Select.Item value="present" label="出席" />
@@ -304,69 +222,36 @@
                     <input
                       type="checkbox"
                       class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      checked={delegation.vetoPower !== false}
+                      checked={seat.procedure.hasVotingRights}
                       onchange={(e: Event) => {
                         const target = e.target as HTMLInputElement
-                        handleVetoPowerToggle(delegation.id, target.checked)
+                        handleVotingRightsToggle(seat.id, target.checked)
                       }}
                       disabled={!isPresent}
                       title={isPresent
-                        ? delegation.vetoPower !== false
+                        ? seat.procedure.hasVotingRights
                           ? '拥有投票权'
                           : '观察员（无投票权）'
                         : '未出席，不可设置投票权'}
                     />
                     <span class="text-[11px] text-muted-foreground">
-                      {delegation.vetoPower !== false ? '有' : '无'}
+                      {seat.procedure.hasVotingRights ? '有' : '无'}
                     </span>
                   </label>
-                </div>
-
-                <!-- 删除 -->
-                <div class="w-12 text-center">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button
-                        class="rounded p-1 text-muted-foreground/40 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                        title="删除代表团"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>删除代表团</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          确定要删除 <span class="font-semibold text-foreground"
-                            >{delegation.name}</span
-                          > 吗？此操作不可撤销。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction
-                          class="bg-red-600 hover:bg-red-700"
-                          onclick={() => handleRemove(delegation.id)}
-                        >
-                          删除
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
                 </div>
               </div>
             {/each}
           </div>
 
-          {#if sortedDelegations.length === 0}
+          {#if sortedSeats.length === 0}
             <div class="py-12">
               <Empty>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
                     <Users size={24} />
                   </EmptyMedia>
-                  <EmptyTitle>暂无代表团</EmptyTitle>
-                  <EmptyDescription>点击"添加代表团"按钮添加</EmptyDescription>
+                  <EmptyTitle>暂无参会席位</EmptyTitle>
+                  <EmptyDescription>请在席位管理中配置参与议事的席位</EmptyDescription>
                 </EmptyHeader>
               </Empty>
             </div>

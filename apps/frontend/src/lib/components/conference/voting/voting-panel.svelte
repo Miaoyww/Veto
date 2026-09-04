@@ -18,6 +18,7 @@
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import { cn } from '$lib/classes/utils.js'
   import PanelHeader from '../common/panel-header.svelte'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
 
   const conf = $derived($currentCommittee)
 
@@ -44,7 +45,9 @@
       : undefined
   )
 
-  const thresholds = $derived(conf ? calculateMajorityThresholds(conf.delegations) : null)
+  const thresholds = $derived(
+    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
+  )
 
   const tally = $derived(
     activeSession ? tallyVotes(activeSession.ballots) : { yes: 0, no: 0, abstain: 0 }
@@ -52,28 +55,28 @@
 
   const totalVoted = $derived(tally.yes + tally.no + tally.abstain)
 
-  // 兼容旧数据
-  const currentDelegationId = $derived(activeSession?.currentDelegationId ?? null)
+  const currentSeatId = $derived(activeSession?.currentSeatId ?? null)
   const isRound2 = $derived((activeSession?.round ?? 1) === 2)
-  const isVotingComplete = $derived(activeSession ? currentDelegationId === null : true)
+  const isVotingComplete = $derived(activeSession ? currentSeatId === null : true)
 
-  // 按 sortOrder 排序的出席代表团列表
-  const presentDelegations = $derived(
+  // 按 sortOrder 排序的出席席位列表
+  const presentSeats = $derived(
     conf
-      ? [...conf.delegations]
-          .filter((d) => d.attendance === 'present' && d.vetoPower !== false)
-          .sort((a, b) => a.sortOrder - b.sortOrder)
+      ? conf.seats
+          .filter(isParticipantSeat)
+          .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+          .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
       : []
   )
 
-  // 当前正在投票的代表团
-  const currentDelegation = $derived(
-    presentDelegations.find((d) => d.id === currentDelegationId) ?? null
+  // 当前正在投票的席位
+  const currentSeat = $derived(
+    presentSeats.find((d) => d.id === currentSeatId) ?? null
   )
 
-  // 当前代表团的序号（1-based）
+  // 当前席位的序号（1-based）
   const currentPosition = $derived(
-    currentDelegation ? presentDelegations.findIndex((d) => d.id === currentDelegationId) + 1 : 0
+    currentSeat ? presentSeats.findIndex((d) => d.id === currentSeatId) + 1 : 0
   )
 
   function handleCloseVoting(): void {
@@ -82,8 +85,8 @@
     }
   }
 
-  function getVoteLabel(delegationId: string): string {
-    const ballot = activeSession?.ballots.find((b) => b.delegationId === delegationId)
+  function getVoteLabel(seatId: string): string {
+    const ballot = activeSession?.ballots.find((b) => b.seatId === seatId)
     if (!ballot) return ''
     switch (ballot.vote) {
       case 'yes':
@@ -100,9 +103,9 @@
   }
 
   function getVoteBadgeVariant(
-    delegationId: string
+    seatId: string
   ): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
-    const ballot = activeSession?.ballots.find((b) => b.delegationId === delegationId)
+    const ballot = activeSession?.ballots.find((b) => b.seatId === seatId)
     if (!ballot) return 'outline'
     switch (ballot.vote) {
       case 'yes':
@@ -193,18 +196,18 @@
           </CardDescription>
         </CardHeader>
       </Card>
-    {:else if currentDelegation}
+    {:else if currentSeat}
       <!-- 状态 ①：正在投票 -->
       <Card class="border-2 border-blue-300 bg-blue-50/30 dark:border-blue-700 dark:bg-blue-950/10">
         <CardHeader class="pb-3 text-center">
           <div class="flex items-center justify-center gap-2">
             <span class="text-xs text-muted-foreground">
-              共 {presentDelegations.length} 代表团，当前第 {currentPosition} 位
+              共 {presentSeats.length} 个席位，当前第 {currentPosition} 位
             </span>
           </div>
-          <CardTitle class="text-2xl">{currentDelegation.name}</CardTitle>
-          {#if currentDelegation.shortName}
-            <CardDescription>{currentDelegation.shortName}</CardDescription>
+          <CardTitle class="text-2xl">{currentSeat.name}</CardTitle>
+          {#if currentSeat.procedure.shortName}
+            <CardDescription>{currentSeat.procedure.shortName}</CardDescription>
           {/if}
         </CardHeader>
         <CardContent>
@@ -213,7 +216,7 @@
               size="lg"
               variant="outline"
               class="h-11 min-w-[100px] gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-              onclick={() => castVote(activeSession.id, currentDelegation.id, 'yes')}
+              onclick={() => castVote(activeSession.id, currentSeat.id, 'yes')}
             >
               <Check size={18} />
               赞成
@@ -222,7 +225,7 @@
               size="lg"
               variant="outline"
               class="h-11 min-w-[100px] gap-2 border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"
-              onclick={() => castVote(activeSession.id, currentDelegation.id, 'no')}
+              onclick={() => castVote(activeSession.id, currentSeat.id, 'no')}
             >
               <X size={18} />
               反对
@@ -232,7 +235,7 @@
                 size="lg"
                 variant="outline"
                 class="h-11 min-w-[100px] gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/40"
-                onclick={() => castVote(activeSession.id, currentDelegation.id, 'abstain')}
+                onclick={() => castVote(activeSession.id, currentSeat.id, 'abstain')}
               >
                 <Minus size={18} />
                 弃权
@@ -241,7 +244,7 @@
                 size="lg"
                 variant="outline"
                 class="h-11 min-w-[100px] gap-2 border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-slate-700 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-950/40"
-                onclick={() => castVote(activeSession.id, currentDelegation.id, 'skip')}
+                onclick={() => castVote(activeSession.id, currentSeat.id, 'skip')}
               >
                 <SkipForward size={18} />
                 跳过
@@ -258,9 +261,9 @@
         <CardHeader class="text-center">
           <CardTitle class="text-emerald-700 dark:text-emerald-400">
             <Check size={24} class="mx-auto mb-2" />
-            全部代表团已完成投票
+            全部席位已完成投票
           </CardTitle>
-          <CardDescription>所有代表团均已投票，可公布结果</CardDescription>
+          <CardDescription>所有席位均已投票，可公布结果</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="flex justify-center">
@@ -273,16 +276,16 @@
       </Card>
     {/if}
 
-    <!-- ====== 代表团投票列表 ====== -->
+    <!-- ====== 席位投票列表 ====== -->
     <Card>
       <CardHeader class="pb-2">
         <CardTitle class="text-sm font-medium text-muted-foreground">投票记录</CardTitle>
       </CardHeader>
       <CardContent class="p-0">
         <div class="divide-y">
-          {#each presentDelegations as delegation (delegation.id)}
-            {@const ballot = activeSession.ballots.find((b) => b.delegationId === delegation.id)}
-            {@const isCurrent = currentDelegationId === delegation.id}
+          {#each presentSeats as seat (seat.id)}
+            {@const ballot = activeSession.ballots.find((b) => b.seatId === seat.id)}
+            {@const isCurrent = currentSeatId === seat.id}
             {@const hasVoted = !!ballot}
             <div
               class={cn(
@@ -293,11 +296,11 @@
               )}
             >
               <span class="min-w-0 flex-1 text-sm">
-                {delegation.name}
+                {seat.name}
               </span>
               {#if hasVoted}
-                <Badge variant={getVoteBadgeVariant(delegation.id)} class="text-xs">
-                  {getVoteLabel(delegation.id)}
+                <Badge variant={getVoteBadgeVariant(seat.id)} class="text-xs">
+                  {getVoteLabel(seat.id)}
                 </Badge>
               {:else if isCurrent && !activeSession.result}
                 <Badge variant="outline" class="animate-pulse text-xs">

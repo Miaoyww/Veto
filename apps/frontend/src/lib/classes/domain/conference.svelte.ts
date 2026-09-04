@@ -3,7 +3,7 @@ import type {
   Committee as CommitteeDTO
 } from '$lib/classes/types/conference'
 import type { RoleTemplate } from '$lib/classes/types/event'
-import type { News, SeatGroup, SituationUpdate } from '$lib/classes/types/delegate'
+import type { News, SeatAccess, SeatGroup, SituationUpdate, User } from '$lib/classes/types/delegate'
 import { Committee } from '$lib/classes/domain/committee.svelte'
 
 /** Runtime Conference aggregate. Its JSON shape remains the persisted ConferenceDTO. */
@@ -18,6 +18,8 @@ export class Conference {
   private _committees = $state<Committee[]>([])
   private _roleTemplates = $state<RoleTemplate[]>([])
   private _seatGroups = $state<SeatGroup[]>([])
+  private _users = $state<User[]>([])
+  private _seatAccesses = $state<SeatAccess[]>([])
   private _news = $state<News[]>([])
   private _situationUpdates = $state<SituationUpdate[]>([])
   timelineId = $state<string | null | undefined>(undefined)
@@ -34,6 +36,8 @@ export class Conference {
     )
     this._roleTemplates = [...(data?.roleTemplates ?? [])]
     this._seatGroups = [...(data?.seatGroups ?? [])]
+    this._users = [...(data?.users ?? [])]
+    this._seatAccesses = [...(data?.seatAccesses ?? [])]
     this._news = [...(data?.news ?? [])]
     this._situationUpdates = [...(data?.situationUpdates ?? [])]
     this.timelineId = data?.timelineId
@@ -50,6 +54,14 @@ export class Conference {
 
   get seatGroups(): SeatGroup[] {
     return [...this._seatGroups]
+  }
+
+  get users(): User[] {
+    return [...this._users]
+  }
+
+  get seatAccesses(): SeatAccess[] {
+    return [...this._seatAccesses]
   }
 
   get news(): News[] {
@@ -105,6 +117,16 @@ export class Conference {
     this.touch()
   }
 
+  setUsers(users: User[]): void {
+    this._users = [...users]
+    this.touch()
+  }
+
+  setSeatAccesses(accesses: SeatAccess[]): void {
+    this._seatAccesses = [...accesses]
+    this.touch()
+  }
+
   addSeatGroup(group: SeatGroup): void {
     this._seatGroups = [...this._seatGroups, { ...group }]
     this.touch()
@@ -146,6 +168,8 @@ export class Conference {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       committees: this._committees.map((committee) => committee.toJSON()),
+      users: this._users,
+      seatAccesses: this._seatAccesses,
       roleTemplates: this._roleTemplates,
       seatGroups: this._seatGroups,
       news: this._news,

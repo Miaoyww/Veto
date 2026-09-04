@@ -37,8 +37,8 @@
   const speakers = $derived<SpeakerDisplayEntry[]>(
     (activeCaucus?.caucusSpeakers ?? []).map((s) => ({
       id: s.id,
-      delegationId: s.delegationId,
-      delegationName: conf?.delegations.find((d) => d.id === s.delegationId)?.name ?? '',
+      seatId: s.seatId,
+      seatName: conf?.seats.find((d) => d.id === s.seatId)?.name ?? '',
       status: s.status,
       allocatedTimeSec: s.allocatedTimeSec
     }))
@@ -51,7 +51,7 @@
   const activeSpeaker = $derived.by(() => {
     const eng = conf?.activeSpeaker
     if (!eng) return null
-    const entry = speakers.find((s) => s.id === eng.entryId || s.delegationId === eng.entryId)
+    const entry = speakers.find((s) => s.id === eng.entryId || s.seatId === eng.entryId)
     if (!entry) return null
     return { ...entry, status: 'speaking' as const }
   })
@@ -271,14 +271,14 @@
     <!-- ═══ 发言人区域 ═══ -->
     {#if !activeSpeaker && readyEntry}
       <ReadySpeakerCard
-        delegationName={readyEntry.delegationName}
+        seatName={readyEntry.seatName}
         allocatedTimeSec={readyEntry.allocatedTimeSec}
         onstart={startCaucusSpeakerHandler}
         oncancel={cancelReadySpeakerHandler}
       />
     {:else if isSpeakerActive && conf.activeSpeaker}
       <ActiveSpeakerCard
-        delegationName={activeSpeaker.delegationName}
+        seatName={activeSpeaker!.seatName}
         remainingSec={timerState.displayRemaining}
         totalSec={timerState.displayTotal}
         isPaused={timerState.isPaused}

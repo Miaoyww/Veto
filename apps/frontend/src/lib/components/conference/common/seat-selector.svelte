@@ -1,37 +1,37 @@
 <script lang="ts">
   /**
-   * delegation-selector.svelte
+   * seat-selector.svelte
    * ────────────────────────────
-   * 可复用的代表团模糊搜索选择器。
+   * 可复用的参会席位模糊搜索选择器。
    * 基于 shadcn Command + ScrollArea，支持中文全称、简称、拼音全拼/首字母、fuse.js 容错匹配。
    */
   import { Command as CommandPrimitive } from 'bits-ui'
   import { cn } from '$lib/classes/utils.js'
-  import type { Delegation } from '$lib/classes/types/conference'
+  import type { ParticipantSeat } from '$lib/classes/types/delegate'
   import Fuse from 'fuse.js'
   import PinyinMatch from 'pinyin-match'
   import SearchIcon from '@lucide/svelte/icons/search'
   import XIcon from '@lucide/svelte/icons/x'
 
   interface Props {
-    delegations: Delegation[]
-    /** 当前已选中的代表团（双向绑定） */
-    value?: Delegation | null
+    seats: ParticipantSeat[]
+    /** 当前已选中的参会席位（双向绑定） */
+    value?: ParticipantSeat | null
     placeholder?: string
     class?: string
-    /** 结果过滤：仅显示出席的代表团 */
+    /** 结果过滤：仅显示出席的席位 */
     presentOnly?: boolean
     /** 选择后立即重置（不清除 value 的状态显示），用于添加列表等场景 */
     resetOnSelect?: boolean
-    /** 排除这些代表团 ID（如已在列表中） */
+    /** 排除这些席位 ID（如已在列表中） */
     excludeIds?: string[]
-    onselect?: (delegation: Delegation) => void
+    onselect?: (seat: ParticipantSeat) => void
   }
 
   let {
-    delegations,
+    seats,
     value = $bindable(null),
-    placeholder = '搜索代表团...',
+    placeholder = '搜索席位...',
     class: className = '',
     presentOnly = false,
     resetOnSelect = false,
@@ -47,15 +47,15 @@
   const excludeSet = $derived(new Set(excludeIds))
   const searchPool = $derived(
     (presentOnly
-      ? delegations.filter((d) => d.attendance === 'present')
-      : delegations
+      ? seats.filter((seat) => seat.procedure.attendance === 'present')
+      : seats
     ).filter((d) => !excludeSet.has(d.id))
   )
 
   // Fuse.js instance（复用 searchPool）
   const fuse = $derived(
     new Fuse(searchPool, {
-      keys: ['name', 'shortName'],
+      keys: ['name', 'procedure.shortName'],
       threshold: 0.4,
       includeScore: true
     })
@@ -66,18 +66,18 @@
     const q = query.trim().toLowerCase()
     if (!q) return searchPool
 
-    const results: Array<{ delegation: Delegation; _score: number }> = []
+    const results: Array<{ seat: ParticipantSeat; _score: number }> = []
     const seen = new Set<string>()
 
-    const addResult = (d: Delegation, score: number) => {
+    const addResult = (d: ParticipantSeat, score: number) => {
       if (seen.has(d.id)) return
       seen.add(d.id)
-      results.push({ delegation: d, _score: score })
+      results.push({ seat: d, _score: score })
     }
 
     // 1. 直接子串匹配
     for (const d of searchPool) {
-      if (d.name.toLowerCase().includes(q) || d.shortName?.toLowerCase().includes(q)) {
+      if (d.name.toLowerCase().includes(q) || d.procedure.shortName?.toLowerCase().includes(q)) {
         addResult(d, 0)
       }
     }
@@ -85,7 +85,9 @@
     // 2. 拼音匹配
     for (const d of searchPool) {
       const matchName = PinyinMatch.match(d.name, q)
-      const matchShort = d.shortName ? PinyinMatch.match(d.shortName, q) : false
+      const matchShort = d.procedure.shortName
+        ? PinyinMatch.match(d.procedure.shortName, q)
+        : false
       if (matchName || matchShort) {
         addResult(d, 0.1)
       }
@@ -97,21 +99,21 @@
       addResult(r.item, (r.score ?? 0.5) + 0.2)
     }
 
-    return results.sort((a, b) => a._score - b._score).map((r) => r.delegation)
+    return results.sort((a, b) => a._score - b._score).map((r) => r.seat)
   })
 
   // ---- selection ----
 
-  function select(delegation: Delegation): void {
+  function select(seat: ParticipantSeat): void {
     if (resetOnSelect) {
       query = ''
       open = false
-      onselect?.(delegation)
+      onselect?.(seat)
     } else {
-      value = delegation
+      value = seat
       query = ''
       open = false
-      onselect?.(delegation)
+      onselect?.(seat)
     }
   }
 
@@ -128,8 +130,8 @@
         class="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2"
       >
         <span class="text-sm">{value.name}</span>
-        {#if value.shortName}
-          <span class="text-xs text-muted-foreground">({value.shortName})</span>
+        {#if value.procedure.shortName}
+          <span class="text-xs text-muted-foreground">({value.procedure.shortName})</span>
         {/if}
         <button
           type="button"
@@ -168,8 +170,8 @@
               class="aria-selected:bg-accent aria-selected:text-accent-foreground outline-hidden relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
             >
               <span class="text-foreground">{d.name}</span>
-              {#if d.shortName}
-                <span class="text-xs text-muted-foreground">({d.shortName})</span>
+              {#if d.procedure.shortName}
+                <span class="text-xs text-muted-foreground">({d.procedure.shortName})</span>
               {/if}
             </CommandPrimitive.Item>
           {/each}

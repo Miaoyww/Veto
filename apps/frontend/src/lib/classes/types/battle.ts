@@ -433,7 +433,7 @@ export interface ModData {
    * Mod 类型。
    * - faction / campaign：需由战局显式激活才加载
    * - utility / dependency：注入时立即激活
-   * - preset：会议代表团预设插件
+   * - preset：会议席位预设插件
    */
   type?: 'faction' | 'campaign' | 'utility' | 'dependency' | 'preset'
   dependencies?: string[]

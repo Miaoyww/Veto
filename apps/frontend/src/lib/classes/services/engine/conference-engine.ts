@@ -8,12 +8,12 @@
 import type {
   Committee,
   ConferencePhase,
-  Delegation,
   VoteBallot,
   Motion,
   MotionType,
   MajorityRule
 } from '$lib/classes/types/conference'
+import type { ParticipantSeat } from '$lib/classes/types/delegate'
 
 // ---- 阶段状态机 ----------------------------------------------------------
 
@@ -71,17 +71,15 @@ export interface MajorityThresholds {
   twoThirdsThreshold: number
 }
 
-export function calculateMajorityThresholds(delegations: Delegation[]): MajorityThresholds {
-  const presentCount = delegations.filter(
-    (d) => d.attendance === 'present'
-  ).length
-  const votingCount = delegations.filter(
-    (d) => d.attendance === 'present' && d.vetoPower !== false
+export function calculateMajorityThresholds(seats: ParticipantSeat[]): MajorityThresholds {
+  const presentCount = seats.filter((seat) => seat.procedure.attendance === 'present').length
+  const votingCount = seats.filter(
+    (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
   ).length
   return {
     presentCount,
     votingCount,
-    totalCount: delegations.length,
+    totalCount: seats.length,
     simpleMajorityThreshold: Math.floor(votingCount / 2) + 1,
     twoThirdsThreshold: Math.ceil(votingCount * 2 / 3)
   }
@@ -90,10 +88,10 @@ export function calculateMajorityThresholds(delegations: Delegation[]): Majority
 export function determinePassFail(
   ballots: VoteBallot[],
   majorityRule: MajorityRule,
-  delegations: Delegation[]
+  seats: ParticipantSeat[]
 ): 'passed' | 'failed' {
   const { presentCount, simpleMajorityThreshold, twoThirdsThreshold } =
-    calculateMajorityThresholds(delegations)
+    calculateMajorityThresholds(seats)
 
   let yesCount = 0
   for (const b of ballots) {

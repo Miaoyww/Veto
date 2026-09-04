@@ -13,7 +13,6 @@ import type {
   Conference as ConferenceDTO,
   Committee as CommitteeDTO,
   ConferenceDisplayData,
-  Delegation,
   AgendaItem,
   YieldChoice,
   Motion,
@@ -28,12 +27,13 @@ import type {
   MajorityRule,
   VoteTargetType
 } from '$lib/classes/types/conference'
-import type { Seat, SeatGroup } from '$lib/classes/types/delegate'
+import { isParticipantSeat, type Seat, type SeatAccess, type SeatGroup, type User } from '$lib/classes/types/delegate'
 import { Committee } from '$lib/classes/domain/committee.svelte'
 import { Conference } from '$lib/classes/domain/conference.svelte'
 import { tallyVotesEngine } from '$lib/classes/services/engine/conference-engine'
 import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
 import { bootstrapStore, saveToStore } from '../../helpers/store-bridge'
+import { generateInviteCode } from '$lib/classes/services/seat-access'
 
 const STORAGE_KEY = 'veto_conferences'
 const STORE_DOMAIN = 'conferences'
@@ -72,23 +72,6 @@ function syncEngine(engine: Committee): void {
 export function syncCurrentCommittee(): void {
   const engine = getCurrentEngine()
   if (engine) syncEngine(engine)
-}
-
-/** 从大会内的所有委员会移除属于指定席位组的席位，并同步已缓存的引擎。 */
-export function removeSeatsForSeatGroup(seatGroupId: string): void {
-  const conference = get(currentConferenceRecord)
-  if (!conference) return
-
-  for (const committee of conference.committees) {
-    const engine = _engines.get(committee.id) ?? committee
-    if (!engine) continue
-    for (const seat of engine.seats.filter((item) => item.seatGroupId === seatGroupId)) {
-      engine.removeSeat(seat.id)
-    }
-  }
-
-  conference.updatedAt = Date.now()
-  conferences.update((items) => [...items])
 }
 
 // ---- 文件持久化（双重写入：localStorage + 文件）--------------------------
@@ -136,7 +119,7 @@ export async function saveConferencesNow(): Promise<void> {
 
 // ---- 核心 Stores ----------------------------------------------------------
 
-/** 所有大会列表（Conference JSON 格式，向后兼容） */
+/** 所有大会列表。 */
 export const conferences = writable<Conference[]>(loadConferencesFromStorage())
 conferences.subscribe(saveConferencesToStorage)
 
@@ -172,6 +155,23 @@ export const currentConferenceRecord = derived(
   ([$conferences, $id]) => $conferences.find((c) => c.id === $id) ?? null
 )
 
+if (typeof window !== 'undefined' && window.veto?.events) {
+  window.veto.events.on('conference:user-claimed', (data) => {
+    const payload = data as { conferenceId: string; seatId: string; user: User }
+    const conference = get(conferences).find((item) => item.id === payload.conferenceId)
+    if (!conference) return
+    const committee = conference.committees.find((item) => item.getSeat(payload.seatId))
+    if (!committee) return
+    conference.setUsers([
+      ...conference.users.filter((user) => user.id !== payload.user.id),
+      payload.user
+    ])
+    committee.updateSeat(payload.seatId, { userId: payload.user.id })
+    conference.replaceCommittee(committee)
+    conferences.update((items) => [...items])
+  })
+}
+
 /** 当前委员会 ID。委员会的议事操作必须显式绑定到此 ID。 */
 export const currentCommitteeId = writable<string | null>(null)
 
@@ -193,29 +193,40 @@ export function createConference(
   name: string,
   committeeName: string,
   agendaItems: { title: string; description?: string }[],
-  delegations: { name: string; shortName?: string; vetoPower?: boolean }[],
+  participants: { name: string; shortName?: string; hasVotingRights?: boolean }[],
   options?: {
     id?: string
     defaultSpeakingTimeSec?: number
     seatGroups?: SeatGroup[]
-    seats?: Seat[]
+    users?: User[]
+    seatAccesses?: SeatAccess[]
     committees?: CommitteeDTO[]
   }
 ): string {
   // 从创建向导等流程传入 id 时沿用该 id，否则自动生成
   const id = options?.id ?? crypto.randomUUID()
 
-  const delegationList: Delegation[] = delegations.map((d, i) => ({
+  const defaultGroupId = crypto.randomUUID()
+  const seatList: Seat[] = participants.map((participant, sortOrder) => ({
     id: crypto.randomUUID(),
-    name: d.name,
-    seatGroupId: '',
+    name: participant.name,
+    seatGroupId: defaultGroupId,
     capabilityOverrides: {},
-    inviteCode: crypto.randomUUID(),
-    passwordHash: '',
-    shortName: d.shortName,
-    attendance: 'absent' as const,
-    vetoPower: d.vetoPower ?? true,
-    sortOrder: i
+    procedure: {
+      shortName: participant.shortName,
+      attendance: 'absent',
+      hasVotingRights: participant.hasVotingRights ?? true,
+      sortOrder
+    }
+  }))
+  const existingCodes = new Set(
+    get(conferences).flatMap((conference) =>
+      conference.seatAccesses.map((access) => access.inviteCode)
+    )
+  )
+  const seatAccesses = options?.seatAccesses ?? seatList.map((seat) => ({
+    seatId: seat.id,
+    inviteCode: generateInviteCode(existingCodes)
   }))
 
   const agendaList: AgendaItem[] = agendaItems.map((a, i) => ({
@@ -229,7 +240,6 @@ export function createConference(
     id: crypto.randomUUID(),
     name: committeeName,
     phase: 'preamble',
-    delegations: delegationList,
     agenda: agendaList,
     speakerLists: { id: 'main', name: '主发言名单', entries: [] },
     motions: [],
@@ -243,7 +253,7 @@ export function createConference(
     defaultSpeakingTimeSec: options?.defaultSpeakingTimeSec ?? 120,
     activeCaucus: null,
     activeSpeaker: null,
-    seats: options?.seats ?? delegationList
+    seats: seatList
   }
   const committees = options?.committees ?? [initialCommittee]
 
@@ -253,8 +263,17 @@ export function createConference(
     createdAt: Date.now(),
     updatedAt: Date.now(),
     committees,
+    users: options?.users ?? [],
+    seatAccesses,
     roleTemplates: [],
-    seatGroups: options?.seatGroups ?? [],
+    seatGroups: options?.seatGroups ?? [{
+      id: defaultGroupId,
+      name: committeeName,
+      type: 'cabinet',
+      defaultCapabilities: [],
+      mode: 'standing',
+      sortOrder: 0
+    }],
     news: [],
     situationUpdates: []
   })
@@ -326,23 +345,26 @@ export function getConferenceById(id: string): Conference | null {
 
 // ---- 点名 -----------------------------------------------------------------
 
-/** 更改代表团出席状态（含会议记录 + Display 通知，动议 & 直接管理统一入口） */
-export function changeDelegationAttendance(
-  delegationId: string,
+/** 更改参会席位出席状态（含会议记录 + Display 通知） */
+export function changeSeatAttendance(
+  seatId: string,
   newAttendance: Attendance,
   opts?: { silent?: boolean }
 ): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.changeDelegationAttendance(delegationId, newAttendance, opts)
+  engine.changeSeatAttendance(seatId, newAttendance, opts)
   syncEngine(engine)
 }
 
-/** 设置代表团的投票权（vetoPower） */
-export function setDelegationVetoPower(delegationId: string, vetoPower: boolean): void {
+export function setSeatVotingRights(seatId: string, hasVotingRights: boolean): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.updateDelegation(delegationId, { vetoPower })
+  const seat = engine.getSeat(seatId)
+  if (!seat?.procedure) return
+  engine.updateSeat(seatId, {
+    procedure: { ...seat.procedure, hasVotingRights }
+  })
   syncEngine(engine)
 }
 
@@ -360,27 +382,10 @@ export function resetRollCall(): void {
   syncEngine(engine)
 }
 
-// ---- 代表团管理 ------------------------------------------------------------
-
-export function addDelegation(name: string, shortName?: string): string {
-  const engine = getCurrentEngine()
-  if (!engine) return ''
-  const id = engine.addDelegation(name, shortName)
-  syncEngine(engine)
-  return id
-}
-
-export function removeDelegation(id: string): void {
+export function updateSeat(id: string, updates: Partial<Seat>): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.removeDelegation(id)
-  syncEngine(engine)
-}
-
-export function updateDelegation(id: string, updates: Partial<Delegation>): void {
-  const engine = getCurrentEngine()
-  if (!engine) return
-  engine.updateDelegation(id, updates)
+  engine.updateSeat(id, updates)
   syncEngine(engine)
 }
 
@@ -393,10 +398,10 @@ export function openSpeakersList(): void {
   syncEngine(engine)
 }
 
-export function addToSpeakersList(delegationId: string, customTimeSec?: number): string {
+export function addToSpeakersList(seatId: string, customTimeSec?: number): string {
   const engine = getCurrentEngine()
   if (!engine) return ''
-  const id = engine.addToSpeakersList(delegationId, customTimeSec)
+  const id = engine.addToSpeakersList(seatId, customTimeSec)
   syncEngine(engine)
   return id
 }
@@ -459,24 +464,24 @@ export function resolveYieldToChair(): void {
   syncEngine(engine)
 }
 
-export function resolveYieldToDelegate(targetDelegationId: string): void {
+export function resolveYieldToDelegate(targetSeatId: string): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.resolveYieldToDelegate(targetDelegationId)
+  engine.resolveYieldToDelegate(targetSeatId)
   syncEngine(engine)
 }
 
-export function resolveYieldToQuestion(questionerDelegationId: string): void {
+export function resolveYieldToQuestion(questionerSeatId: string): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.resolveYieldToQuestion(questionerDelegationId)
+  engine.resolveYieldToQuestion(questionerSeatId)
   syncEngine(engine)
 }
 
-export function resolveYieldToComment(commenterDelegationId: string): void {
+export function resolveYieldToComment(commenterSeatId: string): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.resolveYieldToComment(commenterDelegationId)
+  engine.resolveYieldToComment(commenterSeatId)
   syncEngine(engine)
 }
 
@@ -498,11 +503,11 @@ export function proposeMotion(motionData: Omit<Motion, 'id' | 'proposedAt' | 'st
   return id
 }
 
-export function proposePoint(data: { type: PointType; proposedByDelegationId: string }): string {
+export function proposePoint(data: { type: PointType; proposedBySeatId: string }): string {
   const engine = getCurrentEngine()
   if (!engine) return ''
   // Engine 方法名是 raisePoint
-  const id = engine.raisePoint(data.type, data.proposedByDelegationId)
+  const id = engine.raisePoint(data.type, data.proposedBySeatId)
   syncEngine(engine)
   // 推送问题到 Display
   getDisplayBridge().sendUpdate(buildDisplayData(engine))
@@ -554,17 +559,17 @@ export function setCaucusProposerPosition(position: ProposerPosition): void {
   syncEngine(engine)
 }
 
-export function addToCaucusSpeakers(delegationId: string): void {
+export function addToCaucusSpeakers(seatId: string): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.addToCaucusSpeakersSetup(delegationId)
+  engine.addToCaucusSpeakersSetup(seatId)
   syncEngine(engine)
 }
 
-export function removeFromCaucusSpeakers(delegationId: string): void {
+export function removeFromCaucusSpeakers(seatId: string): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.removeFromCaucusSpeakersSetup(delegationId)
+  engine.removeFromCaucusSpeakersSetup(seatId)
   syncEngine(engine)
 }
 
@@ -589,10 +594,10 @@ export function startCaucusSpeaker(): void {
   syncEngine(engine)
 }
 
-export function appendCaucusSpeaker(delegationId: string): void {
+export function appendCaucusSpeaker(seatId: string): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.appendCaucusSpeaker(delegationId)
+  engine.appendCaucusSpeaker(seatId)
   syncEngine(engine)
 }
 
@@ -640,12 +645,12 @@ export function startVotingSession(
 
 export function castVote(
   sessionId: string,
-  delegationId: string,
+  seatId: string,
   vote: 'yes' | 'no' | 'abstain' | 'skip'
 ): void {
   const engine = getCurrentEngine()
   if (!engine) return
-  engine.castVote(sessionId, delegationId, vote)
+  engine.castVote(sessionId, seatId, vote)
   syncEngine(engine)
 }
 
@@ -719,7 +724,7 @@ export function addConferenceEntry(
   actionType: ConferenceActionType,
   description: string,
   related?: {
-    delegationId?: string
+    seatId?: string
     motionId?: string
     resolutionId?: string
   }
@@ -732,13 +737,15 @@ export function addConferenceEntry(
 
 // ---- 投票计算辅助（纯函数，导出复用）---------------------------------------
 
-export function getPresentCount(delegations: Delegation[]): number {
-  return delegations.filter((d) => d.attendance === 'present').length
+export function getPresentCount(seats: Seat[]): number {
+  return seats.filter(isParticipantSeat).filter((seat) => seat.procedure.attendance === 'present').length
 }
 
 /** 拥有投票权的出席代表人数（排除观察员） */
-export function getVotingCount(delegations: Delegation[]): number {
-  return delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length
+export function getVotingCount(seats: Seat[]): number {
+  return seats.filter(isParticipantSeat).filter(
+    (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+  ).length
 }
 
 export function getSimpleMajorityThreshold(presentCount: number): number {

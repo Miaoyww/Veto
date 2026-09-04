@@ -8,7 +8,9 @@
     DialogHeader,
     DialogTitle,
   } from '$lib/components/ui/dialog'
-  import { Copy, Check } from '@lucide/svelte'
+  import { Copy, Check, RefreshCw } from '@lucide/svelte'
+  import { currentConferenceRecord } from '$lib/classes/stores/conference/conference-store'
+  import { rotateSeatInviteCode } from '$lib/classes/stores/delegate/delegate-store'
 
   interface Props {
     seat: Seat | null
@@ -19,19 +21,30 @@
   let { seat, conferenceId, onClose }: Props = $props()
 
   let copied = $state(false)
+  const inviteCode = $derived(
+    seat
+      ? ($currentConferenceRecord?.seatAccesses.find((access) => access.seatId === seat.id)
+          ?.inviteCode ?? '')
+      : ''
+  )
+  const user = $derived(
+    seat?.userId
+      ? $currentConferenceRecord?.users.find((item) => item.id === seat.userId)
+      : undefined
+  )
 
   function copyInviteInfo(): void {
     if (!seat) return
     const text = [
       `会议 ID: ${conferenceId}`,
       `席位: ${seat.name}`,
-      `邀请码: ${seat.inviteCode}`,
-      `密码: （已设置）`,
+      `邀请码: ${inviteCode}`,
+      `密码: ${user?.passwordHash ? '使用者已设置' : '未设置，仅凭邀请码连接'}`,
       ``,
       `加入方式：`,
       `1. 打开 Veto 应用`,
       `2. 在首页点击"加入会议"`,
-      `3. 输入邀请码和密码`
+      `3. 输入邀请码、姓名和可选密码`
     ].join('\n')
 
     navigator.clipboard.writeText(text)
@@ -41,9 +54,15 @@
 
   function copyInviteCode(): void {
     if (!seat) return
-    navigator.clipboard.writeText(seat.inviteCode)
+    navigator.clipboard.writeText(inviteCode)
     copied = true
     setTimeout(() => (copied = false), 2000)
+  }
+
+  function rotateInviteCode(): void {
+    if (!seat) return
+    rotateSeatInviteCode(seat.id)
+    copied = false
   }
 </script>
 
@@ -53,7 +72,7 @@
       <DialogHeader>
         <DialogTitle>邀请信息 — {seat.name}</DialogTitle>
         <DialogDescription>
-          将此信息发送给参会代表，他们可以使用邀请码和密码加入会议。
+          将此信息发送给参会者。首次连接时会认领席位并创建用户。
         </DialogDescription>
       </DialogHeader>
 
@@ -71,13 +90,16 @@
         <div class="detail-row">
           <span class="detail-label">邀请码</span>
           <div class="code-row">
-            <code class="invite-code-large">{seat.inviteCode}</code>
+            <code class="invite-code-large">{inviteCode}</code>
             <Button size="icon-sm" variant="ghost" onclick={copyInviteCode}>
               {#if copied}
                 <Check class="size-4 text-green-500" />
               {:else}
                 <Copy class="size-4" />
               {/if}
+            </Button>
+            <Button size="icon-sm" variant="ghost" title="轮换邀请码" onclick={rotateInviteCode}>
+              <RefreshCw class="size-4" />
             </Button>
           </div>
         </div>

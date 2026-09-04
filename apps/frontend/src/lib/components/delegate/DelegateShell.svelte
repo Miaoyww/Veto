@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Seat, Capability, CabinetMode } from '$lib/classes/types/delegate'
+  import type { SeatView, Capability, CabinetMode } from '$lib/classes/types/delegate'
   import type { Snippet } from 'svelte'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'
@@ -8,7 +8,7 @@
   import type { ConnectionStatus } from '$lib/classes/clients/delegate-client'
 
   interface Props {
-    seat: Seat
+    seat: SeatView
     capabilities: Capability[]
     connectionStatus: ConnectionStatus
     cabinetMode?: CabinetMode

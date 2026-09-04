@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { SeatGroup } from '$lib/classes/types/delegate'
-  import { seatGroups, removeSeatGroup } from '$lib/classes/stores/delegate/delegate-store'
+  import { seatGroups } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Badge } from '$lib/components/ui/badge'
-  import { Trash2, Edit3, Users } from '@lucide/svelte'
+  import { Edit3, Users } from '@lucide/svelte'
 
   interface Props {
     onEdit: (group: SeatGroup) => void
@@ -20,15 +20,12 @@
     ipc: '学团 IPC'
   }
 
-  const typeBadgeVariants: Record<string, string> = {
+  const typeBadgeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
     cabinet: 'default',
     mpc: 'secondary',
     ipc: 'outline'
   }
 
-  function handleDelete(group: SeatGroup): void {
-    removeSeatGroup(group.id)
-  }
 </script>
 
 <div class="seat-group-list">
@@ -65,9 +62,6 @@
         <div class="group-actions">
           <Button size="icon-sm" variant="ghost" onclick={(e) => { e.stopPropagation(); onEdit(group) }}>
             <Edit3 class="size-4" />
-          </Button>
-          <Button size="icon-sm" variant="ghost" onclick={(e) => { e.stopPropagation(); handleDelete(group) }}>
-            <Trash2 class="size-4 text-destructive" />
           </Button>
         </div>
       </button>
@@ -133,9 +127,6 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-  }
-  .mode-badge {
-    font-size: 0.65rem;
   }
   .empty-state {
     display: flex;

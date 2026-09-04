@@ -9,7 +9,7 @@
   import type { YieldType } from '$lib/classes/types/conference'
 
   interface Props {
-    delegationName: string
+    seatName: string
     remainingSec: number
     totalSec: number
     isPaused?: boolean
@@ -22,7 +22,7 @@
   }
 
   let {
-    delegationName,
+    seatName,
     remainingSec,
     totalSec,
     isPaused = false,
@@ -51,7 +51,7 @@
     {isPaused ? '计时已暂停' : isUrgent ? '⚠ 时间即将耗尽' : '正在发言'}
   </div>
   <div class="mt-1 text-2xl font-bold text-foreground">
-    {delegationName}
+    {seatName}
   </div>
   <div
     class="mt-3 font-mono text-5xl font-bold tabular-nums {isPaused

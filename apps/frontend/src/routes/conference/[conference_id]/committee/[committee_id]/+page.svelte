@@ -279,7 +279,7 @@
     <!-- 阶段对应内容 -->
     <div class="flex flex-1 min-h-0 overflow-hidden p-6">
       {#if conf.phase === 'preamble'}
-        <PlaceholderPage title="会前准备" subtitle="所有代表团已就位，准备开始点名" icon={Users}>
+        <PlaceholderPage title="会前准备" subtitle="所有参会席位已就位，准备开始点名" icon={Users}>
           <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
             <Play size={18} />
             开始点名

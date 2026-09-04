@@ -12,7 +12,7 @@
   import ReadySpeakerCard from '$lib/components/conference/speakers/ready-speaker-card.svelte'
   import WaitingSpeakerList from '$lib/components/conference/speakers/waiting-speaker-list.svelte'
   import YieldResolutionPanel from '$lib/components/conference/speakers/yield-resolution-panel.svelte'
-  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
+  import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
   import {
     currentCommittee,
     addToSpeakersList,
@@ -30,7 +30,8 @@
   import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
   import { usePausedStateRestore } from '$lib/classes/services/hooks/use-paused-state-restore.svelte'
   import type { Committee } from '$lib/classes/domain/committee.svelte'
-  import type { Delegation, YieldType, SpeakerDisplayEntry } from '$lib/classes/types/conference'
+  import type { ParticipantSeat, YieldType, SpeakerDisplayEntry } from '$lib/classes/types/conference'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
 
   // ── 发言队列数据 ──────────────────────────────────────────────
   const conf = $derived($currentCommittee)
@@ -38,8 +39,8 @@
   const speakers = $derived<SpeakerDisplayEntry[]>(
     (conf?.speakerLists?.entries ?? []).map((s) => ({
       id: s.id,
-      delegationId: s.delegationId,
-      delegationName: conf?.delegations.find((d) => d.id === s.delegationId)?.name ?? '',
+      seatId: s.seatId,
+      seatName: conf?.seats.find((d) => d.id === s.seatId)?.name ?? '',
       status: s.status,
       allocatedTimeSec: s.allocatedTimeSec
     }))
@@ -62,7 +63,7 @@
   const activeSpeaker = $derived.by(() => {
     const eng = conf?.activeSpeaker
     if (!eng) return null
-    const entry = speakers.find((s) => s.id === eng.entryId || s.delegationId === eng.entryId)
+    const entry = speakers.find((s) => s.id === eng.entryId || s.seatId === eng.entryId)
     if (!entry) return null
     return { ...entry, status: 'speaking' as const }
   })
@@ -79,16 +80,19 @@
   })
 
   const isYieldAnswering = $derived(
-    yieldPending?.yieldType === 'question' && yieldPending?.questionerDelegationId != null
+    yieldPending?.yieldType === 'question' && yieldPending?.questionerSeatId != null
   )
 
   const yieldNote = $derived.by(() => {
-    if (isYieldAnswering) return `正在回答来自 ${yieldPending?.questionerDelegation?.name} 的提问`
+    if (isYieldAnswering) {
+      const questioner = conf?.seats.find((seat) => seat.id === yieldPending?.questionerSeatId)
+      return `正在回答来自 ${questioner?.name ?? '未知席位'} 的提问`
+    }
     if (!activeSpeakerCanYield && conf?.activeSpeaker) return '（本次发言不可让渡）'
     return undefined
   })
 
-  const listedDelegationIds = $derived(conf?.speakerLists?.entries.map((s) => s.delegationId) ?? [])
+  const listedSeatIds = $derived(conf?.speakerLists?.entries.map((s) => s.seatId) ?? [])
 
   // ── 计时器 ────────────────────────────────────────────────────
   const timerState = new SpeakerTimerState()
@@ -181,30 +185,31 @@
     syncDisplay()
   })
 
-  // ── 可选代表团池（出席 + 未在名单中）───────────────
-  const availableDelegations = $derived(
-    (conf?.delegations ?? [])
-      .filter((d) => d.attendance === 'present')
-      .filter((d) => !listedDelegationIds.includes(d.id))
+  // ── 可选席位池（出席 + 未在名单中）───────────────
+  const availableSeats = $derived(
+    (conf?.seats ?? [])
+      .filter(isParticipantSeat)
+      .filter((seat) => seat.procedure.attendance === 'present')
+      .filter((seat) => !listedSeatIds.includes(seat.id))
   )
 
   // ── 操作处理 ─────────────────────────────────────────────────
-  function addSpeaker(d: Delegation): void {
+  function addSpeaker(d: ParticipantSeat): void {
     addToSpeakersList(d.id)
     syncDisplay()
   }
 
   function addAllSpeakers(): void {
-    for (const d of availableDelegations) {
+    for (const d of availableSeats) {
       addToSpeakersList(d.id)
     }
     syncDisplay()
   }
 
   function addRandomSpeaker(): void {
-    if (availableDelegations.length === 0) return
-    const idx = Math.floor(Math.random() * availableDelegations.length)
-    addToSpeakersList(availableDelegations[idx].id)
+    if (availableSeats.length === 0) return
+    const idx = Math.floor(Math.random() * availableSeats.length)
+    addToSpeakersList(availableSeats[idx].id)
     syncDisplay()
   }
 
@@ -333,16 +338,18 @@
 <div class="flex w-full flex-col gap-4">
   {#if conf}
     {#if yieldPending}
+      {@const originalYieldSeat = conf.seats.find((seat) => seat.id === yieldPending.originalSeatId)}
+      {@const questionerYieldSeat = conf.seats.find((seat) => seat.id === yieldPending.questionerSeatId)}
       <YieldResolutionPanel conference={conf} {yieldPending} />
       {#if isYieldAnswering}
         <div class="mt-4">
           <ActiveSpeakerCard
-            delegationName={yieldPending.originalDelegation.name}
+            seatName={originalYieldSeat?.name ?? '未知席位'}
             remainingSec={timerState.displayRemaining}
             totalSec={yieldPending.allocatedSec}
             isPaused={timerState.isPaused}
             canYield={false}
-            yieldNote={`回答来自 ${yieldPending.questionerDelegation?.name} 的提问`}
+            yieldNote={`回答来自 ${questionerYieldSeat?.name ?? '未知席位'} 的提问`}
             onpause={pauseSpeaking}
             onresume={resumeSpeaking}
             onend={() => finishSpeaker()}
@@ -351,7 +358,7 @@
       {/if}
     {:else if isSpeakerActive && conf.activeSpeaker}
       <ActiveSpeakerCard
-        delegationName={activeSpeaker.delegationName}
+        seatName={activeSpeaker!.seatName}
         remainingSec={timerState.displayRemaining}
         totalSec={timerState.displayTotal}
         isPaused={timerState.isPaused}
@@ -364,7 +371,7 @@
       />
     {:else if readyEntry}
       <ReadySpeakerCard
-        delegationName={readyEntry.delegationName}
+        seatName={readyEntry.seatName}
         allocatedTimeSec={readyEntry.allocatedTimeSec}
         onstart={() => beginSpeaking(readyEntry.id)}
         oncancel={() => {
@@ -378,22 +385,22 @@
       <div class="rounded-lg border bg-card p-4">
         <div class="flex items-start gap-3">
           <div class="flex-1">
-            <DelegationSelector
-              delegations={conf.delegations}
-              placeholder="搜索代表团名称..."
+            <SeatSelector
+              seats={conf.participantSeats}
+              placeholder="搜索席位名称..."
               onselect={addSpeaker}
               resetOnSelect={true}
               presentOnly={true}
-              excludeIds={listedDelegationIds}
+              excludeIds={listedSeatIds}
             />
           </div>
           <div class="flex shrink-0 gap-2">
             <Button
               variant="outline"
               size="default"
-              title="随机抽取一个代表团加入发言名单"
+              title="随机抽取一个席位加入发言名单"
               onclick={addRandomSpeaker}
-              disabled={availableDelegations.length === 0}
+              disabled={availableSeats.length === 0}
             >
               <Shuffle size={14} />
               随机点出
@@ -401,9 +408,9 @@
             <Button
               variant="outline"
               size="default"
-              title="将所有出席代表团加入发言名单"
+              title="将所有出席席位加入发言名单"
               onclick={addAllSpeakers}
-              disabled={availableDelegations.length === 0}
+              disabled={availableSeats.length === 0}
             >
               <ListPlus size={14} />
               添加全部
@@ -419,7 +426,7 @@
       speakers={waitingSpeakers}
       showIndex={true}
       showDelete={true}
-      emptyMessage="主发言名单为空，请添加代表团"
+      emptyMessage="主发言名单为空，请添加席位"
       disabled={isSpeakerActive}
       ondelete={(id: string) => {
         removeFromSpeakersList(id)

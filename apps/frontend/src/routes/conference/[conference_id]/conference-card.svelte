@@ -6,15 +6,18 @@
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import { navigateToCommittee } from '$lib/classes/utils'
   import type { Committee } from '$lib/classes/types/conference'
+  import type { SeatAccess } from '$lib/classes/types/delegate'
 
   let {
     committee,
     conferenceId,
     copied,
+    seatAccesses,
     copyText
   }: {
     committee: Committee
     conferenceId: string
+    seatAccesses: SeatAccess[]
     copied: string
     copyText: (text: string, marker: string) => Promise<void>
   } = $props()
@@ -64,15 +67,17 @@
           </thead>
           <tbody>
             {#each committee.seats as seat (seat.id)}
+              {@const inviteCode = seatAccesses.find((access) => access.seatId === seat.id)?.inviteCode ?? ''}
               <tr class="border-t">
                 <td class="px-3 py-2">{seat.name}</td>
                 <td class="px-3 py-2 text-muted-foreground">{seat.role ?? '-'}</td>
-                <td class="px-3 py-2 font-mono text-xs">{seat.inviteCode}</td>
+                <td class="px-3 py-2 font-mono text-xs">{inviteCode || '未生成'}</td>
                 <td class="px-3 py-2 text-right">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onclick={() => void copyText(seat.inviteCode, seat.id)}
+                    onclick={() => void copyText(inviteCode, seat.id)}
+                    disabled={!inviteCode}
                   >
                     {copied === seat.id ? '已复制' : '复制'}
                   </Button>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import type {
-    Seat,
+    AuthenticatedSeatSession,
     Capability,
     CabinetMode,
     Directive,
@@ -27,10 +27,11 @@
   let connectionStatus = $state<ConnectionStatus>('disconnected')
   let authenticated = $state(false)
   let authError = $state('')
-  let seat = $state<Seat | null>(null)
+  let session = $state<AuthenticatedSeatSession | null>(null)
+  const seat = $derived(session?.seat ?? null)
   let capabilities = $state<Capability[]>([])
   let cabinetMode = $state<CabinetMode>('standing')
-  let directives = $state<Directive[]>([])
+  let directiveItems = $state<Directive[]>([])
   let newsList = $state<News[]>([])
   let situationUpdates = $state<SituationUpdate[]>([])
   let connecting = $state(false)
@@ -38,7 +39,7 @@
   const conferenceId = $derived($page.params.conference_id ?? '')
 
   // ── 认证 ──
-  function handleAuthenticate(inviteCode: string, password: string): void {
+  function handleAuthenticate(inviteCode: string, name: string, password?: string): void {
     authError = ''
     connecting = true
     const bridge = getDelegateBridge()
@@ -46,24 +47,24 @@
     bridge.setCallbacks({
       onAuthResult: (result) => {
         connecting = false
-        if (result.success && result.seat) {
+        if (result.success && result.session) {
           authenticated = true
-          seat = result.seat
-          capabilities = result.capabilities ?? []
+          session = result.session
+          capabilities = result.session.capabilities
         } else {
           authError = result.error ?? '认证失败'
         }
       },
       onConferenceSync: (data: ConferenceSyncData) => {
-        directives = data.directives ?? []
+        directiveItems = data.directives ?? []
         newsList = data.news ?? []
         situationUpdates = data.situationUpdates ?? []
         capabilities = data.myCapabilities ?? []
       },
       onDirectiveUpdated: (directive: Directive) => {
-        directives = directives.map((d) => (d.id === directive.id ? directive : d))
-        if (!directives.some((d) => d.id === directive.id)) {
-          directives = [...directives, directive]
+        directiveItems = directiveItems.map((d) => (d.id === directive.id ? directive : d))
+        if (!directiveItems.some((d) => d.id === directive.id)) {
+          directiveItems = [...directiveItems, directive]
         }
       },
       onNewsUpdated: (news: News) => {
@@ -78,20 +79,20 @@
         }
       },
       onModeChange: (seatGroupId: string, mode: CabinetMode) => {
-        if (seat && seat.seatGroupId === seatGroupId) {
+        if (session?.seatGroupId === seatGroupId) {
           cabinetMode = mode
         }
       }
     })
 
-    bridge.authenticate(inviteCode, password)
+    bridge.authenticate(inviteCode, name, password)
   }
 
   function handleDisconnect(): void {
     const bridge = getDelegateBridge()
     bridge.disconnect()
     authenticated = false
-    seat = null
+    session = null
     capabilities = []
     authError = ''
   }
@@ -108,7 +109,7 @@
       ...data,
       initiatorId: seat?.id,
       initiatorRole: seat?.role,
-      cabinetId: seat?.seatGroupId,
+      cabinetId: session?.seatGroupId,
       status: 'draft',
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -130,7 +131,7 @@
     bridge.createNews({
       ...data,
       authorId: seat?.id,
-      seatGroupId: seat?.seatGroupId,
+      seatGroupId: session?.seatGroupId,
       status: 'draft',
       createdAt: Date.now()
     })
@@ -165,10 +166,10 @@
   >
     {#snippet directives()}
       <DirectivePanel
-        {directives}
+        directives={directiveItems}
         seatId={seat.id}
         seatRole={seat.role ?? ''}
-        cabinetId={seat.seatGroupId}
+        cabinetId={session?.seatGroupId ?? ''}
         onCreateDirective={handleCreateDirective}
         onResubmit={handleResubmitDirective}
       />
@@ -177,7 +178,7 @@
       <NewsPanel
         {newsList}
         seatId={seat.id}
-        seatGroupId={seat.seatGroupId}
+        seatGroupId={session?.seatGroupId ?? ''}
         canDraftNews={capabilities.includes('draft_news')}
         onCreateNews={handleCreateNews}
         onSubmitNews={handleSubmitNews}

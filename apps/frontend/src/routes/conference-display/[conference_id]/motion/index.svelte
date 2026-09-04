@@ -79,7 +79,7 @@
     }
   }
 
-  const displayTitle = $derived(getDisplayParts(activeMotion).title)
+  const displayTitle = $derived(getDisplayParts(activeMotion ?? undefined).title)
 </script>
 
 <DisplayPage>

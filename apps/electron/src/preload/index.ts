@@ -28,11 +28,11 @@ const veto = {
         hasDefinitions: boolean
         hasI18n: boolean
         hasAssets: boolean
-        hasDelegations: boolean
+        hasSeats: boolean
       }>
     > => ipcRenderer.invoke('veto:plugins:list'),
 
-    /** 获取插件详情（含 definitions / delegations 等内容） */
+    /** 获取插件详情（含 definitions / seats 等内容） */
     get: (
       pluginId: string
     ): Promise<{
@@ -40,7 +40,7 @@ const veto = {
       definitions: string | null
       i18n: Record<string, string>
       campaignFiles?: Record<string, string>
-      delegations?: string | null
+      seats?: string | null
       disabled: boolean
       incompatible: boolean
     } | null> => ipcRenderer.invoke('veto:plugins:get', pluginId),
@@ -59,7 +59,7 @@ const veto = {
       definitions: string | null
       i18n: Record<string, string>
       assets: Array<{ path: string; data: string; mimeType: string }>
-      delegations?: string | null
+      seats?: string | null
     }): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('veto:plugins:install', payload),
 

@@ -5,15 +5,16 @@
    * 让渡解析面板 —— 发言人做出让渡选择后，主席在此面板中解析让渡流程。
    *
    * 支持三种让渡类型：
-   * - delegate: 选择目标代表团
+   * - delegate: 选择目标席位
    * - question: 选择提问方 → 原发言人回答（呼吁环节由主席口头执行）
    * - comment: 选择评论方 → 评论方发言（呼吁环节由主席口头执行）
    */
   import { Users, HelpCircle, MessageCircle, X, SkipForward } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
-  import DelegationSelector from '$lib/components/conference/common/delegation-selector.svelte'
-  import type { Delegation } from '$lib/classes/types/conference'
+  import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
+  import type { ParticipantSeat } from '$lib/classes/types/conference'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import {
     resolveYieldToChair,
@@ -32,19 +33,24 @@
 
   const yp = $derived(yieldPending)
   const remainingFormatted = $derived(formatTime(Math.round(yp.remainingSec)))
+  const participantSeats = $derived(conference.seats.filter(isParticipantSeat))
+  const originalSeat = $derived(conference.seats.find((seat) => seat.id === yp.originalSeatId))
+  const questionerSeat = $derived(
+    conference.seats.find((seat) => seat.id === yp.questionerSeatId)
+  )
 
   // 排除原发言人（不能将时间让渡给自己）
-  const excludeOriginalId = $derived([yp.originalDelegationId])
+  const excludeOriginalId = $derived([yp.originalSeatId])
 
-  function handleSelectDelegate(d: Delegation): void {
+  function handleSelectDelegate(d: ParticipantSeat): void {
     resolveYieldToDelegate(d.id)
   }
 
-  function handleSelectQuestioner(d: Delegation): void {
+  function handleSelectQuestioner(d: ParticipantSeat): void {
     resolveYieldToQuestion(d.id)
   }
 
-  function handleSelectCommenter(d: Delegation): void {
+  function handleSelectCommenter(d: ParticipantSeat): void {
     resolveYieldToComment(d.id)
   }
 
@@ -64,7 +70,7 @@
     }
   })
 
-  const hasQuestioner = $derived(yp.questionerDelegationId != null)
+  const hasQuestioner = $derived(yp.questionerSeatId != null)
 </script>
 
 <div
@@ -84,19 +90,19 @@
   </div>
 
   <p class="mb-4 text-sm text-muted-foreground">
-    {yp.originalDelegation.name} 将剩余 <strong>{remainingFormatted}</strong>
+    {originalSeat?.name ?? '未知席位'} 将剩余 <strong>{remainingFormatted}</strong>
     {yieldLabel}
   </p>
 
   <Separator class="mb-4" />
 
-  <!-- ═══ 让渡给代表：选择目标代表团 ═══ -->
+  <!-- ═══ 让渡给代表：选择目标席位 ═══ -->
   {#if yp.yieldType === 'delegate' && !hasQuestioner}
     <div class="space-y-3">
-      <p class="text-xs text-muted-foreground">请选择接收剩余时间的代表团（不可再次让渡）：</p>
-      <DelegationSelector
-        delegations={conference.delegations}
-        placeholder="搜索目标代表团..."
+      <p class="text-xs text-muted-foreground">请选择接收剩余时间的席位（不可再次让渡）：</p>
+      <SeatSelector
+        seats={participantSeats}
+        placeholder="搜索目标席位..."
         onselect={handleSelectDelegate}
         resetOnSelect={true}
         excludeIds={excludeOriginalId}
@@ -118,11 +124,11 @@
   {:else if yp.yieldType === 'question' && !hasQuestioner}
     <div class="space-y-3">
       <p class="text-xs text-muted-foreground">
-        主席口头呼吁场下提问后，选择举手提问的代表团（提问不占用时间）：
+        主席口头呼吁场下提问后，选择举手提问的席位（提问不占用时间）：
       </p>
-      <DelegationSelector
-        delegations={conference.delegations}
-        placeholder="搜索提问代表团..."
+      <SeatSelector
+        seats={participantSeats}
+        placeholder="搜索提问席位..."
         onselect={handleSelectQuestioner}
         resetOnSelect={true}
         excludeIds={excludeOriginalId}
@@ -136,10 +142,10 @@
     <!-- ═══ 让渡给评论 ═══ -->
   {:else if yp.yieldType === 'comment' && !hasQuestioner}
     <div class="space-y-3">
-      <p class="text-xs text-muted-foreground">主席口头呼吁场下评论后，选择举手评论的代表团：</p>
-      <DelegationSelector
-        delegations={conference.delegations}
-        placeholder="搜索评论代表团..."
+      <p class="text-xs text-muted-foreground">主席口头呼吁场下评论后，选择举手评论的席位：</p>
+      <SeatSelector
+        seats={participantSeats}
+        placeholder="搜索评论席位..."
         onselect={handleSelectCommenter}
         resetOnSelect={true}
         excludeIds={excludeOriginalId}
@@ -155,10 +161,10 @@
     <div class="space-y-3 text-center">
       <div class="rounded-md bg-indigo-100 px-4 py-3 dark:bg-indigo-900/30">
         <p class="text-sm font-medium text-indigo-700 dark:text-indigo-400">
-          {yp.questionerDelegation?.name} 正在提问
+          {questionerSeat?.name ?? '未知席位'} 正在提问
         </p>
         <p class="mt-1 text-xs text-muted-foreground">
-          提问不占用时间，提问完成后 {yp.originalDelegation.name} 将使用剩余 {remainingFormatted} 回答问题
+          提问不占用时间，提问完成后 {originalSeat?.name ?? '原发言席位'} 将使用剩余 {remainingFormatted} 回答问题
         </p>
       </div>
       <p class="text-xs text-muted-foreground">

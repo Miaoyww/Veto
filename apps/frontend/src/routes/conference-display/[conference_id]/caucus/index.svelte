@@ -9,12 +9,13 @@
   import { DISPLAY_MAX_SPEAKERS } from '$lib/classes/const'
 
   let { data }: { data: ConferenceDisplayData } = $props()
+  const caucusTimer = $derived(data.caucusTimer!)
 </script>
 
 <DisplayPage>
-  {#if data.caucusTimer.type === 'moderated' && data.caucusTimer.caucusSpeakers}
-    {@const speakers = data.caucusTimer.caucusSpeakers}
-    {@const currentIdx = data.caucusTimer.currentSpeakerIndex ?? -1}
+  {#if caucusTimer.type === 'moderated' && caucusTimer.caucusSpeakers}
+    {@const speakers = caucusTimer.caucusSpeakers}
+    {@const currentIdx = caucusTimer.currentSpeakerIndex ?? -1}
     {@const currentSpeaker = currentIdx >= 0 ? speakers[currentIdx] : null}
 
     <!-- 有主持磋商：逐人发言 -->
@@ -22,7 +23,7 @@
       {#if currentSpeaker && currentSpeaker.status === 'speaking' && data.currentSpeaker}
         <!-- 当前发言人 -->
         <CurrentSpeakerCard
-          delegation={data.currentSpeaker.delegation}
+          seat={data.currentSpeaker.seat}
           remainingSec={data.currentSpeaker.remainingSec ?? 0}
           status={data.currentSpeaker.status}
         />
@@ -30,9 +31,9 @@
         <SpeakerQueueDisplay {speakers} max={DISPLAY_MAX_SPEAKERS} title="有主持的核心磋商" />
       {/if}
     </div>
-  {:else if data.caucusTimer.type === 'individual'}
+  {:else if caucusTimer.type === 'individual'}
     <!-- 个人演讲：单人独白倒计时 -->
-    {@const isPaused = data.caucusTimer.status === 'paused'}
+    {@const isPaused = caucusTimer.status === 'paused'}
     <div class="flex flex-col items-center gap-10">
       <DisplaySectionHeader
         Icon={User}
@@ -40,11 +41,11 @@
         colorClass={isPaused ? 'text-[#C9A84C]/50' : 'text-[#5B92E5]'}
       />
 
-      {#if data.caucusTimer.topic}
+      {#if caucusTimer.topic}
         <div
           class="text-2xl font-medium tracking-[0.05em] {isPaused ? 'text-white/30' : 'text-white/70'}"
         >
-          {data.caucusTimer.topic}
+          {caucusTimer.topic}
         </div>
       {/if}
 
@@ -53,12 +54,12 @@
           ? 'text-[#C9A84C]/50'
           : 'text-[#5B92E5]'}"
       >
-        {formatTime(Math.max(0, data.caucusTimer.remainingSec))}
+        {formatTime(Math.max(0, caucusTimer.remainingSec))}
       </div>
     </div>
   {:else}
     <!-- 自由磋商：总倒计时 -->
-    {@const isPaused = data.caucusTimer.status === 'paused'}
+    {@const isPaused = caucusTimer.status === 'paused'}
     <div class="flex flex-col items-center gap-10">
       <DisplaySectionHeader
         Icon={Coffee}
@@ -71,7 +72,7 @@
           ? 'text-[#C9A84C]/50'
           : 'text-[#C9A84C]'}"
       >
-        {formatTime(Math.max(0, data.caucusTimer.remainingSec))}
+        {formatTime(Math.max(0, caucusTimer.remainingSec))}
       </div>
     </div>
   {/if}

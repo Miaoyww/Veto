@@ -6,7 +6,7 @@
    *
    * 四个子视图：
    * - yieldPending：让渡处理中状态
-   * - currentSpeaker：正在发言（代表团名 + 倒计时 + 暂停状态）
+   * - currentSpeaker：正在发言（席位名 + 倒计时 + 暂停状态）
    * - readySpeaker：预发言（即将发言 + 等待开始计时）
    * - 主发言名单：下一个发言 + 后续队列
    */
@@ -17,7 +17,7 @@
   import CurrentSpeakerCard from '$lib/components/conference-display/current-speaker-card.svelte'
   import DisplaySectionHeader from '$lib/components/conference-display/display-section-header.svelte'
   import { DISPLAY_MAX_SPEAKERS } from '$lib/classes/const'
-  import DelegationNameDisplay from '$lib/components/conference-display/delegation-name-display.svelte'
+  import SeatNameDisplay from '$lib/components/conference-display/seat-name-display.svelte'
   import DisplayPage from '$lib/components/conference-display/display-page.svelte'
 
   let { data }: { data: ConferenceDisplayData } = $props()
@@ -26,14 +26,14 @@
     console.log('[general-debate] data:', data)
   })
 
-  const yp = $derived(data.yieldPending)
+  const yp = $derived(data.yieldPending as NonNullable<ConferenceDisplayData['yieldPending']>)
   const isYieldCalling = $derived(
     yp != null &&
       (yp.yieldType === 'question' || yp.yieldType === 'comment') &&
-      !yp.questionerDelegation
+      !yp.questionerSeat
   )
   const isYieldQuestioning = $derived(
-    yp?.yieldType === 'question' && yp.questionerDelegation != null
+    yp?.yieldType === 'question' && yp.questionerSeat != null
   )
   const isYieldDelegate = $derived(yp?.yieldType === 'delegate')
 </script>
@@ -54,7 +54,7 @@
         {yp.yieldType === 'question' ? '场下有无提问？' : '场下有无评论？'}
       </div>
       <div class="mt-4 text-2xl font-light tracking-[0.06em] text-white/30">
-        {yp.originalDelegation.name} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给{yp.yieldType ===
+        {yp.originalSeat.name} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给{yp.yieldType ===
         'question'
           ? '提问'
           : '评论'}
@@ -67,13 +67,13 @@
     <DisplaySectionHeader Icon={HelpCircle} label="提问环节" colorClass="text-[#5B92E5]" />
 
     <div class="text-center">
-      <DelegationNameDisplay
-        name={yp.questionerDelegation?.name ?? ''}
-        shortName={yp.questionerDelegation?.shortName ?? ''}
+      <SeatNameDisplay
+        name={yp.questionerSeat?.name ?? ''}
+        shortName={yp.questionerSeat?.procedure?.shortName ?? ''}
       />
       <div class="mt-2 text-3xl font-light tracking-[0.06em] text-white/30">正在提问</div>
       <div class="mt-6 text-xl tracking-wider text-white/20">
-        {yp.originalDelegation.name} 将使用剩余 {formatTime(Math.round(yp.remainingSec))} 回答
+        {yp.originalSeat.name} 将使用剩余 {formatTime(Math.round(yp.remainingSec))} 回答
       </div>
     </div>
   </div>
@@ -84,14 +84,14 @@
 
     <div class="text-center">
       <div class="text-5xl font-light tracking-wide text-white/70">
-        {yp.originalDelegation.name} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给另一位代表
+        {yp.originalSeat.name} 将剩余 {formatTime(Math.round(yp.remainingSec))} 让渡给另一位代表
       </div>
-      <div class="mt-4 text-2xl tracking-wider text-white/20">等待主席指定目标代表团</div>
+      <div class="mt-4 text-2xl tracking-wider text-white/20">等待主席指定目标席位</div>
     </div>
   </div>
 {:else if data.currentSpeaker}
   <CurrentSpeakerCard
-    delegation={data.currentSpeaker.delegation}
+    seat={data.currentSpeaker.seat}
     remainingSec={data.currentSpeaker.remainingSec ?? 0}
     status={data.currentSpeaker.status}
   />

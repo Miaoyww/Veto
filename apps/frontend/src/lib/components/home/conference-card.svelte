@@ -163,7 +163,7 @@
       </span>
       <span class="flex items-center gap-1">
         <Users class="size-3" />
-        {conference.committees.reduce((count, committee) => count + committee.delegations.length, 0)} 个代表团
+        {conference.committees.reduce((count, committee) => count + committee.seats.length, 0)} 个席位
       </span>
       <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
         {primaryCommittee ? (PHASE_LABELS[primaryCommittee.phase] ?? primaryCommittee.phase) : '尚未创建会场'}

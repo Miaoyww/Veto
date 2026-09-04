@@ -33,9 +33,10 @@
   function allKeys(): string {
     return event?.committees
       .flatMap((committee) =>
-        committee.seats.map(
-          (seat) => `${committee.name},${seat.name},${seat.role ?? ''},${seat.inviteCode}`
-        )
+        committee.seats.map((seat) => {
+          const inviteCode = event?.seatAccesses.find((access) => access.seatId === seat.id)?.inviteCode ?? ''
+          return `${committee.name},${seat.name},${seat.role ?? ''},${inviteCode}`
+        })
       )
       .join('\n') ?? ''
   }
@@ -103,7 +104,13 @@
             <Collapsible.Content>
               <div class="grid gap-4 xl:grid-cols-2">
                 {#each committees as committee (committee.id)}
-                  <ConferenceCard conferenceId={event.id} {committee} {copied} {copyText} />
+                  <ConferenceCard
+                    conferenceId={event.id}
+                    {committee}
+                    seatAccesses={event.seatAccesses}
+                    {copied}
+                    {copyText}
+                  />
                 {:else}
                   <p
                     class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"

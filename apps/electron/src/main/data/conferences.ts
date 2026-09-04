@@ -24,7 +24,7 @@ export interface ConferenceEntry {
   presentCount: number
   votingCount: number
   currentSpeaker?: {
-    delegation: string
+    seat: string
     remaining: number
   }
   timelineId?: string | null
@@ -52,7 +52,7 @@ export interface ConferenceSummary {
   phase: string
   presentCount: number
   votingCount: number
-  currentSpeaker?: { delegation: string; remaining: number }
+  currentSpeaker?: { seat: string; remaining: number }
   timelineId?: string | null
 }
 
@@ -146,13 +146,13 @@ export function updateConference(
     if (patch.currentSpeaker && !prev.currentSpeaker) {
       eventBus.emit('conference:speaker_started', {
         conferenceId: id,
-        delegation: patch.currentSpeaker.delegation,
+        seat: patch.currentSpeaker.seat,
         remaining: patch.currentSpeaker.remaining,
       })
     } else if (!patch.currentSpeaker && prev.currentSpeaker) {
       eventBus.emit('conference:speaker_finished', {
         conferenceId: id,
-        delegation: prev.currentSpeaker.delegation,
+        seat: prev.currentSpeaker.seat,
       })
     }
   }

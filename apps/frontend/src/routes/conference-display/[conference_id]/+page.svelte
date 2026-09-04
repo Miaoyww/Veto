@@ -17,7 +17,7 @@
     setExternalWsUrl
   } from '$lib/classes/clients/conference-display-client'
   import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
-  import type { Delegation } from '$lib/classes/types/conference'
+  import type { SeatView } from '$lib/classes/types/conference'
   import type { ConferenceDisplayData, TimerTickData } from '$lib/classes/types/conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
@@ -91,7 +91,7 @@
           caucusTimer: {
             ...displayData.caucusTimer,
             remainingSec: tick.remainingSec,
-            status: tick.status
+            status: tick.status === 'playing' ? 'running' : tick.status
           }
         }
       }
@@ -184,15 +184,15 @@
   })
 
   // ---- 出席状态变更（全屏展示） ----
-  // 来源：changeDelegationAttendance（attendanceChange 字段）或点名（rollCall.lastMarked）
-  let attendanceChange = $state<Delegation | null>(null)
+  // 来源：changeSeatAttendance（attendanceChange 字段）或点名（rollCall.lastMarked）
+  let attendanceChange = $state<SeatView | null>(null)
   let attendanceTimer: ReturnType<typeof setTimeout> | null = null
   let _lastAttendanceId = $state('')
 
   $effect(() => {
     const change = displayData?.attendanceChange
     if (change) {
-      const notifId = `${change.id}-${change.attendance}`
+      const notifId = `${change.id}-${change.procedure?.attendance}`
       if (notifId === _lastAttendanceId) return
       _lastAttendanceId = notifId
 
@@ -208,14 +208,20 @@
     // 点名阶段兼容：rollCall.lastMarked
     const lastMarked = displayData?.rollCall?.lastMarked
     if (lastMarked) {
-      const notifId = `${lastMarked.delegation.name}-${lastMarked.status}`
+      const notifId = `${lastMarked.seat.name}-${lastMarked.status}`
       if (notifId === _lastAttendanceId) return
       _lastAttendanceId = notifId
 
       if (attendanceTimer) clearTimeout(attendanceTimer)
       attendanceChange = {
-        ...lastMarked.delegation,
-        attendance: lastMarked.status
+        ...lastMarked.seat,
+        procedure: {
+          attendance: lastMarked.status,
+          hasVotingRights: lastMarked.seat.procedure?.hasVotingRights ?? true,
+          sortOrder: lastMarked.seat.procedure?.sortOrder ?? 0,
+          shortName: lastMarked.seat.procedure?.shortName,
+          flagUrl: lastMarked.seat.procedure?.flagUrl
+        }
       }
 
       attendanceTimer = setTimeout(() => {
@@ -255,9 +261,9 @@
     <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
     {#if attendanceChange}
       <AttendanceChangeDisplay
-        delegationName={attendanceChange.name}
-        shortName={attendanceChange.shortName}
-        status={attendanceChange.attendance}
+        seatName={attendanceChange.name}
+        shortName={attendanceChange.procedure?.shortName}
+        status={attendanceChange.procedure?.attendance ?? 'absent'}
       />
     {:else}
       <!-- 主展示区（phase 动态切换） -->

@@ -2,16 +2,16 @@
   /**
    * speaker-queue-display.svelte
    * ─────────────────────────────
-   * 可复用的 Display 发言名单组件。展示下一个发言代表 + 后续队列，支持限制显示数量。
+   * 可复用的 Display 发言名单组件。展示下一个发言席位 + 后续队列，支持限制显示数量。
    */
   import { Mic } from '@lucide/svelte'
-  import type { Delegation } from '$lib/classes/types/conference'
+  import type { SeatView } from '$lib/classes/types/conference'
   import DisplaySectionHeader from './display-section-header.svelte'
-  import DelegationNameDisplay from './delegation-name-display.svelte'
-  import DelegationRoster, { type RosterEntry } from './delegation-roster.svelte'
+  import SeatNameDisplay from './seat-name-display.svelte'
+  import SeatRoster, { type RosterEntry } from './seat-roster.svelte'
 
   interface Speaker {
-    delegation: Delegation
+    seat: SeatView
   }
 
   let {
@@ -37,12 +37,12 @@
 
   const nextSpeaker = $derived(onlyList ? null : (speakers[0] ?? null))
 
-  /** 队列条目（list 模式传给 DelegationRoster） */
+  /** 队列条目（list 模式传给 SeatRoster） */
   const rosterEntries = $derived<RosterEntry[]>(
     (onlyList ? speakers : speakers.slice(1)).map((s) => ({
-      id: s.delegation.name,
-      name: s.delegation.name,
-      shortName: s.delegation.shortName
+      id: s.seat.name,
+      name: s.seat.name,
+      shortName: s.seat.procedure?.shortName
     }))
   )
 
@@ -58,9 +58,9 @@
   {#if nextSpeaker}
     <!-- 下一个发言 -->
     <div class="w-full px-8 py-6 text-center">
-      <DelegationNameDisplay
-        name={nextSpeaker.delegation.name}
-        shortName={nextSpeaker.delegation.shortName}
+      <SeatNameDisplay
+        name={nextSpeaker.seat.name}
+        shortName={nextSpeaker.seat.procedure?.shortName}
       />
       {#if subtitle}
         <div class="mt-4 text-lg tracking-wider text-white/15">{subtitle}</div>
@@ -69,7 +69,7 @@
   {/if}
 
   {#if rosterEntries.length > 0}
-    <DelegationRoster entries={rosterEntries} mode="list" emptyText="" />
+    <SeatRoster entries={rosterEntries} mode="list" emptyText="" />
   {/if}
 
   {#if speakers.length === 0}

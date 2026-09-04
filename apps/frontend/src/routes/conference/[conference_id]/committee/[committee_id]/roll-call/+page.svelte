@@ -9,13 +9,14 @@
     currentCommittee,
     currentConferenceId,
     loadConference,
-    changeDelegationAttendance,
+    changeSeatAttendance,
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/classes/clients/conference-display-client'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
-  import type { Delegation, Attendance } from '$lib/classes/types/conference'
+  import type { Attendance, ParticipantSeat } from '$lib/classes/types/conference'
+  import { isParticipantSeat, toSeatView } from '$lib/classes/types/delegate'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
@@ -36,9 +37,9 @@
     if (transitionTimeout) clearTimeout(transitionTimeout)
   })
 
-  // 刚标记的代表团（传给 Display 端展示确认动画，发送后即清除）
+  // 刚标记的席位（传给 Display 端展示确认动画，发送后即清除）
   let lastRollCallMarked = $state<{
-    delegation: Delegation
+    seat: ParticipantSeat
     status: Attendance
     index: number
   } | null>(null)
@@ -58,8 +59,10 @@
           presentCount: thresholds.presentCount,
           simpleMajorityThreshold: thresholds.simpleMajorityThreshold,
           twoThirdsThreshold: thresholds.twoThirdsThreshold,
-          ...(currentDelegation ? { currentDelegation } : {}),
-          lastMarked: lastRollCallMarked ?? undefined,
+          ...(currentSeat ? { currentSeat: toSeatView(currentSeat) } : {}),
+          lastMarked: lastRollCallMarked
+            ? { ...lastRollCallMarked, seat: toSeatView(lastRollCallMarked.seat) }
+            : undefined,
         }
       : undefined
 
@@ -80,34 +83,38 @@
 
   const conf = $derived($currentCommittee)
 
-  const sortedDelegations = $derived(
-    conf ? [...conf.delegations].sort((a, b) => a.sortOrder - b.sortOrder) : []
+  const sortedSeats = $derived(
+    conf
+      ? conf.seats
+          .filter(isParticipantSeat)
+          .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
+      : []
   )
 
   let currentIndex = $state(0)
   let isTransitioning = $state(false)
   let transitionTimeout: ReturnType<typeof setTimeout> | null = null
 
-  const currentDelegation = $derived(sortedDelegations[currentIndex] ?? null)
-  const isComplete = $derived(currentIndex >= sortedDelegations.length)
+  const currentSeat = $derived(sortedSeats[currentIndex] ?? null)
+  const isComplete = $derived(currentIndex >= sortedSeats.length)
 
   const thresholds = $derived(
-    conf ? calculateMajorityThresholds(conf.delegations) : null
+    conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
   )
   const presentCount = $derived(thresholds?.presentCount ?? 0)
   const totalCount = $derived(thresholds?.totalCount ?? 0)
   const progress = $derived(totalCount > 0 ? Math.round((currentIndex / totalCount) * 100) : 0)
 
   const showConfirmOverlay = $derived(isTransitioning && lastRollCallMarked !== null)
-  const absentDelegations = $derived(
-    sortedDelegations.filter((d) => d.attendance !== 'present')
+  const absentSeats = $derived(
+    sortedSeats.filter((seat) => seat.procedure.attendance !== 'present')
   )
 
   function markPresent(): void {
-    if (!currentDelegation || isTransitioning) return
-    changeDelegationAttendance(currentDelegation.id, 'present', { silent: true })
+    if (!currentSeat || isTransitioning) return
+    changeSeatAttendance(currentSeat.id, 'present', { silent: true })
     lastRollCallMarked = {
-      delegation: currentDelegation,
+      seat: currentSeat,
       status: 'present',
       index: currentIndex,
     }
@@ -120,10 +127,10 @@
   }
 
   function markAbsent(): void {
-    if (!currentDelegation || isTransitioning) return
-    changeDelegationAttendance(currentDelegation.id, 'absent', { silent: true })
+    if (!currentSeat || isTransitioning) return
+    changeSeatAttendance(currentSeat.id, 'absent', { silent: true })
     lastRollCallMarked = {
-      delegation: currentDelegation,
+      seat: currentSeat,
       status: 'absent',
       index: currentIndex,
     }
@@ -137,20 +144,20 @@
 
   function markAllPresent(): void {
     if (!conf || isTransitioning) return
-    const remaining = sortedDelegations.slice(currentIndex)
+    const remaining = sortedSeats.slice(currentIndex)
     for (const d of remaining) {
-      changeDelegationAttendance(d.id, 'present', { silent: true })
+      changeSeatAttendance(d.id, 'present', { silent: true })
     }
-    currentIndex = sortedDelegations.length
+    currentIndex = sortedSeats.length
   }
 
   function markAllAbsent(): void {
     if (!conf || isTransitioning) return
-    const remaining = sortedDelegations.slice(currentIndex)
+    const remaining = sortedSeats.slice(currentIndex)
     for (const d of remaining) {
-      changeDelegationAttendance(d.id, 'absent', { silent: true })
+      changeSeatAttendance(d.id, 'absent', { silent: true })
     }
-    currentIndex = sortedDelegations.length
+    currentIndex = sortedSeats.length
   }
 
   function goBack(): void {
@@ -241,17 +248,17 @@
             </div>
           </div>
 
-          <!-- 当前代表团 -->
-          {#if currentDelegation}
+          <!-- 当前席位 -->
+          {#if currentSeat}
             <div
               class="relative flex w-full flex-col items-center gap-6 rounded-lg border bg-card p-14 transition-all duration-500 {isTransitioning ? 'opacity-70' : ''}"
             >
-              <!-- 代表团信息 -->
+              <!-- 席位信息 -->
 
               <div class="text-center transition-opacity duration-300" class:opacity-30={isTransitioning}>
-                <div class="text-3xl font-bold text-foreground">{currentDelegation.name}</div>
-                {#if currentDelegation.shortName}
-                  <div class="mt-1 text-lg text-muted-foreground">{currentDelegation.shortName}</div>
+                <div class="text-3xl font-bold text-foreground">{currentSeat.name}</div>
+                {#if currentSeat.procedure.shortName}
+                  <div class="mt-1 text-lg text-muted-foreground">{currentSeat.procedure.shortName}</div>
                 {/if}
               </div>
 
@@ -303,7 +310,7 @@
               variant="outline"
               class="gap-1.5 text-xs"
               onclick={markAllPresent}
-              disabled={isTransitioning || currentIndex >= sortedDelegations.length}
+              disabled={isTransitioning || currentIndex >= sortedSeats.length}
             >
               <Check size={12} />
               全部出席
@@ -313,7 +320,7 @@
               variant="outline"
               class="gap-1.5 text-xs"
               onclick={markAllAbsent}
-              disabled={isTransitioning || currentIndex >= sortedDelegations.length}
+              disabled={isTransitioning || currentIndex >= sortedSeats.length}
             >
               <X size={12} />
               全部缺席
@@ -344,16 +351,16 @@
           </div>
 
           <!-- 未出席列表 -->
-          {#if absentDelegations.length > 0}
+          {#if absentSeats.length > 0}
             <div class="w-full rounded-xl border bg-card">
               <div class="px-6 py-3 text-xs font-medium text-muted-foreground">
-                未出席 ({absentDelegations.length})
+                未出席 ({absentSeats.length})
               </div>
               <div class="divide-y px-6">
-                {#each absentDelegations as delegation (delegation.id)}
+                {#each absentSeats as seat (seat.id)}
                   <div class="flex items-center gap-3 py-2.5">
                     <span class="flex-1 text-sm text-muted-foreground/70">
-                      {delegation.shortName ?? delegation.name}
+                      {seat.procedure.shortName ?? seat.name}
                     </span>
                     <span class="text-xs text-muted-foreground">缺席</span>
                   </div>
@@ -377,8 +384,8 @@
     {:else}
       <div class="flex flex-col items-center gap-3 text-muted-foreground">
         <Users size={40} class="opacity-30" />
-        <p class="text-lg font-medium">未找到代表团</p>
-        <p class="text-sm opacity-70">请先创建大会并添加代表团</p>
+        <p class="text-lg font-medium">未找到参会席位</p>
+        <p class="text-sm opacity-70">请先在席位管理中配置参会席位</p>
       </div>
     {/if}
   </div>

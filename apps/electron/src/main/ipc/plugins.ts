@@ -43,7 +43,7 @@ export function registerPluginsIpc(
       hasDefinitions: !!p.path.definitions,
       hasI18n: !!p.path.i18n,
       hasAssets: !!p.path.assets,
-      hasDelegations: !!p.path.delegations,
+      hasSeats: !!p.path.seats,
       hasService: !!p.path.service,
     }))
   })
@@ -118,11 +118,11 @@ export function registerPluginsIpc(
       }
     }
 
-    // 读取代表团预设
-    let delegations: string | null = null
-    if (plugin.path.delegations && fs.existsSync(plugin.path.delegations)) {
+    // 读取席位预设
+    let seats: string | null = null
+    if (plugin.path.seats && fs.existsSync(plugin.path.seats)) {
       try {
-        delegations = fs.readFileSync(plugin.path.delegations, 'utf-8')
+        seats = fs.readFileSync(plugin.path.seats, 'utf-8')
       } catch {
         /* ignore */
       }
@@ -134,7 +134,7 @@ export function registerPluginsIpc(
       i18n,
       manifest: plugin.manifest,
       campaignFiles,
-      delegations,
+      seats,
       hasService: !!plugin.path.service,
     }
   })
@@ -222,7 +222,7 @@ export function registerPluginsIpc(
         definitions: string | null
         i18n: Record<string, string>
         assets: Array<{ path: string; data: string; mimeType: string }>
-        delegations?: string | null
+        seats?: string | null
       },
     ) => {
       const pluginId = payload.manifest.id as string
@@ -249,9 +249,9 @@ export function registerPluginsIpc(
           fs.writeFileSync(join(pluginDir, 'definitions.json'), payload.definitions, 'utf-8')
         }
 
-        // 写入 delegations.json
-        if (payload.delegations) {
-          fs.writeFileSync(join(pluginDir, 'delegations.json'), payload.delegations, 'utf-8')
+        // 写入 seats.json
+        if (payload.seats) {
+          fs.writeFileSync(join(pluginDir, 'seats.json'), payload.seats, 'utf-8')
         }
 
         // 写入 i18n 文件

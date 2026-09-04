@@ -30,12 +30,12 @@
   import { navigateToConference } from '$lib/classes/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
   import WindowControls from './app-sidebar/window-controls.svelte'
-  import NavUser from './app-sidebar/nav-user.svelte'
   import DynamicIsland from './dynamic-island.svelte'
   import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import { cn } from '$lib/classes/utils.js'
   import JoinConferenceDialog from './home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from './conference/display-only-dialog.svelte'
+  import { isParticipantSeat } from '$lib/classes/types/delegate'
   let {
     className = '',
     collapsible = 'icon',
@@ -61,7 +61,7 @@
   const conferencePrefix = $derived(hasConf ? `/conference/${confId}` : '/conference')
 
   const isStandaloneRoute = $derived(
-    $page.url.pathname === '/login' ||
+    $page.url.pathname === '/connect' ||
       $page.url.pathname.startsWith('/conference-display/') ||
       $page.url.pathname.startsWith('/delegate/')
   )
@@ -138,21 +138,32 @@
       isActive: routeId === `${conferencePrefix}/battle`
     },
     {
-      title: '代表管理',
+      title: '席位管理',
       icon: UserRoundCheck,
-      url: `${confPrefix}/delegations`,
-      needsConf: false,
-      isActive: routeId === `${confPrefix}/delegations`
+      url: `${confPrefix}/seats`,
+      needsConf: true,
+      isActive: routeId === `${confPrefix}/seats`
+    },
+    {
+      title: '参会席位',
+      icon: UserPlus,
+      url: `${confPrefix}/participants`,
+      needsConf: true,
+      isActive: routeId === `${confPrefix}/participants`
     }
   ])
 
   const conf = $derived($currentCommittee)
 
   const presentCount = $derived(
-    conf?.delegations.filter((d) => d.attendance === 'present').length ?? 0
+    conf?.seats.filter(isParticipantSeat).filter(
+      (seat) => seat.procedure.attendance === 'present'
+    ).length ?? 0
   )
   const votingCount = $derived(
-    conf?.delegations.filter((d) => d.attendance === 'present' && d.vetoPower !== false).length ?? 0
+    conf?.seats.filter(isParticipantSeat).filter(
+      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    ).length ?? 0
   )
   const simpleMajority = $derived(Math.floor(votingCount / 2) + 1)
   const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
@@ -243,18 +254,18 @@
           {#if conf}
             <Sidebar.Separator class="my-1" />
 
-            <!-- 代表团列表 -->
+            <!-- 参会席位列表 -->
             <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
               <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
                 <span class="text-[10px] text-muted-foreground/60">
-                  {presentCount}/{conf.delegations.length} 出席，{votingCount} 可投票
+                  {presentCount}/{conf.participantSeats.length} 出席，{votingCount} 可投票
                 </span>
               </div>
 
               <div class="px-3 pb-3">
-                {#each conf.delegations as delegation (delegation.id)}
-                  {@const isPresent = delegation.attendance === 'present'}
-                  {@const isObserver = isPresent && delegation.vetoPower === false}
+                {#each conf.participantSeats as seat (seat.id)}
+                  {@const isPresent = seat.procedure.attendance === 'present'}
+                  {@const isObserver = isPresent && !seat.procedure.hasVotingRights}
                   {@const isVoter = isPresent && !isObserver}
                   <div
                     class={cn(
@@ -264,7 +275,7 @@
                   >
                     <!-- 名称 -->
                     <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                      {delegation.name}
+                      {seat.name}
                     </span>
                     <!-- 出席状态 icon -->
                     <span class="shrink-0 text-[10px]">
@@ -284,9 +295,6 @@
         </Sidebar.Menu>
       </Sidebar.Content>
 
-      <Sidebar.Footer class="mt-auto">
-        <NavUser />
-      </Sidebar.Footer>
 
       <Sidebar.Rail />
     </Sidebar.Root>

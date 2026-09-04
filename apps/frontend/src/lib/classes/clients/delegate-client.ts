@@ -21,7 +21,8 @@ import type {
   Directive,
   News,
   SituationUpdate,
-  Seat,
+  SeatView,
+  AuthenticatedSeatSession,
   Capability,
   CabinetMode
 } from '$lib/classes/types/delegate'
@@ -33,7 +34,7 @@ export interface ConferenceSyncData {
   conferenceId: string
   displayData: ConferenceDisplayData
   seatGroups: SeatGroup[]
-  seats: Seat[]
+  seats: SeatView[]
   directives: Directive[]
   news: News[]
   situationUpdates: SituationUpdate[]
@@ -88,7 +89,7 @@ export interface DelegateBridgeCallbacks {
   onNewsUpdated?: (news: News) => void
   onSituationCreated?: (update: SituationUpdate) => void
   onModeChange?: (seatGroupId: string, mode: CabinetMode) => void
-  onAuthResult?: (result: { success: boolean; error?: string; seat?: Seat; capabilities?: Capability[] }) => void
+  onAuthResult?: (result: { success: boolean; error?: string; session?: AuthenticatedSeatSession }) => void
   onConnectionStatus?: (status: ConnectionStatus) => void
 }
 
@@ -107,8 +108,8 @@ export interface DelegateBridge {
   sendNewsUpdated(news: News): void
   /** Chair 端：发送局势更新 */
   sendSituationCreated(update: SituationUpdate): void
-  /** Delegate 端：通过邀请码+密码认证 */
-  authenticate(inviteCode: string, password: string): void
+  /** Delegate 端：通过邀请码认领或验证大会内 User。 */
+  authenticate(inviteCode: string, name: string, password?: string): void
   /** Delegate 端：提交指令 */
   createDirective(data: Partial<Directive>): void
   /** Delegate 端：更新指令 */
@@ -132,7 +133,7 @@ let _callbacks: DelegateBridgeCallbacks = {}
 let _statusListeners: Array<(status: ConnectionStatus) => void> = []
 let _reconnectDelay = 1000
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
-let _pendingAuth: { inviteCode: string; password: string } | null = null
+let _pendingAuth: { inviteCode: string; name: string; password?: string } | null = null
 let _mode: 'chair' | 'delegate' | 'none' = 'none'
 
 function setStatus(status: ConnectionStatus): void {
@@ -179,6 +180,7 @@ function getWs(): WebSocket {
         JSON.stringify({
           type: 'auth',
           inviteCode: _pendingAuth.inviteCode,
+          name: _pendingAuth.name,
           password: _pendingAuth.password,
           clientType: 'delegate'
         })
@@ -222,8 +224,7 @@ function handleMessage(msg: Record<string, unknown>): void {
       _callbacks.onAuthResult?.({
         success: msg.success as boolean,
         error: msg.error as string | undefined,
-        seat: msg.seat as Seat | undefined,
-        capabilities: msg.capabilities as Capability[] | undefined
+        session: msg.session as AuthenticatedSeatSession | undefined
       })
       break
 
@@ -364,14 +365,15 @@ function createDelegateBridge(): DelegateBridge {
     sendNewsUpdated: (): void => {},
     sendSituationCreated: (): void => {},
 
-    authenticate: (inviteCode: string, password: string): void => {
-      _pendingAuth = { inviteCode, password }
+    authenticate: (inviteCode: string, name: string, password?: string): void => {
+      _pendingAuth = { inviteCode, name, password }
       const ws = getWs()
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(
           JSON.stringify({
             type: 'auth',
             inviteCode,
+            name,
             password,
             clientType: 'delegate'
           })

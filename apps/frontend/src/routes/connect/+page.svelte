@@ -18,11 +18,10 @@
   import { Badge } from '$lib/components/ui/badge'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { Separator } from '$lib/components/ui/separator'
-  import DescContent from '$lib/components/login/desc-content.svelte'
+  import DescContent from '$lib/components/connect/desc-content.svelte'
   import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
   import favicon from '$lib/assets/favicon.png'
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { setOffline } from '$lib/classes/stores/auth-store'
   import { setExternalWsUrl } from '$lib/classes/clients/conference-display-client'
 
   interface LanMeeting {
@@ -100,7 +99,6 @@
   }
 
   function enterOrganizerMode(): void {
-    setOffline(true)
     goto(resolve('/'))
   }
 
