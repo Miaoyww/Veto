@@ -49,7 +49,6 @@ export function addSeatGroup(name: string, type: SeatGroup['type'], defaultCapab
     name,
     type,
     defaultCapabilities,
-    mode: type === 'cabinet' ? 'standing' : undefined,
     sortOrder: conference.seatGroups.length
   })
   conferences.update((items) => [...items])
@@ -152,7 +151,6 @@ export function resolveCapabilities(seatId: string): Capability[] {
 // ---- 模式切换 -------------------------------------------------------------
 
 export function setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
-  updateSeatGroup(seatGroupId, { mode })
   // 通过 WS 广播模式切换
   getDelegateBridge().sendModeChange(seatGroupId, mode)
 }

@@ -59,8 +59,6 @@ export interface SeatGroup {
   type: SeatGroupType
   /** 默认能力集（Seat 级别可覆盖） */
   defaultCapabilities: Capability[]
-  /** 内阁/委员会类型时有效 */
-  mode?: CabinetMode
   /** 排序权重 */
   sortOrder: number
 }

@@ -76,7 +76,6 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       name: draft.name.trim(),
       type: draft.type,
       defaultCapabilities: [],
-      mode: draft.type === 'cabinet' ? 'standing' : undefined,
       sortOrder: index
     })
     const seats = draft.seats.map((draftSeat, sortOrder) => {

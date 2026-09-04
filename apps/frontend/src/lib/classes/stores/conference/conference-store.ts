@@ -271,7 +271,6 @@ export function createConference(
       name: committeeName,
       type: 'cabinet',
       defaultCapabilities: [],
-      mode: 'standing',
       sortOrder: 0
     }],
     news: [],

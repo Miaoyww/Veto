@@ -49,11 +49,6 @@
             <Badge variant={typeBadgeVariants[group.type] ?? 'outline'}>
               {typeLabels[group.type] ?? group.type}
             </Badge>
-            {#if group.mode}
-              <Badge variant="secondary" class="mode-badge">
-                {group.mode === 'crisis' ? '危机' : '常委'}
-              </Badge>
-            {/if}
           </div>
           <span class="text-xs text-muted-foreground">
             {group.defaultCapabilities.length} 项默认能力
