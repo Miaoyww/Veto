@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SeatGroup, Seat } from '$lib/classes/types/delegate'
-  import { currentCommittee } from '$lib/classes/stores/conference/conference-store'
+  import { currentConferenceId } from '$lib/classes/stores/conference/conference-store'
   import SeatGroupList from './SeatGroupList.svelte'
   import SeatGroupEditor from './SeatGroupEditor.svelte'
   import SeatList from './SeatList.svelte'
@@ -59,18 +59,24 @@
     <div class="right-panel">
       {#if showGroupEditor}
         <SeatGroupEditor
-          editingGroup={editingGroup}
-          onClose={() => { showGroupEditor = false; editingGroup = null }}
+          {editingGroup}
+          onClose={() => {
+            showGroupEditor = false
+            editingGroup = null
+          }}
         />
       {:else if showSeatEditor}
         <SeatEditor
           seatGroupId={selectedGroup?.id ?? ''}
-          editingSeat={editingSeat}
-          onClose={() => { showSeatEditor = false; editingSeat = null }}
+          {editingSeat}
+          onClose={() => {
+            showSeatEditor = false
+            editingSeat = null
+          }}
         />
       {:else}
         <SeatList
-          selectedGroup={selectedGroup}
+          {selectedGroup}
           onEdit={handleEditSeat}
           onCreateNew={handleCreateSeat}
           onShowInvite={handleShowInvite}
@@ -82,8 +88,10 @@
   {#if inviteSeat}
     <InviteCodeDisplay
       seat={inviteSeat}
-      conferenceId={$currentCommittee?.id ?? ''}
-      onClose={() => { inviteSeat = null }}
+      conferenceId={$currentConferenceId ?? ''}
+      onClose={() => {
+        inviteSeat = null
+      }}
     />
   {/if}
 </div>
@@ -93,10 +101,14 @@
     padding: 1rem;
   }
   .management-grid {
-    display: grid;
-    grid-template-columns: 320px 1fr;
+    display: flex;
+    width: 100%;
     gap: 1.5rem;
-    max-width: 960px;
+  }
+  .left-panel,
+  .right-panel {
+    flex: 1 1 0;
+    min-width: 0;
   }
   .left-panel {
     border-right: 1px solid var(--border);
@@ -104,5 +116,17 @@
   }
   .right-panel {
     min-height: 300px;
+  }
+
+  @media (max-width: 720px) {
+    .management-grid {
+      flex-direction: column;
+    }
+    .left-panel {
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+      padding-right: 0;
+      padding-bottom: 1rem;
+    }
   }
 </style>

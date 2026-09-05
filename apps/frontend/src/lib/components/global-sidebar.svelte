@@ -85,6 +85,15 @@
       routePath.startsWith('/delegate/')
   )
 
+  const conferenceItems = $derived<NavItem[]>(
+    conferenceId
+      ? [
+          { title: '大会概览', icon: Globe, url: conferencePrefix },
+          { title: '席位管理', icon: UserRoundCheck, url: `${conferencePrefix}/seats` }
+        ]
+      : []
+  )
+
   const committeeItems = $derived<NavItem[]>(
     conferenceId && committeeId
       ? [
@@ -95,13 +104,17 @@
           { title: '文件', icon: Files, url: `${committeePrefix}/files` },
           { title: '工具', icon: Wrench, url: `${committeePrefix}/tools` },
           { title: '军事推演', icon: Swords, url: `${conferencePrefix}/battle` },
-          { title: '席位管理', icon: UserRoundCheck, url: `${committeePrefix}/seats` },
           { title: '参会席位', icon: UserPlus, url: `${committeePrefix}/participants` }
         ]
       : []
   )
 
-  const conf = $derived(sidebarMode === 'committee' ? $currentCommittee : null)
+  // 直接按 URL 解析委员会，避免页面尚未调用 loadConference 时参会席位为空。
+  const conf = $derived(
+    sidebarMode === 'committee'
+      ? (currentConference?.getCommittee(committeeId ?? '') ?? $currentCommittee)
+      : null
+  )
   const presentCount = $derived(
     conf?.seats.filter(isParticipantSeat).filter((seat) => seat.procedure.attendance === 'present')
       .length ?? 0
@@ -202,17 +215,18 @@
                   </Sidebar.MenuButton>
                 </Sidebar.MenuItem>
 
-                <Sidebar.MenuItem>
-                  <Sidebar.MenuButton isActive={isActive(conferencePrefix)}>
-                    {#snippet child({ props })}
-                      <a href={toHref(conferencePrefix)} {...props}>
-                        <Globe />
-                        <span>大会概览</span>
-                      </a>
-                    {/snippet}
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
-
+                {#each conferenceItems as item (item.url)}
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton isActive={isActive(item.url)}>
+                      {#snippet child({ props })}
+                        <a href={toHref(item.url)} {...props}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </a>
+                      {/snippet}
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                {/each}
                 <Sidebar.Separator class="my-1" />
                 {#each currentConference?.committees ?? [] as committee (committee.id)}
                   <Sidebar.MenuItem>
