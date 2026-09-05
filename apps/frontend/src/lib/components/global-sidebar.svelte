@@ -23,6 +23,7 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import { resolve } from '$app/paths'
+  import { dev } from '$app/environment'
   import { conferences, currentCommittee } from '$lib/classes/stores/conference/conference-store'
   import { navigateToCommittee, navigateToConference } from '$lib/classes/utils'
   import BrandSwitcher from './app-sidebar/brand-switcher.svelte'
@@ -103,7 +104,7 @@
           { title: '局势', icon: Globe, url: `${committeePrefix}/situation` },
           { title: '文件', icon: Files, url: `${committeePrefix}/files` },
           { title: '工具', icon: Wrench, url: `${committeePrefix}/tools` },
-          { title: '军事推演', icon: Swords, url: `${conferencePrefix}/battle` },
+          ...(dev ? [{ title: '军事推演', icon: Swords, url: `${conferencePrefix}/battle` }] : []),
           { title: '参会席位', icon: UserPlus, url: `${committeePrefix}/participants` }
         ]
       : []
