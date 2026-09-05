@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, Play } from '@lucide/svelte'
+  import { ChevronDown, Play, Settings } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { Button, buttonVariants } from '$lib/components/ui/button'
   import * as Collapsible from '$lib/components/ui/collapsible'
@@ -47,9 +47,13 @@
           <ChevronDown />
           <span class="sr-only">{open ? '收起席位' : '展开席位'}</span>
         </Collapsible.Trigger>
-        <Button size="sm" class="gap-2" onclick={() => navigateToCommittee(conferenceId, committee.id)}>
-          <Play class="size-4" />
-          进入会议
+        <Button
+          size="icon"
+          class="gap-2"
+          variant="ghost"
+          onclick={() => navigateToCommittee(conferenceId, committee.id)}
+        >
+          <Settings class="size-4" />
         </Button>
       </div>
     </div>
@@ -67,7 +71,8 @@
           </thead>
           <tbody>
             {#each committee.seats as seat (seat.id)}
-              {@const inviteCode = seatAccesses.find((access) => access.seatId === seat.id)?.inviteCode ?? ''}
+              {@const inviteCode =
+                seatAccesses.find((access) => access.seatId === seat.id)?.inviteCode ?? ''}
               <tr class="border-t">
                 <td class="px-3 py-2">{seat.name}</td>
                 <td class="px-3 py-2 text-muted-foreground">{seat.role ?? '-'}</td>
@@ -85,9 +90,7 @@
               </tr>
             {:else}
               <tr class="border-t">
-                <td class="px-3 py-4 text-center text-muted-foreground" colspan="4">
-                  无席位
-                </td>
+                <td class="px-3 py-4 text-center text-muted-foreground" colspan="4"> 无席位 </td>
               </tr>
             {/each}
           </tbody>

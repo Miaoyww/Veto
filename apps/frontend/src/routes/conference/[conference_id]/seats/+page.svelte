@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { page } from '$app/stores'
-  import { loadConference, saveConferencesNow } from '$lib/classes/stores/conference/conference-store'
+  import {
+    loadConference,
+    saveConferencesNow
+  } from '$lib/classes/stores/conference/conference-store'
   import { destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
   import SeatManagement from '$lib/components/conference/seat-management/SeatManagement.svelte'
 
@@ -26,6 +29,16 @@
 </div>
 
 <style>
-  .seats-page { display: flex; flex-direction: column; height: 100%; }
-  .page-header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); }
+  .seats-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
 </style>

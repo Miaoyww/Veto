@@ -30,7 +30,6 @@
   import WindowControls from './app-sidebar/window-controls.svelte'
   import DynamicIsland from './dynamic-island.svelte'
   import { cn } from '$lib/classes/utils.js'
-  import JoinConferenceDialog from './home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from './conference/display-only-dialog.svelte'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
 
@@ -130,7 +129,6 @@
   const twoThirds = $derived(Math.ceil((votingCount * 2) / 3))
 
   let displayOnlyDialogOpen = $state(false)
-  let joinBattleDialogOpen = $state(false)
 
   function toHref(path: string): string {
     // @ts-expect-error resolve 要求字面量路由类型，这里接受动态路由
@@ -173,13 +171,6 @@
                 </Sidebar.MenuItem>
 
                 <Sidebar.MenuItem>
-                  <Sidebar.MenuButton onclick={() => (joinBattleDialogOpen = true)}>
-                    <UserPlus />
-                    <span>加入大会</span>
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
-
-                <Sidebar.MenuItem>
                   <Sidebar.MenuButton onclick={() => goTo('/conference/create')}>
                     <Plus />
                     <span>创建大会</span>
@@ -208,7 +199,7 @@
                 <Sidebar.MenuItem>
                   <Sidebar.MenuButton>
                     {#snippet child({ props })}
-                      <a href={toHref('/')} {...props}>
+                      <a href={toHref('/conference')} {...props}>
                         <House />
                         <span>首页</span>
                       </a>
@@ -373,7 +364,6 @@
 {/if}
 
 <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
-<JoinConferenceDialog bind:open={joinBattleDialogOpen} />
 
 <style>
   .drag-region {
