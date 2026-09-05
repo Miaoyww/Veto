@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
 
-  import { Search, Plus, Users, Monitor, UserPlus, Play, Mic, Bell, Clock } from '@lucide/svelte'
+  import { Search, Plus, Users, UserPlus, Play, Mic, Bell, Clock } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
@@ -15,8 +15,6 @@
     getPresentCount
   } from '$lib/classes/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
-  import CreateConferenceDialog from '$lib/components/home/create-conference-dialog.svelte'
-  import JoinConferenceDialog from '$lib/components/home/join-conference-dialog.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import {
@@ -274,7 +272,5 @@
     {/if}
   </div>
 </div>
-
-<JoinConferenceDialog bind:open={joinDialogOpen} />
 
 <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />

@@ -8,7 +8,6 @@
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
-  import GlobalSidebar from '$lib/components/global-sidebar.svelte'
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
   import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
   import { injectToRegistry } from '$lib/classes/services/plugin/plugin-registry'
@@ -44,9 +43,7 @@
 <TimerDialog bind:open={$timerDialogOpen} />
 
 <div>
-  <GlobalSidebar>
-    {@render children?.()}
-  </GlobalSidebar>
+  {@render children?.()}
 </div>
 
 <!-- 投屏页：独立渲染，无 Sidebar 无 TitleBar -->
