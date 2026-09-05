@@ -6,8 +6,9 @@ import {
   scanLanConferences,
   stopLanConference
 } from '../lan-service'
+import type { HostRuntime } from '../host-runtime'
 
-export function registerLanIpc(getPort: () => number): void {
+export function registerLanIpc(getPort: () => number, runtime?: HostRuntime): void {
   ipcMain.handle('veto:lan:scan', (_event, timeoutMs?: number) =>
     scanLanConferences(Math.min(Math.max(timeoutMs ?? 1600, 500), 4000))
   )
@@ -18,8 +19,13 @@ export function registerLanIpc(getPort: () => number): void {
 
   ipcMain.handle(
     'veto:lan:publish-conference',
-    (_event, info: { conferenceId: string; name: string; phase: string }) => {
-      publishLanConference(info, getPort())
+    () => {
+      const active = runtime?.activeConference
+      if (!active) {
+        stopLanConference()
+        return { success: false, error: '当前没有活动大会' }
+      }
+      publishLanConference({ conferenceId: active.id, name: active.name, phase: 'active' }, getPort())
       return { success: true }
     }
   )

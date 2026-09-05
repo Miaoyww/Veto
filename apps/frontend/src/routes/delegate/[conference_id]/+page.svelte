@@ -1,191 +1,187 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
+  import { onMount } from 'svelte'
   import type {
     AuthenticatedSeatSession,
-    Capability,
-    CabinetMode,
     Directive,
     News,
     SituationUpdate,
-    Classification
-  } from '$lib/classes/types/delegate'
+    UserClientSessionProjection,
+    WorkflowAudienceProjection
+  } from '../../../../../shared'
   import {
+    getUserClient,
     initWsPort,
-    getDelegateBridge,
-    onDelegateConnectionStatus
+    type ConnectionStatus
   } from '$lib/classes/clients/delegate-client'
-  import type { ConnectionStatus, ConferenceSyncData } from '$lib/classes/clients/delegate-client'
-  import type { TimerTickData } from '$lib/classes/types/conference'
   import LoginScreen from '$lib/components/delegate/LoginScreen.svelte'
   import DelegateShell from '$lib/components/delegate/DelegateShell.svelte'
   import DirectivePanel from '$lib/components/delegate/DirectivePanel.svelte'
   import NewsPanel from '$lib/components/delegate/NewsPanel.svelte'
   import SituationTimeline from '$lib/components/delegate/SituationTimeline.svelte'
-  import { page } from '$app/stores'
 
-  // ── 状态 ──
   let connectionStatus = $state<ConnectionStatus>('disconnected')
-  let authenticated = $state(false)
-  let authError = $state('')
   let session = $state<AuthenticatedSeatSession | null>(null)
-  const seat = $derived(session?.seat ?? null)
-  let capabilities = $state<Capability[]>([])
-  let cabinetMode = $state<CabinetMode>('standing')
-  let directiveItems = $state<Directive[]>([])
-  let newsList = $state<News[]>([])
-  let situationUpdates = $state<SituationUpdate[]>([])
+  let projection = $state<UserClientSessionProjection | null>(null)
+  let workflowQueue = $state<WorkflowAudienceProjection>({ directives: [], news: [] })
+  let authError = $state('')
+  let commandError = $state('')
   let connecting = $state(false)
 
   const conferenceId = $derived($page.params.conference_id ?? '')
+  const capabilities = $derived(session?.identity.capabilities ?? [])
+  const authorizedDirectives = $derived(projection?.directives ?? [])
+  const authorizedNews = $derived(projection?.news ?? [])
+  const situations = $derived(projection?.situations ?? [])
 
-  // ── 认证 ──
-  function handleAuthenticate(inviteCode: string, name: string, password?: string): void {
+  function resetSession(): void {
+    session = null
+    projection = null
+    workflowQueue = { directives: [], news: [] }
+    connecting = false
+  }
+
+  function returnToHome(): void {
+    resetSession()
+    void goto('/')
+  }
+
+  function applyProjection(nextProjection: UserClientSessionProjection): void {
+    if (nextProjection.conferenceId !== conferenceId) {
+      returnToHome()
+      return
+    }
+    projection = nextProjection
+  }
+
+  function refreshQueues(): void {
+    const client = getUserClient()
+    client.querySessionProjection()
+    if (capabilities.includes('process_directive') || capabilities.includes('review_news')) {
+      client.queryWorkflowQueue()
+    }
+  }
+
+  function handleAuthenticate(inviteCode: string, password?: string): void {
     authError = ''
+    commandError = ''
     connecting = true
-    const bridge = getDelegateBridge()
+    getUserClient().authenticate(inviteCode, password)
+  }
 
-    bridge.setCallbacks({
-      onAuthResult: (result) => {
-        connecting = false
-        if (result.success && result.session) {
-          authenticated = true
-          session = result.session
-          capabilities = result.session.capabilities
-        } else {
-          authError = result.error ?? '认证失败'
-        }
-      },
-      onConferenceSync: (data: ConferenceSyncData) => {
-        directiveItems = data.directives ?? []
-        newsList = data.news ?? []
-        situationUpdates = data.situationUpdates ?? []
-        capabilities = data.myCapabilities ?? []
-      },
-      onDirectiveUpdated: (directive: Directive) => {
-        directiveItems = directiveItems.map((d) => (d.id === directive.id ? directive : d))
-        if (!directiveItems.some((d) => d.id === directive.id)) {
-          directiveItems = [...directiveItems, directive]
-        }
-      },
-      onNewsUpdated: (news: News) => {
-        newsList = newsList.map((n) => (n.id === news.id ? news : n))
-        if (!newsList.some((n) => n.id === news.id)) {
-          newsList = [...newsList, news]
-        }
-      },
-      onSituationCreated: (update: SituationUpdate) => {
-        if (!situationUpdates.some((s) => s.id === update.id)) {
-          situationUpdates = [...situationUpdates, update]
-        }
-      },
-      onModeChange: (seatGroupId: string, mode: CabinetMode) => {
-        if (session?.seatGroupId === seatGroupId) {
-          cabinetMode = mode
-        }
-      }
-    })
-
-    bridge.authenticate(inviteCode, name, password)
+  function execute(command: Parameters<ReturnType<typeof getUserClient>['execute']>[0]): void {
+    commandError = ''
+    getUserClient().execute(command)
   }
 
   function handleDisconnect(): void {
-    const bridge = getDelegateBridge()
-    bridge.disconnect()
-    authenticated = false
-    session = null
-    capabilities = []
-    authError = ''
+    getUserClient().disconnect()
+    returnToHome()
   }
 
-  // ── 指令操作 ──
-  function handleCreateDirective(data: {
-    title: string
-    content: string
-    target: string
-    classification: Classification
-  }): void {
-    const bridge = getDelegateBridge()
-    bridge.createDirective({
-      ...data,
-      initiatorId: seat?.id,
-      initiatorRole: seat?.role,
-      cabinetId: session?.seatGroupId,
-      status: 'draft',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    })
+  function refreshContent(_content: Directive | News | SituationUpdate): void {
+    // Events are only an invalidation signal. Re-querying prevents a withdrawn
+    // record from surviving locally after the Host removes it from a projection.
+    refreshQueues()
   }
 
-  function handleResubmitDirective(directiveId: string): void {
-    const bridge = getDelegateBridge()
-    bridge.updateDirective({
-      id: directiveId,
-      status: 'submitted',
-      updatedAt: Date.now()
+  onMount(() => {
+    let hadSession = false
+    const client = getUserClient()
+    client.setCallbacks({
+      onConnectionStatus: (status) => {
+        connectionStatus = status
+      },
+      onAuthenticated: (nextSession) => {
+        connecting = false
+        hadSession = true
+        if (nextSession.conferenceId !== conferenceId) {
+          returnToHome()
+          return
+        }
+        session = nextSession
+        applyProjection(nextSession.projection)
+        refreshQueues()
+      },
+      onAuthError: (error) => {
+        connecting = false
+        authError = error.message
+      },
+      onProjection: applyProjection,
+      onWorkflowQueue: (nextQueue) => {
+        workflowQueue = nextQueue
+      },
+      onContentChanged: refreshContent,
+      onCommandResult: (result) => {
+        if (!result.ok) commandError = result.error.message
+        refreshQueues()
+      },
+      onError: (error) => {
+        if (session) commandError = error.message
+        else {
+          connecting = false
+          authError = error.message
+        }
+      },
+      onSessionRevoked: () => {
+        if (hadSession) returnToHome()
+      }
     })
-  }
 
-  // ── 新闻操作 ──
-  function handleCreateNews(data: { title: string; content: string; source: string }): void {
-    const bridge = getDelegateBridge()
-    bridge.createNews({
-      ...data,
-      authorId: seat?.id,
-      seatGroupId: session?.seatGroupId,
-      status: 'draft',
-      createdAt: Date.now()
-    })
-  }
-
-  function handleSubmitNews(newsId: string): void {
-    const bridge = getDelegateBridge()
-    bridge.submitNews(newsId)
-  }
-
-  // ── 生命周期 ──
-  onMount(async () => {
-    await initWsPort()
-    const unsubConn = onDelegateConnectionStatus((status) => {
-      connectionStatus = status
-    })
-    onDestroy(() => {
-      unsubConn()
-    })
+    void initWsPort()
+    return () => client.disconnect()
   })
 </script>
 
-{#if !authenticated}
+{#if !session}
   <LoginScreen onAuthenticate={handleAuthenticate} error={authError} {connecting} />
-{:else if seat}
+{:else if projection}
   <DelegateShell
-    {seat}
+    identity={session.identity}
     {capabilities}
     {connectionStatus}
-    {cabinetMode}
     onDisconnect={handleDisconnect}
+    {commandError}
   >
     {#snippet directives()}
       <DirectivePanel
-        directives={directiveItems}
-        seatId={seat.id}
-        seatRole={seat.role ?? ''}
-        cabinetId={session?.seatGroupId ?? ''}
-        onCreateDirective={handleCreateDirective}
-        onResubmit={handleResubmitDirective}
+        directives={authorizedDirectives}
+        workflowDirectives={workflowQueue.directives}
+        seatId={session?.identity.seatId ?? ''}
+        targets={projection?.directiveTargets ?? []}
+        canSubmit={capabilities.includes('submit_directive')}
+        canProcess={capabilities.includes('process_directive')}
+        onSubmit={(data) => execute({ type: 'submit_directive', ...data })}
+        onClaim={(directiveId) => execute({ type: 'claim_directive', directiveId })}
+        onApprove={(directiveId, processingNote) =>
+          execute({ type: 'approve_directive', directiveId, processingNote })}
+        onReject={(directiveId, processingNote) =>
+          execute({ type: 'reject_directive', directiveId, processingNote })}
+        onCancel={(directiveId, reason) => execute({ type: 'cancel_directive', directiveId, reason })}
       />
     {/snippet}
     {#snippet news()}
       <NewsPanel
-        {newsList}
-        seatId={seat.id}
-        seatGroupId={session?.seatGroupId ?? ''}
-        canDraftNews={capabilities.includes('draft_news')}
-        onCreateNews={handleCreateNews}
-        onSubmitNews={handleSubmitNews}
+        news={authorizedNews}
+        workflowNews={workflowQueue.news}
+        canDraft={capabilities.includes('draft_news')}
+        canReview={capabilities.includes('review_news')}
+        canWithdraw={capabilities.includes('withdraw_news')}
+        onSubmit={(data) => execute({ type: 'submit_news', ...data })}
+        onReview={(newsId, decision, note) => execute({ type: 'review_news', newsId, decision, note })}
+        onWithdraw={(newsId, reason) => execute({ type: 'withdraw_news', newsId, reason })}
       />
     {/snippet}
     {#snippet timeline()}
-      <SituationTimeline updates={situationUpdates} />
+      <SituationTimeline
+        updates={situations}
+        timelines={projection?.timelines ?? []}
+        canPublish={capabilities.includes('publish_situation')}
+        canWithdraw={capabilities.includes('withdraw_situation')}
+        onPublish={(data) => execute({ type: 'publish_situation', ...data })}
+        onWithdraw={(situationId, reason) => execute({ type: 'withdraw_situation', situationId, reason })}
+      />
     {/snippet}
   </DelegateShell>
 {/if}

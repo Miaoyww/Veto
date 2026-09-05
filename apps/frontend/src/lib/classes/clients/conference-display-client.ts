@@ -3,11 +3,8 @@
  * ──────────────────────────────────────────────
  * Display 窗口通信抽象层。
  *
- * 使用 WebSocket 协议：主进程运行 WS server，Host 和 Display 窗口
- * 都通过浏览器原生 WebSocket 连接。端口由主进程自动分配。
- *
- * Host 端：连接后发送 { type: "host", data } → 服务器广播给所有 Display
- * Display 端：连接后接收服务器广播的消息
+ * Display is a direct, local Chair-to-Display link. It deliberately does not
+ * connect to the Host Service: the Chair owns its local procedure projection.
  */
 
 import type {
@@ -19,58 +16,6 @@ import type {
 } from '$lib/classes/types/conference'
 import { isParticipantSeat, toSeatView, type Seat, type SeatView } from '$lib/classes/types/delegate'
 
-const DEFAULT_WS_PORT = 19527
-
-/** 从主进程查询到的实际 WS 端口（初始化后可用） */
-let _wsPort: number | null = null
-
-/** 初始化 WS 端口（从主进程查询，应在应用启动时调用一次） */
-export async function initWsPort(): Promise<number> {
-  if (_wsPort !== null) return _wsPort
-  if (typeof window !== 'undefined' && window.veto?.ws) {
-    const port = await window.veto.ws.getPort()
-    _wsPort = port
-    console.log('[DisplayBridge] WS port from main:', _wsPort)
-    return port
-  }
-  _wsPort = DEFAULT_WS_PORT
-  return _wsPort
-}
-
-/** 获取当前 WS 端口 */
-export function getWsPort(): number {
-  return _wsPort ?? DEFAULT_WS_PORT
-}
-
-function buildDefaultWsUrl(): string {
-  return `ws://localhost:${_wsPort ?? DEFAULT_WS_PORT}`
-}
-
-/** 当前 WS 连接地址（可由外部 IPC 消息更新） */
-let _currentWsUrl: string | null = null
-
-export function getWsUrl(): string {
-  return _currentWsUrl || buildDefaultWsUrl()
-}
-
-/** 更新 WS 地址并重连（仅展示模式由 IPC 触发） */
-export function setExternalWsUrl(url: string): void {
-  if (_currentWsUrl === url) return
-  _currentWsUrl = url
-  console.log('[DisplayBridge] External WS URL set:', url)
-  // 断开当前连接并重连
-  if (_ws) {
-    _ws.close()
-    _ws = null
-  }
-  if (_reconnectTimer) {
-    clearTimeout(_reconnectTimer)
-    _reconnectTimer = null
-  }
-  _reconnectDelay = 1000
-  getWs()
-}
-
 // ---- 抽象接口 ------------------------------------------------------------
 
 export interface ConferenceDisplayBridge {
@@ -78,27 +23,34 @@ export interface ConferenceDisplayBridge {
   openDisplay(conferenceId: string): Promise<boolean>
   /** 关闭显示窗口 */
   closeDisplay(): Promise<void>
-  /** 推送完整显示数据（Host 端通过 WebSocket 发送，结构变化时调用） */
+  /** Push a full Chair projection to its bound local Display. */
   sendUpdate(data: ConferenceDisplayData): void
   /** 推送计时器增量数据（Host 端每 tick 发送，Display 端不维护计时器，见 ADR-0002） */
   sendTimerTick(data: TimerTickData): void
-  /** 监听完整数据更新（Display 端通过 WebSocket 接收） */
+  /** Listen for a full Chair projection on the local Display. */
   onHostCommand(callback: (data: ConferenceDisplayData) => void): () => void
   /** 监听计时器增量更新（Display 端，与 onHostCommand 独立） */
   onTimerTick(callback: (data: TimerTickData) => void): () => void
 }
 
-// ---- 共享 WebSocket 连接 ----
+// ---- Direct local display channel ----
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
-let _ws: WebSocket | null = null
+/** Compatibility helper for the Chair UI status badge. Display data itself
+ * travels over the local Electron IPC channel, while this only reads the
+ * Host Service listener port for diagnostics. */
+export async function initWsPort(): Promise<number> {
+  if (typeof window !== 'undefined' && window.veto?.ws) {
+    return window.veto.ws.getPort()
+  }
+  return 19527
+}
+
 let _wsListeners: Array<(data: ConferenceDisplayData) => void> = []
 let _tickListeners: Array<(data: TimerTickData) => void> = []
 let _statusListeners: Array<(status: ConnectionStatus) => void> = []
-let _pendingMessages: Array<{ type: string; data: unknown }> = []
-let _reconnectDelay = 1000
-let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let _status: ConnectionStatus = 'disconnected'
 
 function setStatus(status: ConnectionStatus): void {
   for (const cb of _statusListeners) {
@@ -106,83 +58,11 @@ function setStatus(status: ConnectionStatus): void {
   }
 }
 
-function getWs(): WebSocket {
-  if (_ws && _ws.readyState === WebSocket.OPEN) {
-    setStatus('connected')
-    return _ws
-  }
-
-  // 清除已有重连定时器
-  if (_reconnectTimer) {
-    clearTimeout(_reconnectTimer)
-    _reconnectTimer = null
-  }
-
-  setStatus('connecting')
-  _ws = new WebSocket(getWsUrl())
-
-  _ws.onopen = () => {
-    setStatus('connected')
-    console.log('[DisplayBridge] WebSocket connected')
-    _reconnectDelay = 1000 // 重置退避
-    // 发送积压消息（仅发送最新的全量数据，丢弃过期 tick）
-    const lastFull = [..._pendingMessages].reverse().find((m) => m.type !== 'timer_tick')
-    if (lastFull) {
-      _ws!.send(JSON.stringify(lastFull))
-    }
-    _pendingMessages = []
-  }
-
-  _ws.onmessage = (event) => {
-    try {
-      const raw = JSON.parse(event.data)
-      if (raw.type === 'timer_tick') {
-        // 计时器增量消息（ADR-0002）：仅更新 remainingSec/elapsedSec，不重建全量数据
-        const tickData = raw.data as TimerTickData
-        for (const cb of _tickListeners) {
-          cb(tickData)
-        }
-      } else {
-        // host 全量消息 或 向后兼容的无 type 消息
-        const data: ConferenceDisplayData =
-          raw.type === 'host' ? (raw.data as ConferenceDisplayData) : (raw as ConferenceDisplayData)
-        for (const cb of _wsListeners) {
-          cb(data)
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  _ws.onerror = () => {
-    // 连接失败由 onclose 处理（error 后必然 close）
-  }
-
-  _ws.onclose = () => {
-    _ws = null
-    setStatus('disconnected')
-    // 自动重连（指数退避：1s → 2s → 4s → … → max 10s）
-    _reconnectTimer = setTimeout(() => {
-      if (!_ws || _ws.readyState !== WebSocket.OPEN) {
-        getWs()
-      }
-    }, _reconnectDelay)
-    _reconnectDelay = Math.min(_reconnectDelay * 2, 10000)
-  }
-
-  return _ws
-}
-
-/** 获取当前 WebSocket 连接状态 */
 function currentStatus(): ConnectionStatus {
-  if (!_ws) return 'disconnected'
-  if (_ws.readyState === WebSocket.OPEN) return 'connected'
-  if (_ws.readyState === WebSocket.CONNECTING) return 'connecting'
-  return 'disconnected'
+  return _status
 }
 
-/** 监听 WebSocket 连接状态变化（供 Display 端显示连接状态） */
+/** Listen for the state of the Chair-to-Display local channel. */
 export function onConnectionStatus(callback: (status: ConnectionStatus) => void): () => void {
   _statusListeners.push(callback)
   // 立即通知当前状态（解决 HMR 后状态丢失问题）
@@ -192,7 +72,7 @@ export function onConnectionStatus(callback: (status: ConnectionStatus) => void)
   }
 }
 
-// ---- Host 桥接 ----
+// ---- Chair bridge ----
 
 function createHostBridge(): ConferenceDisplayBridge {
   return {
@@ -208,22 +88,13 @@ function createHostBridge(): ConferenceDisplayBridge {
     },
 
     sendUpdate: (data: ConferenceDisplayData): void => {
-      const ws = getWs()
-      const payload = JSON.stringify({ type: 'host', data })
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload)
-      } else {
-        _pendingMessages.push({ type: 'host', data })
-      }
+      _status = 'connected'
+      setStatus(_status)
+      window.veto?.conference?.sendToDisplay(data)
     },
 
     sendTimerTick: (data: TimerTickData): void => {
-      const ws = getWs()
-      const payload = JSON.stringify({ type: 'timer_tick', data })
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload)
-      }
-      // tick 消息不积压——断线时下一个全量 sendUpdate 会覆盖所有状态
+      window.veto?.conference?.sendToDisplay({ type: 'timer_tick', data })
     },
 
     onHostCommand: (): (() => void) => {
@@ -238,7 +109,7 @@ function createHostBridge(): ConferenceDisplayBridge {
   }
 }
 
-// ---- Display 桥接 ----
+// ---- Display bridge ----
 
 function createDisplayBridge(): ConferenceDisplayBridge {
   return {
@@ -255,8 +126,8 @@ function createDisplayBridge(): ConferenceDisplayBridge {
 
     onHostCommand: (callback: (data: ConferenceDisplayData) => void): (() => void) => {
       _wsListeners.push(callback)
-      // 确保 WebSocket 已连接
-      getWs()
+      _status = 'connected'
+      setStatus(_status)
       return () => {
         _wsListeners = _wsListeners.filter((cb) => cb !== callback)
       }
@@ -264,12 +135,23 @@ function createDisplayBridge(): ConferenceDisplayBridge {
 
     onTimerTick: (callback: (data: TimerTickData) => void): (() => void) => {
       _tickListeners.push(callback)
-      getWs()
       return () => {
         _tickListeners = _tickListeners.filter((cb) => cb !== callback)
       }
     }
   }
+}
+
+/** Receive a payload delivered by the Chair-owned Electron Display channel. */
+export function receiveDisplayUpdate(payload: unknown): void {
+  const message = payload as { type?: string; data?: unknown }
+  _status = 'connected'
+  setStatus(_status)
+  if (message.type === 'timer_tick') {
+    for (const callback of _tickListeners) callback(message.data as TimerTickData)
+    return
+  }
+  for (const callback of _wsListeners) callback(payload as ConferenceDisplayData)
 }
 
 // ---- 单例 ----------------------------------------------------------------

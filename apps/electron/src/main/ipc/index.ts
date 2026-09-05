@@ -21,6 +21,9 @@ import { registerPluginsIpc } from './plugins'
 import { registerAssetsIpc } from './assets'
 import { registerConferenceIpc } from './conference'
 import { registerUpdaterIpc } from './updater'
+import { registerHostConsoleIpc } from './host-console'
+import type { HostRuntime } from '../host-runtime'
+import type { BrowserWindow } from 'electron'
 
 /** IPC 模块所需的运行时依赖 */
 export interface IpcDependencies {
@@ -28,6 +31,10 @@ export interface IpcDependencies {
   displayWindow: DisplayWindowRef
   wsServerPort: number
   refreshPlugins: () => void
+  hostRuntime: HostRuntime
+  getHostConsoleWindow: () => BrowserWindow | null
+  onActiveConferenceChanged?: () => void
+  refreshConfiguredConferences?: () => void
 }
 
 /**
@@ -45,9 +52,15 @@ export function registerAllIpcHandlers(deps: IpcDependencies): void {
 
   // 有依赖模块
   registerWsIpc(() => deps.wsServerPort)
-  registerLanIpc(() => deps.wsServerPort)
+  registerLanIpc(() => deps.wsServerPort, deps.hostRuntime)
   registerConfigIpc(deps.refreshPlugins)
   registerPluginsIpc(deps.pluginInstances, deps.refreshPlugins)
   registerAssetsIpc(deps.pluginInstances)
   registerConferenceIpc(deps.displayWindow)
+  registerHostConsoleIpc({
+    runtime: deps.hostRuntime,
+    getHostConsoleWindow: deps.getHostConsoleWindow,
+    onConferenceChanged: deps.onActiveConferenceChanged,
+    refreshConfiguredConferences: deps.refreshConfiguredConferences
+  })
 }

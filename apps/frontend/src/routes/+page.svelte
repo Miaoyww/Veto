@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { fly } from 'svelte/transition'
-  import { Loader2, LogIn, MonitorPlay, Network, Plus, RefreshCw, Server } from '@lucide/svelte'
+  import { Loader2, LogIn, Network, Plus, RefreshCw, Server } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
   import { Input } from '$lib/components/ui/input'
@@ -14,7 +14,7 @@
   import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
   import favicon from '$lib/assets/favicon.png'
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { setExternalWsUrl } from '$lib/classes/clients/conference-display-client'
+  import { setUserClientWsUrl } from '$lib/classes/clients/delegate-client'
 
   interface LanMeeting {
     conferenceId: string
@@ -57,9 +57,9 @@
     }
 
     scanError = ''
-    setExternalWsUrl(meeting.wsUrl)
+    setUserClientWsUrl(meeting.wsUrl)
     goto(
-      resolve('/conference-display/[conference_id]', {
+      resolve('/delegate/[conference_id]', {
         conference_id: meeting.conferenceId
       })
     )
@@ -93,6 +93,7 @@
   }
 
   function enterOrganizerMode(): void {
+    setUserClientWsUrl(null)
     goto(resolve('/conference'))
   }
 
@@ -226,18 +227,6 @@
             <Button class="w-full gap-2" size="lg" onclick={enterOrganizerMode}>
               <Plus class="size-4" />
               组织者入口
-            </Button>
-            <Button
-              variant="outline"
-              class="w-full gap-2"
-              size="lg"
-              onclick={() => {
-                if (meetings[0]) join(meetings[0])
-              }}
-              disabled={meetings.length === 0}
-            >
-              <MonitorPlay class="size-4" />
-              投屏端加入
             </Button>
           </Card.Footer>
         </Card.Root>

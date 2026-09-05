@@ -30,6 +30,12 @@
   let query = $state('')
   let joinDialogOpen = $state(false)
   let displayOnlyDialogOpen = $state(false)
+  let hostStatus = $state<{
+    activeConferenceId: string | null
+    conferences: Array<{ id: string; name: string; active: boolean }>
+  } | null>(null)
+  let hostStatusError = $state('')
+  let hostBusy = $state(false)
 
   const filteredConferences = $derived(
     query.trim()
@@ -58,7 +64,46 @@
 
   onMount(() => {
     unloadConference()
+    void refreshHostStatus()
   })
+
+  async function refreshHostStatus(): Promise<void> {
+    if (!window.veto?.hostConsole) return
+    const result = await window.veto.hostConsole.status()
+    if (!result.ok) {
+      hostStatusError = result.error ?? '无法读取 Host 状态'
+      return
+    }
+    hostStatus = {
+      activeConferenceId: result.activeConferenceId ?? null,
+      conferences: result.conferences ?? []
+    }
+  }
+
+  async function startHostConference(conferenceId: string): Promise<void> {
+    hostBusy = true
+    hostStatusError = ''
+    try {
+      const result = await window.veto.hostConsole.startConference(conferenceId)
+      if ((result as { ok?: boolean }).ok === false) {
+        hostStatusError = (result as { error?: { message?: string } }).error?.message ?? '启动大会失败'
+      }
+      await refreshHostStatus()
+    } finally {
+      hostBusy = false
+    }
+  }
+
+  async function stopHostConference(): Promise<void> {
+    hostBusy = true
+    hostStatusError = ''
+    try {
+      await window.veto.hostConsole.stopConference()
+      await refreshHostStatus()
+    } finally {
+      hostBusy = false
+    }
+  }
 
   function formatActiveTime(ts: number): string {
     return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
@@ -116,6 +161,35 @@
           </Button>
         </div>
       </div>
+
+      {#if hostStatus}
+        <section class="border-b bg-muted/20 px-8 py-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-medium">Host 活动大会</span>
+            {#if hostStatus.activeConferenceId}
+              <Badge variant="default">
+                {hostStatus.conferences.find((item) => item.id === hostStatus?.activeConferenceId)?.name ?? hostStatus.activeConferenceId}
+              </Badge>
+              <Button size="sm" variant="outline" disabled={hostBusy} onclick={() => void stopHostConference()}>
+                停止
+              </Button>
+            {:else}
+              <Badge variant="secondary">未启动</Badge>
+            {/if}
+            <div class="flex flex-wrap gap-2">
+              {#each hostStatus.conferences.filter((item) => !item.active) as item (item.id)}
+                <Button size="sm" variant="outline" disabled={hostBusy} onclick={() => void startHostConference(item.id)}>
+                  启动 {item.name}
+                </Button>
+              {/each}
+            </div>
+            <Button size="icon" variant="ghost" title="刷新 Host 状态" disabled={hostBusy} onclick={() => void refreshHostStatus()}>
+              <Clock class="size-4" />
+            </Button>
+            {#if hostStatusError}<span class="text-xs text-destructive">{hostStatusError}</span>{/if}
+          </div>
+        </section>
+      {/if}
 
       <!-- Conference List -->
       <ScrollArea class="flex-1">

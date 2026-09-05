@@ -28,27 +28,13 @@ function isDev(): boolean {
 export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
   ipcMain.handle(
     'veto:conference:open-display',
-    async (
-      _event,
-      conferenceIdOrParams: string | { conferenceId?: string; wsUrl?: string; label?: string },
-    ) => {
+    async (_event, conferenceIdOrParams: string | { conferenceId?: string; label?: string }) => {
       const isParams = typeof conferenceIdOrParams === 'object'
-      const conferenceId = isParams
-        ? (conferenceIdOrParams.conferenceId || 'standalone')
-        : conferenceIdOrParams
-      const wsUrl = isParams ? conferenceIdOrParams.wsUrl : undefined
+      const conferenceId = isParams ? (conferenceIdOrParams.conferenceId || 'standalone') : conferenceIdOrParams
       const label = isParams ? conferenceIdOrParams.label : undefined
 
       if (displayWindow.current && !displayWindow.current.isDestroyed()) {
         displayWindow.current.focus()
-        if (wsUrl) {
-          setTimeout(() => {
-            displayWindow.current?.webContents.send('veto:conference:display-update', {
-              type: 'ws-config',
-              wsUrl,
-            })
-          }, 500)
-        }
         return { success: true }
       }
 
@@ -108,13 +94,6 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
       await new Promise<void>((resolve) => {
         win.webContents.once('did-finish-load', () => resolve())
       })
-
-      if (wsUrl) {
-        win.webContents.send('veto:conference:display-update', {
-          type: 'ws-config',
-          wsUrl,
-        })
-      }
 
       return { success: true }
     },

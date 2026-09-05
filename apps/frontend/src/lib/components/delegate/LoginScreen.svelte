@@ -6,7 +6,7 @@
   import { Loader2, LogIn } from '@lucide/svelte'
 
   interface Props {
-    onAuthenticate: (inviteCode: string, name: string, password?: string) => void
+    onAuthenticate: (inviteCode: string, password?: string) => void
     error?: string
     connecting: boolean
   }
@@ -14,14 +14,13 @@
   let { onAuthenticate, error, connecting }: Props = $props()
 
   let inviteCode = $state('')
-  let name = $state('')
   let password = $state('')
 
   function handleSubmit(e: Event): void {
     e.preventDefault()
     const code = inviteCode.trim().toUpperCase()
-    if (!code || !name.trim()) return
-    onAuthenticate(code, name.trim(), password || undefined)
+    if (!code) return
+    onAuthenticate(code, password || undefined)
   }
 </script>
 
@@ -30,7 +29,7 @@
     <div class="login-header">
       <h2 class="text-xl font-bold">加入会议</h2>
       <p class="text-sm text-muted-foreground">
-        输入邀请码和姓名。首次连接时可选择设置密码。
+        使用席位邀请码和密码连接 Host Service。
       </p>
     </div>
 
@@ -48,28 +47,17 @@
           bind:value={inviteCode}
           placeholder="XXXX-XXXX-XXXX"
           maxlength={14}
-          class="invite-code-input"
           disabled={connecting}
         />
       </div>
 
       <div class="form-field">
-        <Label for="name">姓名</Label>
-        <Input
-          id="name"
-          bind:value={name}
-          placeholder="代表姓名"
-          disabled={connecting}
-        />
-      </div>
-
-      <div class="form-field">
-        <Label for="password">密码（可选）</Label>
+        <Label for="password">密码（如已设置）</Label>
         <Input
           id="password"
           type="password"
           bind:value={password}
-          placeholder="首次连接可留空"
+          placeholder="席位密码"
           disabled={connecting}
         />
       </div>
@@ -77,7 +65,7 @@
       <Button
         type="submit"
         class="w-full"
-        disabled={connecting || !inviteCode.trim() || !name.trim()}
+        disabled={connecting || !inviteCode.trim()}
       >
         {#if connecting}
           <Loader2 class="size-4 mr-2 animate-spin" />
@@ -120,12 +108,5 @@
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
-  }
-  .invite-code-input {
-    font-family: monospace;
-    font-size: 1.25rem;
-    letter-spacing: 0.3em;
-    text-align: center;
-    text-transform: uppercase;
   }
 </style>

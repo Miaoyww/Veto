@@ -77,11 +77,7 @@
 
   $effect(() => {
     if (!conf) return
-    void window.veto?.lan?.publishConference({
-      conferenceId: conf.id,
-      name: conf.name,
-      phase: conf.phase
-    })
+    void window.veto?.lan?.publishConference()
   })
 
   // 自动同步 Display 窗口

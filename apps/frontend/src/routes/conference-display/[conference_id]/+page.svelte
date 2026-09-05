@@ -14,7 +14,7 @@
   import {
     getDisplayBridge,
     onConnectionStatus,
-    setExternalWsUrl
+    receiveDisplayUpdate
   } from '$lib/classes/clients/conference-display-client'
   import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
   import type { SeatView } from '$lib/classes/types/conference'
@@ -67,8 +67,6 @@
   onMount(() => {
     const bridge = getDisplayBridge()
     const unsubData = bridge.onHostCommand((data: ConferenceDisplayData) => {
-      // 忽略 ws-config 控制消息（非显示数据）
-      if ((data as any).type === 'ws-config') return
       displayData = data
     })
 
@@ -103,11 +101,11 @@
 
     // 监听来自主进程的 Display 更新（全屏状态变更等）
     const unsubDisplayUpdate = window.veto?.conference?.onDisplayUpdate?.((data: unknown) => {
-      const msg = data as { type?: string; wsUrl?: string; isFullScreen?: boolean }
-      if (msg.type === 'ws-config' && msg.wsUrl) {
-        setExternalWsUrl(msg.wsUrl)
-      } else if (msg.type === 'fullscreen-change') {
+      const msg = data as { type?: string; isFullScreen?: boolean }
+      if (msg.type === 'fullscreen-change') {
         isFullScreen = msg.isFullScreen ?? false
+      } else {
+        receiveDisplayUpdate(data)
       }
     })
 

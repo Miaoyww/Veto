@@ -70,7 +70,7 @@ export interface VetoAPI {
   }
   conference: {
     openDisplay: (
-      conferenceIdOrParams: string | { conferenceId?: string; wsUrl?: string; label?: string }
+      conferenceIdOrParams: string | { conferenceId?: string; label?: string }
     ) => Promise<{ success: boolean }>
     closeDisplay: () => Promise<{ success: boolean }>
     sendToDisplay: (data: unknown) => Promise<{ success: boolean }>
@@ -78,6 +78,18 @@ export interface VetoAPI {
   }
   ws: {
     getPort: () => Promise<number>
+  }
+  hostConsole: {
+    status: () => Promise<{
+      ok: boolean
+      error?: string
+      activeConferenceId?: string | null
+      conferences?: Array<{ id: string; name: string; active: boolean }>
+    }>
+    startConference: (conferenceId: string) => Promise<unknown>
+    stopConference: () => Promise<unknown>
+    releaseDirectiveClaim: (directiveId: string, reason: string) => Promise<unknown>
+    auditLog: () => Promise<unknown>
   }
   lan: {
     scan: (timeoutMs?: number) => Promise<
@@ -107,11 +119,7 @@ export interface VetoAPI {
       wsUrl: string
       appVersion: string
     } | null>
-    publishConference: (info: {
-      conferenceId: string
-      name: string
-      phase: string
-    }) => Promise<{ success: boolean }>
+    publishConference: () => Promise<{ success: boolean; error?: string }>
     unpublishConference: () => Promise<{ success: boolean }>
   }
   services: {

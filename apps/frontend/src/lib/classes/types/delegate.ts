@@ -4,22 +4,20 @@
 // SeatGroup、Seat、User、Directive、News、SituationUpdate 等
 // 代表端核心类型定义。
 
+import type {
+  AuthenticatedSeatSession as HostAuthenticatedSeatSession,
+  Capability as HostCapability,
+  Directive as HostDirective,
+  DirectiveStatus as HostDirectiveStatus,
+  News as HostNews,
+  NewsStatus as HostNewsStatus,
+  SituationUpdate as HostSituationUpdate
+} from '../../../../../shared'
+
 // ---- 能力系统 -------------------------------------------------------------
 
 /** Seat 可执行的操作能力 */
-export type Capability =
-  | 'view_conference'
-  | 'view_situation'
-  | 'view_news'
-  | 'view_files'
-  | 'draft_news'
-  | 'review_news'
-  | 'submit_directive'
-  | 'process_directive'
-  | 'send_files'
-  | 'publish_situation'
-  | 'control_conference'
-  | 'draft_resolution'
+export type Capability = HostCapability
 
 /** 能力中文标签（与 CONTEXT.md 术语表一致，全库唯一真源，条目须覆盖全部 Capability） */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
@@ -33,6 +31,9 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   process_directive: '处理指令',
   send_files: '发送文件',
   publish_situation: '发布局势更新',
+  withdraw_news: '撤回已发布新闻',
+  withdraw_situation: '撤回已发布局势更新',
+  withdraw_files: '撤回已发布文件',
   control_conference: '控制会议流程',
   draft_resolution: '起草决议'
 }
@@ -141,104 +142,19 @@ export interface UserView {
 }
 
 /** 代表端认证后使用的临时连接上下文，不持久化 */
-export interface AuthenticatedSeatSession {
-  conferenceId: string
-  seat: SeatView
-  seatGroupId: string
-  capabilities: Capability[]
-  user: UserView
-}
+export type AuthenticatedSeatSession = HostAuthenticatedSeatSession
 
 // ---- 指令 -----------------------------------------------------------------
 
-/** 保密等级 */
-export type Classification = 'top_secret' | 'secret' | 'confidential' | 'public'
-
-/** 指令状态 */
-export type DirectiveStatus = 'draft' | 'submitted' | 'approved' | 'rejected'
-
-/** 指令 */
-export interface Directive {
-  id: string
-  /** 标题 */
-  title: string
-  /** 发起人 Seat ID */
-  initiatorId: string
-  /** 发起人职务 */
-  initiatorRole: string
-  /** 接收方（Seat ID、SeatGroup ID 或 "ipc"） */
-  target: string
-  /** 保密等级 */
-  classification: Classification
-  /** 正文 */
-  content: string
-  /** 状态 */
-  status: DirectiveStatus
-  /** 所属内阁 SeatGroup ID */
-  cabinetId: string
-  /** 审核意见（驳回时填写） */
-  reviewComment?: string
-  /** 时间戳 */
-  createdAt: number
-  /** 更新时间戳 */
-  updatedAt: number
-}
+/** Host-routed Directive. A target is always one Committee, never a Seat. */
+export type Directive = HostDirective
+export type DirectiveStatus = HostDirectiveStatus
 
 // ---- 新闻 -----------------------------------------------------------------
 
-/** 新闻状态 */
-export type NewsStatus = 'draft' | 'submitted' | 'published' | 'rejected' | 'retracted'
-
-/** 新闻 */
-export interface News {
-  id: string
-  /** 标题 */
-  title: string
-  /** 正文（Markdown） */
-  content: string
-  /** 来源通讯社名称，如 "新华社"、"路透社" */
-  source: string
-  /** 起草人 Seat ID */
-  authorId: string
-  /** 所属 SeatGroup ID（MPC） */
-  seatGroupId: string
-  /** 状态 */
-  status: NewsStatus
-  /** 审核意见（驳回时填写） */
-  reviewComment?: string
-  /** 审核人 Seat ID */
-  reviewerId?: string
-  /** 时间戳 */
-  createdAt: number
-  /** 发布时间戳 */
-  publishedAt?: number
-  /** 撤回时间戳 */
-  retractedAt?: number
-}
+export type News = HostNews
+export type NewsStatus = HostNewsStatus
 
 // ---- 局势更新 -------------------------------------------------------------
 
-/** 局势更新 */
-export interface SituationUpdate {
-  id: string
-  /** 标题 */
-  title: string
-  /** 正文（Markdown） */
-  content: string
-  /** 发布方 SeatGroup ID（IPC） */
-  publisherId: string
-  /** 发布人 Seat ID */
-  authorId: string
-  /** 关联的 Timeline ID */
-  timelineId: string
-  /** 预留：关联的 Battle ID */
-  relatedBattleId?: string
-  /** 预留：关联的地图位置 */
-  relatedLocation?: {
-    lat: number
-    lng: number
-    label?: string
-  }
-  /** 时间戳 */
-  createdAt: number
-}
+export type SituationUpdate = HostSituationUpdate

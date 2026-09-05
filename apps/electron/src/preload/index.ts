@@ -155,7 +155,7 @@ const veto = {
   conference: {
     /** 打开显示窗口 */
     openDisplay: (
-      conferenceIdOrParams: string | { conferenceId?: string; wsUrl?: string; label?: string }
+      conferenceIdOrParams: string | { conferenceId?: string; label?: string }
     ): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('veto:conference:open-display', conferenceIdOrParams),
 
@@ -188,6 +188,21 @@ const veto = {
     getPort: (): Promise<number> => ipcRenderer.invoke('veto:ws:get-port')
   },
 
+  hostConsole: {
+    status: (): Promise<{
+      ok: boolean
+      error?: string
+      activeConferenceId?: string | null
+      conferences?: Array<{ id: string; name: string; active: boolean }>
+    }> => ipcRenderer.invoke('veto:host-console:status'),
+    startConference: (conferenceId: string): Promise<unknown> =>
+      ipcRenderer.invoke('veto:host-console:start-conference', conferenceId),
+    stopConference: (): Promise<unknown> => ipcRenderer.invoke('veto:host-console:stop-conference'),
+    releaseDirectiveClaim: (directiveId: string, reason: string): Promise<unknown> =>
+      ipcRenderer.invoke('veto:host-console:release-directive-claim', directiveId, reason),
+    auditLog: (): Promise<unknown> => ipcRenderer.invoke('veto:host-console:audit-log')
+  },
+
   lan: {
     /** 扫描局域网内正在广播的 Veto 会议 */
     scan: (timeoutMs?: number) => ipcRenderer.invoke('veto:lan:scan', timeoutMs),
@@ -211,13 +226,9 @@ const veto = {
       appVersion: string
     } | null> => ipcRenderer.invoke('veto:lan:query', address),
 
-    /** 广播当前打开的会议 */
-    publishConference: (info: {
-      conferenceId: string
-      name: string
-      phase: string
-    }): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke('veto:lan:publish-conference', info),
+    /** 广播当前由 Host Console 启动的会议 */
+    publishConference: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('veto:lan:publish-conference'),
 
     /** 停止广播当前会议 */
     unpublishConference: (): Promise<{ success: boolean }> =>

@@ -9,20 +9,13 @@
  */
 
 import { derived, get } from 'svelte/store'
-import type {
-  SeatGroup,
-  Seat,
-  Capability,
-  CabinetMode,
-  News
-} from '$lib/classes/types/delegate'
+import type { SeatGroup, Seat, Capability, CabinetMode } from '$lib/classes/types/delegate'
 import {
   conferences,
   currentConferenceRecord,
   currentCommittee,
   syncCurrentCommittee
 } from '../conference/conference-store'
-import { getDelegateBridge } from '$lib/classes/clients/delegate-client'
 import { generateInviteCode } from '$lib/classes/services/seat-access'
 
 // ---- 辅助：获取当前引擎 -------------------------------------------------
@@ -151,8 +144,9 @@ export function resolveCapabilities(seatId: string): Capability[] {
 // ---- 模式切换 -------------------------------------------------------------
 
 export function setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
-  // 通过 WS 广播模式切换
-  getDelegateBridge().sendModeChange(seatGroupId, mode)
+  // Procedure is local to the Chair and is never routed through the Host Service.
+  void seatGroupId
+  void mode
 }
 
 // ---- 指令 -----------------------------------------------------------------
@@ -165,101 +159,12 @@ export const directives = derived(currentCommittee, ($engine) => {
 
 export function createDirective(data: {
   title: string
-  initiatorId: string
-  initiatorRole?: string
-  target: string
-  classification: 'confidential' | 'secret' | 'top_secret' | 'public'
+  targetCommitteeId: string
   content: string
-  cabinetId: string
 }): string {
   void data
   return ''
 }
 
-// ---- 新闻 -----------------------------------------------------------------
-
-/** 当前会议的所有新闻 */
-export const newsList = derived(currentConferenceRecord, ($conference) => $conference?.news ?? [])
-
-export function createNews(data: {
-  title: string
-  content: string
-  source: string
-  authorId: string
-  seatGroupId: string
-}): string {
-  const id = crypto.randomUUID()
-  updateCurrentConference((conference) =>
-    conference.addNews({ ...data, id, status: 'draft', createdAt: Date.now() })
-  )
-  return id
-}
-
-export function submitNews(newsId: string): void {
-  updateCurrentConference((conference) =>
-    conference.updateNews((items) => items.map((news) =>
-      news.id === newsId ? { ...news, status: 'submitted' } : news
-    ))
-  )
-}
-
-export function publishNews(newsId: string, reviewerId: string): void {
-  let updated: News | undefined
-  updateCurrentConference((conference) => conference.updateNews((items) => items.map((news) => {
-      if (news.id !== newsId) return news
-      updated = { ...news, status: 'published', reviewerId, publishedAt: Date.now() }
-      return updated
-    })))
-  // 通过 WS 通知 Delegate
-  if (updated) {
-    getDelegateBridge().sendNewsUpdated(updated)
-  }
-}
-
-export function rejectNews(newsId: string, reviewerId: string, reviewComment: string): void {
-  let updated: News | undefined
-  updateCurrentConference((conference) => conference.updateNews((items) => items.map((news) => {
-      if (news.id !== newsId) return news
-      updated = { ...news, status: 'rejected', reviewerId, reviewComment }
-      return updated
-    })))
-  if (updated) {
-    getDelegateBridge().sendNewsUpdated(updated)
-  }
-}
-
-export function retractNews(newsId: string): void {
-  let updated: News | undefined
-  updateCurrentConference((conference) => conference.updateNews((items) => items.map((news) => {
-      if (news.id !== newsId) return news
-      updated = { ...news, status: 'retracted', retractedAt: Date.now() }
-      return updated
-    })))
-  if (updated) {
-    getDelegateBridge().sendNewsUpdated(updated)
-  }
-}
-
-// ---- 局势更新 -------------------------------------------------------------
-
-export const situationUpdates = derived(
-  currentConferenceRecord,
-  ($conference) => $conference?.situationUpdates ?? []
-)
-
-export function createSituationUpdate(data: {
-  title: string
-  content: string
-  publisherId: string
-  authorId: string
-  timelineId: string
-  relatedBattleId?: string
-  relatedLocation?: { lat: number; lng: number; label?: string }
-}): string {
-  const id = crypto.randomUUID()
-  const update = { ...data, id, createdAt: Date.now() }
-  updateCurrentConference((conference) => conference.addSituationUpdate(update))
-  // 通过 WS 通知 Delegate
-  getDelegateBridge().sendSituationCreated(update)
-  return id
-}
+// Content is Host-owned. UserClient commands in the delegate route are the
+// only supported path for creating, reviewing, publishing, or withdrawing it.
