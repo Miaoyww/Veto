@@ -2,7 +2,18 @@
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
 
-  import { Search, Plus, Users, UserPlus, Play, Mic, Bell, Clock } from '@lucide/svelte'
+  import {
+    Search,
+    Plus,
+    Users,
+    UserPlus,
+    Play,
+    Mic,
+    Bell,
+    Clock,
+    Building2,
+    CalendarDays
+  } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Badge } from '$lib/components/ui/badge/index.js'
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js'
@@ -11,22 +22,17 @@
   import {
     conferences,
     lastOpenedConferenceId,
-    unloadConference,
-    getPresentCount
+    unloadConference
   } from '$lib/classes/stores/conference/conference-store'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import {
-    getCurrentSpeakerName,
-    getPendingMotionCount
-  } from '$lib/components/home/conference-status'
+
   import { navigateToConference } from '$lib/classes/utils'
   import { fly } from 'svelte/transition'
   import { resolve } from '$app/paths'
 
   let query = $state('')
-  let joinDialogOpen = $state(false)
   let displayOnlyDialogOpen = $state(false)
   let hostStatus = $state<{
     activeConferenceId: string | null
@@ -53,12 +59,6 @@
       : null
   )
   const lastOpenedCommittee = $derived(lastOpened?.committees[0] ?? null)
-  const currentSpeaker = $derived(
-    lastOpenedCommittee ? getCurrentSpeakerName(lastOpenedCommittee) : null
-  )
-  const pendingCount = $derived(
-    lastOpenedCommittee ? getPendingMotionCount(lastOpenedCommittee) : 0
-  )
 
   onMount(() => {
     unloadConference()
@@ -84,7 +84,8 @@
     try {
       const result = await window.veto.hostConsole.startConference(conferenceId)
       if ((result as { ok?: boolean }).ok === false) {
-        hostStatusError = (result as { error?: { message?: string } }).error?.message ?? '启动大会失败'
+        hostStatusError =
+          (result as { error?: { message?: string } }).error?.message ?? '启动大会失败'
       }
       await refreshHostStatus()
     } finally {
@@ -103,7 +104,7 @@
     }
   }
 
-  function formatActiveTime(ts: number): string {
+  function formatDate(ts: number): string {
     return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
   }
 </script>
@@ -166,9 +167,15 @@
             <span class="text-sm font-medium">Host 活动大会</span>
             {#if hostStatus.activeConferenceId}
               <Badge variant="default">
-                {hostStatus.conferences.find((item) => item.id === hostStatus?.activeConferenceId)?.name ?? hostStatus.activeConferenceId}
+                {hostStatus.conferences.find((item) => item.id === hostStatus?.activeConferenceId)
+                  ?.name ?? hostStatus.activeConferenceId}
               </Badge>
-              <Button size="sm" variant="outline" disabled={hostBusy} onclick={() => void stopHostConference()}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={hostBusy}
+                onclick={() => void stopHostConference()}
+              >
                 停止
               </Button>
             {:else}
@@ -176,15 +183,27 @@
             {/if}
             <div class="flex flex-wrap gap-2">
               {#each hostStatus.conferences.filter((item) => !item.active) as item (item.id)}
-                <Button size="sm" variant="outline" disabled={hostBusy} onclick={() => void startHostConference(item.id)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={hostBusy}
+                  onclick={() => void startHostConference(item.id)}
+                >
                   启动 {item.name}
                 </Button>
               {/each}
             </div>
-            <Button size="icon" variant="ghost" title="刷新 Host 状态" disabled={hostBusy} onclick={() => void refreshHostStatus()}>
+            <Button
+              size="icon"
+              variant="ghost"
+              title="刷新 Host 状态"
+              disabled={hostBusy}
+              onclick={() => void refreshHostStatus()}
+            >
               <Clock class="size-4" />
             </Button>
-            {#if hostStatusError}<span class="text-xs text-destructive">{hostStatusError}</span>{/if}
+            {#if hostStatusError}<span class="text-xs text-destructive">{hostStatusError}</span
+              >{/if}
           </div>
         </section>
       {/if}
@@ -212,35 +231,25 @@
                     <span class="truncate text-base font-semibold text-foreground">
                       {lastOpened.name}
                     </span>
-                    <Badge variant="outline" class="shrink-0 text-[10px]">
-                      {lastOpenedCommittee
-                        ? (PHASE_LABELS[lastOpenedCommittee.phase] ?? lastOpenedCommittee.phase)
-                        : '尚未创建会场'}
-                    </Badge>
                   </div>
                   <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span class="flex items-center gap-1">
-                      <Users class="size-3" />
-                      {lastOpenedCommittee
-                        ? `${getPresentCount(lastOpenedCommittee.seats)}/${lastOpenedCommittee.seats.length} 出席`
-                        : '暂无会场'}
-                    </span>
-                    {#if currentSpeaker}
-                      <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
-                        <Mic class="size-3" />
-                        正在发言：{currentSpeaker}
+                    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span class="flex items-center gap-1">
+                        <Building2 class="size-3" />
+                        {lastOpened.committees.length} 个会场
                       </span>
-                    {/if}
-                    {#if pendingCount > 0}
-                      <span class="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                        <Bell class="size-3" />
-                        {pendingCount} 个待处理动议
+                      <span class="flex items-center gap-1">
+                        <CalendarDays class="size-3" />
+                        {formatDate(lastOpened.createdAt)}
                       </span>
-                    {/if}
-                    <span class="flex items-center gap-1">
-                      <Clock class="size-3" />
-                      {formatActiveTime(lastOpened.updatedAt)}
-                    </span>
+                      <span class="flex items-center gap-1">
+                        <Users class="size-3" />
+                        {lastOpened.committees.reduce(
+                          (count, committee) => count + committee.seats.length,
+                          0
+                        )} 个席位
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div class="shrink-0">

@@ -165,21 +165,6 @@
         <Users class="size-3" />
         {conference.committees.reduce((count, committee) => count + committee.seats.length, 0)} 个席位
       </span>
-      <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-        {primaryCommittee ? (PHASE_LABELS[primaryCommittee.phase] ?? primaryCommittee.phase) : '尚未创建会场'}
-      </span>
-      {#if currentSpeaker}
-        <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
-          <Mic class="size-3" />
-          {currentSpeaker}
-        </span>
-      {/if}
-      {#if pendingCount > 0}
-        <span class="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-          <Bell class="size-3" />
-          {pendingCount} 待处理
-        </span>
-      {/if}
     </div>
   </CardContent>
 </Card>

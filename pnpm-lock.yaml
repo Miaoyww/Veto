@@ -90,9 +90,15 @@ importers:
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
+      lucide:
+        specifier: 1.39.0
+        version: 1.39.0
       milsymbol:
         specifier: ^3.0.4
         version: 3.0.4
+      morphicons:
+        specifier: ^1.7.1
+        version: 1.7.1(svelte@5.56.8(@typescript-eslint/types@8.64.0))
       pinyin-match:
         specifier: ^1.2.10
         version: 1.2.10
@@ -1167,6 +1173,7 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abbrev@4.0.0:
     resolution: {integrity: sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA==}
@@ -2198,6 +2205,9 @@ packages:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
 
+  lucide@1.39.0:
+    resolution: {integrity: sha512-5tdtUFVqkqXjQRlt8QyPeF9GjkMxiKDLWYg20vCmWYDgDY/Atnmx9foe9zF81NmbJNa+oheEfF8gN+CoCAljGg==}
+
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
@@ -2271,6 +2281,26 @@ packages:
     resolution: {integrity: sha512-mUT9RRGPDYenk59qJauN1rhsIMKBmWA3xMF+uRwE8MW/tjhaDSCCARqkSuDTq8vr4/2KcAxIGVjACxTjdk5C3g==}
     peerDependencies:
       svelte: ^5.27.0
+
+  morphicons@1.7.1:
+    resolution: {integrity: sha512-q5ylxy5/d7vBg0OAzanlooXf05PekovMYDuuQVpr6vAQZxl99lrJbaIi+jJ32PXQf9WEEaDO2pbNBsx1ZhEnFQ==}
+    peerDependencies:
+      react: '>=18'
+      react-native: '>=0.71'
+      react-native-svg: '>=14'
+      svelte: '>=5'
+      vue: '>=3.3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-native:
+        optional: true
+      react-native-svg:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -5076,6 +5106,8 @@ snapshots:
     dependencies:
       yallist: 4.0.0
 
+  lucide@1.39.0: {}
+
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
@@ -5136,6 +5168,10 @@ snapshots:
       runed: 0.25.0(svelte@5.56.8(@typescript-eslint/types@8.64.0))
       svelte: 5.56.8(@typescript-eslint/types@8.64.0)
       svelte-toolbelt: 0.7.1(svelte@5.56.8(@typescript-eslint/types@8.64.0))
+
+  morphicons@1.7.1(svelte@5.56.8(@typescript-eslint/types@8.64.0)):
+    optionalDependencies:
+      svelte: 5.56.8(@typescript-eslint/types@8.64.0)
 
   mri@1.2.0: {}
 

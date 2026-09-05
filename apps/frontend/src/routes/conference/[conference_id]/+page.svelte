@@ -5,10 +5,12 @@
   import { Badge } from '$lib/components/ui/badge'
   import { Button, buttonVariants } from '$lib/components/ui/button'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { ChevronDown, KeyRound, Newspaper, ShieldCheck } from '@lucide/svelte'
+  import { ChevronDown, KeyRound, LayoutDashboard, Newspaper, ShieldCheck } from '@lucide/svelte'
   import { conferences, openConference } from '$lib/classes/stores/conference/conference-store'
-  import ConferenceCard from './conference-card.svelte'
   import * as Collapsible from '$lib/components/ui/collapsible'
+  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
+  import { resolve } from '$app/paths'
+  import { goto } from '$app/navigation'
 
   let ready = $state(false)
   let copied = $state('')
@@ -20,7 +22,9 @@
     return $conferences.find((conference) => conference.id === conferenceId) ?? null
   })
   const committees = $derived(event?.committees ?? [])
-  const seatCount = $derived(event?.committees.reduce((sum, committee) => sum + committee.seats.length, 0) ?? 0)
+  const seatCount = $derived(
+    event?.committees.reduce((sum, committee) => sum + committee.seats.length, 0) ?? 0
+  )
 
   async function copyText(text: string, marker: string): Promise<void> {
     await navigator.clipboard.writeText(text)
@@ -31,14 +35,17 @@
   }
 
   function allKeys(): string {
-    return event?.committees
-      .flatMap((committee) =>
-        committee.seats.map((seat) => {
-          const inviteCode = event?.seatAccesses.find((access) => access.seatId === seat.id)?.inviteCode ?? ''
-          return `${committee.name},${seat.name},${seat.role ?? ''},${inviteCode}`
-        })
-      )
-      .join('\n') ?? ''
+    return (
+      event?.committees
+        .flatMap((committee) =>
+          committee.seats.map((seat) => {
+            const inviteCode =
+              event?.seatAccesses.find((access) => access.seatId === seat.id)?.inviteCode ?? ''
+            return `${committee.name},${seat.name},${seat.role ?? ''},${inviteCode}`
+          })
+        )
+        .join('\n') ?? ''
+    )
   }
 
   onMount(() => {
@@ -66,7 +73,7 @@
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <Badge variant="outline">{committees.length} 场小会议</Badge>
+          <Badge variant="outline">{committees.length} 场会场</Badge>
           <Badge variant="outline">{seatCount} 个席位</Badge>
           <Button
             variant="outline"
@@ -87,10 +94,10 @@
         <Collapsible.Root bind:open={conferencesOpen}>
           <section class="space-y-3">
             <div class="flex items-center justify-between gap-3">
-              <h2 class="text-sm font-semibold">小会议</h2>
+              <h2 class="text-sm font-semibold">会场</h2>
               <Collapsible.Trigger
-                aria-label={conferencesOpen ? '收起小会议列表' : '展开小会议列表'}
-                title={conferencesOpen ? '收起小会议列表' : '展开小会议列表'}
+                aria-label={conferencesOpen ? '收起会场列表' : '展开会场列表'}
+                title={conferencesOpen ? '收起会场列表' : '展开会场列表'}
                 class={cn(
                   buttonVariants({ variant: 'ghost', size: 'icon' }),
                   'transition-transform',
@@ -98,24 +105,39 @@
                 )}
               >
                 <ChevronDown />
-                <span class="sr-only">{conferencesOpen ? '收起小会议列表' : '展开小会议列表'}</span>
+                <span class="sr-only">{conferencesOpen ? '收起会场列表' : '展开会场列表'}</span>
               </Collapsible.Trigger>
             </div>
             <Collapsible.Content>
               <div class="grid gap-4 xl:grid-cols-2">
                 {#each committees as committee (committee.id)}
-                  <ConferenceCard
-                    conferenceId={event.id}
-                    {committee}
-                    seatAccesses={event.seatAccesses}
-                    {copied}
-                    {copyText}
-                  />
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <div
+                    class="flex flex-wrap items-center justify-between gap-3 border rounded-2xl bg-card p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onclick={() =>
+                      goto(resolve(`/conference/${event.id}/committee/${committee.id}`))}
+                  >
+                    <div class="min-w-0 flex-1">
+                      <h3 class="truncate text-base font-semibold">{committee.name}</h3>
+                      <p class="mt-1 text-xs text-muted-foreground">
+                        {PHASE_LABELS[committee.phase] ?? committee.phase}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="gap-2"
+                      href={resolve(`/conference/${event.id}/committee/${committee.id}`)}
+                    >
+                      <LayoutDashboard class="size-4" />
+                    </Button>
+                  </div>
                 {:else}
                   <p
                     class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
                   >
-                    暂无小会议
+                    暂无会场
                   </p>
                 {/each}
               </div>
