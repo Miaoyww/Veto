@@ -1,5 +1,17 @@
 <script lang="ts">
-  import { ArrowLeft, FileText, Globe, House, Monitor, Newspaper, Plus, Puzzle, Radio, Users } from '@lucide/svelte'
+  import {
+    ArrowLeft,
+    FileText,
+    Globe,
+    House,
+    Monitor,
+    Newspaper,
+    Plus,
+    Puzzle,
+    Radio,
+    SquarePen,
+    Users
+  } from '@lucide/svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
@@ -52,6 +64,15 @@
               onclick={() => navigateToCommittee(activeConference.id, activeCommittee.id)}
             >
               <Users />
+              <span>委员会概览</span>
+            </Sidebar.MenuButton>
+          </Sidebar.MenuItem>
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton
+              isActive={$page.url.pathname.includes('/seats')}
+              onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/seats`)}
+            >
+              <SquarePen />
               <span>席位管理</span>
             </Sidebar.MenuButton>
           </Sidebar.MenuItem>

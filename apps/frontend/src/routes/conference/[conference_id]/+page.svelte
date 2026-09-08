@@ -446,6 +446,7 @@
           </article>
         </section>
       </div>
+      <div class="h-10"></div>
     </ScrollArea>
   {/if}
 </div>

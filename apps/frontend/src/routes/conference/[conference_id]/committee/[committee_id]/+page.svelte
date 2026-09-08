@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import {
     ChevronDown,
     FileText,
+    Globe,
     KeyRound,
     Newspaper,
     Radio,
@@ -14,30 +17,34 @@
   import { Check, Copy } from 'lucide'
   import { cn } from '$lib/classes/utils'
   import { conferences, loadConference } from '$lib/classes/stores/conference/conference-store'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
+  import { loadHostConferenceContent, type HostConferenceContent } from '$lib/classes/services/host-content'
   import { Button, buttonVariants } from '$lib/components/ui/button'
-  import { Badge } from '$lib/components/ui/badge'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
   let seatsOpen = $state(true)
   let ready = $state(false)
+  let hostContent = $state<HostConferenceContent | null>(null)
 
   const conferenceId = $derived($page.params.conference_id ?? '')
   const committeeId = $derived($page.params.committee_id ?? '')
   const conference = $derived($conferences.find((item) => item.id === conferenceId) ?? null)
   const committee = $derived(conference?.committees.find((item) => item.id === committeeId) ?? null)
   const committeeNews = $derived(
-    conference?.news.filter((item) => item.sourceCommitteeId === committeeId) ?? []
+    (hostContent?.news ?? conference?.news ?? []).filter((item) => item.sourceCommitteeId === committeeId)
   )
   const committeeSituation = $derived(
-    conference?.situationUpdates.filter((item) => item.sourceCommitteeId === committeeId) ?? []
+    (hostContent?.situations ?? conference?.situationUpdates ?? []).filter(
+      (item) => item.sourceCommitteeId === committeeId
+    )
   )
+  const committeeFiles = $derived(committee?.documentNames ?? [])
   const event = $derived.by(() => {
     return $conferences.find((conference) => conference.id === conferenceId) ?? null
   })
-  onMount(() => {
+  onMount(async () => {
     loadConference(conferenceId, committeeId)
+    hostContent = await loadHostConferenceContent(conferenceId)
     ready = true
   })
   let copied = $state('')
@@ -62,6 +69,10 @@
         )
         .join('\n') ?? ''
     )
+  }
+
+  function openSeats(): void {
+    void goto(resolve(`/conference/${conferenceId}/committee/${committeeId}/seats`))
   }
 </script>
 
@@ -115,7 +126,7 @@
             <span class="text-xs text-muted-foreground">按来源委员会统计</span>
           </div>
 
-          <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div class="rounded-lg border bg-card p-4">
               <div class="flex items-center gap-2 text-muted-foreground">
                 <Users class="size-4" />
@@ -128,7 +139,7 @@
                 <Radio class="size-4" />
                 <dt class="text-xs font-medium">指令</dt>
               </div>
-              <dd class="mt-3 text-2xl font-semibold">0</dd>
+                <dd class="mt-3 text-2xl font-semibold">0</dd>
             </div>
             <div class="rounded-lg border bg-card p-4">
               <div class="flex items-center gap-2 text-muted-foreground">
@@ -142,7 +153,14 @@
                 <FileText class="size-4" />
                 <dt class="text-xs font-medium">文件</dt>
               </div>
-              <dd class="mt-3 text-2xl font-semibold">0</dd>
+              <dd class="mt-3 text-2xl font-semibold">{committeeFiles.length}</dd>
+            </div>
+            <div class="rounded-lg border bg-card p-4">
+              <div class="flex items-center gap-2 text-muted-foreground">
+                <Globe class="size-4" />
+                <dt class="text-xs font-medium">局势</dt>
+              </div>
+              <dd class="mt-3 text-2xl font-semibold">{committeeSituation.length}</dd>
             </div>
           </dl>
         </section>
@@ -200,7 +218,13 @@
                           >
                             <MorphIcon icon={copied === seat.id ? Check : Copy} />
                           </Button>
-                          <Button variant="ghost" size="icon" aria-label="编辑" title="编辑">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="编辑席位"
+                            title="编辑席位"
+                            onclick={openSeats}
+                          >
                             <SquarePen />
                           </Button>
                         </td>
