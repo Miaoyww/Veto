@@ -70,7 +70,9 @@
     }
 
     const isCreateHandoff =
-      fromPath === '/empty' &&
+      (fromPath === '/empty' ||
+        fromPath === '/conference' ||
+        (fromPath?.startsWith('/conference/') && !fromPath.startsWith('/conference/create'))) &&
       (toPath === '/conference/create' || toPath?.startsWith('/conference/create/'))
 
     if (!isCreateHandoff || typeof document.startViewTransition !== 'function') return
@@ -121,11 +123,7 @@
 <TimerDialog bind:open={$timerDialogOpen} />
 
 {#if conferenceHandoffActive}
-  <div
-    class="conference-handoff"
-    data-phase={conferenceHandoffPhase}
-    aria-hidden="true"
-  >
+  <div class="conference-handoff" data-phase={conferenceHandoffPhase} aria-hidden="true">
     <img class="conference-handoff__logo" src={handoffLogo} alt="" />
   </div>
 {/if}
