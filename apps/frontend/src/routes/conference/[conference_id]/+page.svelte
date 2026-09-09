@@ -34,7 +34,6 @@
   import { waitForHostCooldown } from '$lib/classes/services/host-cooldown'
   import { conferences, openConference } from '$lib/classes/stores/conference/conference-store'
   import * as Collapsible from '$lib/components/ui/collapsible'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import { resolve } from '$app/paths'
   import { goto } from '$app/navigation'
 
@@ -385,9 +384,6 @@
                   >
                     <div class="min-w-0 flex-1">
                       <h3 class="truncate text-base font-semibold">{committee.name}</h3>
-                      <p class="mt-1 text-xs text-muted-foreground">
-                        {PHASE_LABELS[committee.phase] ?? committee.phase}
-                      </p>
                     </div>
                     <Button
                       variant="ghost"

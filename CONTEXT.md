@@ -43,6 +43,7 @@ _Avoid_: Role, Team, Group
 - **危机模式 (crisis)**：Seat 独立运作，各自绑定部门（海军部、情报局等），直接发送指令。
 - **常委模式 (standing)**：内阁统一为国家立场，通过会议机制（发言名单、动议、表决）产出国家文件。
 模式切换和会议机制由 Chair 在本地维护，不向普通 UserClient 同步。
+于是Host无需关注Chair的议程和会议机制，Chair也不需要向Host同步会议机制。
 _Avoid_: Committee, Council
 
 **MPC (主新闻中心)**:
