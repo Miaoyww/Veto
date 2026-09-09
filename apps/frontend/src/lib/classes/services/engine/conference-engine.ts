@@ -5,163 +5,33 @@
  * 与 simulation-engine.ts 不同，这是事件驱动而非 RAF 帧驱动。
  */
 
-import type {
-  Committee,
-  ConferencePhase,
-  VoteBallot,
-  Motion,
-  MotionType,
-  MajorityRule
-} from '$lib/classes/types/conference'
-import type { ParticipantSeat } from '$lib/classes/types/delegate'
+import {
+  VALID_TRANSITIONS,
+  PHASE_LABELS,
+  canTransition,
+  transitionPhase
+} from '$lib/classes/utils/committee/phase'
+import {
+  calculateMajorityThresholds,
+  determinePassFail,
+  tallyVotesEngine
+} from '$lib/classes/utils/committee/voting'
+import { resolveMotion } from '$lib/classes/utils/committee/motions'
+import { calcMaxSpeakers } from '$lib/classes/utils/committee/caucus'
 
-// ---- 阶段状态机 ----------------------------------------------------------
-
-export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {
-  preamble: ['roll_call'],
-  roll_call: ['pending_speakers_list', 'preamble'],
-  pending_speakers_list: ['general_debate', 'suspended', 'closed'],
-  general_debate: ['caucus', 'voting', 'suspended', 'closed'],
-  caucus: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
-  voting: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
-  motion: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
-  caucus_setup: ['caucus', 'general_debate', 'suspended', 'closed'],
-  suspended: ['general_debate', 'closed'],
-  closed: []
+export {
+  VALID_TRANSITIONS,
+  PHASE_LABELS,
+  canTransition,
+  transitionPhase,
+  calculateMajorityThresholds,
+  determinePassFail,
+  tallyVotesEngine,
+  resolveMotion,
+  calcMaxSpeakers
 }
-
-export function canTransition(from: ConferencePhase, to: ConferencePhase): boolean {
-  return VALID_TRANSITIONS[from]?.includes(to) ?? false
-}
-
-export function transitionPhase(
-  _committee: Committee,
-  from: ConferencePhase,
-  to: ConferencePhase
-): ConferencePhase | Error {
-  if (!canTransition(from, to)) {
-    return new Error(`非法阶段转换: ${from} → ${to}`)
-  }
-  return to
-}
-
-// ---- 阶段中文标签 ---------------------------------------------------------
-
-export const PHASE_LABELS: Record<ConferencePhase, string> = {
-  preamble: '会前准备',
-  roll_call: '点名',
-  pending_speakers_list: '等待开启主发言名单',
-  general_debate: '一般性辩论',
-  caucus: '磋商',
-  voting: '投票表决',
-  motion: '动议',
-  caucus_setup: '磋商准备',
-  suspended: '休会',
-  closed: '闭幕'
-}
-
-// ---- 投票计算（纯函数）----------------------------------------------------
-
-export interface MajorityThresholds {
-  presentCount: number
-  /** 拥有投票权的出席代表人数（排除观察员） */
-  votingCount: number
-  totalCount: number
-  simpleMajorityThreshold: number
-  twoThirdsThreshold: number
-}
-
-export function calculateMajorityThresholds(seats: ParticipantSeat[]): MajorityThresholds {
-  const presentCount = seats.filter((seat) => seat.procedure.attendance === 'present').length
-  const votingCount = seats.filter(
-    (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-  ).length
-  return {
-    presentCount,
-    votingCount,
-    totalCount: seats.length,
-    simpleMajorityThreshold: Math.floor(votingCount / 2) + 1,
-    twoThirdsThreshold: Math.ceil(votingCount * 2 / 3)
-  }
-}
-
-export function determinePassFail(
-  ballots: VoteBallot[],
-  majorityRule: MajorityRule,
-  seats: ParticipantSeat[]
-): 'passed' | 'failed' {
-  const { presentCount, simpleMajorityThreshold, twoThirdsThreshold } =
-    calculateMajorityThresholds(seats)
-
-  let yesCount = 0
-  for (const b of ballots) {
-    if (b.vote === 'yes') yesCount++
-  }
-
-  const threshold =
-    majorityRule === 'simple_majority' ? simpleMajorityThreshold : twoThirdsThreshold
-
-  return yesCount >= threshold ? 'passed' : 'failed'
-}
-
-/** 纯函数：统计投票（skip 不计入任何类别） */
-export function tallyVotesEngine(ballots: VoteBallot[]): {
-  yes: number
-  no: number
-  abstain: number
-} {
-  let yes = 0
-  let no = 0
-  let abstain = 0
-  for (const b of ballots) {
-    if (b.vote === 'yes') yes++
-    else if (b.vote === 'no') no++
-    else if (b.vote === 'abstain') abstain++
-    // skip 不计入
-  }
-  return { yes, no, abstain }
-}
-
-// ---- 动议裁决 ------------------------------------------------------------
-
-export interface MotionResolution {
-  requiresVoting: boolean
-  votingMajority: MajorityRule
-  autoApprove: boolean
-}
-
-/**
- * 判断动议是否需要表决，以及需要什么样的多数。
- * 遵循标准 MUN 议事规则。
- */
-export function resolveMotion(motionType: MotionType): MotionResolution {
-  switch (motionType) {
-    // 无需表决，直接生效
-    case 'change_attendance':
-    case 'individual_speech':
-      return { requiresVoting: false, votingMajority: 'simple_majority', autoApprove: false }
-
-    // 需要简单多数表决
-    case 'open_speakers_list':
-    case 'moderated_caucus':
-    case 'unmoderated_caucus':
-    case 'modify_speaking_time':
-    case 'resume_resolution':
-    case 'reorder_resolution':
-    case 'suspend_meeting':
-    case 'substantive_vote':
-      return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
-
-    // 需要 2/3 多数表决
-    case 'closure_debate':
-    case 'close_meeting':
-    case 'postpone_resolution':
-      return { requiresVoting: true, votingMajority: 'two_thirds', autoApprove: false }
-
-    default:
-      return { requiresVoting: true, votingMajority: 'simple_majority', autoApprove: false }
-  }
-}
+export type { MotionResolution } from '$lib/classes/utils/committee/motions'
+export type { MajorityThresholds } from '$lib/classes/types/committee'
 
 // ---- 计时器 --------------------------------------------------------------
 
@@ -331,7 +201,3 @@ export function destroyAllTimers(): void {
 
 // ---- 有主持磋商：计算最大发言人数 ------------------------------------------
 
-export function calcMaxSpeakers(totalTimeSec: number, speakingTimePerPersonSec: number): number {
-  if (speakingTimePerPersonSec <= 0) return 0
-  return Math.floor(totalTimeSec / speakingTimePerPersonSec)
-}
