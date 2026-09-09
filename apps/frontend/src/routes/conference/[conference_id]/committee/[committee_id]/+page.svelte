@@ -19,6 +19,7 @@
   import { conferences, loadConference } from '$lib/classes/stores/conference/conference-store'
   import { loadHostConferenceContent, type HostConferenceContent } from '$lib/classes/services/host-content'
   import { Button, buttonVariants } from '$lib/components/ui/button'
+  import CommitteeOverviewCard from '$lib/components/conference/committee/committee-overview-card.svelte'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
@@ -39,6 +40,38 @@
     )
   )
   const committeeFiles = $derived(committee?.documentNames ?? [])
+  const overviewCards = $derived([
+    {
+      icon: Users,
+      label: '席位',
+      value: committee?.seats.length ?? 0,
+      href: resolve(`/conference/${conferenceId}/committee/${committeeId}/seats`)
+    },
+    {
+      icon: Radio,
+      label: '指令',
+      value: 0,
+      href: resolve(`/conference/${conferenceId}/committee/${committeeId}/directives`)
+    },
+    {
+      icon: Newspaper,
+      label: '新闻',
+      value: committeeNews.length,
+      href: resolve(`/conference/${conferenceId}/committee/${committeeId}/news`)
+    },
+    {
+      icon: FileText,
+      label: '文件',
+      value: committeeFiles.length,
+      href: resolve(`/conference/${conferenceId}/committee/${committeeId}/files`)
+    },
+    {
+      icon: Globe,
+      label: '局势',
+      value: committeeSituation.length,
+      href: resolve(`/conference/${conferenceId}/committee/${committeeId}/situation`)
+    }
+  ])
   const event = $derived.by(() => {
     return $conferences.find((conference) => conference.id === conferenceId) ?? null
   })
@@ -126,43 +159,11 @@
             <span class="text-xs text-muted-foreground">按来源委员会统计</span>
           </div>
 
-          <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div class="rounded-lg border bg-card p-4">
-              <div class="flex items-center gap-2 text-muted-foreground">
-                <Users class="size-4" />
-                <dt class="text-xs font-medium">席位</dt>
-              </div>
-              <dd class="mt-3 text-2xl font-semibold">{committee.seats.length}</dd>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-              <div class="flex items-center gap-2 text-muted-foreground">
-                <Radio class="size-4" />
-                <dt class="text-xs font-medium">指令</dt>
-              </div>
-                <dd class="mt-3 text-2xl font-semibold">0</dd>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-              <div class="flex items-center gap-2 text-muted-foreground">
-                <Newspaper class="size-4" />
-                <dt class="text-xs font-medium">新闻</dt>
-              </div>
-              <dd class="mt-3 text-2xl font-semibold">{committeeNews.length}</dd>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-              <div class="flex items-center gap-2 text-muted-foreground">
-                <FileText class="size-4" />
-                <dt class="text-xs font-medium">文件</dt>
-              </div>
-              <dd class="mt-3 text-2xl font-semibold">{committeeFiles.length}</dd>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-              <div class="flex items-center gap-2 text-muted-foreground">
-                <Globe class="size-4" />
-                <dt class="text-xs font-medium">局势</dt>
-              </div>
-              <dd class="mt-3 text-2xl font-semibold">{committeeSituation.length}</dd>
-            </div>
-          </dl>
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {#each overviewCards as card (card.label)}
+              <CommitteeOverviewCard {...card} />
+            {/each}
+          </div>
         </section>
         <section class="flex flex-col gap-3">
           <Collapsible.Root bind:open={seatsOpen}>
