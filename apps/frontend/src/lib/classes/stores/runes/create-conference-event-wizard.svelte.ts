@@ -251,6 +251,30 @@ export class ConferenceCreateWizard {
     })
   }
 
+  /** 将外部导入的席位追加到指定委员会。 */
+  addImportedSeats(
+    committeeId: string,
+    seats: Array<{ name: string; shortName?: string; roleId?: string }>
+  ): void {
+    this.committees = this.committees.map((committee) => {
+      if (committee.id !== committeeId) return committee
+      const fallbackRoleId =
+        this.roles.find((role) => this.isRoleAllowedInCommittee(role.id, committee.type))?.id ?? ''
+      return {
+        ...committee,
+        seats: [
+          ...committee.seats,
+          ...seats.map((seat) => ({
+            id: crypto.randomUUID(),
+            name: seat.name,
+            shortName: seat.shortName ?? '',
+            roleId: seat.roleId ?? fallbackRoleId
+          }))
+        ]
+      }
+    })
+  }
+
   removeSeat(committeeId: string, seatId: string): void {
     this.committees = this.committees.map((committee) => {
       if (committee.id !== committeeId) return committee

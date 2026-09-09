@@ -1,11 +1,30 @@
 <script lang="ts">
-  import { Plus, Trash2 } from '@lucide/svelte'
+  import { FileSpreadsheet, FileText, Plus, Trash2, Upload } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { Button } from '$lib/components/ui/button'
   import * as Field from '$lib/components/ui/field'
   import { Input } from '$lib/components/ui/input'
   import * as Select from '$lib/components/ui/select'
+  import * as Dialog from '$lib/components/ui/dialog'
+  import { Textarea } from '$lib/components/ui/textarea'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
+  import * as XLSX from 'xlsx'
+
+  type ImportMode = 'excel' | 'text'
+  type ImportedSeat = { name: string; shortName: string; type: string }
+
+  let formatDialogOpen = $state(false)
+  let textDialogOpen = $state(false)
+  let sheetDialogOpen = $state(false)
+  let previewDialogOpen = $state(false)
+  let importMode = $state<ImportMode>('excel')
+  let textValue = $state('')
+  let importError = $state('')
+  let selectedSheet = $state('')
+  let targetCommitteeId = $state('')
+  let importedRows = $state<ImportedSeat[]>([])
+  let workbook = $state<any>(null)
+  let fileInput = $state<HTMLInputElement | undefined>(undefined)
 
   const showInvalidRole = $derived(
     wizard.attempted &&
@@ -14,7 +33,142 @@
         committee.seats.some((seat) => !wizard.roles.some((role) => role.id === seat.roleId))
       )
   )
+
+  const hasUnmatchedImportedRole = $derived(
+    importedRows.some((row) => row.type && !roleIdForType(row.type, targetCommitteeId))
+  )
+
+  function openFormatDialog(mode: ImportMode): void {
+    importMode = mode
+    importError = ''
+    formatDialogOpen = true
+  }
+
+  function confirmFormatDialog(): void {
+    formatDialogOpen = false
+    importError = ''
+    if (importMode === 'excel') {
+      fileInput?.click()
+    } else {
+      textDialogOpen = true
+    }
+  }
+
+  async function handleExcelFile(event: Event): Promise<void> {
+    const input = event.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    try {
+      workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+      if (workbook.SheetNames.length === 0) throw new Error('文件中没有可读取的 sheet')
+      selectedSheet = workbook.SheetNames[0]
+      sheetDialogOpen = true
+    } catch (error) {
+      importError = error instanceof Error ? error.message : 'Excel 文件读取失败'
+      formatDialogOpen = true
+    }
+  }
+
+  function readSelectedSheet(): void {
+    if (!workbook || !selectedSheet) return
+    try {
+      const sheet = workbook.Sheets[selectedSheet]
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][]
+      importedRows = rows.slice(1).map(toImportedSeat).filter((row) => row.name || row.shortName || row.type)
+      if (importedRows.length === 0) throw new Error('没有读取到有效数据，请检查表格内容')
+      sheetDialogOpen = false
+      openPreview()
+    } catch (error) {
+      importError = error instanceof Error ? error.message : 'Sheet 读取失败'
+    }
+  }
+
+  function toImportedSeat(row: unknown): ImportedSeat {
+    const cells = Array.isArray(row) ? row : []
+    return {
+      name: String(cells[0] ?? '').trim(),
+      shortName: String(cells[1] ?? '').trim(),
+      type: String(cells[2] ?? '').trim()
+    }
+  }
+
+  function readText(): void {
+    importedRows = textValue
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => toImportedSeat(line.split(/[,，;；|]/)))
+      .filter((row) => row.name || row.shortName || row.type)
+    if (importedRows.length === 0) {
+      importError = '没有读取到有效数据，请按格式逐行输入'
+      return
+    }
+    textDialogOpen = false
+    openPreview()
+  }
+
+  function openPreview(): void {
+    if (!wizard.committees.some((committee) => committee.id === targetCommitteeId)) {
+      targetCommitteeId = wizard.committees[0]?.id ?? ''
+    }
+    previewDialogOpen = true
+  }
+
+  function roleIdForType(type: string, committeeId: string): string {
+    const committee = wizard.committees.find((item) => item.id === committeeId)
+    if (!committee) return ''
+    const normalized = type.replace(/\s+/g, '').toLowerCase()
+    if (!normalized) {
+      return wizard.roles.find((role) => wizard.isRoleAllowedInCommittee(role.id, committee.type))?.id ?? ''
+    }
+    return (
+      wizard.roles.find(
+        (role) =>
+          role.name.replace(/\s+/g, '').toLowerCase() === normalized &&
+          wizard.isRoleAllowedInCommittee(role.id, committee.type)
+      )?.id ?? ''
+    )
+  }
+
+  function matchedRoleName(row: ImportedSeat): string {
+    const roleId = roleIdForType(row.type, targetCommitteeId)
+    return roleId ? wizard.roleName(roleId) : row.type ? '未匹配角色' : '自动匹配'
+  }
+
+  function confirmImport(): void {
+    if (!targetCommitteeId || importedRows.length === 0) return
+    wizard.addImportedSeats(
+      targetCommitteeId,
+      importedRows.map((row) => ({
+        name: row.name,
+        shortName: row.shortName,
+        roleId: roleIdForType(row.type, targetCommitteeId)
+      }))
+    )
+    previewDialogOpen = false
+    importedRows = []
+    importError = ''
+  }
 </script>
+
+<div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+  <input
+    bind:this={fileInput}
+    class="hidden"
+    type="file"
+    accept=".xlsx,.xls,.csv"
+    onchange={(event) => void handleExcelFile(event)}
+  />
+  <Button variant="outline" size="sm" onclick={() => openFormatDialog('excel')}>
+    <FileSpreadsheet data-icon="inline-start" />
+    从 Excel 导入
+  </Button>
+  <Button variant="outline" size="sm" onclick={() => openFormatDialog('text')}>
+    <FileText data-icon="inline-start" />
+    从文本导入
+  </Button>
+</div>
 
 <section class="flex flex-col gap-4">
   {#each wizard.committees as committee (committee.id)}
@@ -102,3 +256,115 @@
     </article>
   {/each}
 </section>
+
+<Dialog.Root bind:open={formatDialogOpen}>
+  <Dialog.Content class="sm:max-w-lg">
+    <Dialog.Header>
+      <Dialog.Title>{importMode === 'excel' ? '从 Excel 导入席位' : '从文本导入席位'}</Dialog.Title>
+      <Dialog.Description>开始读取前，请确认导入内容符合以下格式。</Dialog.Description>
+    </Dialog.Header>
+    {#if importMode === 'excel'}
+      <div class="flex flex-col gap-3 text-sm text-muted-foreground">
+        <p>第一行作为表头，从第二行开始读取：</p>
+        <div class="overflow-hidden rounded-md border">
+          <table class="w-full text-sm">
+            <thead class="bg-muted/50 text-left text-xs text-muted-foreground">
+              <tr><th class="px-3 py-2 font-medium">A 列</th><th class="px-3 py-2 font-medium">B 列（可选）</th><th class="px-3 py-2 font-medium">C 列（可选）</th></tr>
+            </thead>
+            <tbody><tr class="border-t"><td class="px-3 py-2">席位名称</td><td class="px-3 py-2">席位简称（可选）</td><td class="px-3 py-2">席位类型（角色名称，可选）</td></tr></tbody>
+          </table>
+        </div>
+        <p>选择文件后还需要选择要读取的 sheet。</p>
+      </div>
+    {:else}
+      <div class="flex flex-col gap-2 text-sm text-muted-foreground">
+        <p>每行一个席位，格式为：</p>
+        <code class="rounded-md bg-muted px-3 py-2 text-foreground">席位名称[,席位简称][,席位类型]</code>
+        <p>席位简称和席位类型都可以省略；需要跳过简称填写类型时，请保留空字段，例如：席位名称,,席位类型。</p>
+        <p>分隔符支持逗号、中文逗号、分号、中文分号和 |。</p>
+      </div>
+    {/if}
+    {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (formatDialogOpen = false)}>取消</Button>
+      <Button onclick={confirmFormatDialog}>
+        <Upload data-icon="inline-start" />
+        {importMode === 'excel' ? '选择文件' : '继续输入'}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={textDialogOpen}>
+  <Dialog.Content class="sm:max-w-2xl">
+    <Dialog.Header>
+      <Dialog.Title>粘贴文本席位</Dialog.Title>
+      <Dialog.Description>每行一个席位，支持逗号、分号或 | 分隔。</Dialog.Description>
+    </Dialog.Header>
+    <Textarea bind:value={textValue} rows={10} placeholder="席位名称[,席位简称][,席位类型]" />
+    {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (textDialogOpen = false)}>取消</Button>
+      <Button onclick={readText}>读取并预览</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={sheetDialogOpen}>
+  <Dialog.Content class="sm:max-w-md">
+    <Dialog.Header>
+      <Dialog.Title>选择 Sheet</Dialog.Title>
+      <Dialog.Description>请选择要读取的工作表，第一行将作为表头跳过。</Dialog.Description>
+    </Dialog.Header>
+    <Select.Select type="single" bind:value={selectedSheet}>
+      <Select.SelectTrigger class="w-full" aria-label="工作表">{selectedSheet || '选择工作表'}</Select.SelectTrigger>
+      <Select.SelectContent>
+        {#each workbook?.SheetNames ?? [] as sheet}<Select.SelectItem value={sheet} label={sheet} />{/each}
+      </Select.SelectContent>
+    </Select.Select>
+    {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (sheetDialogOpen = false)}>取消</Button>
+      <Button disabled={!selectedSheet} onclick={readSelectedSheet}>读取并预览</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={previewDialogOpen}>
+  <Dialog.Content class="max-w-4xl">
+    <Dialog.Header>
+      <Dialog.Title>导入数据预览</Dialog.Title>
+      <Dialog.Description>确认后将把以下 {importedRows.length} 条席位追加到选定委员会。</Dialog.Description>
+    </Dialog.Header>
+    <Field.FieldGroup>
+      <Field.Field>
+        <Field.FieldLabel for="import-target-committee">导入到委员会</Field.FieldLabel>
+        <Select.Select type="single" bind:value={targetCommitteeId}>
+          <Select.SelectTrigger id="import-target-committee" class="w-full">{wizard.committees.find((committee) => committee.id === targetCommitteeId)?.name || '选择委员会'}</Select.SelectTrigger>
+          <Select.SelectContent>
+            {#each wizard.committees as committee (committee.id)}<Select.SelectItem value={committee.id} label={committee.name || '未命名委员会'} />{/each}
+          </Select.SelectContent>
+        </Select.Select>
+      </Field.Field>
+    </Field.FieldGroup>
+    <div class="max-h-[50vh] overflow-auto rounded-md border">
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-muted/90 text-left text-xs text-muted-foreground">
+          <tr><th class="px-3 py-2 font-medium">席位名称</th><th class="px-3 py-2 font-medium">席位简称</th><th class="px-3 py-2 font-medium">席位类型</th><th class="px-3 py-2 font-medium">匹配角色</th></tr>
+        </thead>
+        <tbody>
+          {#each importedRows as row, index (index)}
+            <tr class="border-t"><td class="px-3 py-2">{row.name || '（空）'}</td><td class="px-3 py-2">{row.shortName || '—'}</td><td class="px-3 py-2">{row.type || '自动匹配'}</td><td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    {#if hasUnmatchedImportedRole}
+      <Field.FieldError>存在无法匹配到当前委员会的席位类型，导入后请在席位列表中重新选择角色。</Field.FieldError>
+    {/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (previewDialogOpen = false)}>取消</Button>
+      <Button disabled={!targetCommitteeId} onclick={confirmImport}>确认导入</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
