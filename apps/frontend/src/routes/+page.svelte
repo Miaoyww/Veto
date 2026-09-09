@@ -15,6 +15,7 @@
   import favicon from '$lib/assets/favicon.png'
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
   import { setUserClientWsUrl } from '$lib/classes/clients/delegate-client'
+  import { conferences } from '$lib/classes/stores/conference/conference-store'
 
   interface LanMeeting {
     conferenceId: string
@@ -94,6 +95,11 @@
 
   function enterOrganizerMode(): void {
     setUserClientWsUrl(null)
+    if ($conferences.length === 0) {
+      goto(resolve('/empty'))
+      return
+    }
+
     goto(resolve('/conference'))
   }
 
