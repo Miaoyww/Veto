@@ -169,6 +169,16 @@ body::-webkit-scrollbar {
   }
 }
 
+@keyframes blink-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink-cursor {
+  animation: blink-cursor 1s step-end infinite;
+}
+
 html[data-veto-theme-transition='active']::view-transition-old(root),
 html[data-veto-theme-transition='active']::view-transition-new(root) {
   animation: none;
