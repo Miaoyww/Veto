@@ -101,7 +101,7 @@
 
   let effectiveSpeed = $derived(((): number => {
     const pos = liveRt ?? unitInfo?.placed
-    return pos?.stats?.speed ?? 0
+    return unitInfo?.placed.stats.speed ?? 0
   })())
 
   let sensorList = $derived(((): Array<{ id: string; name: string; range: number }> => {
@@ -115,8 +115,8 @@
 
   let weaponList = $derived(((): Array<{ id: string; label: string }> => {
     const unit = unitInfo?.unit
-    if (!unit?.components || unit.components.length === 0) return []
-    return unit.components.map((c) => ({
+    if (!unit?.components) return []
+    return Object.values(unit.components).flat().map((c) => ({
       id: c.id,
       label: mods.getLabel('component.' + c.id, c.id)
     }))

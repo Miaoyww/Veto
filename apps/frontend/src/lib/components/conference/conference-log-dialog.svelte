@@ -21,7 +21,7 @@
   }
 </script>
 
-<Dialog.Root bind:open {onclose}>
+<Dialog.Root bind:open onOpenChange={(value) => { if (!value) onclose?.() }}>
   <Dialog.Portal>
     <Dialog.Overlay />
     <Dialog.Content class="max-w-xl">
@@ -42,7 +42,7 @@
           <pre
             class="text-xs leading-relaxed text-foreground whitespace-pre-wrap font-mono">{recentMinutes
               .map((entry) => {
-                const label = ACTION_LABELS[entry.actionType] ?? entry.eventType
+                const label = ACTION_LABELS[entry.actionType] ?? entry.actionType
                 return `[${formatTime(entry.timestamp)}] [${label}] ${entry.description}`
               })
               .join('\n')}</pre>

@@ -26,7 +26,7 @@
   } = $props()
 
   let el = $state<HTMLElement | null>(null)
-  let size = $state(maxRem)
+  let size = $state<number | undefined>(undefined)
 
   $effect(() => {
     const target = el
@@ -55,6 +55,10 @@
   })
 </script>
 
-<div bind:this={el} class={className} style="font-size: {size}rem; max-width: {maxWidthVw}vw">
+<div
+  bind:this={el}
+  class={className}
+  style="font-size: {size ?? maxRem}rem; max-width: {maxWidthVw}vw"
+>
   {text}
 </div>

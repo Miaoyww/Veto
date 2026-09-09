@@ -156,7 +156,7 @@ export const currentConferenceRecord = derived(
 )
 
 if (typeof window !== 'undefined' && window.veto?.events) {
-  window.veto.events.on('conference:user-claimed', (data) => {
+  window.veto.events.on('conference:user-claimed', (data: unknown) => {
     const payload = data as { conferenceId: string; seatId: string; user: User }
     const conference = get(conferences).find((item) => item.id === payload.conferenceId)
     if (!conference) return

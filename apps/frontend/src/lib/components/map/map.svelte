@@ -248,7 +248,7 @@
 
         // 每个路径点渲染为可交互的 CircleMarker
         const selWp = get(selectedWaypoint)
-        const wpMarkers: L.CircleMarker[] = []
+        const wpMarkers: L.Marker[] = []
 
         for (let i = 0; i < placed.route.length; i++) {
           const [lat, lng] = placed.route[i]

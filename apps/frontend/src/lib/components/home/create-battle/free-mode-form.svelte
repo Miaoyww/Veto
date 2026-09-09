@@ -22,12 +22,8 @@
       pixelsPerKm: number
       iconStyle: 'nato' | 'simple'
       selectedFaction: string | null
-      selectedScenario: string | null
-      selectedRuleset: string | null
     }
     factionPlugins: InstalledPlugin[]
-    scenarioPlugins: InstalledPlugin[]
-    rulesetPlugins: InstalledPlugin[]
     hasAnyMods: boolean
     onenter?: () => void
   }
@@ -35,8 +31,6 @@
   let {
     draft = $bindable(),
     factionPlugins,
-    scenarioPlugins,
-    rulesetPlugins,
     hasAnyMods,
     onenter
   }: Props = $props()
@@ -188,53 +182,6 @@
         </div>
       {/if}
 
-      {#if scenarioPlugins.length > 0}
-        <div class="mb-2">
-          <Label class="mb-1.5 block text-xs text-muted-foreground">剧情包</Label>
-          <div class="flex flex-wrap gap-1.5">
-            <Button
-              size="sm"
-              variant={!draft.selectedScenario ? 'default' : 'outline'}
-              onclick={() => (draft.selectedScenario = null)}
-            >
-              无
-            </Button>
-            {#each scenarioPlugins as p (p.id)}
-              <Button
-                size="sm"
-                variant={draft.selectedScenario === p.id ? 'default' : 'outline'}
-                onclick={() => (draft.selectedScenario = p.id)}
-              >
-                {p.manifest.name}
-              </Button>
-            {/each}
-          </div>
-        </div>
-      {/if}
-
-      {#if rulesetPlugins.length > 0}
-        <div>
-          <Label class="mb-1.5 block text-xs text-muted-foreground">规则包</Label>
-          <div class="flex flex-wrap gap-1.5">
-            <Button
-              size="sm"
-              variant={!draft.selectedRuleset ? 'default' : 'outline'}
-              onclick={() => (draft.selectedRuleset = null)}
-            >
-              无
-            </Button>
-            {#each rulesetPlugins as p (p.id)}
-              <Button
-                size="sm"
-                variant={draft.selectedRuleset === p.id ? 'default' : 'outline'}
-                onclick={() => (draft.selectedRuleset = p.id)}
-              >
-                {p.manifest.name}
-              </Button>
-            {/each}
-          </div>
-        </div>
-      {/if}
     </section>
   {/if}
 </div>

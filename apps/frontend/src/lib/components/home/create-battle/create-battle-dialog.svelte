@@ -26,11 +26,7 @@
 
   const campaignPlugins = $derived(installedPlugins.filter((p) => p.manifest.type === 'campaign'))
   const factionPlugins = $derived(installedPlugins.filter((p) => p.manifest.type === 'faction'))
-  const scenarioPlugins = $derived(installedPlugins.filter((p) => p.manifest.type === 'scenario'))
-  const rulesetPlugins = $derived(installedPlugins.filter((p) => p.manifest.type === 'ruleset'))
-  const hasAnyMods = $derived(
-    factionPlugins.length + scenarioPlugins.length + rulesetPlugins.length > 0
-  )
+  const hasAnyMods = $derived(factionPlugins.length > 0)
 
   let step = $state<'mode_select' | 'free'>('mode_select')
 
@@ -44,8 +40,6 @@
     pixelsPerKm: 10,
     iconStyle: 'nato' as 'nato' | 'simple',
     selectedFaction: null as string | null,
-    selectedScenario: null as string | null,
-    selectedRuleset: null as string | null
   })
 
   function resetDraft() {
@@ -56,8 +50,6 @@
       pixelsPerKm: 10,
       iconStyle: 'nato',
       selectedFaction: null,
-      selectedScenario: null,
-      selectedRuleset: null
     }
   }
 
@@ -65,9 +57,7 @@
     const name = draft.name.trim()
     if (!name) return
     const enabledMods = [
-      draft.selectedFaction,
-      draft.selectedScenario,
-      draft.selectedRuleset
+      draft.selectedFaction
     ].filter((id): id is string => id !== null)
     if (enabledMods.length === 0) {
       enabledMods.push('base')
@@ -232,8 +222,6 @@
           <FreeModeForm
             bind:draft
             {factionPlugins}
-            {scenarioPlugins}
-            {rulesetPlugins}
             {hasAnyMods}
             onenter={handleCreate}
           />

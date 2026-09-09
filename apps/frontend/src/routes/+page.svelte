@@ -59,7 +59,7 @@
     scanError = ''
     setUserClientWsUrl(meeting.wsUrl)
     goto(
-      resolve('/delegate/[conference_id]', {
+      resolve('/client/[conference_id]', {
         conference_id: meeting.conferenceId
       })
     )

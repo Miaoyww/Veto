@@ -19,7 +19,7 @@
 
   useKeyboardShortcuts()
 
-  const battleId = $page.params.battle_id ?? null
+  const battleId = null
   const battle = get(battles).find((b) => b.id === battleId)
   const exists = !!battle
 

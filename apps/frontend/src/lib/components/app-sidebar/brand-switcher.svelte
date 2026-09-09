@@ -56,7 +56,7 @@
           首页
         </DropdownMenu.Item>
         {#if hasConf}
-          <DropdownMenu.Item onclick={() => goto(resolve('/' + confPrefix.split('/').slice(1).join('/')))} class="gap-2 p-2">
+          <DropdownMenu.Item onclick={() => goto('/' + confPrefix.split('/').slice(1).join('/'))} class="gap-2 p-2">
             <CalendarRange size={16} />
             议程
           </DropdownMenu.Item>

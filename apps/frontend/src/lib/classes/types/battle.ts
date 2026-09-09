@@ -179,6 +179,8 @@ export interface PlacedUnit {
    * 内置值：'idle' | 'moving' | 'attacking' | 'defending' | 'retreating' | 'destroyed'
    */
   status: string
+  /** 当前单位行为姿态。 */
+  behavior?: UnitBehavior
   /**
    * 可选覆盖：覆盖从模板/大类推导的北约符号功能代码（7 字符：维度 + 功能ID）。
    * 示例："GUCI---" 表示地面步兵。

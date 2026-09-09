@@ -48,7 +48,7 @@ setPluginListChangeCallback(() => {
  * 等待存储初始化完成，超时时间为 5 秒。
  */
 export async function ensureStorageInitialized(): Promise<void> {
-  let initialized: boolean
+  let initialized = false
   storageInitialized.subscribe((v) => {
     initialized = v
   })()

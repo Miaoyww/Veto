@@ -38,7 +38,8 @@ import {
 	getEffectiveStats,
 	tickStatusEffects,
 	applyStatusEffect,
-	hasStatusEffect
+	hasStatusEffect,
+	removeStatusEffect
 } from '$lib/classes/services/engine/registry/status-registry';
 import {
 	runDetectionScan,

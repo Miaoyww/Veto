@@ -24,7 +24,7 @@
 	import { fly } from 'svelte/transition';
 
 	const DISPLAY_SCALES = [60, 3600, 86400] as const;
-	const battleId = $page.params.battle_id ?? null;
+  const battleId = null;
 
 	let initial = get(currentBattle);
 	onMount(() => {
