@@ -10,13 +10,74 @@
   import { toast } from 'svelte-sonner'
   import { Upload, Trash2, Sun, Moon } from '@lucide/svelte'
   import { setMode, userPrefersMode } from 'mode-watcher'
+  import { onDestroy } from 'svelte'
   import { fly } from 'svelte/transition'
+  import { getThemeTransitionClipPaths } from './theme-transition'
 
   const GROUPS = ['危机推演', '模拟大会'] as const
 
   const shortcutsByGroup = Object.fromEntries(
     GROUPS.map((g) => [g, SHORTCUT_DEFS.filter((d) => d.group === g)])
   ) as Record<(typeof GROUPS)[number], typeof SHORTCUT_DEFS>
+
+  const THEME_TRANSITION_DURATION = 400
+  let activeThemeAnimation: Animation | null = null
+  let isThemeTransitioning = false
+
+  function clearThemeTransition() {
+    if (typeof document === 'undefined') return
+
+    activeThemeAnimation?.cancel()
+    activeThemeAnimation = null
+    isThemeTransitioning = false
+
+    const root = document.documentElement
+    delete root.dataset.vetoThemeTransition
+    root.style.removeProperty('--veto-theme-transition-clip-from')
+  }
+
+  onDestroy(clearThemeTransition)
+
+  function handleThemeChange(nextMode: 'light' | 'dark', event: MouseEvent) {
+    if (userPrefersMode.current === nextMode || isThemeTransitioning) return
+
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const button = event.currentTarget as HTMLElement | null
+    const bounds = button?.getBoundingClientRect()
+    const x = bounds ? bounds.left + bounds.width / 2 : viewportWidth / 2
+    const y = bounds ? bounds.top + bounds.height / 2 : viewportHeight / 2
+    const maxRadius = Math.hypot(Math.max(x, viewportWidth - x), Math.max(y, viewportHeight - y))
+    const applyMode = () => setMode(nextMode)
+
+    if (typeof document.startViewTransition !== 'function') {
+      applyMode()
+      return
+    }
+
+    const clipPaths = getThemeTransitionClipPaths(x, y, maxRadius, viewportWidth, viewportHeight)
+    const root = document.documentElement
+    root.dataset.vetoThemeTransition = 'active'
+    root.style.setProperty('--veto-theme-transition-clip-from', clipPaths[0])
+    isThemeTransitioning = true
+
+    const transition = document.startViewTransition(applyMode)
+    transition.finished.finally(clearThemeTransition).catch(() => {})
+    transition.ready
+      .then(() => {
+        if (typeof root.animate !== 'function') return
+        activeThemeAnimation = root.animate(
+          { clipPath: clipPaths },
+          {
+            duration: THEME_TRANSITION_DURATION,
+            easing: 'ease-in-out',
+            fill: 'forwards',
+            pseudoElement: '::view-transition-new(root)'
+          }
+        )
+      })
+      .catch(() => {})
+  }
 
   function handleImport() {
     const input = document.createElement('input')
@@ -65,7 +126,7 @@
           <Button
             variant={userPrefersMode.current === 'light' ? 'secondary' : 'ghost'}
             size="sm"
-            onclick={() => setMode('light')}
+            onclick={(event) => handleThemeChange('light', event)}
           >
             <Sun size={13} class="mr-1.5" />
             浅色
@@ -73,7 +134,7 @@
           <Button
             variant={userPrefersMode.current === 'dark' ? 'secondary' : 'ghost'}
             size="sm"
-            onclick={() => setMode('dark')}
+            onclick={(event) => handleThemeChange('dark', event)}
           >
             <Moon size={13} class="mr-1.5" />
             暗色
