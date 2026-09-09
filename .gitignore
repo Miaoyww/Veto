@@ -7,6 +7,7 @@ out
 *.log*
 release.ps1
 .vscode/*
+.worktrees/
 docs/*
 !docs/adr/
 !docs/adr/*.md
