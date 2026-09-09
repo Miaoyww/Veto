@@ -32,7 +32,7 @@ Align the frontend and Electron data flow with the CONTEXT model: `Conference` o
 ### Committee types
 
 - `apps/frontend/src/lib/classes/types/committee.ts`
-  - Owns `ConferencePhase`, agenda, speaker-list, yield, point, motion, resolution, voting, caucus, minutes, and `Committee` DTO types.
+  - Owns `ConferencePhase`, agenda, speaker-list, yield, point, motion, resolution, voting, caucus, minutes, `MajorityThresholds`, and `Committee` DTO types.
   - Owns labels that are semantically Committee-specific only when they are required by the local Chair UI; shared text labels used by multiple surfaces are exposed through a formatter module.
 
 - `apps/frontend/src/lib/classes/types/committee-display.ts`
@@ -52,7 +52,7 @@ Align the frontend and Electron data flow with the CONTEXT model: `Conference` o
   - `VALID_TRANSITIONS`, `canTransition`, `transitionPhase`, `PHASE_LABELS`.
 
 - `apps/frontend/src/lib/classes/utils/committee/voting.ts`
-  - `MajorityThresholds`, `calculateMajorityThresholds`, `determinePassFail`, `tallyVotes`.
+  - `calculateMajorityThresholds`, `determinePassFail`, `tallyVotes`.
 
 - `apps/frontend/src/lib/classes/utils/committee/motions.ts`
   - `MotionResolution`, `resolveMotion`.
