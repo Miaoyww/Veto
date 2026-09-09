@@ -96,16 +96,7 @@
             />
           </h1>
           <p class="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-            <span>每一场大会, 都值得</span>
-            <TypingAnimation
-              words={['准备充分', '秩序井然', '观点交汇']}
-              className="font-medium text-foreground"
-              typeSpeed={75}
-              deleteSpeed={38}
-              pauseDelay={900}
-              loop
-              startOnView={false}
-            />
+            <span>每一场大会, 都值得悉心准备</span>
           </p>
         </div>
 
