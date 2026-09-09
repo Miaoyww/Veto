@@ -1,428 +1,73 @@
 // ============================================================
-// types-conference.ts — 模拟大会（Model UN Conference）领域模型
+// conference.ts - Conference aggregate DTO
 // ============================================================
 
-import type { Attendance, Seat, SeatAccess, SeatView, User } from './delegate'
+import type { SeatAccess, User, News, SeatGroup, SituationUpdate } from './delegate'
+import type { RoleTemplate } from './event'
+import type { Committee } from './committee'
+import { ACTION_LABELS } from '../../../../../shared/action-types'
+import { MOTION_LABELS, POINT_LABELS } from './committee'
+
 export type { Attendance, ParticipantSeat, Seat, SeatView } from './delegate'
 
-// ---- 会议阶段 -----------------------------------------------------------
+// Temporary compatibility exports while callers migrate to domain modules.
+export type {
+  AbstractMotion,
+  AgendaItem,
+  CaucusSpeakerStatus,
+  CaucusType,
+  Committee,
+  ConferenceActionType,
+  ConferencePhase,
+  ConferenceEntry,
+  DraftResolution,
+  Entry,
+  IndividualSpeechMotion,
+  MajorityRule,
+  MajorityThresholds,
+  ModifySpeakingTimeMotion,
+  Motion,
+  MotionStatus,
+  MotionType,
+  OpenSpeakersListMotion,
+  ChangeAttendanceMotion,
+  CloseMeetingMotion,
+  ClosureDebateMotion,
+  ModeratedCaucusMotion,
+  PostponeResolutionMotion,
+  Point,
+  PointType,
+  ProposerPosition,
+  ReorderResolutionMotion,
+  ResumeResolutionMotion,
+  SpeakerDisplayEntry,
+  SpeakerEntry,
+  SpeakerEntryStatus,
+  SpeakerListData,
+  SubstantiveVoteMotion,
+  SuspendMeetingMotion,
+  UnmoderatedCaucusMotion,
+  VoteBallot,
+  VoteTargetType,
+  VoteValue,
+  VotingSession,
+  YieldChoice,
+  YieldPendingState,
+  YieldType
+} from './committee'
 
-export type ConferencePhase =
-  | 'preamble' // 刚创建，尚未开始点名
-  | 'roll_call' // 点名
-  | 'pending_speakers_list' // 等待开启主发言名单（点名结束 / 休会恢复后）
-  | 'general_debate' // 一般性辩论（主发言名单阶段）
-  | 'caucus' // 磋商中（有主持或自由磋商）
-  | 'voting' // 投票表决中
-  | 'motion' // 动议（Display 专用：编辑/表决/结果）
-  | 'caucus_setup' // 磋商发言名单设置
-  | 'suspended' // 暂时休会
-  | 'closed' // 闭幕
+export type {
+  ConferenceDisplayData,
+  ConferenceDisplaySpeaker,
+  MotionDraft,
+  SpeakerTransitionReason
+} from './committee-display'
+export type { TimerStatus, TimerTickData, TimerTickStatus } from './timer'
 
-// ---- 议题 ---------------------------------------------------------------
+// Runtime labels remain exported for existing callers.
+export { ACTION_LABELS, MOTION_LABELS, POINT_LABELS }
 
-export interface AgendaItem {
-  id: string
-  title: string
-  description?: string
-  sortOrder: number
-}
-
-// ---- 主发言名单 ----------------------------------------------------------
-
-export type YieldType = 'chair' | 'delegate' | 'question' | 'comment'
-
-export type SpeakerEntryStatus =
-  | 'waiting'
-  | 'ready'
-  | 'speaking'
-  | 'finished'
-  | 'interrupted'
-
-/** 磋商发言人的活跃状态（不包括 finished/interrupted） */
-export type CaucusSpeakerStatus = 'waiting' | 'ready' | 'speaking'
-
-export interface YieldChoice {
-  type: YieldType
-  /** 当 type='delegate' 时，让渡给的席位 ID */
-  seatId?: string
-  /** 当 type='question'/'comment' 时，提问/评论方的席位 ID */
-  fromSeatId?: string
-}
-
-/** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
-export interface YieldPendingState {
-  originalEntryId: string
-  originalSeatId: string
-  yieldType: YieldType
-  /** 让渡时的剩余秒数 */
-  remainingSec: number
-  /** 原发言人分配的总时长 */
-  allocatedSec: number
-  /** 提问方席位 ID（question 类型专用） */
-  questionerSeatId?: string
-}
-
-export interface SpeakerEntry {
-  id: string
-  seatId: string
-  /** 分配的发言时间（秒），默认 120 */
-  allocatedTimeSec: number
-  /** 暂停/中断时剩余时间 */
-  remainingTimeSec?: number
-  status: SpeakerEntryStatus
-  /** 发言人做出的让渡选择 */
-  yield?: YieldChoice
-  /** 是否允许让渡（通过让渡获得时间的发言人不可再次让渡），默认 true */
-  canYield?: boolean
-}
-
-/**
- * UI 展示用的发言条目视图模型。
- * 统一了一般性辩论和磋商两种数据源的差异，供 SpeakerQueue 组件安全消费。
- */
-export interface SpeakerDisplayEntry {
-  id: string
-  seatId: string
-  seatName: string
-  status: string
-  allocatedTimeSec: number
-}
-
-/** 发言名单的 JSON 序列化格式 */
-export interface SpeakerListData {
-  id: string
-  name: string
-  entries: SpeakerEntry[]
-}
-
-// ---- 问题系统 ------------------------------------------------------------
-
-export type PointType =
-  | 'point_of_order' // 程序性问题
-  | 'point_of_inquiry' // 咨询性问题
-  | 'point_of_personal_privilege' // 个人特权问题
-
-export const POINT_LABELS: Record<PointType, string> = {
-  point_of_order: '程序性问题',
-  point_of_inquiry: '咨询性问题',
-  point_of_personal_privilege: '个人特权问题'
-}
-
-// ---- 动议系统 ------------------------------------------------------------
-
-/** 动议类型，对应模拟联合国会议中的各类动议 */
-export type MotionType =
-  /** 开启主发言名单 */
-  | 'open_speakers_list'
-  /** 有主持核心磋商 */
-  | 'moderated_caucus'
-  /** 自由磋商 */
-  | 'unmoderated_caucus'
-  /** 修改发言时间 */
-  | 'modify_speaking_time'
-  /** 延置决议草案 */
-  | 'postpone_resolution'
-  /** 恢复决议草案 */
-  | 'resume_resolution'
-  /** 结束辩论 */
-  | 'closure_debate'
-  /** 暂时休会 */
-  | 'suspend_meeting'
-  /** 闭幕 */
-  | 'close_meeting'
-  /** 调整投票顺序 */
-  | 'reorder_resolution'
-  /** 实质性投票 */
-  | 'substantive_vote'
-  /** 更改出席状态 */
-  | 'change_attendance'
-  /** 个人演讲 */
-  | 'individual_speech'
-
-export type MotionStatus = 'pending' | 'approved' | 'rejected' | 'expired'
-
-export interface AbstractMotion {
-  id: string
-  type: MotionType
-  /** 动议提出席位 */
-  proposedBySeatId: string
-  proposedAt: number
-  status: MotionStatus
-}
-
-/** 开启主发言名单 */
-export interface OpenSpeakersListMotion extends AbstractMotion {
-  type: 'open_speakers_list'
-}
-
-/** 有主持核心磋商 */
-export interface ModeratedCaucusMotion extends AbstractMotion {
-  type: 'moderated_caucus'
-  topic: string
-  /** 总时长（秒） */
-  totalTimeSec: number
-  /** 每人发言时间（秒） */
-  speakingTimePerPersonSec: number
-  /** 最大发言人数 = floor(totalTimeSec / speakingTimePerPersonSec) */
-  maxSpeakers: number
-}
-
-/** 自由磋商 */
-export interface UnmoderatedCaucusMotion extends AbstractMotion {
-  type: 'unmoderated_caucus'
-  /** 总倒计时（秒） */
-  durationSec: number
-}
-
-/** 修改发言时间 */
-export interface ModifySpeakingTimeMotion extends AbstractMotion {
-  type: 'modify_speaking_time'
-  newTimeSec: number
-}
-
-/** 延置决议草案 */
-export interface PostponeResolutionMotion extends AbstractMotion {
-  type: 'postpone_resolution'
-  agendaItemId: string
-}
-
-/** 恢复决议草案 */
-export interface ResumeResolutionMotion extends AbstractMotion {
-  type: 'resume_resolution'
-  agendaItemId: string
-}
-
-/** 结束辩论 */
-export interface ClosureDebateMotion extends AbstractMotion {
-  type: 'closure_debate'
-}
-
-/** 暂时休会 */
-export interface SuspendMeetingMotion extends AbstractMotion {
-  type: 'suspend_meeting'
-}
-
-/** 闭幕 */
-export interface CloseMeetingMotion extends AbstractMotion {
-  type: 'close_meeting'
-}
-
-/** 调整投票顺序 */
-export interface ReorderResolutionMotion extends AbstractMotion {
-  type: 'reorder_resolution'
-  /** 排序后的议程项 ID 列表 */
-  newOrder: string[]
-}
-
-/** 实质性投票（对决议草案、修正案等文件的唱名表决） */
-export interface SubstantiveVoteMotion extends AbstractMotion {
-  type: 'substantive_vote'
-  /** 被表决的文件名称 */
-  documentName: string
-}
-
-/** 更改出席状态 */
-export interface ChangeAttendanceMotion extends AbstractMotion {
-  type: 'change_attendance'
-  /** 新的出席状态 */
-  newAttendance: Attendance
-}
-
-/** 个人演讲 */
-export interface IndividualSpeechMotion extends AbstractMotion {
-  type: 'individual_speech'
-  /** 发言时长（秒） */
-  durationSec: number
-}
-
-export type Motion =
-  | OpenSpeakersListMotion
-  | ModeratedCaucusMotion
-  | UnmoderatedCaucusMotion
-  | ModifySpeakingTimeMotion
-  | PostponeResolutionMotion
-  | ResumeResolutionMotion
-  | ClosureDebateMotion
-  | SuspendMeetingMotion
-  | CloseMeetingMotion
-  | ReorderResolutionMotion
-  | SubstantiveVoteMotion
-  | ChangeAttendanceMotion
-  | IndividualSpeechMotion
-
-/** 动议类型的中文标签 */
-export const MOTION_LABELS: Record<MotionType, string> = {
-  open_speakers_list: '开启主发言名单',
-  moderated_caucus: '有主持核心磋商',
-  unmoderated_caucus: '自由磋商',
-  modify_speaking_time: '修改发言时间',
-  postpone_resolution: '延置决议草案',
-  resume_resolution: '恢复决议草案',
-  closure_debate: '结束辩论',
-  suspend_meeting: '暂时休会',
-  close_meeting: '闭幕',
-  reorder_resolution: '调整投票顺序',
-  substantive_vote: '实质性投票',
-  change_attendance: '更改出席状态',
-  individual_speech: '个人演讲'
-}
-
-export interface Point {
-  id: string
-  type: PointType
-  /** 问题提出席位 ID */
-  proposedBySeatId: string
-  proposedAt: number
-}
-
-// ---- 决议草案 ------------------------------------------------------------
-
-export interface DraftResolution {
-  id: string
-  title: string
-  /** 起草席位 ID 列表 */
-  sponsors: string[]
-  /** 附议席位 ID 列表 */
-  signatories: string[]
-  /** 决议正文（自由文本，后续可改为结构化段落） */
-  content: string
-  /** 关联的议程项 ID */
-  agendaItemId?: string
-  createdAt: number
-}
-
-// ---- 投票系统 ------------------------------------------------------------
-
-export type VoteValue = 'yes' | 'no' | 'abstain' | 'skip'
-
-export type MajorityRule = 'simple_majority' | 'two_thirds'
-
-export type VoteTargetType = 'motion' | 'resolution'
-
-export interface VoteBallot {
-  seatId: string
-  vote: VoteValue
-}
-
-export interface VotingSession {
-  id: string
-  /** 表决对象类型 */
-  targetType: VoteTargetType
-  /** 表决对象 ID */
-  targetId: string
-  /** 多数规则 */
-  majorityRule: MajorityRule
-  ballots: VoteBallot[]
-  startedAt: number
-  endedAt?: number
-  result?: 'passed' | 'failed'
-  /** 当前正在投票的席位 ID（唱名表决顺序控制）；null 表示全部投完 */
-  currentSeatId: string | null
-  /** 当前轮次：1 = 第一轮，2 = 第二轮（跳过席位补投） */
-  round: number
-}
-
-// ---- 会议记录 ------------------------------------------------------------
-
-// 从共享类型重导出（新名称），确保 main + renderer 进程使用同一份操作类型定义
-import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../../../shared/action-types'
-import type { News, SeatGroup, SituationUpdate } from './delegate'
-import type { RoleTemplate } from './event'
-import { ACTION_LABELS } from '../../../../../shared/action-types'
-export type { ConferenceActionType, Entry, ConferenceEntry }
-export { ACTION_LABELS }
-
-// ---- Conference（根实体）--------------------------------------------------
-
-export type ProposerPosition = 'first' | 'last'
-
-export type CaucusType = 'moderated' | 'unmoderated' | 'individual'
-
-export interface Committee {
-  id: string
-  /** 委员会名称 */
-  name: string
-  /** 当前阶段 */
-  phase: ConferencePhase
-  /** 议题列表 */
-  agenda: AgendaItem[]
-  /** 席位列表；拥有 procedure 的席位参与议事 */
-  seats: Seat[]
-  /** 主发言名单 */
-  speakerLists?: SpeakerListData
-  /** 所有动议 */
-  motions: Motion[]
-  /** 已被主席忽略的已决动议 ID（取消对话框后不再展示其结果） */
-  dismissedResolvedMotionIds: string[]
-  /** 所有问题（Point） */
-  points: Point[]
-  /** 已被主席结束的问题 ID（结束后不再在 Display 展示） */
-  dismissedPointIds: string[]
-  /** 决议草案 */
-  draftResolutions: DraftResolution[]
-  /** 已记录的文件名称（用于实质性投票时的输入提示） */
-  documentNames: string[]
-  /** 投票记录 */
-  votingSessions: VotingSession[]
-  /** 会议记录 */
-  minutes: ConferenceEntry[]
-  /** 默认发言时间（秒），默认 120 */
-  defaultSpeakingTimeSec: number
-
-  // ---- 运行时状态（不持久化到单独的 store，直接内嵌）----
-
-  /** 磋商发言名单设置（caucus_setup 阶段使用） */
-  caucusSetup?: {
-    motionId: string
-    /** 动议国发言位置：标首（第一个）还是标尾（最后一个） */
-    proposerPosition: ProposerPosition
-    /** 已加入的席位 ID 列表（有序） */
-    speakerSeatIds: string[]
-    /** 名单耗尽后重回 setup 时的剩余秒数 */
-    remainingSec?: number
-  } | null
-
-  /** 当前磋商计时器状态（累计时间模型） */
-  activeCaucus?: {
-    motionId: string
-    type: CaucusType
-
-    /** 总分配时间（秒） */
-    totalSec: number
-
-    /** 已消耗时间（秒） */
-    elapsedSec: number
-
-    /** 是否暂停 */
-    paused: boolean
-
-    /** 用于同步和恢复 */
-    updatedAt?: number
-
-    /** 有主持磋商发言顺序 */
-    caucusSpeakers?: SpeakerEntry[]
-    /** 当前发言人在 caucusSpeakers 中的索引 */
-    currentSpeakerIndex?: number
-  } | null
-
-  /** 当前发言计时器状态（累计时间模型） */
-  activeSpeaker?: {
-    entryId: string
-    /** 总分配时间（秒） */
-    totalSec: number
-    /** 已消耗时间（秒） */
-    elapsedSec: number
-    /** 是否暂停 */
-    paused: boolean
-  } | null
-
-  /** 让渡处理中的中间状态（控制端用来逐步解析让渡） */
-  yieldPending?: YieldPendingState | null
-
-}
-
-/** 大会根实体：大会级资源与委员会集合。 */
+/** Conference aggregate: conference-level resources plus its committees. */
 export interface Conference {
   id: string
   name: string
@@ -431,186 +76,11 @@ export interface Conference {
   createdAt: number
   updatedAt: number
   committees: Committee[]
-  /** 大会内与席位一对一的本地用户 */
   users: User[]
-  /** 邀请码到席位的访问入口 */
   seatAccesses: SeatAccess[]
-  /** 大会级角色模板 */
   roleTemplates: RoleTemplate[]
-  /** 大会级席位组（常规、MPC、IPC） */
   seatGroups: SeatGroup[]
-  /** 大会级新闻 */
   news: News[]
-  /** 大会级局势更新 */
   situationUpdates: SituationUpdate[]
-  /** 绑定的时间线 ID（TODO: 支持多个时间线） */
   timelineId?: string | null
-}
-
-// ---- 显示窗口同步数据 -----------------------------------------------------
-
-/** 动议编辑草稿 —— 实时同步到 Display 窗口 */
-export interface MotionDraft {
-  /** 动议提出席位 */
-  proposedBy?: SeatView
-  /** 动议类型 */
-  type?: MotionType
-  /** 是否需要表决（false = 特殊动议，直接生效，不展示表决 UI） */
-  isRequestingVote?: boolean
-  /** 主题（moderated_caucus） */
-  topic?: string
-  /** 总时长秒数 */
-  totalTimeSec?: number
-  /** 每人发言秒数 */
-  speakingTimePerPersonSec?: number
-  /** 新的发言时间秒数（modify_speaking_time） */
-  newTimeSec?: number
-  /** 文件名称（substantive_vote） */
-  documentName?: string
-}
-
-/** 问题编辑草稿 —— 实时同步到 Display 窗口 */
-export interface PointDraft {
-  /** 问题提出席位 */
-  proposedBy?: SeatView
-  /** 问题类型 */
-  type?: PointType
-}
-
-// ---- Display 窗口用的命名类型（避免内联类型导致 Svelte 模板推断为 any）----
-
-export type TimerStatus = 'running' | 'paused'
-
-/** 发言人切换原因：timeout=计时器自然到期，ended=主席手动结束 */
-export type SpeakerTransitionReason = 'timeout' | 'ended'
-
-/** Display 计时器增量同步数据（ADR-0002），Host 每 tick 推送，Display 不维护计时器 */
-export interface TimerTickData {
-  remainingSec: number
-  elapsedSec: number
-  totalSec: number
-  status: 'playing' | 'paused'
-}
-
-export interface ConferenceDisplaySpeaker {
-  seat: SeatView
-  remainingSec: number
-  allocatedSec: number
-  /** 计时状态 */
-  status: 'playing' | 'paused'
-}
-
-export interface ConferenceDisplayData {
-  conferenceId: string
-  phase: ConferencePhase
-  venue: string
-  name: string
-  /** 当前出席席位数量（点名结束后持久可用） */
-  presentCount: number
-  /** 拥有投票权的出席席位数量 */
-  votingCount: number
-  /** 动议编辑草稿（编辑中实时同步） */
-  motionDraft?: MotionDraft
-  /** 问题编辑草稿（编辑中实时同步） */
-  pointDraft?: PointDraft
-  currentSpeaker?: ConferenceDisplaySpeaker
-  /** 预发言状态（ready 阶段） */
-  readySpeaker?: {
-    seat: SeatView
-  }
-  speakersList: Array<{
-    seat: SeatView
-    status: string
-  }>
-  votingSession?: {
-    targetDescription: string
-    majorityRule: string
-    tally: { yes: number; no: number; abstain: number; present: number }
-    result?: string
-    /** 当前轮次 */
-    round: number
-    /** 当前正在投票的席位 ID */
-    currentSeatId: string | null
-    /** 每个出席席位的投票状态，按投票顺序排列 */
-    ballots: Array<{
-      seatId: string
-      seatName: string
-      shortName?: string
-      vote: string | null
-    }>
-  }
-  activeMotion?: {
-    type: MotionType
-    topic?: string
-    status: string
-    proposedBy: SeatView
-    motionId: string
-    /** 总时长（秒），moderated_caucus / unmoderated_caucus */
-    totalTimeSec?: number
-    /** 每人发言时间（秒），moderated_caucus */
-    speakingTimePerPersonSec?: number
-    /** 新的发言时间（秒），modify_speaking_time */
-    newTimeSec?: number
-    /** 文件名称（substantive_vote） */
-    documentName?: string
-  }
-  activePoint?: {
-    type: PointType
-    proposedBy: SeatView
-    pointId: string
-  }
-  caucusSetup?: {
-    topic?: string
-    proposerName?: string
-    proposerPosition: ProposerPosition
-    speakerSeatIds: string[]
-    speakerNames: SeatView[]
-  }
-  caucusTimer?: {
-    remainingSec: number
-    totalSec: number
-    type: CaucusType
-    /** 计时状态 */
-    status: TimerStatus
-    topic?: string
-    /** 有主持磋商发言顺序 */
-    caucusSpeakers?: Array<{
-      seatName: string
-      seat: SeatView
-      status: CaucusSpeakerStatus
-      allocatedTimeSec: number
-    }>
-    currentSpeakerIndex?: number
-    /** 发言人切换原因：timeout=计时器自然到期，ended=主席手动结束 */
-    speakerTransition?: SpeakerTransitionReason
-  }
-  recentMinutes: Array<{
-    timestamp: number
-    eventType: ConferenceActionType
-    description: string
-  }>
-  /** 让渡处理中状态（Display 端展示让渡流程） */
-  yieldPending?: {
-    yieldType: YieldType
-    originalSeat: SeatView
-    questionerSeat?: SeatView
-    remainingSec: number
-  }
-  /** 出席状态变更通知 */
-  attendanceChange?: SeatView
-  /** 点名进度（roll_call 阶段使用） */
-  rollCall?: {
-    currentIndex: number
-    totalCount: number
-    currentSeat?: SeatView
-    presentCount: number
-    simpleMajorityThreshold: number
-    twoThirdsThreshold: number
-    /** 刚刚标记的席位结果（供 Display 端展示确认动画） */
-    lastMarked?: {
-      seat: SeatView
-      status: Attendance
-      index: number
-    }
-  }
 }

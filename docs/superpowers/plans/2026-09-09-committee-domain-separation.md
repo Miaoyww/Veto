@@ -37,7 +37,7 @@
 - Produces generic `TimerTickData` and timer status types from `types/timer.ts`.
 - `types/conference.ts` retains `Conference` DTO and大会级 imports, with temporary type-only re-exports for existing callers.
 
-- [ ] **Step 1: Write the failing type-boundary test**
+- [x] **Step 1: Write the failing type-boundary test**
 
 ```ts
 import type { Conference } from './conference'
@@ -45,7 +45,7 @@ import type { Committee, MajorityThresholds } from './committee'
 import type { ConferenceDisplayData } from './committee-display'
 
 const committee: Committee = {} as Committee
-const thresholds: MajorityThresholds = { presentCount: 0, votingCount: 0, simpleMajorityThreshold: 1, twoThirdsThreshold: 0 }
+const thresholds: MajorityThresholds = { presentCount: 0, votingCount: 0, totalCount: 0, simpleMajorityThreshold: 1, twoThirdsThreshold: 0 }
 const display: ConferenceDisplayData = {} as ConferenceDisplayData
 const conference: Conference = { committees: [committee] } as Conference
 void thresholds
@@ -53,23 +53,23 @@ void display
 void conference
 ```
 
-- [ ] **Step 2: Run the focused type check to verify the new modules are absent**
+- [x] **Step 2: Run the focused type check to verify the new modules are absent**
 
 Run: `pnpm --filter @vetoexpress/frontend exec svelte-check --tsconfig ./tsconfig.json`
 
 Expected: FAIL because the committee and timer modules do not yet exist.
 
-- [ ] **Step 3: Move declarations without changing persisted field names**
+- [x] **Step 3: Move declarations without changing persisted field names**
 
 Copy the existing Committee-related declarations from `types/conference.ts` into the three new modules. Keep `Conference` DTO in `types/conference.ts`; add type-only re-exports there while consumers are migrated. Put `MajorityThresholds` in `committee.ts`, not in `voting.ts`.
 
-- [ ] **Step 4: Run the focused type check**
+- [x] **Step 4: Run the focused type check**
 
 Run: `pnpm --filter @vetoexpress/frontend check`
 
 Expected: PASS for the type declarations, with only import-path migration errors remaining if any.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/frontend/src/lib/classes/types docs/superpowers/plans/2026-09-09-committee-domain-separation.md
