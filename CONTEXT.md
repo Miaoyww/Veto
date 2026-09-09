@@ -218,6 +218,7 @@ _Avoid_: Event, Update, Intel
 
 **Host Service（主机服务）**:
 运行在一台本地主机上的权威协调服务，持有共享大会数据、认证、权限校验、命令处理与局域网实时路由；第一版同时仅暴露一个活动 Conference，并按 Conference 与 Committee 隔离数据和消息。每次重启后没有活动 Conference，必须由 Host Console 显式启动。它是共享大会数据的唯一权威来源：UserClient 只能拉取其授权范围内的数据并提交内容命令，不能在本地修改这些数据后再同步。Chair 的本地议事状态不属于 Host Service 的共享数据。
+局域网发现只用于公布可连接的大会身份与地址，不公布 Committee 的阶段、发言人、动议、表决、计时或其他 Agenda 状态。
 _Avoid_: Chair, Client
 
 **Host Console（主机控制台）**:
