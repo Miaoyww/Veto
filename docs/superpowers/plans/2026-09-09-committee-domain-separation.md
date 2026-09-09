@@ -95,7 +95,7 @@ git commit -m "refactor: split committee and display type contracts"
 - [ ] **Step 1: Add behavior tests copied from current implementation**
 
 ```ts
-it('rejects invalid phase transitions', () => expect(() => transitionPhase('closed', 'voting')).toThrow(Error))
+it('returns an Error for invalid phase transitions', () => expect(transitionPhase('closed', 'voting')).toBeInstanceOf(Error))
 it('calculates majority thresholds from present/voting seats', () => {
   expect(calculateMajorityThresholds(seats)).toMatchObject({ presentCount: 2, votingCount: 2, totalCount: 2, simpleMajorityThreshold: 2, twoThirdsThreshold: 2 })
 })
