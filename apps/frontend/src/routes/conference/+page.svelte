@@ -96,7 +96,7 @@
       </div>
     {:else}
       <!-- Header -->
-      <div class="grid grid-cols-3 items-center gap-6 border-b px-8 py-5">
+      <div class="flex items-center gap-6 border-b px-8 py-5">
         <!-- 中间：搜索 -->
         <InputGroup.Root>
           <InputGroup.Input bind:value={query} placeholder="搜索大会..." />
