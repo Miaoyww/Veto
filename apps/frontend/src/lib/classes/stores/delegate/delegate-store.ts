@@ -127,6 +127,20 @@ export function updateSeat(id: string, updates: Partial<Seat>): void {
   syncCurrentCommittee()
 }
 
+export function removeSeat(id: string): void {
+  const engine = getEng()
+  const conference = get(currentConferenceRecord)
+  const seat = engine?.getSeat(id)
+  if (!engine || !conference || !seat) return
+
+  engine.removeSeat(id)
+  conference.setSeatAccesses(conference.seatAccesses.filter((access) => access.seatId !== id))
+  if (seat.userId) {
+    conference.setUsers(conference.users.filter((user) => user.id !== seat.userId))
+  }
+  syncCurrentCommittee()
+}
+
 export function resolveCapabilities(seatId: string): Capability[] {
   const engine = getEng()
   const conference = get(currentConferenceRecord)

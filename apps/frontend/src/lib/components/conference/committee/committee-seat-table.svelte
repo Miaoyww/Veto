@@ -1,17 +1,22 @@
 <script lang="ts">
-  import { Check, Copy, Pencil, RefreshCw } from '@lucide/svelte'
+  import { onDestroy } from 'svelte'
+  import { Check, Copy, Pencil, RefreshCw, Trash2, X } from '@lucide/svelte'
   import type { Seat, SeatAccess } from '$lib/classes/types/delegate'
-  import { rotateSeatInviteCode, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
+  import {
+    removeSeat,
+    rotateSeatInviteCode,
+    updateSeat
+  } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
-  import * as Dialog from '$lib/components/ui/dialog'
+  import TextAnimate from '$lib/components/ui/text-animate.svelte'
 
   /**
    * committee-seat-table.svelte
    * ───────────────────────────
    * 席位表 —— 席位名称 / 简称 / 角色 / 访问 key，并就地提供
-   * 复制 key、重新生成 key、重命名席位三个操作。
-   * 依赖当前委员会已加载（updateSeat / rotateSeatInviteCode 作用于当前委员会）。
+   * 复制 key、重新生成 key、编辑和删除席位等操作。
+   * 依赖当前委员会已加载（席位操作均作用于当前委员会）。
    */
   interface Props {
     seats: Seat[]
@@ -22,9 +27,11 @@
   let { seats, seatAccesses = [] }: Props = $props()
 
   let copied = $state('')
-  let editingSeat = $state<Seat | null>(null)
-  let editorOpen = $state(false)
+  let editingSeatId = $state('')
   let editName = $state('')
+  let editShortName = $state('')
+  let deleteConfirmSeatId = $state('')
+  let deleteConfirmTimer: ReturnType<typeof setTimeout> | undefined
 
   function inviteCode(seatId: string): string {
     return seatAccesses.find((access) => access.seatId === seatId)?.inviteCode ?? ''
@@ -37,24 +44,56 @@
     setTimeout(() => copied === seatId && (copied = ''), 1400)
   }
 
-  function openEditor(seat: Seat): void {
-    editingSeat = seat
+  function startEditing(seat: Seat): void {
+    clearDeleteConfirmation()
+    editingSeatId = seat.id
     editName = seat.name
-    editorOpen = true
+    editShortName = seat.shortName ?? ''
   }
 
-  function closeEditor(): void {
-    editingSeat = null
-    editorOpen = false
+  function cancelEditing(): void {
+    editingSeatId = ''
+    editName = ''
+    editShortName = ''
   }
 
-  function saveName(): void {
-    const seat = editingSeat
+  function saveSeat(seat: Seat): void {
     const name = editName.trim()
-    if (!seat || !name) return
-    updateSeat(seat.id, { name })
-    closeEditor()
+    if (!name) return
+    updateSeat(seat.id, { name, shortName: editShortName.trim() || undefined })
+    cancelEditing()
   }
+
+  function handleEditorKeydown(event: KeyboardEvent, seat: Seat): void {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      saveSeat(seat)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelEditing()
+    }
+  }
+
+  function clearDeleteConfirmation(): void {
+    if (deleteConfirmTimer) clearTimeout(deleteConfirmTimer)
+    deleteConfirmTimer = undefined
+    deleteConfirmSeatId = ''
+  }
+
+  function handleDelete(seat: Seat): void {
+    if (deleteConfirmSeatId !== seat.id) {
+      clearDeleteConfirmation()
+      deleteConfirmSeatId = seat.id
+      deleteConfirmTimer = setTimeout(clearDeleteConfirmation, 3000)
+      return
+    }
+
+    clearDeleteConfirmation()
+    if (editingSeatId === seat.id) cancelEditing()
+    removeSeat(seat.id)
+  }
+
+  onDestroy(clearDeleteConfirmation)
 </script>
 
 <div class="overflow-hidden rounded-lg border bg-card">
@@ -72,8 +111,29 @@
       {#each seats as seat (seat.id)}
         {@const code = inviteCode(seat.id)}
         <tr class="border-t">
-          <td class="px-4 py-3 font-medium">{seat.name}</td>
-          <td class="px-4 py-3 font-medium">{seat.shortName ?? '-'}</td>
+          <td class="px-4 py-3 font-medium">
+            {#if editingSeatId === seat.id}
+              <Input
+                bind:value={editName}
+                aria-label="席位名称"
+                onkeydown={(event) => handleEditorKeydown(event, seat)}
+              />
+            {:else}
+              {seat.name}
+            {/if}
+          </td>
+          <td class="px-4 py-3 font-medium">
+            {#if editingSeatId === seat.id}
+              <Input
+                bind:value={editShortName}
+                aria-label="席位简称"
+                placeholder="可选"
+                onkeydown={(event) => handleEditorKeydown(event, seat)}
+              />
+            {:else}
+              {seat.shortName ?? '-'}
+            {/if}
+          </td>
           <td class="px-4 py-3 text-muted-foreground">{seat.role ?? '-'}</td>
           <td class="px-4 py-3"><code class="font-mono text-xs">{code || '未生成'}</code></td>
           <td class="px-4 py-3">
@@ -97,14 +157,47 @@
               >
                 <RefreshCw />
               </Button>
+              {#if editingSeatId === seat.id}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="取消编辑"
+                  aria-label="取消编辑"
+                  onclick={cancelEditing}
+                >
+                  <X />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="保存席位"
+                  aria-label="保存席位"
+                  disabled={!editName.trim()}
+                  onclick={() => saveSeat(seat)}
+                >
+                  <Check />
+                </Button>
+              {:else}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="编辑席位"
+                  aria-label="编辑席位"
+                  onclick={() => startEditing(seat)}
+                >
+                  <Pencil />
+                </Button>
+              {/if}
               <Button
-                variant="ghost"
-                size="icon"
-                title="重命名席位"
-                aria-label="重命名席位"
-                onclick={() => openEditor(seat)}
+                variant={deleteConfirmSeatId === seat.id ? 'destructive' : 'ghost'}
+                size="sm"
+                title="双击以删除席位"
+                onclick={() => handleDelete(seat)}
               >
-                <Pencil />
+                <Trash2 data-icon="inline-start" />
+                {#key deleteConfirmSeatId === seat.id}
+                  删除
+                {/key}
               </Button>
             </div>
           </td>
@@ -117,23 +210,3 @@
     </tbody>
   </table>
 </div>
-
-<Dialog.Root bind:open={editorOpen}>
-  <Dialog.Content class="sm:max-w-md">
-    <Dialog.Header>
-      <Dialog.Title>重命名席位</Dialog.Title>
-      <Dialog.Description>更新 host 和代表端看到的席位名称。</Dialog.Description>
-    </Dialog.Header>
-    <div class="py-4">
-      <Input
-        bind:value={editName}
-        aria-label="席位名称"
-        onkeydown={(event) => event.key === 'Enter' && saveName()}
-      />
-    </div>
-    <Dialog.Footer>
-      <Button variant="outline" onclick={closeEditor}>取消</Button>
-      <Button disabled={!editName.trim()} onclick={saveName}>保存</Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>

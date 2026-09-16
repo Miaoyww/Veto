@@ -1712,6 +1712,55 @@ export class Committee {
     this.touch()
   }
 
+  removeSeat(id: string): void {
+    if (!this.seats.some((seat) => seat.id === id)) return
+
+    const removedSpeakerEntryIds = new Set(
+      this.speakerList.entries.filter((entry) => entry.seatId === id).map((entry) => entry.id)
+    )
+
+    this.seats = this.seats.filter((seat) => seat.id !== id)
+    this.speakerList.entries = this.speakerList.entries.filter((entry) => entry.seatId !== id)
+
+    if (
+      this.activeSpeaker &&
+      (this.activeSpeaker.entryId === id || removedSpeakerEntryIds.has(this.activeSpeaker.entryId))
+    ) {
+      this.activeSpeaker = null
+    }
+    if (
+      this.yieldPending &&
+      (this.yieldPending.originalSeatId === id || this.yieldPending.questionerSeatId === id)
+    ) {
+      this.yieldPending = null
+    }
+    if (this.caucusSetup?.speakerSeatIds.includes(id)) {
+      this.caucusSetup = {
+        ...this.caucusSetup,
+        speakerSeatIds: this.caucusSetup.speakerSeatIds.filter((seatId) => seatId !== id)
+      }
+    }
+    if (this.activeCaucus?.caucusSpeakers?.some((entry) => entry.seatId === id)) {
+      const currentSpeaker =
+        this.activeCaucus.currentSpeakerIndex == null
+          ? undefined
+          : this.activeCaucus.caucusSpeakers[this.activeCaucus.currentSpeakerIndex]
+      const caucusSpeakers = this.activeCaucus.caucusSpeakers.filter((entry) => entry.seatId !== id)
+      const currentSpeakerIndex = currentSpeaker
+        ? caucusSpeakers.findIndex((entry) => entry.id === currentSpeaker.id)
+        : undefined
+
+      this.activeCaucus = {
+        ...this.activeCaucus,
+        caucusSpeakers,
+        currentSpeakerIndex:
+          currentSpeakerIndex == null || currentSpeakerIndex < 0 ? undefined : currentSpeakerIndex
+      }
+    }
+
+    this.touch()
+  }
+
   getSeat(id: string): Seat | undefined {
     return this.seats.find((s) => s.id === id)
   }
