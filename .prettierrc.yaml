@@ -3,6 +3,7 @@ semi: false
 printWidth: 100
 trailingComma: none
 endOfLine: auto
+htmlWhitespaceSensitivity: ignore
 
 plugins:
   - prettier-plugin-svelte

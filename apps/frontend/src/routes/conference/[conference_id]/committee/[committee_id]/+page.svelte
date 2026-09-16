@@ -13,13 +13,15 @@
     SquarePen,
     Users
   } from '@lucide/svelte'
-  import { MorphIcon } from 'morphicons/svelte'
-  import { Check, Copy } from 'lucide'
   import { cn } from '$lib/classes/utils'
   import { conferences, loadConference } from '$lib/classes/stores/conference/conference-store'
-  import { loadHostConferenceContent, type HostConferenceContent } from '$lib/classes/services/host-content'
+  import {
+    loadHostConferenceContent,
+    type HostConferenceContent
+  } from '$lib/classes/services/host-content'
   import { Button, buttonVariants } from '$lib/components/ui/button'
   import CommitteeOverviewCard from '$lib/components/conference/committee/committee-overview-card.svelte'
+  import CommitteeSeatTable from '$lib/components/conference/committee/committee-seat-table.svelte'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
@@ -32,7 +34,9 @@
   const conference = $derived($conferences.find((item) => item.id === conferenceId) ?? null)
   const committee = $derived(conference?.committees.find((item) => item.id === committeeId) ?? null)
   const committeeNews = $derived(
-    (hostContent?.news ?? conference?.news ?? []).filter((item) => item.sourceCommitteeId === committeeId)
+    (hostContent?.news ?? conference?.news ?? []).filter(
+      (item) => item.sourceCommitteeId === committeeId
+    )
   )
   const committeeSituation = $derived(
     (hostContent?.situations ?? conference?.situationUpdates ?? []).filter(
@@ -174,72 +178,27 @@
                 </p>
                 <h2 class="mt-1 text-base font-semibold">席位</h2>
               </div>
-              <Collapsible.Trigger
-                aria-label={seatsOpen ? '收起席位列表' : '展开席位列表'}
-                title={seatsOpen ? '收起席位列表' : '展开席位列表'}
-                class={cn(
-                  buttonVariants({ variant: 'ghost', size: 'icon' }),
-                  'transition-transform',
-                  seatsOpen && 'rotate-180'
-                )}
-              >
-                <ChevronDown />
-                <span class="sr-only">{seatsOpen ? '收起席位列表' : '展开席位列表'}</span>
-              </Collapsible.Trigger>
+              <div class="flex items-center gap-1">
+                <Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={openSeats}>
+                  <SquarePen class="size-3.5" />管理席位
+                </Button>
+                <Collapsible.Trigger
+                  aria-label={seatsOpen ? '收起席位列表' : '展开席位列表'}
+                  title={seatsOpen ? '收起席位列表' : '展开席位列表'}
+                  class={cn(
+                    buttonVariants({ variant: 'ghost', size: 'icon' }),
+                    'transition-transform',
+                    seatsOpen && 'rotate-180'
+                  )}
+                >
+                  <ChevronDown />
+                  <span class="sr-only">{seatsOpen ? '收起席位列表' : '展开席位列表'}</span>
+                </Collapsible.Trigger>
+              </div>
             </div>
 
-            <Collapsible.Content>
-              <div class="mt-4 overflow-hidden rounded-md border">
-                <table class="w-full text-sm">
-                  <thead class="bg-muted/50 text-xs text-muted-foreground">
-                    <tr>
-                      <th class="px-3 py-2 text-left font-medium">席位</th>
-                      <th class="px-3 py-2 text-left font-medium">角色</th>
-                      <th class="px-3 py-2 text-left font-medium">Key</th>
-                      <th class="w-20 px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {#each committee.seats as seat (seat.id)}
-                      {@const inviteCode =
-                        event?.seatAccesses?.find((access) => access.seatId === seat.id)
-                          ?.inviteCode ?? ''}
-                      <tr class="border-t">
-                        <td class="px-3 py-2">{seat.name}</td>
-                        <td class="px-3 py-2 text-muted-foreground">{seat.role ?? '-'}</td>
-                        <td class="px-3 py-2 font-mono text-xs">{inviteCode || '未生成'}</td>
-                        <td class="px-3 py-2 text-right flex">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onclick={() => void copyText(inviteCode, seat.id)}
-                            disabled={!inviteCode}
-                            aria-label={copied === seat.id ? '已复制' : '复制'}
-                            title={copied === seat.id ? '已复制' : '复制'}
-                          >
-                            <MorphIcon icon={copied === seat.id ? Check : Copy} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="编辑席位"
-                            title="编辑席位"
-                            onclick={openSeats}
-                          >
-                            <SquarePen />
-                          </Button>
-                        </td>
-                      </tr>
-                    {:else}
-                      <tr class="border-t">
-                        <td class="px-3 py-4 text-center text-muted-foreground" colspan="4">
-                          无席位
-                        </td>
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
-              </div>
+            <Collapsible.Content class="mt-4">
+              <CommitteeSeatTable seats={committee.seats} seatAccesses={conference.seatAccesses} />
             </Collapsible.Content>
           </Collapsible.Root>
         </section>
