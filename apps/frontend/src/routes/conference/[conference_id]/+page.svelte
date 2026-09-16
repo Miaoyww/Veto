@@ -237,9 +237,9 @@
           <Card.Root class="host-card overflow-hidden" aria-label="Host 大会服务">
             <Card.Header>
               <Card.Title>
-                <span class="flex items-center gap-2"
-                  ><Server class="size-4" aria-hidden="true" />Host 大会服务</span
-                >
+                <span class="flex items-center gap-2">
+                  <Server class="size-4" aria-hidden="true" />Host 大会服务
+                </span>
               </Card.Title>
               <Card.Description>在本机托管当前大会，供局域网内的客户端连接。</Card.Description>
               <Card.Action>
@@ -287,19 +287,19 @@
                 <Alert.Root>
                   <ArrowRightLeft aria-hidden="true" />
                   <Alert.Title>另一场大会正在运行</Alert.Title>
-                  <Alert.Description
-                    >启动后将从「{activeHostConferenceName}」切换到当前大会。</Alert.Description
-                  >
+                  <Alert.Description>
+                    启动后将从「{activeHostConferenceName}」切换到当前大会。
+                  </Alert.Description>
                 </Alert.Root>
               {/if}
               {#if hostStatusError}
                 <Alert.Root variant="destructive">
                   <CircleAlert aria-hidden="true" />
-                  <Alert.Title
-                    >{failedHostCheck
+                  <Alert.Title>
+                    {failedHostCheck
                       ? `启动自检未通过：${checkLabels[failedHostCheck.id]}`
-                      : 'Host 操作未完成'}</Alert.Title
-                  >
+                      : 'Host 操作未完成'}
+                  </Alert.Title>
                   <Alert.Description>{hostStatusError}</Alert.Description>
                 </Alert.Root>
               {/if}

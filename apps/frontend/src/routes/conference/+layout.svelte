@@ -60,20 +60,12 @@
           </Sidebar.MenuItem>
           <Sidebar.MenuItem>
             <Sidebar.MenuButton
-              isActive={$page.url.pathname === `/conference/${conferenceId}/committee/${committeeId}`}
+              isActive={$page.url.pathname ===
+                `/conference/${conferenceId}/committee/${committeeId}`}
               onclick={() => navigateToCommittee(activeConference.id, activeCommittee.id)}
             >
               <Users />
               <span>委员会概览</span>
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              isActive={$page.url.pathname.includes('/seats')}
-              onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/seats`)}
-            >
-              <SquarePen />
-              <span>席位管理</span>
             </Sidebar.MenuButton>
           </Sidebar.MenuItem>
 
@@ -82,7 +74,8 @@
           <Sidebar.MenuItem>
             <Sidebar.MenuButton
               isActive={$page.url.pathname.includes('/directives')}
-              onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/directives`)}
+              onclick={() =>
+                goTo(`/conference/${conferenceId}/committee/${committeeId}/directives`)}
             >
               <Radio />
               <span>指令</span>
@@ -119,7 +112,10 @@
       {:else}
         <Sidebar.Menu class="p-3">
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton isActive={$page.url.pathname === '/conference'} onclick={() => goTo('/conference')}>
+            <Sidebar.MenuButton
+              isActive={$page.url.pathname === '/conference'}
+              onclick={() => goTo('/conference')}
+            >
               <House />
               <span>首页</span>
             </Sidebar.MenuButton>

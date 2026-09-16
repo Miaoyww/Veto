@@ -49,7 +49,7 @@
       icon: Users,
       label: '席位',
       value: committee?.seats.length ?? 0,
-      href: resolve(`/conference/${conferenceId}/committee/${committeeId}/seats`)
+      href: resolve(`/conference/${conferenceId}/committee/${committeeId}`)
     },
     {
       icon: Radio,
