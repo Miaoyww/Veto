@@ -25,7 +25,7 @@
 <DisplayPage>
   {#if proposer}
     <div class="text-center">
-      <SeatNameDisplay name={proposer.name} shortName={proposer.procedure?.shortName ?? ''} />
+      <SeatNameDisplay name={proposer.name} shortName={proposer.shortName ?? ''} />
       {#if hasType}
         <div class="mt-4 text-4xl tracking-wide text-white/40">
           提出 {label}

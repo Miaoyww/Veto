@@ -55,7 +55,7 @@
   // Fuse.js instance（复用 searchPool）
   const fuse = $derived(
     new Fuse(searchPool, {
-      keys: ['name', 'procedure.shortName'],
+      keys: ['name', 'shortName'],
       threshold: 0.4,
       includeScore: true
     })
@@ -77,7 +77,7 @@
 
     // 1. 直接子串匹配
     for (const d of searchPool) {
-      if (d.name.toLowerCase().includes(q) || d.procedure.shortName?.toLowerCase().includes(q)) {
+      if (d.name.toLowerCase().includes(q) || d.shortName?.toLowerCase().includes(q)) {
         addResult(d, 0)
       }
     }
@@ -85,8 +85,8 @@
     // 2. 拼音匹配
     for (const d of searchPool) {
       const matchName = PinyinMatch.match(d.name, q)
-      const matchShort = d.procedure.shortName
-        ? PinyinMatch.match(d.procedure.shortName, q)
+      const matchShort = d.shortName
+        ? PinyinMatch.match(d.shortName, q)
         : false
       if (matchName || matchShort) {
         addResult(d, 0.1)
@@ -130,8 +130,8 @@
         class="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2"
       >
         <span class="text-sm">{value.name}</span>
-        {#if value.procedure.shortName}
-          <span class="text-xs text-muted-foreground">({value.procedure.shortName})</span>
+        {#if value.shortName}
+          <span class="text-xs text-muted-foreground">({value.shortName})</span>
         {/if}
         <button
           type="button"
@@ -170,8 +170,8 @@
               class="aria-selected:bg-accent aria-selected:text-accent-foreground outline-hidden relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
             >
               <span class="text-foreground">{d.name}</span>
-              {#if d.procedure.shortName}
-                <span class="text-xs text-muted-foreground">({d.procedure.shortName})</span>
+              {#if d.shortName}
+                <span class="text-xs text-muted-foreground">({d.shortName})</span>
               {/if}
             </CommandPrimitive.Item>
           {/each}

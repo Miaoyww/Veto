@@ -325,7 +325,7 @@ export class Committee {
     const twoThirds = Math.ceil((votingCount * 2) / 3)
 
     const absentSeats = participants.filter((seat) => seat.procedure?.attendance !== 'present')
-    const absentNames = absentSeats.map((seat) => seat.procedure?.shortName ?? seat.name).join('、')
+    const absentNames = absentSeats.map((seat) => seat.shortName ?? seat.name).join('、')
 
     const observerCount = presentCount - votingCount
     let detail =

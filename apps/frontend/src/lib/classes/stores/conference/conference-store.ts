@@ -210,10 +210,10 @@ export function createConference(
   const seatList: Seat[] = participants.map((participant, sortOrder) => ({
     id: crypto.randomUUID(),
     name: participant.name,
+    shortName: participant.shortName,
     seatGroupId: defaultGroupId,
     capabilityOverrides: {},
     procedure: {
-      shortName: participant.shortName,
       attendance: 'absent',
       hasVotingRights: participant.hasVotingRights ?? true,
       sortOrder

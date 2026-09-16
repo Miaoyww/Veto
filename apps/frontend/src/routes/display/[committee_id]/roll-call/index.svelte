@@ -62,7 +62,7 @@
           {#if rc.currentSeat}
             <SeatNameDisplay
               name={rc.currentSeat.name}
-              shortName={rc.currentSeat.procedure?.shortName ?? ''}
+              shortName={rc.currentSeat.shortName ?? ''}
             />
           {/if}
         </div>

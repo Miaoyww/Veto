@@ -42,7 +42,7 @@
     (onlyList ? speakers : speakers.slice(1)).map((s) => ({
       id: s.seat.name,
       name: s.seat.name,
-      shortName: s.seat.procedure?.shortName
+      shortName: s.seat.shortName
     }))
   )
 
@@ -60,7 +60,7 @@
     <div class="w-full px-8 py-6 text-center">
       <SeatNameDisplay
         name={nextSpeaker.seat.name}
-        shortName={nextSpeaker.seat.procedure?.shortName}
+        shortName={nextSpeaker.seat.shortName}
       />
       {#if subtitle}
         <div class="mt-4 text-lg tracking-wider text-white/15">{subtitle}</div>

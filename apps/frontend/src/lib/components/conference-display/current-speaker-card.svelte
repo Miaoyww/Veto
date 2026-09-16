@@ -31,7 +31,7 @@
     colorClass={accentColor}
   />
 
-  <SeatNameDisplay name={seat.name} shortName={seat.procedure?.shortName} />
+  <SeatNameDisplay name={seat.name} shortName={seat.shortName} />
 
   <!-- 倒计时 -->
   <div

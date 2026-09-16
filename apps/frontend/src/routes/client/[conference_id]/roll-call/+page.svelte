@@ -257,8 +257,8 @@
 
               <div class="text-center transition-opacity duration-300" class:opacity-30={isTransitioning}>
                 <div class="text-3xl font-bold text-foreground">{currentSeat.name}</div>
-                {#if currentSeat.procedure.shortName}
-                  <div class="mt-1 text-lg text-muted-foreground">{currentSeat.procedure.shortName}</div>
+                {#if currentSeat.shortName}
+                  <div class="mt-1 text-lg text-muted-foreground">{currentSeat.shortName}</div>
                 {/if}
               </div>
 
@@ -360,7 +360,7 @@
                 {#each absentSeats as seat (seat.id)}
                   <div class="flex items-center gap-3 py-2.5">
                     <span class="flex-1 text-sm text-muted-foreground/70">
-                      {seat.procedure.shortName ?? seat.name}
+                      {seat.shortName ?? seat.name}
                     </span>
                     <span class="text-xs text-muted-foreground">缺席</span>
                   </div>

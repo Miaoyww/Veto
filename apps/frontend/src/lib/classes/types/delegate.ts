@@ -70,7 +70,6 @@ export type Attendance = 'present' | 'absent'
 
 /** 仅议事席位具有的程序状态 */
 export interface SeatProcedure {
-  shortName?: string
   flagUrl?: string
   attendance: Attendance
   hasVotingRights: boolean
@@ -82,6 +81,7 @@ export interface Seat {
   id: string
   /** 显示名称，如 "海军部长"、"新华社记者"、"推演官 A" */
   name: string
+  shortName?: string
   /** 所属 SeatGroup ID */
   seatGroupId: string
   /** 当前使用者；席位尚未被认领时为空 */
@@ -106,6 +106,7 @@ export function isParticipantSeat(seat: Seat): seat is ParticipantSeat {
 export interface SeatView {
   id: string
   name: string
+  shortName?: string
   role?: string
   procedure?: SeatProcedure
 }
@@ -114,6 +115,7 @@ export function toSeatView(seat: Seat): SeatView {
   return {
     id: seat.id,
     name: seat.name,
+    shortName: seat.shortName,
     role: seat.role,
     procedure: seat.procedure ? { ...seat.procedure } : undefined
   }

@@ -69,7 +69,7 @@
     <div class="text-center">
       <SeatNameDisplay
         name={yp.questionerSeat?.name ?? ''}
-        shortName={yp.questionerSeat?.procedure?.shortName ?? ''}
+        shortName={yp.questionerSeat?.shortName ?? ''}
       />
       <div class="mt-2 text-3xl font-light tracking-[0.06em] text-white/30">正在提问</div>
       <div class="mt-6 text-xl tracking-wider text-white/20">

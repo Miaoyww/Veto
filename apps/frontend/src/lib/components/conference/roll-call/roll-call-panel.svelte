@@ -105,15 +105,15 @@
               {#if currentSeat.procedure.flagUrl}
                 <img src={currentSeat.procedure.flagUrl} alt="" class="h-full w-full rounded-full object-cover" />
               {:else}
-                {currentSeat.procedure.shortName?.charAt(0) ?? currentSeat.name.charAt(0)}
+                {currentSeat.shortName?.charAt(0) ?? currentSeat.name.charAt(0)}
               {/if}
             </div>
 
             <!-- 名称 -->
             <div class="text-center">
               <div class="text-3xl font-bold text-foreground">{currentSeat.name}</div>
-              {#if currentSeat.procedure.shortName}
-                <div class="mt-1 text-lg text-muted-foreground">{currentSeat.procedure.shortName}</div>
+              {#if currentSeat.shortName}
+                <div class="mt-1 text-lg text-muted-foreground">{currentSeat.shortName}</div>
               {/if}
             </div>
 

@@ -107,6 +107,7 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       const seat: Seat = {
         id: createId(),
         name: draftSeat.name.trim(),
+        shortName: draftSeat.shortName?.trim() || undefined,
         seatGroupId: groupId,
         capabilityOverrides: capabilityOverrides(role?.capabilities ?? []),
         role: role?.name,
@@ -114,7 +115,6 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
         procedure:
           draft.type === 'cabinet'
             ? {
-                shortName: draftSeat.shortName?.trim() || undefined,
                 attendance: 'absent',
                 hasVotingRights: true,
                 sortOrder

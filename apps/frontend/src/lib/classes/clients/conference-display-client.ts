@@ -264,7 +264,7 @@ export function buildDisplayData(
       return {
         seatId: d.id,
         seatName: d.name,
-        shortName: d.procedure.shortName,
+        shortName: d.shortName,
         vote: ballot?.vote ?? null
       }
     })

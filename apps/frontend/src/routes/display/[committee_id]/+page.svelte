@@ -218,7 +218,6 @@
           attendance: lastMarked.status,
           hasVotingRights: lastMarked.seat.procedure?.hasVotingRights ?? true,
           sortOrder: lastMarked.seat.procedure?.sortOrder ?? 0,
-          shortName: lastMarked.seat.procedure?.shortName,
           flagUrl: lastMarked.seat.procedure?.flagUrl
         }
       }
@@ -261,7 +260,7 @@
     {#if attendanceChange}
       <AttendanceChangeDisplay
         seatName={attendanceChange.name}
-        shortName={attendanceChange.procedure?.shortName}
+        shortName={attendanceChange.shortName}
         status={attendanceChange.procedure?.attendance ?? 'absent'}
       />
     {:else}

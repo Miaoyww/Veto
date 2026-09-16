@@ -206,8 +206,8 @@
             </span>
           </div>
           <CardTitle class="text-2xl">{currentSeat.name}</CardTitle>
-          {#if currentSeat.procedure.shortName}
-            <CardDescription>{currentSeat.procedure.shortName}</CardDescription>
+          {#if currentSeat.shortName}
+            <CardDescription>{currentSeat.shortName}</CardDescription>
           {/if}
         </CardHeader>
         <CardContent>

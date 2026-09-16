@@ -194,9 +194,9 @@
                   >
                     {seat.name}
                   </span>
-                  {#if seat.procedure.shortName}
+                  {#if seat.shortName}
                     <span class="truncate text-xs text-muted-foreground"
-                      >{seat.procedure.shortName}</span
+                      >{seat.shortName}</span
                     >
                   {/if}
                 </div>
