@@ -141,7 +141,13 @@
   backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
 >
   {#snippet actions()}
-    <Button size="sm" class="h-8 gap-1.5 text-xs" disabled={!conf} onclick={openAddSeatDialog}>
+    <Button
+      variant="outline"
+      size="sm"
+      class="h-8 gap-1.5 text-xs"
+      disabled={!conf}
+      onclick={openAddSeatDialog}
+    >
       <Plus size={12} />
       增加席位
     </Button>
