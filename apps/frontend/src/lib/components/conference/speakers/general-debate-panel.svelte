@@ -26,11 +26,21 @@
     saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
   import { destroyTimer } from '$lib/classes/services/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
-  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
+  import {
+    getDisplayBridge,
+    buildDisplayData
+  } from '$lib/classes/clients/conference-display-client'
+  import {
+    SpeakerTimerState,
+    usePerSpeakerTimer
+  } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
   import { usePausedStateRestore } from '$lib/classes/services/hooks/use-paused-state-restore.svelte'
   import type { Committee } from '$lib/classes/domain/committee.svelte'
-  import type { ParticipantSeat, YieldType, SpeakerDisplayEntry } from '$lib/classes/types/conference'
+  import type {
+    ParticipantSeat,
+    YieldType,
+    SpeakerDisplayEntry
+  } from '$lib/classes/types/conference'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
 
   // ── 发言队列数据 ──────────────────────────────────────────────
@@ -213,7 +223,6 @@
     syncDisplay()
   }
 
-
   function beginSpeaking(entryId: string): void {
     const entry = conf?.speakerLists?.entries.find((s) => s.id === entryId)
     if (!entry) return
@@ -249,7 +258,6 @@
     }
     syncDisplay()
   }
-
 
   // ── 键盘快捷键 ──────────────────────────────────────────────
   let yieldModifier = $state(false)
@@ -338,8 +346,12 @@
 <div class="flex w-full flex-col gap-4">
   {#if conf}
     {#if yieldPending}
-      {@const originalYieldSeat = conf.seats.find((seat) => seat.id === yieldPending.originalSeatId)}
-      {@const questionerYieldSeat = conf.seats.find((seat) => seat.id === yieldPending.questionerSeatId)}
+      {@const originalYieldSeat = conf.seats.find(
+        (seat) => seat.id === yieldPending.originalSeatId
+      )}
+      {@const questionerYieldSeat = conf.seats.find(
+        (seat) => seat.id === yieldPending.questionerSeatId
+      )}
       <YieldResolutionPanel conference={conf} {yieldPending} />
       {#if isYieldAnswering}
         <div class="mt-4">
@@ -381,7 +393,7 @@
       />
     {/if}
 
-    {#if !isSpeakerActive && !readyEntry}
+    {#if !isSpeakerActive}
       <div class="rounded-lg border bg-card p-4">
         <div class="flex items-start gap-3">
           <div class="flex-1">
@@ -419,7 +431,6 @@
         </div>
       </div>
     {/if}
-
 
     <WaitingSpeakerList
       title="发言队列"
