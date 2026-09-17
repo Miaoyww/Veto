@@ -18,8 +18,14 @@
 <section class="flex flex-col gap-5">
   <article class="rounded-lg border p-4">
     <h2 class="truncate text-sm font-semibold">{wizard.eventName || '未命名大会'}</h2>
-    <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-      <div>
+      <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <dt class="text-xs text-muted-foreground">创建模式</dt>
+          <dd class="mt-1 font-medium">
+            {wizard.mode === 'singleton' ? '单例模式' : '大会模式'}
+          </dd>
+        </div>
+        <div>
         <dt class="text-xs text-muted-foreground">委员会</dt>
         <dd class="mt-1 font-medium">{wizard.committees.length}</dd>
       </div>

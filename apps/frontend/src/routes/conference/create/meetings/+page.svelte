@@ -13,10 +13,15 @@
     ipc: 'IPC'
   }
 
+  const isSingleton = $derived(wizard.mode === 'singleton')
   const showNoCommittees = $derived(wizard.attempted && wizard.committees.length === 0)
 </script>
 
 <section class="flex flex-col gap-4">
+  {#if isSingleton}
+    <p class="text-sm text-muted-foreground">单例模式聚焦单一场会，会场数量已固定为一个。</p>
+  {/if}
+
   {#if showNoCommittees}
     <Field.FieldError>至少添加一个会场</Field.FieldError>
   {/if}
@@ -55,21 +60,25 @@
         </Field.Field>
 
         <div class="flex items-center justify-end md:pt-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            title="删除委员会"
-            onclick={() => wizard.removeCommittee(committee.id)}
-          >
-            <Trash2 class="text-destructive" />
-          </Button>
+          {#if !isSingleton}
+            <Button
+              variant="ghost"
+              size="icon"
+              title="删除委员会"
+              onclick={() => wizard.removeCommittee(committee.id)}
+            >
+              <Trash2 class="text-destructive" />
+            </Button>
+          {/if}
         </div>
       </div>
     </article>
   {/each}
 
-  <Button variant="outline" class="w-fit" onclick={() => wizard.addCommittee()}>
-    <Plus data-icon="inline-start" />
-    添加会场
-  </Button>
+  {#if !isSingleton}
+    <Button variant="outline" class="w-fit" onclick={() => wizard.addCommittee()}>
+      <Plus data-icon="inline-start" />
+      添加会场
+    </Button>
+  {/if}
 </section>

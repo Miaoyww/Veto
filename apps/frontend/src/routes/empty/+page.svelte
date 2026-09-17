@@ -10,7 +10,7 @@
   import TypingAnimation from '$lib/components/ui/typing-animation.svelte'
 
   function openCreatePage(): void {
-    goto(resolve('/conference/create/info'))
+    goto(resolve('/conference/create/mode'))
   }
 
   function openConnectionPage(): void {

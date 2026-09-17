@@ -23,6 +23,8 @@ export interface CommitteeDraft {
   seats: SeatDraft[]
 }
 
+export type ConferenceCreateMode = 'conference' | 'singleton'
+
 const MPC_REPORTER_ROLE_NAME = 'MPC记者'
 const IPC_ROLE_NAME = 'IPC'
 const STAFF_ROLE_NAME = 'Staff'
@@ -103,6 +105,7 @@ function createDefaultRoles(): RoleTemplate[] {
 }
 
 export class ConferenceCreateWizard {
+  mode = $state<ConferenceCreateMode | null>(null)
   eventName = $state('')
   eventDescription = $state('')
   organizer = $state('')
@@ -131,8 +134,16 @@ export class ConferenceCreateWizard {
     return this.eventName.trim().length > 0
   }
 
+  get modeValid(): boolean {
+    return this.mode !== null
+  }
+
   get committeeValid(): boolean {
-    return this.committees.length > 0 && this.committees.every((committee) => committee.name.trim().length > 0)
+    return (
+      this.committees.length > 0 &&
+      (this.mode === 'singleton' ? this.committees.length === 1 : true) &&
+      this.committees.every((committee) => committee.name.trim().length > 0)
+    )
   }
 
   get roleValid(): boolean {
@@ -158,21 +169,29 @@ export class ConferenceCreateWizard {
     )
   }
 
-  /** 第 step 步（0-4）当前是否通过校验；确认页恒为 true */
+  setMode(mode: ConferenceCreateMode): void {
+    this.mode = mode
+
+    if (mode !== 'singleton') return
+    this.committees = this.committees.length > 0 ? [this.committees[0]] : [newCommittee()]
+  }
+
+  /** 第 step 步（0-5）当前是否通过校验；确认页恒为 true */
   isStepValid(step: number): boolean {
-    if (step <= 0) return this.eventValid
-    if (step === 1) return this.committeeValid
-    if (step === 2) return this.roleValid
-    if (step === 3) return this.seatValid
+    if (step <= 0) return this.modeValid
+    if (step === 1) return this.eventValid
+    if (step === 2) return this.committeeValid
+    if (step === 3) return this.roleValid
+    if (step === 4) return this.seatValid
     return true
   }
 
-  /** 第一个未完成步骤（0-4）；全部完成时为确认页 */
+  /** 第一个未完成步骤（0-5）；全部完成时为确认页 */
   firstIncompleteStep(): number {
-    for (let step = 0; step < 4; step += 1) {
+    for (let step = 0; step < 5; step += 1) {
       if (!this.isStepValid(step)) return step
     }
-    return 4
+    return 5
   }
 
   roleName(roleId: string): string {
@@ -199,6 +218,7 @@ export class ConferenceCreateWizard {
   }
 
   reset(): void {
+    this.mode = null
     this.eventName = ''
     this.eventDescription = ''
     this.organizer = ''
@@ -284,7 +304,14 @@ export class ConferenceCreateWizard {
 
   /** 校验全部步骤并调用持久层创建大会；成功返回 eventId，失败返回 null（错误在 createError） */
   async submit(): Promise<string | null> {
-    if (!this.eventValid || !this.committeeValid || !this.roleValid || !this.seatValid || this.creating) {
+    if (
+      !this.modeValid ||
+      !this.eventValid ||
+      !this.committeeValid ||
+      !this.roleValid ||
+      !this.seatValid ||
+      this.creating
+    ) {
       return null
     }
 
