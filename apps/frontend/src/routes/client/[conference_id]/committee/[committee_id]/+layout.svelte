@@ -57,7 +57,7 @@
       {#if inCommittee && activeConference && activeCommittee}
         <Sidebar.Menu class="p-3">
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton onclick={() => goto(resolve('/conference'))}>
+            <Sidebar.MenuButton onclick={() => goto(resolve('/'))}>
               <ArrowLeft />
               <span>返回首页</span>
             </Sidebar.MenuButton>
@@ -83,7 +83,7 @@
           </div>
 
           <!-- 代表团列表 -->
-          <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <div class="flex flex-1 flex-col">
             <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
               <Users size={12} class="text-muted-foreground shrink-0 mt-0.5" />
               <div class="flex flex-col min-w-0">
@@ -109,7 +109,7 @@
               </Button>
             </div>
 
-            <ScrollArea class="flex-1 min-h-0">
+            <ScrollArea class="flex-1 overflow-hidden">
               <div class="px-3 pb-3">
                 {#each participantSeats as delegation (delegation.id)}
                   {@const isPresent = delegation.procedure.attendance === 'present'}
@@ -144,10 +144,7 @@
       {:else}
         <Sidebar.Menu class="p-3">
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              isActive={$page.url.pathname === '/conference'}
-              onclick={() => goTo('/conference')}
-            >
+            <Sidebar.MenuButton isActive={$page.url.pathname === '/'} onclick={() => goTo('/')}>
               <House />
               <span>首页</span>
             </Sidebar.MenuButton>
@@ -201,7 +198,7 @@
       variant="ghost"
       size="sm"
       class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-      onclick={() => goTo('/tools')}
+      onclick={() => goTo(`/client/${conferenceId}/committee/${committeeId}/tools`)}
       title="插件"
     >
       <Puzzle />

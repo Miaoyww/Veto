@@ -89,7 +89,7 @@
 
   function goBack(): void {
     if (conf) {
-      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
     }
   }
 
@@ -101,7 +101,7 @@
         (m) => m.status === 'approved' || m.status === 'rejected'
       )
       if (!hasProcessedMotion) {
-        goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
+        goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
       }
     }
   })

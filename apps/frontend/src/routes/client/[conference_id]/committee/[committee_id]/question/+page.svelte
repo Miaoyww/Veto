@@ -69,14 +69,14 @@
 
   function goBack(): void {
     if (conf) {
-      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
     }
   }
 
   // 如果没有最近的问题，自动返回
   $effect(() => {
     if (conf && !latestPoint) {
-      goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
     }
   })
 

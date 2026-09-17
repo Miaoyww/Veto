@@ -182,7 +182,7 @@
       icon={Gavel}
       title={PHASE_LABELS[conf.phase] ?? conf.phase}
       subtitle={conf.name}
-      backHref={resolve(`/conference/${conferenceId}/committee/${committeeId}`)}
+      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
       showBackButton={false}
     >
       {#snippet actions()}

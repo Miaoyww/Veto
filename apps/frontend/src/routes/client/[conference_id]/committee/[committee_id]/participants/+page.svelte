@@ -179,7 +179,7 @@
             onclick={() => {
               resetRollCall()
               showResetConfirm = false
-              goto(resolve(`/conference/${conferenceId}/committee/${committeeId}/roll-call`))
+              goto(resolve(`/client/${conferenceId}/committee/${committeeId}/roll-call`))
             }}
           >
             确认重新点名

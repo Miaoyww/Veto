@@ -167,7 +167,7 @@
 
   function handleComplete(): void {
     completeRollCall()
-    goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
+    goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
   }
 
   function handleKeydown(e: KeyboardEvent): void {
