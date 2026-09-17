@@ -8,7 +8,7 @@
  * - 持久化通过 toJSON() / fromJSON()
  */
 
-import { writable, derived, get } from 'svelte/store'
+import { writable, derived, get, type Readable } from 'svelte/store'
 import type {
   Conference as ConferenceDTO,
   Committee as CommitteeDTO,
@@ -27,7 +27,13 @@ import type {
   MajorityRule,
   VoteTargetType
 } from '$lib/classes/types/conference'
-import { isParticipantSeat, type Seat, type SeatAccess, type SeatGroup, type User } from '$lib/classes/types/delegate'
+import {
+  isParticipantSeat,
+  type Seat,
+  type SeatAccess,
+  type SeatGroup,
+  type User
+} from '$lib/classes/types/delegate'
 import { Committee } from '$lib/classes/domain/committee.svelte'
 import { Conference } from '$lib/classes/domain/conference.svelte'
 import { tallyVotesEngine } from '$lib/classes/services/engine/conference-engine'
@@ -124,15 +130,16 @@ export const conferences = writable<Conference[]>(loadConferencesFromStorage())
 conferences.subscribe(saveConferencesToStorage)
 
 /** 启动完成 Promise：文件数据已加载并同步到 localStorage */
-export const conferencesReady: Promise<void> = bootstrapStore<ConferenceDTO[]>(STORE_DOMAIN, []).then(
-  (data) => {
-    const restored = data.map((conference) => Conference.fromJSON(conference))
-    for (const conference of restored) {
-      for (const committee of conference.committees) registerEngine(committee)
-    }
-    conferences.set(restored)
+export const conferencesReady: Promise<void> = bootstrapStore<ConferenceDTO[]>(
+  STORE_DOMAIN,
+  []
+).then((data) => {
+  const restored = data.map((conference) => Conference.fromJSON(conference))
+  for (const conference of restored) {
+    for (const committee of conference.committees) registerEngine(committee)
   }
-)
+  conferences.set(restored)
+})
 
 /** 当前激活的大会 ID */
 export const currentConferenceId = writable<string | null>(null)
@@ -176,9 +183,10 @@ if (typeof window !== 'undefined' && window.veto?.events) {
 export const currentCommitteeId = writable<string | null>(null)
 
 /** 当前委员会。 */
-export const currentCommittee = derived(
+export const currentCommittee: Readable<Committee | null> = derived(
   [currentConferenceRecord, currentCommitteeId],
-  ([$conference, $committeeId]) => ($committeeId ? $conference?.getCommittee($committeeId) ?? null : null)
+  ([$conference, $committeeId]) =>
+    $committeeId ? ($conference?.getCommittee($committeeId) ?? null) : null
 )
 
 /** 动议编辑草稿（实时同步到 Display） */
@@ -224,10 +232,12 @@ export function createConference(
       conference.seatAccesses.map((access) => access.inviteCode)
     )
   )
-  const seatAccesses = options?.seatAccesses ?? seatList.map((seat) => ({
-    seatId: seat.id,
-    inviteCode: generateInviteCode(existingCodes)
-  }))
+  const seatAccesses =
+    options?.seatAccesses ??
+    seatList.map((seat) => ({
+      seatId: seat.id,
+      inviteCode: generateInviteCode(existingCodes)
+    }))
 
   const agendaList: AgendaItem[] = agendaItems.map((a, i) => ({
     id: crypto.randomUUID(),
@@ -266,13 +276,15 @@ export function createConference(
     users: options?.users ?? [],
     seatAccesses,
     roleTemplates: [],
-    seatGroups: options?.seatGroups ?? [{
-      id: defaultGroupId,
-      name: committeeName,
-      type: 'cabinet',
-      defaultCapabilities: [],
-      sortOrder: 0
-    }],
+    seatGroups: options?.seatGroups ?? [
+      {
+        id: defaultGroupId,
+        name: committeeName,
+        type: 'cabinet',
+        defaultCapabilities: [],
+        sortOrder: 0
+      }
+    ],
     news: [],
     situationUpdates: []
   })
@@ -739,14 +751,16 @@ export function addConferenceEntry(
 // ---- 投票计算辅助（纯函数，导出复用）---------------------------------------
 
 export function getPresentCount(seats: Seat[]): number {
-  return seats.filter(isParticipantSeat).filter((seat) => seat.procedure.attendance === 'present').length
+  return seats.filter(isParticipantSeat).filter((seat) => seat.procedure.attendance === 'present')
+    .length
 }
 
 /** 拥有投票权的出席代表人数（排除观察员） */
 export function getVotingCount(seats: Seat[]): number {
-  return seats.filter(isParticipantSeat).filter(
-    (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-  ).length
+  return seats
+    .filter(isParticipantSeat)
+    .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+    .length
 }
 
 export function getSimpleMajorityThreshold(presentCount: number): number {

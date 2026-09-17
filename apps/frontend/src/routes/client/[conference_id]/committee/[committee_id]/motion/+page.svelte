@@ -20,7 +20,6 @@
     LogOut,
     Check,
     X,
-    ArrowLeft,
     Vote
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
@@ -33,9 +32,12 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { resolveMotion } from '$lib/classes/services/engine/conference-engine'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
+  import {
+    getDisplayBridge,
+    buildDisplayData
+  } from '$lib/classes/clients/conference-display-client'
   import { VETO_NAME } from '$lib/classes/const'
-  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
+  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
@@ -65,7 +67,7 @@
 
   const proposerDel = $derived(
     pendingMotion
-      ? conf?.seats.find((seat) => seat.id === pendingMotion.proposedBySeatId) ?? null
+      ? (conf?.seats.find((seat) => seat.id === pendingMotion.proposedBySeatId) ?? null)
       : null
   )
 
@@ -119,10 +121,12 @@
 <div class="flex h-full w-full flex-col bg-background">
   {#if conf && pendingMotion}
     {@const Icon = MOTION_ICONS[pendingMotion.type] ?? Presentation}
-    <!-- 顶部栏 -->
-    <div class="flex items-center gap-4 border-b px-6 py-3">
-      <PanelHeader icon={Icon} title="动议表决" />
-    </div>
+    <PageTopBar
+      icon={Icon}
+      title="动议表决"
+      subtitle={conf.name}
+      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+    />
 
     <!-- 主内容 -->
     <div class="flex flex-1 items-center justify-center p-8">
@@ -133,9 +137,7 @@
         >
           <div class="flex items-center justify-center gap-2">
             <Icon size={24} class="text-indigo-600 dark:text-indigo-400" />
-            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">
-              动议裁决
-            </span>
+            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">动议裁决</span>
           </div>
 
           <div class="mt-4 space-y-2">
@@ -143,7 +145,8 @@
               {MOTION_LABELS[pendingMotion.type]}
             </div>
             <div class="text-base text-muted-foreground">
-              由 <span class="font-semibold text-foreground">{proposerDel?.name}</span> 提出
+              由 <span class="font-semibold text-foreground">{proposerDel?.name}</span>
+               提出
             </div>
 
             {#if pendingMotion.type === 'moderated_caucus'}
@@ -151,22 +154,22 @@
                 class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
               >
                 <p>
-                  主题：<span class="font-medium text-foreground"
-                    >{(pendingMotion as any).topic}</span
-                  >
+                  主题：
+                  <span class="font-medium text-foreground">{(pendingMotion as any).topic}</span>
                 </p>
                 <p class="mt-0.5">
-                  总时长 <span class="font-medium text-foreground"
-                    >{(pendingMotion as any).totalTimeSec / 60} 分钟</span
-                  >
+                  总时长 <span class="font-medium text-foreground">
+                    {(pendingMotion as any).totalTimeSec / 60} 分钟
+                  </span>
                   ，每人发言
-                  <span class="font-medium text-foreground"
-                    >{(pendingMotion as any).speakingTimePerPersonSec} 秒</span
-                  >
+                  <span class="font-medium text-foreground">
+                    {(pendingMotion as any).speakingTimePerPersonSec} 秒
+                  </span>
                   ，最多
-                  <span class="font-medium text-foreground"
-                    >{(pendingMotion as any).maxSpeakers}</span
-                  > 人
+                  <span class="font-medium text-foreground">
+                    {(pendingMotion as any).maxSpeakers}
+                  </span>
+                   人
                 </p>
               </div>
             {:else if pendingMotion.type === 'unmoderated_caucus'}
@@ -175,9 +178,10 @@
               </div>
             {:else if pendingMotion.type === 'modify_speaking_time'}
               <div class="mt-3 text-sm text-muted-foreground">
-                新发言时间：<span class="font-medium text-foreground"
-                  >{(pendingMotion as any).newTimeSec} 秒</span
-                >
+                新发言时间：
+                <span class="font-medium text-foreground">
+                  {(pendingMotion as any).newTimeSec} 秒
+                </span>
               </div>
             {:else if pendingMotion.type === 'closure_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
@@ -187,9 +191,9 @@
               <div
                 class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
               >
-                <span class="font-medium text-foreground"
-                  >{(pendingMotion as any).documentName}</span
-                >
+                <span class="font-medium text-foreground">
+                  {(pendingMotion as any).documentName}
+                </span>
               </div>
             {/if}
           </div>

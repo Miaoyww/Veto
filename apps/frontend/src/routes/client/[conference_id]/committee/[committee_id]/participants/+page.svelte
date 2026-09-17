@@ -41,7 +41,7 @@
   import type { Attendance } from '$lib/classes/types/conference'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { resolve } from '$app/paths'
-  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
+  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
@@ -85,12 +85,13 @@
   <title>{VETO_NAME} - 参会席位</title>
 </svelte:head>
 
-<!-- 顶部栏 -->
-<div class="flex items-center gap-4 border-b px-6 py-3">
-  <PanelHeader icon={Users} title="参会席位" />
-  <span class="text-xs text-muted-foreground">{conf?.name}</span>
-
-  <div class="ml-auto flex items-center gap-2">
+<PageTopBar
+  icon={Users}
+  title="参会席位"
+  subtitle={conf?.name}
+  backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+>
+  {#snippet actions()}
     <AlertDialog bind:open={showResetConfirm}>
       <AlertDialogTrigger>
         {#snippet child({ props })}
@@ -127,8 +128,8 @@
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </div>
-</div>
+  {/snippet}
+</PageTopBar>
 
 <div class="flex-1 overflow-y-auto">
   <div class="mx-auto max-w-3xl px-6 py-6">

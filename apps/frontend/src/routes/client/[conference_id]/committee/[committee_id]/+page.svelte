@@ -39,7 +39,7 @@
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
   import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
 
-  import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
+  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
   import { Gavel, Play, Users, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
 
@@ -179,11 +179,14 @@
 
 <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
   {#if conf}
-    <!-- 顶部横幅：阶段 + 控制 -->
-    <div class="flex items-center gap-3 border-b px-6 py-3">
-      <PanelHeader icon={Gavel} title={PHASE_LABELS[conf.phase] ?? conf.phase} />
-
-      <div class="ml-auto flex items-center gap-2">
+    <PageTopBar
+      icon={Gavel}
+      title={PHASE_LABELS[conf.phase] ?? conf.phase}
+      subtitle={conf.name}
+      backHref={resolve(`/conference/${conferenceId}/committee/${committeeId}`)}
+      showBackButton={false}
+    >
+      {#snippet actions()}
         {#if !isSingleton && wsPort !== null}
           <span
             class="select-none text-[11px] text-muted-foreground/70"
@@ -268,8 +271,8 @@
             恢复会议
           </Button>
         {/if}
-      </div>
-    </div>
+      {/snippet}
+    </PageTopBar>
 
     <!-- 阶段对应内容 -->
     <div class="flex flex-1 min-h-0 overflow-hidden p-6">

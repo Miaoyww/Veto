@@ -1,14 +1,12 @@
 <script lang="ts">
   import {
     ArrowLeft,
-    FileText,
     Globe,
     House,
     Monitor,
-    Newspaper,
     Plus,
     Puzzle,
-    Radio,
+    UserRoundCheck,
     Users
   } from '@lucide/svelte'
   import { goto } from '$app/navigation'
@@ -19,8 +17,9 @@
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Sidebar from '$lib/components/ui/sidebar'
-  import { conferences } from '$lib/classes/stores/conference/conference-store'
-  import { navigateToCommittee, navigateToConference } from '$lib/classes/utils'
+  import { conferences, currentCommittee } from '$lib/classes/stores/conference/conference-store'
+  import { cn, navigateToConference } from '$lib/classes/utils'
+  import { ScrollArea } from '$lib/components/ui/scroll-area'
 
   let { children } = $props()
   let displayOnlyDialogOpen = $state(false)
@@ -32,10 +31,21 @@
   const activeConference = $derived(
     $conferences.find((conference) => conference.id === conferenceId) ?? null
   )
+
   const activeCommittee = $derived(
     activeConference?.committees.find((committee) => committee.id === committeeId) ?? null
   )
-
+  const participantSeats = $derived(activeCommittee?.participantSeats ?? [])
+  const presentCount = $derived(
+    participantSeats.filter((seat) => seat.procedure.attendance === 'present').length
+  )
+  const votingCount = $derived(
+    participantSeats.filter(
+      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+    ).length
+  )
+  const simpleMajority = $derived(activeCommittee?.getSimpleMajorityThreshold() ?? 0)
+  const twoThirds = $derived(activeCommittee?.getTwoThirdsThreshold() ?? 0)
   function goTo(path: string): void {
     // @ts-expect-error resolve requires a literal route type for dynamic paths.
     goto(resolve(path))
@@ -60,43 +70,81 @@
 
           <Sidebar.Separator class="my-1" />
 
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              isActive={$page.url.pathname.includes('/directives')}
-              onclick={() =>
-                goTo(`/conference/${conferenceId}/committee/${committeeId}/directives`)}
-            >
-              <Radio />
-              <span>指令</span>
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              isActive={$page.url.pathname.includes('/news')}
-              onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/news`)}
-            >
-              <Newspaper />
-              <span>新闻</span>
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              isActive={$page.url.pathname.includes('/situation')}
-              onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/situation`)}
-            >
-              <Globe />
-              <span>局势</span>
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              isActive={$page.url.pathname.includes('/files')}
-              onclick={() => goTo(`/conference/${conferenceId}/committee/${committeeId}/files`)}
-            >
-              <FileText />
-              <span>文件</span>
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
+          <!-- 表决信息 -->
+          <div class="px-5 pb-3">
+            <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span>表决信息</span>
+            </div>
+            <div class="mt-1.5 grid grid-cols-2 gap-2">
+              <div class="rounded-md bg-muted px-2.5 py-1.5">
+                <div class="text-[10px] text-muted-foreground">简单多数</div>
+                <div class="text-sm font-bold text-foreground">{simpleMajority}</div>
+              </div>
+              <div class="rounded-md bg-muted px-2.5 py-1.5">
+                <div class="text-[10px] text-muted-foreground">2/3 多数</div>
+                <div class="text-sm font-bold text-foreground">{twoThirds}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 代表团列表 -->
+          <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
+            <div class="flex shrink-0 items-start gap-1.5 px-5 pb-2">
+              <Users size={12} class="text-muted-foreground shrink-0 mt-0.5" />
+              <div class="flex flex-col min-w-0">
+                <span class="text-[11px] font-medium text-muted-foreground">代表团</span>
+                <span class="text-[10px] text-muted-foreground/60">
+                  {presentCount}/{participantSeats.length}
+                </span>
+              </div>
+              <div class="flex-1"></div>
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-7 gap-1 text-[10px]"
+                onclick={() =>
+                  goto(
+                    resolve(
+                      `/client/${activeConference.id}/committee/${activeCommittee.id}/participants`
+                    )
+                  )}
+              >
+                <UserRoundCheck size={10} />
+                代表管理
+              </Button>
+            </div>
+
+            <ScrollArea class="flex-1 min-h-0">
+              <div class="px-3 pb-3">
+                {#each participantSeats as delegation (delegation.id)}
+                  {@const isPresent = delegation.procedure.attendance === 'present'}
+                  {@const isObserver = isPresent && !delegation.procedure.hasVotingRights}
+                  {@const isVoter = isPresent && !isObserver}
+                  <div
+                    class={cn(
+                      'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
+                      isPresent ? '' : 'opacity-50'
+                    )}
+                  >
+                    <!-- 名称 -->
+                    <span class="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                      {delegation.name}
+                    </span>
+                    <!-- 出席状态 icon -->
+                    <span class="shrink-0 text-[10px]">
+                      {#if isVoter}
+                        <span class="text-emerald-500">●</span>
+                      {:else if isObserver}
+                        <span class="text-blue-500">●</span>
+                      {:else}
+                        <span class="text-muted-foreground/40">○</span>
+                      {/if}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            </ScrollArea>
+          </div>
         </Sidebar.Menu>
       {:else}
         <Sidebar.Menu class="p-3">

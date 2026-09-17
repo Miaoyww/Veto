@@ -3,19 +3,23 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
-  import { ArrowLeft, Check, X, Users, Monitor } from '@lucide/svelte'
+  import { Check, X, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
-    import {
+  import {
     currentCommittee,
     loadConference,
     changeSeatAttendance,
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
+  import {
+    getDisplayBridge,
+    buildDisplayData
+  } from '$lib/classes/clients/conference-display-client'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import type { Attendance, ParticipantSeat } from '$lib/classes/types/conference'
   import { isParticipantSeat, toSeatView } from '$lib/classes/types/delegate'
+  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
@@ -55,7 +59,7 @@
           ...(currentSeat ? { currentSeat: toSeatView(currentSeat) } : {}),
           lastMarked: lastRollCallMarked
             ? { ...lastRollCallMarked, seat: toSeatView(lastRollCallMarked.seat) }
-            : undefined,
+            : undefined
         }
       : undefined
 
@@ -109,7 +113,7 @@
     lastRollCallMarked = {
       seat: currentSeat,
       status: 'present',
-      index: currentIndex,
+      index: currentIndex
     }
     isTransitioning = true
     transitionTimeout = setTimeout(() => {
@@ -125,7 +129,7 @@
     lastRollCallMarked = {
       seat: currentSeat,
       status: 'absent',
-      index: currentIndex,
+      index: currentIndex
     }
     isTransitioning = true
     transitionTimeout = setTimeout(() => {
@@ -166,10 +170,6 @@
     goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
   }
 
-  function handleBackToConference(): void {
-    goto(resolve(`/conference/${conferenceId}/committee/${committeeId}`))
-  }
-
   function handleKeydown(e: KeyboardEvent): void {
     if (isComplete || isTransitioning) return
     if (e.key === 'p' || e.key === 'P' || e.key === 'ArrowLeft') {
@@ -189,23 +189,18 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="flex h-full w-full flex-col bg-background">
-  <!-- 顶部栏 -->
-  <div class="flex items-center gap-4 border-b px-6 py-3">
-    <Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleBackToConference}>
-      <ArrowLeft size={14} />
-      返回大会
-    </Button>
-    <div class="h-4 w-px bg-border"></div>
-    <span class="text-sm font-semibold text-foreground">点名</span>
-    <span class="text-xs text-muted-foreground">{conf?.name}</span>
-
-    <div class="ml-auto flex items-center gap-2">
+  <PageTopBar
+    title="点名"
+    subtitle={conf?.name}
+    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+  >
+    {#snippet actions()}
       <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={openDisplayWindow}>
         <Monitor size={12} />
         显示窗口
       </Button>
-    </div>
-  </div>
+    {/snippet}
+  </PageTopBar>
 
   <!-- 内容 -->
   <div class="flex flex-1 items-center justify-center overflow-hidden p-6">
@@ -226,20 +221,35 @@
               ></div>
             </div>
             <div class="flex gap-4 text-xs text-muted-foreground">
-              <span>已出席 <span class="font-semibold text-foreground">{presentCount}</span></span>
-              <span>简单多数 <span class="font-semibold text-foreground">{thresholds.simpleMajorityThreshold}</span></span>
-              <span>2/3多数 <span class="font-semibold text-foreground">{thresholds.twoThirdsThreshold}</span></span>
+              <span>
+                已出席 <span class="font-semibold text-foreground">{presentCount}</span>
+              </span>
+              <span>
+                简单多数 <span class="font-semibold text-foreground">
+                  {thresholds.simpleMajorityThreshold}
+                </span>
+              </span>
+              <span>
+                2/3多数 <span class="font-semibold text-foreground">
+                  {thresholds.twoThirdsThreshold}
+                </span>
+              </span>
             </div>
           </div>
 
           <!-- 当前席位 -->
           {#if currentSeat}
             <div
-              class="relative flex w-full flex-col items-center gap-6 rounded-lg border bg-card p-14 transition-all duration-500 {isTransitioning ? 'opacity-70' : ''}"
+              class="relative flex w-full flex-col items-center gap-6 rounded-lg border bg-card p-14 transition-all duration-500 {isTransitioning
+                ? 'opacity-70'
+                : ''}"
             >
               <!-- 席位信息 -->
 
-              <div class="text-center transition-opacity duration-300" class:opacity-30={isTransitioning}>
+              <div
+                class="text-center transition-opacity duration-300"
+                class:opacity-30={isTransitioning}
+              >
                 <div class="text-3xl font-bold text-foreground">{currentSeat.name}</div>
                 {#if currentSeat.shortName}
                   <div class="mt-1 text-lg text-muted-foreground">{currentSeat.shortName}</div>
@@ -280,7 +290,11 @@
               {/if}
 
               {#if currentIndex > 0}
-                <button class="text-xs text-muted-foreground hover:text-foreground" onclick={goBack} disabled={isTransitioning}>
+                <button
+                  class="text-xs text-muted-foreground hover:text-foreground"
+                  onclick={goBack}
+                  disabled={isTransitioning}
+                >
                   ← Backspace 返回上一位
                 </button>
               {/if}
@@ -311,7 +325,6 @@
             </Button>
           </div>
         </div>
-
       {:else}
         <!-- ===== 点名完成 ===== -->
         <div class="flex w-full max-w-lg flex-col items-center gap-8">
@@ -325,7 +338,9 @@
               <div class="mt-1 text-sm text-muted-foreground">出席 / {totalCount}</div>
             </div>
             <div class="rounded-lg border bg-card p-6 text-center">
-              <div class="text-3xl font-bold text-foreground">{thresholds.simpleMajorityThreshold}</div>
+              <div class="text-3xl font-bold text-foreground">
+                {thresholds.simpleMajorityThreshold}
+              </div>
               <div class="mt-1 text-sm text-muted-foreground">简单多数</div>
             </div>
             <div class="rounded-lg border bg-card p-6 text-center">
@@ -356,9 +371,7 @@
           {/if}
 
           <div class="flex gap-4">
-            <Button variant="outline" size="lg" onclick={goBack}>
-              ← 返回修改
-            </Button>
+            <Button variant="outline" size="lg" onclick={goBack}>← 返回修改</Button>
             <Button size="lg" class="min-w-[160px] gap-2 text-base" onclick={handleComplete}>
               完成点名
             </Button>

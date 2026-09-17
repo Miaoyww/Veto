@@ -8,7 +8,7 @@
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { page } from '$app/stores'
-  import { AlertTriangle, HelpCircle, User, ArrowLeft } from '@lucide/svelte'
+  import { AlertTriangle, HelpCircle, User } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import {
     currentCommittee,
@@ -17,7 +17,11 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/classes/types/conference'
   import type { PointType } from '$lib/classes/types/conference'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
+  import {
+    getDisplayBridge,
+    buildDisplayData
+  } from '$lib/classes/clients/conference-display-client'
+  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
   import { VETO_NAME } from '$lib/classes/const'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
@@ -36,9 +40,7 @@
   )
 
   const proposerDel = $derived(
-    latestPoint
-      ? conf?.seats.find((d) => d.id === latestPoint.proposedBySeatId)
-      : null
+    latestPoint ? conf?.seats.find((d) => d.id === latestPoint.proposedBySeatId) : null
   )
 
   const POINT_ICONS: Record<PointType, typeof AlertTriangle> = {
@@ -56,7 +58,8 @@
   const POINT_BG_COLORS: Record<PointType, string> = {
     point_of_order: 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30',
     point_of_inquiry: 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30',
-    point_of_personal_privilege: 'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30'
+    point_of_personal_privilege:
+      'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30'
   }
 
   function handleEnd(): void {
@@ -95,17 +98,13 @@
     {@const iconColor = POINT_COLORS[latestPoint.type]}
     {@const bgColor = POINT_BG_COLORS[latestPoint.type]}
 
-    <!-- 顶部栏 -->
-    <div class="flex items-center gap-4 border-b px-6 py-3">
-      <Button size="sm" variant="ghost" class="h-8 gap-1.5 text-xs" onclick={goBack}>
-        <ArrowLeft size={14} />
-        返回
-      </Button>
-      <div class="flex items-center gap-2">
-        <HelpCircle size={16} class="text-amber-500" />
-        <span class="text-sm font-semibold text-foreground">问题</span>
-      </div>
-    </div>
+    <PageTopBar
+      icon={HelpCircle}
+      title="问题"
+      subtitle={conf?.name}
+      iconClass={iconColor}
+      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+    />
 
     <!-- 主内容 -->
     <div class="flex flex-1 items-center justify-center p-8">
@@ -114,9 +113,7 @@
         <div class="rounded-lg border-2 {bgColor} p-8 text-center">
           <div class="flex items-center justify-center gap-2">
             <Icon size={24} class={iconColor} />
-            <span class="text-lg font-semibold {iconColor}">
-              问题
-            </span>
+            <span class="text-lg font-semibold {iconColor}">问题</span>
           </div>
 
           <div class="mt-4 space-y-2">
@@ -124,7 +121,10 @@
               {POINT_LABELS[latestPoint.type]}
             </div>
             <div class="text-base text-muted-foreground">
-              由 <span class="font-semibold text-foreground">{proposerDel?.name ?? latestPoint.proposedBySeatId}</span> 提出
+              由 <span class="font-semibold text-foreground">
+                {proposerDel?.name ?? latestPoint.proposedBySeatId}
+              </span>
+               提出
             </div>
           </div>
         </div>
