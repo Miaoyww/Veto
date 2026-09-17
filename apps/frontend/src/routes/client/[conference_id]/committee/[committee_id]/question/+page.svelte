@@ -12,7 +12,6 @@
   import { Button } from '$lib/components/ui/button'
   import {
     currentCommittee,
-    currentConferenceId,
     loadConference,
     dismissLatestPoint
   } from '$lib/classes/stores/conference/conference-store'
@@ -26,10 +25,7 @@
 
   onMount(() => {
     if (conferenceId) {
-      const alreadyLoaded = $currentConferenceId === conferenceId
-      if (!alreadyLoaded) {
-        loadConference(conferenceId, committeeId ?? undefined)
-      }
+      void loadConference(conferenceId, committeeId ?? undefined)
     }
   })
 

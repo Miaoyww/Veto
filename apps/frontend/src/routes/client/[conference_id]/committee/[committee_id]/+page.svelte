@@ -60,13 +60,8 @@
   let lanUrl = $state<string | null>(null)
 
   onMount(async () => {
-    // 加载会议
     if (conferenceId) {
-      const alreadyLoaded = $currentConferenceId === conferenceId
-
-      if (!alreadyLoaded) {
-        loadConference(conferenceId, committeeId ?? undefined)
-      }
+      await loadConference(conferenceId, committeeId ?? undefined)
     }
 
     if (!isSingleton) {
@@ -131,7 +126,8 @@
 
     setPhase('roll_call')
 
-    const route = `/client/${conferenceId}/committee/${committeeId}/roll-call` as `/client/${string}/committee/${string}/roll-call`
+    const route =
+      `/client/${conferenceId}/committee/${committeeId}/roll-call` as `/client/${string}/committee/${string}/roll-call`
     goto(resolve(route))
   }
 

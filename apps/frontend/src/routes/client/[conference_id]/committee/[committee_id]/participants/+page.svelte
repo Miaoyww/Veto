@@ -27,8 +27,6 @@
   import { cn } from '$lib/classes/utils.js'
   import {
     currentCommittee,
-    currentCommitteeId,
-    currentConferenceId,
     loadConference,
     changeSeatAttendance,
     setSeatVotingRights,
@@ -50,11 +48,7 @@
 
   onMount(() => {
     if (conferenceId) {
-      const alreadyLoaded =
-        $currentConferenceId === conferenceId && $currentCommitteeId === committeeId
-      if (!alreadyLoaded) {
-        loadConference(conferenceId, committeeId ?? undefined)
-      }
+      void loadConference(conferenceId, committeeId ?? undefined)
     }
   })
 

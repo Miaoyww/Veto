@@ -27,7 +27,6 @@
   import { Separator } from '$lib/components/ui/separator'
   import {
     currentCommittee,
-    currentConferenceId,
     loadConference,
     approveMotion,
     rejectMotion
@@ -43,10 +42,7 @@
 
   onMount(() => {
     if (conferenceId) {
-      const alreadyLoaded = $currentConferenceId === conferenceId
-      if (!alreadyLoaded) {
-        loadConference(conferenceId, committeeId ?? undefined)
-      }
+      void loadConference(conferenceId, committeeId ?? undefined)
     }
   })
 

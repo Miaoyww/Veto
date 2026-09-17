@@ -314,7 +314,9 @@ export function bindTimeline(conferenceId: string, timelineId: string | null): v
   conferences.update((list) => [...list])
 }
 
-export function loadConference(id: string, committeeId?: string): void {
+export async function loadConference(id: string, committeeId?: string): Promise<void> {
+  await conferencesReady
+
   const conf = getConferenceById(id)
   if (conf) {
     currentConferenceId.set(id)
