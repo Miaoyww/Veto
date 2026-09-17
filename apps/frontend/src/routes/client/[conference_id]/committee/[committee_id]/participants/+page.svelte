@@ -45,6 +45,7 @@
   import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { resolve } from '$app/paths'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
+  import { ScrollArea } from '$lib/components/ui/scroll-area'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
@@ -144,8 +145,8 @@
   {/snippet}
 </PageTopBar>
 
-<div class="flex-1 h-screen overflow-y-auto">
-  <div class="mx-auto h-screen max-w-3xl px-6 py-6">
+<ScrollArea class="min-h-0 flex-1">
+  <div class="mx-auto max-w-4xl px-6 py-6">
     {#if conf && thresholds}
       <!-- 统计卡片 -->
       <div class="mb-8 grid grid-cols-4 gap-4">
@@ -275,4 +276,4 @@
       </div>
     {/if}
   </div>
-</div>
+</ScrollArea>

@@ -19,19 +19,19 @@
   } & Omit<ComponentProps<typeof Sidebar.Root>, 'children' | 'class'> = $props()
 </script>
 
-<Sidebar.Provider>
+<Sidebar.Provider class="h-svh overflow-hidden">
   <Sidebar.Root variant="inset" class={className} {collapsible} {...restProps}>
     {@render sidebar?.()}
     <Sidebar.Rail />
   </Sidebar.Root>
 
-  <Sidebar.Inset>
+  <Sidebar.Inset class="min-h-0 overflow-hidden">
     <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
       {@render toolbar?.()}
       <WindowControls />
     </header>
 
-    <div class="flex flex-1 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
       {@render children()}
     </div>
   </Sidebar.Inset>
