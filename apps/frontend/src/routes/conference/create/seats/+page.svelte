@@ -81,7 +81,10 @@
     try {
       const sheet = workbook.Sheets[selectedSheet]
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][]
-      importedRows = rows.slice(1).map(toImportedSeat).filter((row) => row.name || row.shortName || row.type)
+      importedRows = rows
+        .slice(1)
+        .map(toImportedSeat)
+        .filter((row) => row.name || row.shortName || row.type)
       if (importedRows.length === 0) throw new Error('没有读取到有效数据，请检查表格内容')
       sheetDialogOpen = false
       openPreview()
@@ -110,7 +113,7 @@
   }
 
   function readText(): void {
-      importedRows = textValue
+    importedRows = textValue
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
@@ -137,7 +140,10 @@
     if (!committee) return ''
     const normalized = type.replace(/\s+/g, '').toLowerCase()
     if (!normalized) {
-      return wizard.roles.find((role) => wizard.isRoleAllowedInCommittee(role.id, committee.type))?.id ?? ''
+      return (
+        wizard.roles.find((role) => wizard.isRoleAllowedInCommittee(role.id, committee.type))?.id ??
+        ''
+      )
     }
     return (
       wizard.roles.find(
@@ -179,22 +185,25 @@
   }
 </script>
 
-<div class="mb-4 flex flex-wrap items-center justify-end gap-2">
-  <input
-    bind:this={fileInput}
-    class="hidden"
-    type="file"
-    accept=".xlsx,.xls,.csv"
-    onchange={(event) => void handleExcelFile(event)}
-  />
-  <Button variant="outline" size="sm" onclick={() => openFormatDialog('excel')}>
-    <FileSpreadsheet data-icon="inline-start" />
-    从 Excel 导入
-  </Button>
-  <Button variant="outline" size="sm" onclick={() => openFormatDialog('text')}>
-    <FileText data-icon="inline-start" />
-    从文本导入
-  </Button>
+<div class="mb-4 flex flex-wrap items-center gap-2">
+  <div class="flex-auto"></div>
+  <div class="flex-none">
+    <input
+      bind:this={fileInput}
+      class="hidden"
+      type="file"
+      accept=".xlsx,.xls,.csv"
+      onchange={(event) => void handleExcelFile(event)}
+    />
+    <Button variant="outline" size="sm" onclick={() => openFormatDialog('excel')}>
+      <FileSpreadsheet data-icon="inline-start" />
+      从 Excel 导入
+    </Button>
+    <Button variant="outline" size="sm" onclick={() => openFormatDialog('text')}>
+      <FileText data-icon="inline-start" />
+      从文本导入
+    </Button>
+  </div>
 </div>
 
 <section class="flex flex-col gap-4">
@@ -203,7 +212,11 @@
     {@const showInvalidSpecialRole =
       !isSingleton &&
       wizard.attempted &&
-      committee.seats.some((seat) => Boolean(seat.roleId) && !wizard.isRoleAllowedInCommittee(seat.roleId ?? '', committee.type))}
+      committee.seats.some(
+        (seat) =>
+          Boolean(seat.roleId) &&
+          !wizard.isRoleAllowedInCommittee(seat.roleId ?? '', committee.type)
+      )}
     <article class="rounded-lg border p-4">
       <div class="flex items-center justify-between gap-3">
         <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
@@ -290,7 +303,9 @@
         <Field.FieldError class="mt-1">存在未匹配到角色的席位，请重新选择角色</Field.FieldError>
       {/if}
       {#if showInvalidSpecialRole}
-        <Field.FieldError class="mt-1">当前席位的角色与会场类型不匹配，请重新选择角色或调整会场类型</Field.FieldError>
+        <Field.FieldError class="mt-1">
+          当前席位的角色与会场类型不匹配，请重新选择角色或调整会场类型
+        </Field.FieldError>
       {/if}
     </article>
   {/each}
@@ -308,7 +323,11 @@
         <div class="overflow-hidden rounded-md border">
           <table class="w-full text-sm">
             <thead class="bg-muted/50 text-left text-xs text-muted-foreground">
-              <tr><th class="px-3 py-2 font-medium">A 列</th><th class="px-3 py-2 font-medium">B 列（可选）</th><th class="px-3 py-2 font-medium">C 列（可选）</th></tr>
+              <tr>
+                <th class="px-3 py-2 font-medium">A 列</th>
+                <th class="px-3 py-2 font-medium">B 列（可选）</th>
+                <th class="px-3 py-2 font-medium">C 列（可选）</th>
+              </tr>
             </thead>
             <tbody>
               <tr class="border-t">
@@ -374,9 +393,14 @@
       <Dialog.Description>请选择要读取的工作表，第一行将作为表头跳过。</Dialog.Description>
     </Dialog.Header>
     <Select.Select type="single" bind:value={selectedSheet}>
-      <Select.SelectTrigger class="w-full" aria-label="工作表">{selectedSheet || '选择工作表'}</Select.SelectTrigger>
+      <Select.SelectTrigger class="w-full" aria-label="工作表">
+        {selectedSheet || '选择工作表'}
+      </Select.SelectTrigger>
       <Select.SelectContent>
-        {#each workbook?.SheetNames ?? [] as sheet}<Select.SelectItem value={sheet} label={sheet} />{/each}
+        {#each workbook?.SheetNames ?? [] as sheet}<Select.SelectItem
+            value={sheet}
+            label={sheet}
+          />{/each}
       </Select.SelectContent>
     </Select.Select>
     {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
@@ -391,18 +415,28 @@
   <Dialog.Content class="max-w-4xl">
     <Dialog.Header>
       <Dialog.Title>导入数据预览</Dialog.Title>
-      <Dialog.Description>确认后将把以下 {importedRows.length} 条席位追加到选定委员会。</Dialog.Description>
+      <Dialog.Description>
+        确认后将把以下 {importedRows.length} 条席位追加到选定委员会。
+      </Dialog.Description>
     </Dialog.Header>
     <Field.FieldGroup>
       <Field.Field>
         <Field.FieldLabel for="import-target-committee">导入到委员会</Field.FieldLabel>
         {#if isSingleton}
-          <p class="text-sm text-muted-foreground">导入到：{singletonCommitteeName || '单例会场'}</p>
+          <p class="text-sm text-muted-foreground">
+            导入到：{singletonCommitteeName || '单例会场'}
+          </p>
         {:else}
           <Select.Select type="single" bind:value={targetCommitteeId}>
-            <Select.SelectTrigger id="import-target-committee" class="w-full">{wizard.committees.find((committee) => committee.id === targetCommitteeId)?.name || '选择委员会'}</Select.SelectTrigger>
+            <Select.SelectTrigger id="import-target-committee" class="w-full">
+              {wizard.committees.find((committee) => committee.id === targetCommitteeId)?.name ||
+                '选择委员会'}
+            </Select.SelectTrigger>
             <Select.SelectContent>
-              {#each wizard.committees as committee (committee.id)}<Select.SelectItem value={committee.id} label={committee.name || '未命名委员会'} />{/each}
+              {#each wizard.committees as committee (committee.id)}<Select.SelectItem
+                  value={committee.id}
+                  label={committee.name || '未命名委员会'}
+                />{/each}
             </Select.SelectContent>
           </Select.Select>
         {/if}
@@ -423,7 +457,9 @@
             <tr class="border-t">
               <td class="px-3 py-2">{row.name || '（空）'}</td>
               <td class="px-3 py-2">{row.shortName || '—'}</td>
-              <td class="px-3 py-2">{isSingleton ? (row.votingRights === false ? '否' : '') : (row.type || '自动匹配')}</td>
+              <td class="px-3 py-2">
+                {isSingleton ? (row.votingRights === false ? '否' : '') : row.type || '自动匹配'}
+              </td>
               <td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td>
             </tr>
           {/each}
@@ -431,7 +467,9 @@
       </table>
     </div>
     {#if hasUnmatchedImportedRole}
-      <Field.FieldError>存在无法匹配到当前委员会的席位类型，导入后请在席位列表中重新选择角色。</Field.FieldError>
+      <Field.FieldError>
+        存在无法匹配到当前委员会的席位类型，导入后请在席位列表中重新选择角色。
+      </Field.FieldError>
     {/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={() => (previewDialogOpen = false)}>取消</Button>

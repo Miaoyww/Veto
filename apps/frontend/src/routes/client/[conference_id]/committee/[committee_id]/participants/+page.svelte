@@ -35,7 +35,10 @@
     resetRollCall,
     saveConferencesNow
   } from '$lib/classes/stores/conference/conference-store'
-  import { calculateMajorityThresholds, destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
+  import {
+    calculateMajorityThresholds,
+    destroyAllTimers
+  } from '$lib/classes/services/engine/conference-engine'
   import { VETO_NAME } from '$lib/classes/const'
   import type { Attendance } from '$lib/classes/types/conference'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
@@ -97,16 +100,16 @@
     <AlertDialog bind:open={showResetConfirm}>
       <AlertDialogTrigger>
         {#snippet child({ props })}
-        <Button
-          {...props}
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          disabled={!conf || sortedSeats.length === 0}
-        >
-          <RotateCcw size={12} />
-          重新点名
-        </Button>
+          <Button
+            {...props}
+            size="sm"
+            variant="outline"
+            class="h-8 gap-1.5 text-xs"
+            disabled={!conf || sortedSeats.length === 0}
+          >
+            <RotateCcw size={12} />
+            重新点名
+          </Button>
         {/snippet}
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -152,9 +155,9 @@
         </Card>
         <Card>
           <CardContent class="flex flex-col items-center gap-1 p-5">
-            <span class="text-2xl font-bold text-foreground"
-              >{thresholds.simpleMajorityThreshold}</span
-            >
+            <span class="text-2xl font-bold text-foreground">
+              {thresholds.simpleMajorityThreshold}
+            </span>
             <span class="text-sm text-muted-foreground">简单多数</span>
           </CardContent>
         </Card>
@@ -195,9 +198,7 @@
                     {seat.name}
                   </span>
                   {#if seat.shortName}
-                    <span class="truncate text-xs text-muted-foreground"
-                      >{seat.shortName}</span
-                    >
+                    <span class="truncate text-xs text-muted-foreground">{seat.shortName}</span>
                   {/if}
                 </div>
 

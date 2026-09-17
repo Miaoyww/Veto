@@ -7,7 +7,7 @@
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import type { CommitteeDraft } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
 
-  let { committee }: { committee: CommitteeDraft } = $props()
+  let { committee, isSingleton }: { committee: CommitteeDraft; isSingleton: boolean } = $props()
 
   let open = $state(true)
 </script>
@@ -41,9 +41,16 @@
                 <span class="ml-2 text-xs text-muted-foreground">({seat.shortName})</span>
               {/if}
             </div>
-            <span class="shrink-0 text-xs text-muted-foreground">
-              {wizard.roleName(seat.roleId ?? '')}
-            </span>
+            {#if !isSingleton}
+              <span class="shrink-0 text-xs text-muted-foreground">
+                {wizard.roleName(seat.roleId ?? '')}
+              </span>
+            {/if}
+            {#if isSingleton && seat.hasVotingRights}
+              <Badge variant="secondary" class="bg-blue-500 text-white dark:bg-blue-600">
+                投票权
+              </Badge>
+            {/if}
           </li>
         {/each}
       </ul>

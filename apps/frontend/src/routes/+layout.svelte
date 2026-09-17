@@ -26,15 +26,15 @@
   function isCreateToConference(fromPath: string | undefined, toPath: string | undefined): boolean {
     return Boolean(
       fromPath?.startsWith('/conference/create') &&
-        toPath?.startsWith('/conference/') &&
-        !toPath.startsWith('/conference/create')
+      toPath?.startsWith('/conference/') &&
+      !toPath.startsWith('/conference/create')
     )
   }
 
   onNavigate((navigation) => {
     const fromPath = navigation.from?.url.pathname
     const toPath = navigation.to?.url.pathname
-
+    console.log('onNavigate', { fromPath, toPath })
     if (isCreateToConference(fromPath, toPath)) {
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       const coverDuration = reducedMotion ? 120 : 560
