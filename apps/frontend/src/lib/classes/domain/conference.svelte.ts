@@ -11,6 +11,7 @@ import { RoleTemplate } from '$lib/classes/domain/role-template.svelte'
 export class Conference {
   readonly id: string
   name = $state('')
+  mode = $state<'conference' | 'singleton'>('conference')
   description = $state<string | undefined>(undefined)
   organizer = $state<string | undefined>(undefined)
   createdAt = $state(0)
@@ -28,6 +29,7 @@ export class Conference {
   constructor(data?: Partial<ConferenceDTO>) {
     this.id = data?.id ?? crypto.randomUUID()
     this.name = data?.name ?? ''
+    this.mode = data?.mode ?? 'conference'
     this.description = data?.description
     this.organizer = data?.organizer
     this.createdAt = data?.createdAt ?? Date.now()
@@ -105,6 +107,11 @@ export class Conference {
     this.touch()
   }
 
+  setMode(mode: 'conference' | 'singleton'): void {
+    this.mode = mode
+    this.touch()
+  }
+
   bindTimeline(timelineId: string | null): void {
     this.timelineId = timelineId
     this.touch()
@@ -168,6 +175,7 @@ export class Conference {
     return {
       id: this.id,
       name: this.name,
+      mode: this.mode,
       description: this.description,
       organizer: this.organizer,
       createdAt: this.createdAt,

@@ -6,6 +6,10 @@
 
 运行形态包括 **Host Service**（主机服务）、**Host Console**（主机控制台）、**UserClient**（用户端）和 **Display**（投屏端）。
 
+**Singleton Mode（单例模式）**:
+Conference 的一种组织模式，限定 Conference 只包含一个 Committee，并由 UserClient 直接进行本地主持。
+_Avoid_: Singleton Conference, Single Meeting Mode
+
 ## Conference（大会）
 
 **Conference (大会)**:

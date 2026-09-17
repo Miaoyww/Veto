@@ -13,7 +13,14 @@ export interface SeatDraft {
   id: string
   name: string
   shortName: string
-  roleId: string
+  roleId?: string
+  hasVotingRights?: boolean
+}
+
+export interface AgendaItemDraft {
+  id: string
+  title: string
+  description?: string
 }
 
 export interface CommitteeDraft {
@@ -21,6 +28,7 @@ export interface CommitteeDraft {
   name: string
   type: SeatGroupType
   seats: SeatDraft[]
+  agenda?: AgendaItemDraft[]
 }
 
 export type ConferenceCreateMode = 'conference' | 'singleton'
@@ -29,8 +37,8 @@ const MPC_REPORTER_ROLE_NAME = 'MPC记者'
 const IPC_ROLE_NAME = 'IPC'
 const STAFF_ROLE_NAME = 'Staff'
 
-function newSeat(roleId: string): SeatDraft {
-  return { id: crypto.randomUUID(), name: '', shortName: '', roleId }
+function newSeat(roleId?: string): SeatDraft {
+  return { id: crypto.randomUUID(), name: '', shortName: '', roleId, hasVotingRights: true }
 }
 
 function newCommittee(): CommitteeDraft {
@@ -111,6 +119,7 @@ export class ConferenceCreateWizard {
   organizer = $state('')
   roles = $state<RoleTemplate[]>(createDefaultRoles())
   committees = $state<CommitteeDraft[]>([])
+  agendaItems = $state<AgendaItemDraft[]>([])
   creating = $state(false)
   createError = $state('')
   /** “下一步/跳步”尝试过且当前步未通过校验——各步页面据此显示内联错误 */
@@ -124,7 +133,7 @@ export class ConferenceCreateWizard {
     const usage = new Map<string, number>()
     for (const committee of this.committees) {
       for (const seat of committee.seats) {
-        usage.set(seat.roleId, (usage.get(seat.roleId) ?? 0) + 1)
+        if (seat.roleId) usage.set(seat.roleId, (usage.get(seat.roleId) ?? 0) + 1)
       }
     }
     return usage
@@ -141,7 +150,9 @@ export class ConferenceCreateWizard {
   get committeeValid(): boolean {
     return (
       this.committees.length > 0 &&
-      (this.mode === 'singleton' ? this.committees.length === 1 : true) &&
+      (this.mode === 'singleton'
+        ? this.committees.length === 1 && this.committees[0]?.type === 'cabinet'
+        : true) &&
       this.committees.every((committee) => committee.name.trim().length > 0)
     )
   }
@@ -154,6 +165,17 @@ export class ConferenceCreateWizard {
   }
 
   get seatValid(): boolean {
+    if (this.mode === 'singleton') {
+      return (
+        this.committeeValid &&
+        this.committees.every(
+          (committee) =>
+            committee.seats.length > 0 &&
+            committee.seats.every((seat) => seat.name.trim().length > 0)
+        )
+      )
+    }
+
     return (
       this.committeeValid &&
       this.committees.every(
@@ -194,6 +216,17 @@ export class ConferenceCreateWizard {
     return 5
   }
 
+  isStepValidById(
+    stepId: 'mode' | 'event' | 'meeting' | 'roles' | 'seats' | 'review'
+  ): boolean {
+    if (stepId === 'mode') return this.modeValid
+    if (stepId === 'event') return this.eventValid
+    if (stepId === 'meeting') return this.committeeValid
+    if (stepId === 'roles') return this.roleValid
+    if (stepId === 'seats') return this.seatValid
+    return true
+  }
+
   roleName(roleId: string): string {
     return this.roles.find((role) => role.id === roleId)?.name || '未指定角色'
   }
@@ -224,6 +257,7 @@ export class ConferenceCreateWizard {
     this.organizer = ''
     this.roles = createDefaultRoles()
     this.committees = [newCommittee()]
+    this.agendaItems = []
     this.creating = false
     this.createError = ''
     this.attempted = false
@@ -235,6 +269,17 @@ export class ConferenceCreateWizard {
 
   removeCommittee(id: string): void {
     this.committees = this.committees.filter((committee) => committee.id !== id)
+  }
+
+  addAgendaItem(): void {
+    this.agendaItems = [
+      ...this.agendaItems,
+      { id: crypto.randomUUID(), title: '', description: '' }
+    ]
+  }
+
+  removeAgendaItem(id: string): void {
+    this.agendaItems = this.agendaItems.filter((item) => item.id !== id)
   }
 
   addRole(): void {
@@ -262,6 +307,10 @@ export class ConferenceCreateWizard {
   addSeat(committeeId: string): void {
     this.committees = this.committees.map((committee) => {
       if (committee.id !== committeeId) return committee
+      if (this.mode === 'singleton') {
+        return { ...committee, seats: [...committee.seats, newSeat()] }
+      }
+
       const roleId =
         this.roles.find((role) => this.isRoleAllowedInCommittee(role.id, committee.type))?.id ?? ''
       return {
@@ -274,7 +323,7 @@ export class ConferenceCreateWizard {
   /** 将外部导入的席位追加到指定委员会。 */
   addImportedSeats(
     committeeId: string,
-    seats: Array<{ name: string; shortName?: string; roleId?: string }>
+    seats: Array<{ name: string; shortName?: string; roleId?: string; hasVotingRights?: boolean }>
   ): void {
     this.committees = this.committees.map((committee) => {
       if (committee.id !== committeeId) return committee
@@ -288,7 +337,8 @@ export class ConferenceCreateWizard {
             id: crypto.randomUUID(),
             name: seat.name,
             shortName: seat.shortName ?? '',
-            roleId: seat.roleId ?? fallbackRoleId
+            roleId: this.mode === 'singleton' ? undefined : (seat.roleId ?? fallbackRoleId),
+            hasVotingRights: seat.hasVotingRights ?? true
           }))
         ]
       }
@@ -308,7 +358,7 @@ export class ConferenceCreateWizard {
       !this.modeValid ||
       !this.eventValid ||
       !this.committeeValid ||
-      !this.roleValid ||
+      (this.mode !== 'singleton' && !this.roleValid) ||
       !this.seatValid ||
       this.creating
     ) {
@@ -320,10 +370,14 @@ export class ConferenceCreateWizard {
     try {
       const eventId = await createConferenceFromDraft({
         name: this.eventName,
+        mode: this.mode,
         description: this.eventDescription,
         organizer: this.organizer,
-        roleTemplates: this.roles,
-        committees: this.committees
+        roleTemplates: this.mode === 'singleton' ? [] : this.roles,
+        committees:
+          this.mode === 'singleton'
+            ? this.committees.map((committee) => ({ ...committee, agenda: this.agendaItems }))
+            : this.committees
       })
       if (!eventId) {
         this.createError = '创建失败，请检查会议和席位配置'
