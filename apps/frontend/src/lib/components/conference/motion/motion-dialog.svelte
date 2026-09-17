@@ -38,7 +38,9 @@
   const conf = $derived($currentCommittee)
   const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
-  const routePrefix = $derived($page.url.pathname.startsWith('/client/') ? '/client' : '/conference')
+  const routePrefix = $derived(
+    $page.url.pathname.startsWith('/client/') ? '/client' : '/conference'
+  )
 
   // Proposer
   let selectedProposer = $state<ParticipantSeat | null>(null)
@@ -332,7 +334,7 @@
           <Separator />
           <div>
             <Label class="mb-2 block text-xs text-muted-foreground">动议类型</Label>
-            <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-2 gap-2">
+            <ToggleGroup.Root type="single" bind:value={toggleValue} class="grid grid-cols-4 gap-2">
               {#each motionTypes as mt (mt)}
                 {@const Icon = MOTION_ICONS[mt] ?? Presentation}
                 <ToggleGroup.Item value={mt}>
@@ -417,7 +419,8 @@
                 class="rounded-md bg-muted/50 px-3 py-2 text-center text-xs text-muted-foreground"
               >
                 {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多
-                <span class="font-semibold text-foreground">{mcMaxSpeakers}</span> 人发言
+                <span class="font-semibold text-foreground">{mcMaxSpeakers}</span>
+                 人发言
               </div>
             {/if}
           </div>
