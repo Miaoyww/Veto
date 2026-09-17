@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
-  import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import {
     ChevronDown,
@@ -10,11 +9,12 @@
     KeyRound,
     Newspaper,
     Radio,
-    SquarePen,
+    Plus,
     Users
   } from '@lucide/svelte'
   import { cn } from '$lib/classes/utils'
   import { conferences, loadConference } from '$lib/classes/stores/conference/conference-store'
+  import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
   import {
     loadHostConferenceContent,
     type HostConferenceContent
@@ -23,9 +23,17 @@
   import CommitteeOverviewCard from '$lib/components/conference/committee/committee-overview-card.svelte'
   import CommitteeSeatTable from '$lib/components/conference/committee/committee-seat-table.svelte'
   import * as Collapsible from '$lib/components/ui/collapsible'
+  import * as Dialog from '$lib/components/ui/dialog'
+  import * as Field from '$lib/components/ui/field'
+  import { Input } from '$lib/components/ui/input'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
   let seatsOpen = $state(true)
+  let addSeatDialogOpen = $state(false)
+  let newSeatName = $state('')
+  let newSeatShortName = $state('')
+  let newSeatRole = $state('')
+  let addSeatError = $state('')
   let ready = $state(false)
   let hostContent = $state<HostConferenceContent | null>(null)
 
@@ -109,7 +117,39 @@
   }
 
   function openSeats(): void {
-    void goto(resolve(`/conference/${conferenceId}/committee/${committeeId}/seats`))
+    newSeatName = ''
+    newSeatShortName = ''
+    newSeatRole = ''
+    addSeatError = ''
+    addSeatDialogOpen = true
+  }
+
+  function submitNewSeat(event: SubmitEvent): void {
+    event.preventDefault()
+    const name = newSeatName.trim()
+    if (!name) {
+      addSeatError = '请输入席位名称'
+      return
+    }
+    if (!committee) return
+
+    const seatGroupId =
+      committee.seats[0]?.seatGroupId ??
+      conference?.seatGroups.find((group) => group.name === committee.name)?.id ??
+      conference?.seatGroups[0]?.id
+    if (!seatGroupId) {
+      addSeatError = '当前大会没有可用的席位组'
+      return
+    }
+
+    const id = addSeat(name, seatGroupId, newSeatRole.trim() || undefined)
+    if (!id) {
+      addSeatError = '席位添加失败，请稍后重试'
+      return
+    }
+    const shortName = newSeatShortName.trim()
+    if (shortName) updateSeat(id, { shortName })
+    addSeatDialogOpen = false
   }
 </script>
 
@@ -180,7 +220,7 @@
               </div>
               <div class="flex items-center gap-1">
                 <Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={openSeats}>
-                  <SquarePen class="size-3.5" />管理席位
+                  <Plus data-icon="inline-start" />添加席位
                 </Button>
                 <Collapsible.Trigger
                   aria-label={seatsOpen ? '收起席位列表' : '展开席位列表'}
@@ -208,3 +248,39 @@
     </ScrollArea>
   {/if}
 </div>
+
+<Dialog.Root bind:open={addSeatDialogOpen}>
+  <Dialog.Content class="sm:max-w-md">
+    <Dialog.Header>
+      <Dialog.Title>添加席位</Dialog.Title>
+      <Dialog.Description>为“{committee?.name ?? '当前委员会'}”添加一个新席位。</Dialog.Description>
+    </Dialog.Header>
+    <form class="flex flex-col gap-4" onsubmit={submitNewSeat}>
+      <Field.FieldGroup>
+        <Field.Field>
+          <Field.FieldLabel for="new-seat-name">席位名称</Field.FieldLabel>
+          <Input
+            id="new-seat-name"
+            bind:value={newSeatName}
+            placeholder="例如：法国"
+            aria-invalid={!!addSeatError || undefined}
+            autofocus
+          />
+        </Field.Field>
+        <Field.Field>
+          <Field.FieldLabel for="new-seat-short-name">席位简称（可选）</Field.FieldLabel>
+          <Input id="new-seat-short-name" bind:value={newSeatShortName} placeholder="例如：FRA" />
+        </Field.Field>
+        <Field.Field>
+          <Field.FieldLabel for="new-seat-role">角色/职务（可选）</Field.FieldLabel>
+          <Input id="new-seat-role" bind:value={newSeatRole} placeholder="例如：外交部长" />
+        </Field.Field>
+      </Field.FieldGroup>
+      {#if addSeatError}<Field.FieldError>{addSeatError}</Field.FieldError>{/if}
+      <Dialog.Footer>
+        <Button type="button" variant="outline" onclick={() => (addSeatDialogOpen = false)}>取消</Button>
+        <Button type="submit">添加席位</Button>
+      </Dialog.Footer>
+    </form>
+  </Dialog.Content>
+</Dialog.Root>
