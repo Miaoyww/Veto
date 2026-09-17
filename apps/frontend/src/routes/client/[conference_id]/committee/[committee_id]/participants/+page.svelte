@@ -5,7 +5,10 @@
   import { Users, RotateCcw } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Card, CardContent } from '$lib/components/ui/card'
-  import * as Select from '$lib/components/ui/select'
+  import { Badge } from '$lib/components/ui/badge'
+  import { Switch } from '$lib/components/ui/switch'
+  import * as Table from '$lib/components/ui/table'
+  import * as ToggleGroup from '$lib/components/ui/toggle-group'
   import {
     Empty,
     EmptyHeader,
@@ -67,6 +70,16 @@
   )
   const thresholds = $derived(
     conf ? calculateMajorityThresholds(conf.seats.filter(isParticipantSeat)) : null
+  )
+  const stats = $derived(
+    thresholds
+      ? [
+          { value: thresholds.presentCount, label: `出席 / ${thresholds.totalCount}` },
+          { value: thresholds.votingCount, label: '可投票' },
+          { value: thresholds.simpleMajorityThreshold, label: '简单多数' },
+          { value: thresholds.twoThirdsThreshold, label: '2/3 多数' }
+        ]
+      : []
   )
 
   // ---- 重新点名确认 ----
@@ -131,116 +144,24 @@
   {/snippet}
 </PageTopBar>
 
-<div class="flex-1 overflow-y-auto">
-  <div class="mx-auto max-w-3xl px-6 py-6">
+<div class="flex-1 h-screen overflow-y-auto">
+  <div class="mx-auto h-screen max-w-3xl px-6 py-6">
     {#if conf && thresholds}
       <!-- 统计卡片 -->
       <div class="mb-8 grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent class="flex flex-col items-center gap-1 p-5">
-            <span class="text-2xl font-bold text-foreground">{thresholds.presentCount}</span>
-            <span class="text-sm text-muted-foreground">出席 / {thresholds.totalCount}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent class="flex flex-col items-center gap-1 p-5">
-            <span class="text-2xl font-bold text-foreground">{thresholds.votingCount}</span>
-            <span class="text-sm text-muted-foreground">可投票</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent class="flex flex-col items-center gap-1 p-5">
-            <span class="text-2xl font-bold text-foreground">
-              {thresholds.simpleMajorityThreshold}
-            </span>
-            <span class="text-sm text-muted-foreground">简单多数</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent class="flex flex-col items-center gap-1 p-5">
-            <span class="text-2xl font-bold text-foreground">{thresholds.twoThirdsThreshold}</span>
-            <span class="text-sm text-muted-foreground">2/3 多数</span>
-          </CardContent>
-        </Card>
+        {#each stats as stat (stat.label)}
+          <Card>
+            <CardContent class="flex flex-col items-center gap-1 p-5">
+              <span class="text-2xl font-bold text-foreground">{stat.value}</span>
+              <span class="text-sm text-muted-foreground">{stat.label}</span>
+            </CardContent>
+          </Card>
+        {/each}
       </div>
 
       <!-- 参会席位列表 -->
       <Card>
         <CardContent class="p-0">
-          <!-- 表头 -->
-          <div
-            class="flex items-center gap-3 border-b px-5 py-3 text-xs font-medium text-muted-foreground"
-          >
-            <div class="flex-1">席位</div>
-            <div class="w-28 text-center">出席状态</div>
-            <div class="w-20 text-center">投票权</div>
-          </div>
-
-          <div class="divide-y">
-            {#each sortedSeats as seat (seat.id)}
-              {@const isPresent = seat.procedure.attendance === 'present'}
-              {@const isObserver = isPresent && !seat.procedure.hasVotingRights}
-              <div class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30">
-                <!-- 名称 -->
-                <div class="flex min-w-0 flex-1 flex-col">
-                  <span
-                    class={cn(
-                      'truncate text-sm font-medium',
-                      !isPresent && 'text-muted-foreground/50 line-through',
-                      isObserver && 'text-blue-600 dark:text-blue-400'
-                    )}
-                  >
-                    {seat.name}
-                  </span>
-                  {#if seat.shortName}
-                    <span class="truncate text-xs text-muted-foreground">{seat.shortName}</span>
-                  {/if}
-                </div>
-
-                <!-- 出席状态选择 -->
-                <div class="w-28">
-                  <Select.Root
-                    type="single"
-                    value={seat.procedure.attendance}
-                    onValueChange={(v: string) => handleAttendanceChange(seat.id, v)}
-                  >
-                    <Select.Trigger class="h-8 w-full text-xs">
-                      {seat.procedure.attendance === 'present' ? '出席' : '缺席'}
-                    </Select.Trigger>
-                    <Select.Content>
-                      <Select.Item value="present" label="出席" />
-                      <Select.Item value="absent" label="缺席" />
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-
-                <!-- 投票权开关 -->
-                <div class="w-20 text-center">
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      checked={seat.procedure.hasVotingRights}
-                      onchange={(e: Event) => {
-                        const target = e.target as HTMLInputElement
-                        handleVotingRightsToggle(seat.id, target.checked)
-                      }}
-                      disabled={!isPresent}
-                      title={isPresent
-                        ? seat.procedure.hasVotingRights
-                          ? '拥有投票权'
-                          : '观察员（无投票权）'
-                        : '未出席，不可设置投票权'}
-                    />
-                    <span class="text-[11px] text-muted-foreground">
-                      {seat.procedure.hasVotingRights ? '有' : '无'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            {/each}
-          </div>
-
           {#if sortedSeats.length === 0}
             <div class="py-12">
               <Empty>
@@ -253,6 +174,90 @@
                 </EmptyHeader>
               </Empty>
             </div>
+          {:else}
+            <Table.Root>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>席位</Table.Head>
+                  <Table.Head class="w-36 text-center">出席状态</Table.Head>
+                  <Table.Head class="w-24 text-center">投票权</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {#each sortedSeats as seat (seat.id)}
+                  {@const isPresent = seat.procedure.attendance === 'present'}
+                  {@const isObserver = isPresent && !seat.procedure.hasVotingRights}
+                  <Table.Row>
+                    <Table.Cell class="max-w-0">
+                      <div class="flex min-w-0 flex-col gap-0.5">
+                        <div class="flex min-w-0 items-center gap-2">
+                          <span
+                            class={cn(
+                              'truncate text-sm font-medium',
+                              !isPresent && 'text-muted-foreground/50 line-through'
+                            )}
+                          >
+                            {seat.name}
+                          </span>
+                          {#if isObserver}
+                            <Badge variant="outline">观察员</Badge>
+                          {/if}
+                        </div>
+                        {#if seat.shortName}
+                          <span class="truncate text-xs text-muted-foreground">
+                            {seat.shortName}
+                          </span>
+                        {/if}
+                      </div>
+                    </Table.Cell>
+
+                    <Table.Cell>
+                      <div class="flex justify-center">
+                        <ToggleGroup.Root
+                          type="single"
+                          variant="outline"
+                          size="sm"
+                          spacing={1}
+                          value={seat.procedure.attendance}
+                          onValueChange={(value: string) => handleAttendanceChange(seat.id, value)}
+                          aria-label={`设置 ${seat.name} 的出席状态`}
+                        >
+                          <ToggleGroup.Item
+                            value="present"
+                            class="data-[state=on]:border-blue-300 data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 dark:data-[state=on]:border-blue-700 dark:data-[state=on]:bg-blue-950/60 dark:data-[state=on]:text-blue-300"
+                          >
+                            出席
+                          </ToggleGroup.Item>
+                          <ToggleGroup.Item
+                            value="absent"
+                            class="data-[state=on]:border-border data-[state=on]:bg-muted data-[state=on]:text-muted-foreground"
+                          >
+                            缺席
+                          </ToggleGroup.Item>
+                        </ToggleGroup.Root>
+                      </div>
+                    </Table.Cell>
+
+                    <Table.Cell>
+                      <div class="flex justify-center">
+                        <Switch
+                          checked={seat.procedure.hasVotingRights}
+                          onCheckedChange={(checked: boolean) =>
+                            handleVotingRightsToggle(seat.id, checked)}
+                          disabled={!isPresent}
+                          title={isPresent
+                            ? seat.procedure.hasVotingRights
+                              ? '拥有投票权'
+                              : '观察员（无投票权）'
+                            : '未出席，不可设置投票权'}
+                          aria-label={`设置 ${seat.name} 的投票权`}
+                        />
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                {/each}
+              </Table.Body>
+            </Table.Root>
           {/if}
         </CardContent>
       </Card>

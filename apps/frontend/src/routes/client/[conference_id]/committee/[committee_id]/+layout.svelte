@@ -17,7 +17,7 @@
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Sidebar from '$lib/components/ui/sidebar'
-  import { conferences, currentCommittee } from '$lib/classes/stores/conference/conference-store'
+  import { conferences } from '$lib/classes/stores/conference/conference-store'
   import { cn, navigateToConference } from '$lib/classes/utils'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
@@ -38,11 +38,6 @@
   const participantSeats = $derived(activeCommittee?.participantSeats ?? [])
   const presentCount = $derived(
     participantSeats.filter((seat) => seat.procedure.attendance === 'present').length
-  )
-  const votingCount = $derived(
-    participantSeats.filter(
-      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-    ).length
   )
   const simpleMajority = $derived(activeCommittee?.getSimpleMajorityThreshold() ?? 0)
   const twoThirds = $derived(activeCommittee?.getTwoThirdsThreshold() ?? 0)

@@ -10,7 +10,6 @@
     conferences,
     currentCommittee,
     loadConference,
-    currentConferenceId,
     pointDraft,
     saveConferencesNow,
     setPhase,
