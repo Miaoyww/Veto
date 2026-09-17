@@ -27,19 +27,22 @@
   import * as Field from '$lib/components/ui/field'
   import { Input } from '$lib/components/ui/input'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
+  import * as Select from '$lib/components/ui/select/index.js'
 
   let seatsOpen = $state(true)
   let addSeatDialogOpen = $state(false)
   let newSeatName = $state('')
   let newSeatShortName = $state('')
-  let newSeatRole = $state('')
   let addSeatError = $state('')
   let ready = $state(false)
   let hostContent = $state<HostConferenceContent | null>(null)
 
   const conferenceId = $derived($page.params.conference_id ?? '')
   const committeeId = $derived($page.params.committee_id ?? '')
+
   const conference = $derived($conferences.find((item) => item.id === conferenceId) ?? null)
+  let newSeatRoleId = $state(conference?.roleTemplates?.[0]?.id ?? '')
+
   const committee = $derived(conference?.committees.find((item) => item.id === committeeId) ?? null)
   const committeeNews = $derived(
     (hostContent?.news ?? conference?.news ?? []).filter(
@@ -52,6 +55,12 @@
     )
   )
   const committeeFiles = $derived(committee?.documentNames ?? [])
+  const roleItems = $derived(
+    (conference?.roleTemplates ?? []).map((role) => ({
+      value: role.id,
+      label: role.name
+    }))
+  )
   const overviewCards = $derived([
     {
       icon: Users,
@@ -119,7 +128,7 @@
   function openSeats(): void {
     newSeatName = ''
     newSeatShortName = ''
-    newSeatRole = ''
+    newSeatRoleId = ''
     addSeatError = ''
     addSeatDialogOpen = true
   }
@@ -142,7 +151,7 @@
       return
     }
 
-    const id = addSeat(name, seatGroupId, newSeatRole.trim() || undefined)
+    const id = addSeat(name, seatGroupId, newSeatRoleId || undefined)
     if (!id) {
       addSeatError = '席位添加失败，请稍后重试'
       return
@@ -269,16 +278,30 @@
         </Field.Field>
         <Field.Field>
           <Field.FieldLabel for="new-seat-short-name">席位简称（可选）</Field.FieldLabel>
-          <Input id="new-seat-short-name" bind:value={newSeatShortName} placeholder="例如：FRA" />
+          <Input id="new-seat-short-name" bind:value={newSeatShortName} placeholder="例如: FRA" />
         </Field.Field>
         <Field.Field>
-          <Field.FieldLabel for="new-seat-role">角色/职务（可选）</Field.FieldLabel>
-          <Input id="new-seat-role" bind:value={newSeatRole} placeholder="例如：外交部长" />
+          <Field.FieldLabel for="new-seat-role">角色模板</Field.FieldLabel>
+          <Select.Root type="single" items={roleItems} bind:value={newSeatRoleId}>
+            <Select.Trigger id="new-seat-role" class="h-9 w-full">
+              <Select.Value placeholder="请选择角色模板" />
+            </Select.Trigger>
+
+            <Select.Content>
+              {#each roleItems as role (role.value)}
+                <Select.Item value={role.value} label={role.label}>
+                  {role.label}
+                </Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
         </Field.Field>
       </Field.FieldGroup>
       {#if addSeatError}<Field.FieldError>{addSeatError}</Field.FieldError>{/if}
       <Dialog.Footer>
-        <Button type="button" variant="outline" onclick={() => (addSeatDialogOpen = false)}>取消</Button>
+        <Button type="button" variant="outline" onclick={() => (addSeatDialogOpen = false)}>
+          取消
+        </Button>
         <Button type="submit">添加席位</Button>
       </Dialog.Footer>
     </form>

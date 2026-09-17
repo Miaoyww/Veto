@@ -2,9 +2,10 @@ import type {
   Conference as ConferenceDTO,
   Committee as CommitteeDTO
 } from '$lib/classes/types/conference'
-import type { RoleTemplate } from '$lib/classes/types/event'
+import type { RoleTemplate as RoleTemplateData } from '$lib/classes/types/event'
 import type { News, SeatAccess, SeatGroup, SituationUpdate, User } from '$lib/classes/types/delegate'
 import { Committee } from '$lib/classes/domain/committee.svelte'
+import { RoleTemplate } from '$lib/classes/domain/role-template.svelte'
 
 /** Runtime Conference aggregate. Its JSON shape remains the persisted ConferenceDTO. */
 export class Conference {
@@ -34,7 +35,9 @@ export class Conference {
     this._committees = (data?.committees ?? []).map((committee) =>
       committee instanceof Committee ? committee : Committee.fromJSON(committee)
     )
-    this._roleTemplates = [...(data?.roleTemplates ?? [])]
+    this._roleTemplates = (data?.roleTemplates ?? []).map((role) =>
+      role instanceof RoleTemplate ? role : new RoleTemplate(role)
+    )
     this._seatGroups = [...(data?.seatGroups ?? [])]
     this._users = [...(data?.users ?? [])]
     this._seatAccesses = [...(data?.seatAccesses ?? [])]
@@ -112,8 +115,10 @@ export class Conference {
     this.touch()
   }
 
-  setRoleTemplates(templates: RoleTemplate[]): void {
-    this._roleTemplates = [...templates]
+  setRoleTemplates(templates: Array<RoleTemplate | RoleTemplateData>): void {
+    this._roleTemplates = templates.map((role) =>
+      role instanceof RoleTemplate ? role : new RoleTemplate(role)
+    )
     this.touch()
   }
 
@@ -170,7 +175,7 @@ export class Conference {
       committees: this._committees.map((committee) => committee.toJSON()),
       users: this._users,
       seatAccesses: this._seatAccesses,
-      roleTemplates: this._roleTemplates,
+      roleTemplates: this._roleTemplates.map((role) => role.toJSON()),
       seatGroups: this._seatGroups,
       news: this._news,
       situationUpdates: this._situationUpdates,

@@ -1,4 +1,11 @@
 <script lang="ts">
+  /**
+   * committee-seat-table.svelte
+   * ───────────────────────────
+   * 席位表 —— 席位名称 / 简称 / 角色 / 访问 key，并就地提供
+   * 复制 key、重新生成 key、编辑和删除席位等操作。
+   * 依赖当前委员会已加载（席位操作均作用于当前委员会）。
+   */
   import { onDestroy } from 'svelte'
   import { Check, Copy, Pencil, RefreshCw, Trash2, X } from '@lucide/svelte'
   import type { Seat, SeatAccess } from '$lib/classes/types/delegate'
@@ -9,15 +16,7 @@
   } from '$lib/classes/stores/delegate/delegate-store'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
-  import TextAnimate from '$lib/components/ui/text-animate.svelte'
 
-  /**
-   * committee-seat-table.svelte
-   * ───────────────────────────
-   * 席位表 —— 席位名称 / 简称 / 角色 / 访问 key，并就地提供
-   * 复制 key、重新生成 key、编辑和删除席位等操作。
-   * 依赖当前委员会已加载（席位操作均作用于当前委员会）。
-   */
   interface Props {
     seats: Seat[]
     /** 大会级访问记录，用于解析每个席位的邀请码 */

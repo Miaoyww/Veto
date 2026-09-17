@@ -73,13 +73,14 @@ export const seats = derived(currentCommittee, ($engine) => $engine?.seats ?? []
 export function addSeat(
   name: string,
   seatGroupId: string,
-  role?: string,
+  roleId?: string,
   capabilityOverrides: Partial<Record<Capability, boolean>> = {}
 ): string {
   const engine = getEng()
   const conference = get(currentConferenceRecord)
   if (!engine || !conference) return ''
   const group = conference.seatGroups.find((item) => item.id === seatGroupId)
+  const role = conference.roleTemplates.find((item) => item.id === roleId)
   const procedure = group?.type === 'cabinet'
     ? {
         attendance: 'absent' as const,
@@ -87,7 +88,14 @@ export function addSeat(
         sortOrder: engine.participantSeats.length
       }
     : undefined
-  const id = engine.addSeat(name, seatGroupId, role, capabilityOverrides, procedure)
+  const id = engine.addSeat(
+    name,
+    seatGroupId,
+    role?.name,
+    { ...Object.fromEntries((role?.capabilities ?? []).map((capability) => [capability, true])), ...capabilityOverrides },
+    procedure,
+    roleId
+  )
   const existingCodes = new Set(
     get(conferences).flatMap((item) => item.seatAccesses.map((access) => access.inviteCode))
   )

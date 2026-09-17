@@ -2,6 +2,7 @@
   import type { Capability, Seat } from '$lib/classes/types/delegate'
   import { CAPABILITY_OPTIONS } from '$lib/classes/types/delegate'
   import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
+  import { currentConferenceRecord } from '$lib/classes/stores/conference/conference-store'
   import { Button } from '$lib/components/ui/button'
   import { Checkbox } from '$lib/components/ui/checkbox'
   import * as Field from '$lib/components/ui/field'
@@ -16,7 +17,7 @@
   let { seatGroupId, editingSeat, onClose }: Props = $props()
 
   let name = $state(editingSeat?.name ?? '')
-  let role = $state(editingSeat?.role ?? '')
+  let roleId = $state(editingSeat?.roleId ?? '')
 
   // 能力覆盖：勾选 = 强制开启；未勾选 = 不写入覆盖（沿用席位组默认）
   let selectedCapabilities = $state<Set<Capability>>(
@@ -56,11 +57,12 @@
     if (editingSeat) {
       updateSeat(editingSeat.id, {
         name: nameTrimmed,
-        role: role.trim() || undefined,
+        roleId: roleId || undefined,
+        role: $currentConferenceRecord?.roleTemplates.find((template) => template.id === roleId)?.name,
         capabilityOverrides
       })
     } else {
-      addSeat(nameTrimmed, seatGroupId, role.trim() || undefined, capabilityOverrides)
+      addSeat(nameTrimmed, seatGroupId, roleId || undefined, capabilityOverrides)
     }
     onClose()
   }
@@ -78,8 +80,13 @@
     </Field.Field>
 
     <Field.Field>
-      <Field.FieldLabel for="seat-role">职务/角色（可选）</Field.FieldLabel>
-      <Input id="seat-role" bind:value={role} placeholder="如：外交部长" />
+      <Field.FieldLabel for="seat-role">角色模板</Field.FieldLabel>
+      <select id="seat-role" bind:value={roleId} class="h-9 w-full rounded-md border bg-background px-3 text-sm">
+        <option value="">不指定角色模板</option>
+        {#each $currentConferenceRecord?.roleTemplates ?? [] as template (template.id)}
+          <option value={template.id}>{template.name}</option>
+        {/each}
+      </select>
     </Field.Field>
   </Field.FieldGroup>
 

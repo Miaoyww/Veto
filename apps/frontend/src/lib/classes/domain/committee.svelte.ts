@@ -1687,7 +1687,8 @@ export class Committee {
     seatGroupId: string,
     role?: string,
     capabilityOverrides: Partial<Record<Capability, boolean>> = {},
-    procedure?: Seat['procedure']
+    procedure?: Seat['procedure'],
+    roleId?: string
   ): string {
     const id = generateId()
     const seat: Seat = {
@@ -1696,6 +1697,7 @@ export class Committee {
       seatGroupId,
       capabilityOverrides,
       role,
+      roleId,
       procedure
     }
     this.seats = [...this.seats, seat]
