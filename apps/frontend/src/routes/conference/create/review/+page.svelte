@@ -18,7 +18,11 @@
 <section class="flex flex-col gap-5">
   <article class="rounded-lg border p-4">
     <h2 class="truncate text-sm font-semibold">{wizard.eventName || '未命名大会'}</h2>
-      <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+      <dl
+        class={wizard.mode === 'singleton'
+          ? 'mt-3 grid gap-3 text-sm sm:grid-cols-3'
+          : 'mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4'}
+      >
         <div>
           <dt class="text-xs text-muted-foreground">创建模式</dt>
           <dd class="mt-1 font-medium">
@@ -26,13 +30,28 @@
           </dd>
         </div>
         <div>
-        <dt class="text-xs text-muted-foreground">委员会</dt>
-        <dd class="mt-1 font-medium">{wizard.committees.length}</dd>
-      </div>
-      <div>
-        <dt class="text-xs text-muted-foreground">角色模板</dt>
-        <dd class="mt-1 font-medium">{wizard.roles.length}</dd>
-      </div>
+          <dt class="text-xs text-muted-foreground">
+            {wizard.mode === 'singleton' ? '会议' : '委员会'}
+          </dt>
+          <dd class="mt-1 font-medium">
+            {wizard.mode === 'singleton'
+              ? (wizard.committees[0]?.name || '未命名会议')
+              : wizard.committees.length}
+          </dd>
+        </div>
+        {#if wizard.mode === 'singleton'}
+          <div>
+            <dt class="text-xs text-muted-foreground">议程</dt>
+            <dd class="mt-1 font-medium">
+              {wizard.agendaItems.filter((item) => item.title.trim()).length}
+            </dd>
+          </div>
+        {:else}
+          <div>
+            <dt class="text-xs text-muted-foreground">角色模板</dt>
+            <dd class="mt-1 font-medium">{wizard.roles.length}</dd>
+          </div>
+        {/if}
       <div>
         <dt class="text-xs text-muted-foreground">席位</dt>
         <dd class="mt-1 font-medium">{wizard.totalSeatCount}</dd>

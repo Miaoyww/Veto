@@ -20,7 +20,8 @@ import { createLogger, initializeLogging, log as baseLog } from './logger'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory } from './plugin-discovery'
 import { loadPluginConfig } from './plugin-store'
-import { startDisplayWs, setHostRuntime, stopDisplayWs } from './ws-display'
+import { startDisplayWs as startHostServiceWs, setHostRuntime, stopDisplayWs as stopHostServiceWs } from './ws-display'
+import { stopDisplayWs as stopDisplayDataWs } from './display-ws'
 import { loadPlugin, unloadAll } from './plugin-host/extension-host/index'
 import { registerAllIpcHandlers, type IpcDependencies } from './ipc'
 import { publishLanConference, stopLanConference } from './lan-service'
@@ -338,18 +339,25 @@ app.whenReady().then(async () => {
   hostRuntime = loadOrMigrateHostRuntime()
   setHostRuntime(hostRuntime)
 
-  // WebSocket Display 通信（基于 ws 包）
-  wsServerPort = await startDisplayWs(hostRuntime)
-  log.info(`Display WS started on port ${wsServerPort}`)
+  // Host Service WS is lazily started when a normal conference is explicitly started.
+  log.info('Host Service WS deferred until normal conference startup')
 
   // IPC 处理器注册
   const ipcDeps: IpcDependencies = {
     pluginInstances,
     displayWindow,
-    wsServerPort,
+    getHostServicePort: () => wsServerPort,
     refreshPlugins,
     hostRuntime,
     getHostConsoleWindow: () => mainWindow,
+    startHostService: async () => {
+      wsServerPort = await startHostServiceWs(hostRuntime ?? undefined)
+      return wsServerPort
+    },
+    stopHostService: async () => {
+      await stopHostServiceWs()
+      wsServerPort = 0
+    },
     onActiveConferenceChanged: () => {
       const active = hostRuntime?.activeConference
       if (active) {
@@ -406,5 +414,5 @@ app.on('before-quit', async () => {
   hostRuntime?.shutdown()
   setHostRuntime(null)
   await unloadAll()
-  await stopDisplayWs()
+  await Promise.all([stopHostServiceWs(), stopDisplayDataWs()])
 })

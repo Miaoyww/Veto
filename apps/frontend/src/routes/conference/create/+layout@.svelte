@@ -9,7 +9,7 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import { getCreatedConferenceById } from '$lib/classes/stores/conference/conference-event-store'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
-  import { wizardSteps } from './steps'
+  import { getWizardSteps } from './steps'
   import { resolve } from '$app/paths'
   import OnboardingShell from '$lib/components/onboarding-shell.svelte'
 
@@ -17,17 +17,25 @@
 
   let contentEl = $state<HTMLDivElement | undefined>(undefined)
 
+  const visibleSteps = $derived(getWizardSteps(wizard.mode))
+
   const currentIndex = $derived(
     Math.max(
       0,
-      wizardSteps.findIndex((step) => step.path === $page.url.pathname)
+      visibleSteps.findIndex((step) => step.path === $page.url.pathname)
     )
   )
-  const isLastStep = $derived(currentIndex === wizardSteps.length - 1)
+  const isLastStep = $derived(currentIndex === visibleSteps.length - 1)
+
+  $effect(() => {
+    if (wizard.mode === 'singleton' && $page.url.pathname.endsWith('/roles')) {
+      void goto(resolve('/conference/create/seats'), { replaceState: true })
+    }
+  })
 
   // 步骤切换后清除上一页留下的“已尝试”错误态
   $effect(() => {
-    if (wizardSteps[currentIndex]) wizard.attempted = false
+    if (visibleSteps[currentIndex]) wizard.attempted = false
   })
 
   function focusFirstInvalid(): void {
@@ -39,18 +47,20 @@
 
   /** 校验当前步并通过后跳转 targetIndex；未通过则原地标错 */
   function tryAdvance(targetIndex: number): void {
-    if (!wizard.isStepValid(currentIndex)) {
+    const currentStep = visibleSteps[currentIndex]
+    const targetStep = visibleSteps[targetIndex]
+    if (!currentStep || !targetStep || !wizard.isStepValidById(currentStep.id)) {
       wizard.attempted = true
       focusFirstInvalid()
       return
     }
-    void goto(resolve(wizardSteps[targetIndex].path))
+    void goto(resolve(targetStep.path))
   }
 
   function goToStep(index: number): void {
-    if (index < 0 || index >= wizardSteps.length) return
+    if (index < 0 || index >= visibleSteps.length) return
     if (index <= currentIndex) {
-      void goto(resolve(wizardSteps[index].path))
+      void goto(resolve(visibleSteps[index].path))
       return
     }
     // 向前跳步与“下一步”同规则：先通过当前步校验
@@ -59,7 +69,7 @@
 
   function handleNext(): void {
     if (isLastStep) return
-    tryAdvance(Math.min(currentIndex + 1, wizardSteps.length - 1))
+    tryAdvance(Math.min(currentIndex + 1, visibleSteps.length - 1))
   }
 
   async function handleSubmit(): Promise<void> {
@@ -70,6 +80,10 @@
     const event = getCreatedConferenceById(eventId)
     wizard.reset()
     const committeeId = event?.committees[0]?.id
+    if (event && committeeId && event.mode === 'singleton') {
+      void goto(resolve(`/client/${event.id}/committee/${committeeId}`))
+      return
+    }
     void goto(
       resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}` : '/')
     )
@@ -83,9 +97,15 @@
     >
       <div>
         <h1 class="text-xl font-semibold">创建大会</h1>
-        <p class="mt-1 text-sm text-muted-foreground">配置大会、委员会、角色权限与席位</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {wizard.mode === 'singleton'
+                ? '配置一场独立主持的会议与席位'
+                : '配置大会、委员会、角色权限与席位'}
+            </p>
       </div>
-      <Badge variant="outline" class="shrink-0">步骤 {currentIndex + 1}/{wizardSteps.length}</Badge>
+      <Badge variant="outline" class="shrink-0">
+        步骤 {currentIndex + 1}/{visibleSteps.length}
+      </Badge>
     </header>
 
     <div class="flex min-h-0 flex-1">
@@ -94,10 +114,12 @@
         class="hidden w-48 shrink-0 rounded-3xl px-4 py-5 bg-background/70 lg:block ml-5 mb-5"
       >
         <div class="flex flex-col gap-1">
-          {#each wizardSteps as step, index (step.path)}
+          {#each visibleSteps as step, index (step.path)}
             {@const Icon = step.icon}
             {@const completed =
-              index <= currentIndex && index < wizardSteps.length - 1 && wizard.isStepValid(index)}
+              index <= currentIndex &&
+              index < visibleSteps.length - 1 &&
+              wizard.isStepValidById(step.id)}
             <button
               type="button"
               class={cn(

@@ -12,10 +12,12 @@ export interface CommitteeDraft {
   id: string
   name: string
   type: SeatGroupType
-  seats: Array<{ name: string; shortName?: string; roleId: string }>
+  seats: Array<{ name: string; shortName?: string; roleId?: string; hasVotingRights?: boolean }>
+  agenda?: Array<{ title: string; description?: string }>
 }
 
 export interface CreateConferenceInput {
+  mode?: 'conference' | 'singleton' | null
   name: string
   description?: string
   organizer?: string
@@ -31,12 +33,22 @@ function capabilityOverrides(capabilities: Capability[]): Seat['capabilityOverri
   return Object.fromEntries(capabilities.map((capability) => [capability, true]))
 }
 
-function createCommittee(id: string, name: string, seats: Seat[]): Committee {
+function createCommittee(
+  id: string,
+  name: string,
+  seats: Seat[],
+  agenda: Array<{ title: string; description?: string }> = []
+): Committee {
   return {
     id,
     name,
     phase: 'preamble',
-    agenda: [],
+    agenda: agenda.map((item, index) => ({
+      id: crypto.randomUUID(),
+      title: item.title.trim(),
+      description: item.description?.trim() || undefined,
+      sortOrder: index
+    })),
     seats,
     speakerLists: { id: 'main', name: '主发言名单', entries: [] },
     motions: [],
@@ -62,6 +74,53 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
   const name = input.name.trim()
   if (!name || input.committees.length === 0) return null
 
+  if (input.mode === 'singleton') {
+    if (input.committees.length !== 1) return null
+    const draft = input.committees[0]
+    if (!draft || draft.type !== 'cabinet' || !draft.name.trim() || draft.seats.length === 0) return null
+    if (draft.seats.some((seat) => !seat.name.trim())) return null
+
+    const groupId = createId()
+    const seatGroup: SeatGroup = {
+      id: groupId,
+      name: '参会席位',
+      type: 'cabinet',
+      defaultCapabilities: [],
+      sortOrder: 0
+    }
+    const seats: Seat[] = draft.seats.map((draftSeat, sortOrder) => ({
+      id: createId(),
+      name: draftSeat.name.trim(),
+      shortName: draftSeat.shortName?.trim() || undefined,
+      seatGroupId: groupId,
+      capabilityOverrides: {},
+      procedure: {
+        attendance: 'absent',
+        hasVotingRights: draftSeat.hasVotingRights ?? true,
+        sortOrder
+      }
+    }))
+    const singletonCommittee = createCommittee(draft.id, draft.name.trim(), seats, draft.agenda ?? [])
+
+    const conferenceId = createConference(name, singletonCommittee.name, [], [], {
+      id: createId(),
+      seatGroups: [seatGroup],
+      seatAccesses: [],
+      committees: [singletonCommittee]
+    })
+    const conference = getConferenceById(conferenceId)
+    if (!conference) return null
+    conference.rename(name)
+    conference.setMode('singleton')
+    conference.description = input.description?.trim() || undefined
+    conference.organizer = input.organizer?.trim() || undefined
+    conference.setRoleTemplates([])
+    conference.setSeatAccesses([])
+    conferences.update((items) => [...items])
+    await saveConferencesNow()
+    return conferenceId
+  }
+
   const roleTemplates = input.roleTemplates.map((role) => ({ ...role, name: role.name.trim() }))
   const roles = new Map(roleTemplates.map((role) => [role.id, role]))
   const mpcReporterRoleIds = new Set(
@@ -77,12 +136,13 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
     input.committees.some(
       (draft) =>
         draft.seats.some((seat) => {
-          if (staffRoleIds.has(seat.roleId)) return false
+          const roleId = seat.roleId ?? ''
+          if (staffRoleIds.has(roleId)) return false
           if (draft.type === 'mpc') {
-            return !mpcReporterRoleIds.has(seat.roleId) && !ipcRoleIds.has(seat.roleId)
+            return !mpcReporterRoleIds.has(roleId) && !ipcRoleIds.has(roleId)
           }
-          if (draft.type === 'ipc') return !ipcRoleIds.has(seat.roleId)
-          return mpcReporterRoleIds.has(seat.roleId)
+          if (draft.type === 'ipc') return !ipcRoleIds.has(roleId)
+          return mpcReporterRoleIds.has(roleId)
         })
     )
   ) {
@@ -103,7 +163,8 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
       sortOrder: index
     })
     const seats = draft.seats.map((draftSeat, sortOrder) => {
-      const role = roles.get(draftSeat.roleId)
+      const roleId = draftSeat.roleId ?? ''
+      const role = roles.get(roleId)
       const seat: Seat = {
         id: createId(),
         name: draftSeat.name.trim(),
@@ -111,7 +172,7 @@ export async function createConferenceFromDraft(input: CreateConferenceInput): P
         seatGroupId: groupId,
         capabilityOverrides: capabilityOverrides(role?.capabilities ?? []),
         role: role?.name,
-        roleId: draftSeat.roleId,
+        roleId,
         procedure:
           draft.type === 'cabinet'
             ? {

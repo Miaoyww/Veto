@@ -42,7 +42,7 @@
               {/if}
             </div>
             <span class="shrink-0 text-xs text-muted-foreground">
-              {wizard.roleName(seat.roleId)}
+              {wizard.roleName(seat.roleId ?? '')}
             </span>
           </li>
         {/each}

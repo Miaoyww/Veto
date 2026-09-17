@@ -15,6 +15,8 @@ export interface HostConsoleIpcDependencies {
   getHostConsoleWindow: () => BrowserWindow | null
   onConferenceChanged?: () => void
   refreshConfiguredConferences?: () => void
+  startHostService?: () => Promise<number>
+  stopHostService?: () => Promise<void>
 }
 
 function isHostConsoleEvent(
@@ -41,17 +43,32 @@ export function registerHostConsoleIpc(deps: HostConsoleIpcDependencies): void {
     }
   })
 
-  ipcMain.handle('veto:host-console:start-conference', (event, conferenceId: string) => {
+  ipcMain.handle('veto:host-console:start-conference', async (event, conferenceId: string) => {
     if (!isHostConsoleEvent(event, deps.getHostConsoleWindow)) return forbidden()
     deps.refreshConfiguredConferences?.()
+    await deps.startHostService?.()
     const result = deps.runtime.startConference(conferenceId)
     if (result.ok) deps.onConferenceChanged?.()
     return result
   })
 
-  ipcMain.handle('veto:host-console:stop-conference', (event) => {
+  ipcMain.handle('veto:host-console:prepare-service', async (event) => {
+    if (!isHostConsoleEvent(event, deps.getHostConsoleWindow)) return forbidden()
+    try {
+      await deps.startHostService?.()
+      return { ok: true }
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Host Service 启动失败'
+      }
+    }
+  })
+
+  ipcMain.handle('veto:host-console:stop-conference', async (event) => {
     if (!isHostConsoleEvent(event, deps.getHostConsoleWindow)) return forbidden()
     const result = deps.runtime.stopConference()
+    await deps.stopHostService?.()
     if (result.ok) deps.onConferenceChanged?.()
     return result
   })

@@ -19,6 +19,7 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { navigateToConference } from '$lib/classes/utils'
   import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
+  import { Badge } from '$lib/components/ui/badge'
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
@@ -120,6 +121,9 @@
         </Button>
       {:else}
         <span class="truncate font-semibold">{conference.name}</span>
+        {#if conference.mode === 'singleton'}
+          <Badge variant="outline" class="shrink-0">单例</Badge>
+        {/if}
         <Button
           variant="ghost"
           size="icon-sm"
@@ -143,7 +147,7 @@
         }}
       >
         <Play class="size-3" />
-        进入
+        {conference.mode === 'singleton' ? '主持' : '进入'}
       </Button>
       <Button variant="destructive" size="icon-sm" title="删除大会" onclick={handleDelete}>
         <Trash2 />

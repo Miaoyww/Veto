@@ -7,6 +7,7 @@
   import { VETO_NAME } from '$lib/classes/const'
 
   import {
+    conferences,
     currentCommittee,
     loadConference,
     currentConferenceId,
@@ -20,8 +21,7 @@
 
   import {
     getDisplayBridge,
-    buildDisplayData,
-    initWsPort
+    buildDisplayData
   } from '$lib/classes/clients/conference-display-client'
 
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
@@ -50,6 +50,8 @@
   const committeeId = $derived($page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
+  const conference = $derived($conferences.find((item) => item.id === conferenceId) ?? null)
+  const isSingleton = $derived(conference?.mode === 'singleton')
 
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
@@ -67,17 +69,18 @@
       }
     }
 
-    // 初始化显示端 WS
-    wsPort = await initWsPort()
-    if (window.veto?.lan) {
-      const serverInfo = await window.veto.lan.getServerInfo()
-      lanUrl = serverInfo.urls[0] ?? null
+    if (!isSingleton) {
+      wsPort = window.veto?.ws ? await window.veto.ws.getPort() : 19527
+      if (window.veto?.lan) {
+        const serverInfo = await window.veto.lan.getServerInfo()
+        lanUrl = serverInfo.urls[0] ?? null
+      }
     }
   })
 
   $effect(() => {
     if (!conf) return
-    void window.veto?.lan?.publishConference()
+    if (!isSingleton) void window.veto?.lan?.publishConference()
   })
 
   // 自动同步 Display 窗口
@@ -104,7 +107,7 @@
   onDestroy(async () => {
     // 离开页面保存状态
     await saveConferencesNow()
-    await window.veto?.lan?.unpublishConference()
+    if (!isSingleton) await window.veto?.lan?.unpublishConference()
 
     destroyAllTimers()
   })
@@ -128,7 +131,7 @@
 
     setPhase('roll_call')
 
-    const route = `/conference/${conferenceId}/committee/${committeeId}/roll-call` as `/conference/${string}/committee/${string}/roll-call`
+    const route = `/client/${conferenceId}/committee/${committeeId}/roll-call` as `/client/${string}/committee/${string}/roll-call`
     goto(resolve(route))
   }
 
@@ -185,7 +188,7 @@
       <PanelHeader icon={Gavel} title={PHASE_LABELS[conf.phase] ?? conf.phase} />
 
       <div class="ml-auto flex items-center gap-2">
-        {#if wsPort !== null}
+        {#if !isSingleton && wsPort !== null}
           <span
             class="select-none text-[11px] text-muted-foreground/70"
             title="WebSocket 端口：{wsPort}"

@@ -163,10 +163,6 @@ const veto = {
     closeDisplay: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('veto:conference:close-display'),
 
-    /** 向显示窗口发送数据 */
-    sendToDisplay: (data: unknown): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke('veto:conference:send-to-display', data),
-
     /** 切换 Display 窗口全屏 */
     toggleFullscreen: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('veto:conference:toggle-fullscreen'),
@@ -188,6 +184,10 @@ const veto = {
     getPort: (): Promise<number> => ipcRenderer.invoke('veto:ws:get-port')
   },
 
+  displayWs: {
+    getPort: (): Promise<number> => ipcRenderer.invoke('veto:display:get-port')
+  },
+
   hostConsole: {
     status: (): Promise<{
       ok: boolean
@@ -198,6 +198,8 @@ const veto = {
     startConference: (conferenceId: string): Promise<unknown> =>
       ipcRenderer.invoke('veto:host-console:start-conference', conferenceId),
     stopConference: (): Promise<unknown> => ipcRenderer.invoke('veto:host-console:stop-conference'),
+    prepareService: (): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('veto:host-console:prepare-service'),
     releaseDirectiveClaim: (directiveId: string, reason: string): Promise<unknown> =>
       ipcRenderer.invoke('veto:host-console:release-directive-claim', directiveId, reason),
     auditLog: (): Promise<unknown> => ipcRenderer.invoke('veto:host-console:audit-log')

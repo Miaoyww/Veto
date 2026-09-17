@@ -13,8 +13,7 @@
   import { onMount, onDestroy } from 'svelte'
   import {
     getDisplayBridge,
-    onConnectionStatus,
-    receiveDisplayUpdate
+    onConnectionStatus
   } from '$lib/classes/clients/conference-display-client'
   import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
   import type { SeatView } from '$lib/classes/types/conference'
@@ -105,8 +104,6 @@
       const msg = data as { type?: string; isFullScreen?: boolean }
       if (msg.type === 'fullscreen-change') {
         isFullScreen = msg.isFullScreen ?? false
-      } else {
-        receiveDisplayUpdate(data)
       }
     })
 

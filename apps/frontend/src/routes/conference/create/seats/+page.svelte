@@ -5,13 +5,16 @@
   import * as Field from '$lib/components/ui/field'
   import { Input } from '$lib/components/ui/input'
   import * as Select from '$lib/components/ui/select'
+  import { Checkbox } from '$lib/components/ui/checkbox'
   import * as Dialog from '$lib/components/ui/dialog'
   import { Textarea } from '$lib/components/ui/textarea'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import * as XLSX from 'xlsx'
 
   type ImportMode = 'excel' | 'text'
-  type ImportedSeat = { name: string; shortName: string; type: string }
+  type ImportedSeat = { name: string; shortName: string; type: string; votingRights?: boolean }
+
+  const isSingleton = $derived(wizard.mode === 'singleton')
 
   let formatDialogOpen = $state(false)
   let textDialogOpen = $state(false)
@@ -27,7 +30,8 @@
   let fileInput = $state<HTMLInputElement | undefined>(undefined)
 
   const showInvalidRole = $derived(
-    wizard.attempted &&
+    !isSingleton &&
+      wizard.attempted &&
       wizard.roles.length > 0 &&
       wizard.committees.some((committee) =>
         committee.seats.some((seat) => !wizard.roles.some((role) => role.id === seat.roleId))
@@ -35,8 +39,10 @@
   )
 
   const hasUnmatchedImportedRole = $derived(
-    importedRows.some((row) => row.type && !roleIdForType(row.type, targetCommitteeId))
+    !isSingleton &&
+      importedRows.some((row) => row.type && !roleIdForType(row.type, targetCommitteeId))
   )
+  const singletonCommitteeName = $derived(wizard.committees[0]?.name ?? '')
 
   function openFormatDialog(mode: ImportMode): void {
     importMode = mode
@@ -86,15 +92,25 @@
 
   function toImportedSeat(row: unknown): ImportedSeat {
     const cells = Array.isArray(row) ? row : []
+    const thirdColumn = String(cells[2] ?? '').trim()
+    if (isSingleton) {
+      return {
+        name: String(cells[0] ?? '').trim(),
+        shortName: String(cells[1] ?? '').trim(),
+        type: '',
+        votingRights: !/^(否|无|没有|false|0)$/i.test(thirdColumn)
+      }
+    }
+
     return {
       name: String(cells[0] ?? '').trim(),
       shortName: String(cells[1] ?? '').trim(),
-      type: String(cells[2] ?? '').trim()
+      type: thirdColumn
     }
   }
 
   function readText(): void {
-    importedRows = textValue
+      importedRows = textValue
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
@@ -116,6 +132,7 @@
   }
 
   function roleIdForType(type: string, committeeId: string): string {
+    if (isSingleton) return ''
     const committee = wizard.committees.find((item) => item.id === committeeId)
     if (!committee) return ''
     const normalized = type.replace(/\s+/g, '').toLowerCase()
@@ -132,6 +149,8 @@
   }
 
   function matchedRoleName(row: ImportedSeat): string {
+    if (isSingleton) return row.votingRights === false ? '无投票权' : '有投票权'
+
     const roleId = roleIdForType(row.type, targetCommitteeId)
     return roleId ? wizard.roleName(roleId) : row.type ? '未匹配角色' : '自动匹配'
   }
@@ -140,11 +159,19 @@
     if (!targetCommitteeId || importedRows.length === 0) return
     wizard.addImportedSeats(
       targetCommitteeId,
-      importedRows.map((row) => ({
-        name: row.name,
-        shortName: row.shortName,
-        roleId: roleIdForType(row.type, targetCommitteeId)
-      }))
+      importedRows.map((row) =>
+        isSingleton
+          ? {
+              name: row.name,
+              shortName: row.shortName,
+              hasVotingRights: row.votingRights ?? true
+            }
+          : {
+              name: row.name,
+              shortName: row.shortName,
+              roleId: roleIdForType(row.type, targetCommitteeId)
+            }
+      )
     )
     previewDialogOpen = false
     importedRows = []
@@ -174,8 +201,9 @@
   {#each wizard.committees as committee (committee.id)}
     {@const showNoSeats = wizard.attempted && committee.seats.length === 0}
     {@const showInvalidSpecialRole =
+      !isSingleton &&
       wizard.attempted &&
-      committee.seats.some((seat) => !wizard.isRoleAllowedInCommittee(seat.roleId, committee.type))}
+      committee.seats.some((seat) => Boolean(seat.roleId) && !wizard.isRoleAllowedInCommittee(seat.roleId ?? '', committee.type))}
     <article class="rounded-lg border p-4">
       <div class="flex items-center justify-between gap-3">
         <h2 class="truncate text-sm font-semibold">{committee.name || '未命名委员会'}</h2>
@@ -192,9 +220,11 @@
             <div
               class={cn(
                 'grid items-center gap-2',
-                committee.type === 'cabinet'
-                  ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]'
-                  : 'md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]'
+                isSingleton
+                  ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_9rem_2.5rem]'
+                  : committee.type === 'cabinet'
+                    ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_15rem_2.5rem]'
+                    : 'md:grid-cols-[minmax(0,1fr)_15rem_2.5rem]'
               )}
             >
               <Input
@@ -210,18 +240,27 @@
                   aria-label="席位简称"
                 />
               {/if}
-              <Select.Select type="single" bind:value={seat.roleId}>
-                <Select.SelectTrigger class="w-full" aria-label="角色">
-                  {wizard.roleName(seat.roleId)}
-                </Select.SelectTrigger>
-                <Select.SelectContent>
-                  {#each wizard.roles as role (role.id)}
-                    {#if wizard.isRoleAllowedInCommittee(role.id, committee.type)}
-                      <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
-                    {/if}
-                  {/each}
-                </Select.SelectContent>
-              </Select.Select>
+              {#if isSingleton}
+                <label
+                  class="flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs text-muted-foreground"
+                >
+                  <Checkbox bind:checked={seat.hasVotingRights} aria-label="投票权" />
+                  投票权
+                </label>
+              {:else}
+                <Select.Select type="single" bind:value={seat.roleId}>
+                  <Select.SelectTrigger class="w-full" aria-label="角色">
+                    {wizard.roleName(seat.roleId ?? '')}
+                  </Select.SelectTrigger>
+                  <Select.SelectContent>
+                    {#each wizard.roles as role (role.id)}
+                      {#if wizard.isRoleAllowedInCommittee(role.id, committee.type)}
+                        <Select.SelectItem value={role.id} label={role.name || '未命名角色'} />
+                      {/if}
+                    {/each}
+                  </Select.SelectContent>
+                </Select.Select>
+              {/if}
               <Button
                 variant="ghost"
                 size="icon"
@@ -271,7 +310,15 @@
             <thead class="bg-muted/50 text-left text-xs text-muted-foreground">
               <tr><th class="px-3 py-2 font-medium">A 列</th><th class="px-3 py-2 font-medium">B 列（可选）</th><th class="px-3 py-2 font-medium">C 列（可选）</th></tr>
             </thead>
-            <tbody><tr class="border-t"><td class="px-3 py-2">席位名称</td><td class="px-3 py-2">席位简称（可选）</td><td class="px-3 py-2">席位类型（角色名称，可选）</td></tr></tbody>
+            <tbody>
+              <tr class="border-t">
+                <td class="px-3 py-2">席位名称</td>
+                <td class="px-3 py-2">席位简称（可选）</td>
+                <td class="px-3 py-2">
+                  {isSingleton ? '投票权（可选，默认为是）' : '席位类型（角色名称，可选）'}
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
         <p>选择文件后还需要选择要读取的 sheet。</p>
@@ -279,8 +326,14 @@
     {:else}
       <div class="flex flex-col gap-2 text-sm text-muted-foreground">
         <p>每行一个席位，格式为：</p>
-        <code class="rounded-md bg-muted px-3 py-2 text-foreground">席位名称[,席位简称][,席位类型]</code>
-        <p>席位简称和席位类型都可以省略；需要跳过简称填写类型时，请保留空字段，例如：席位名称,,席位类型。</p>
+        <code class="rounded-md bg-muted px-3 py-2 text-foreground">
+          {isSingleton ? '席位名称[,席位简称][,投票权]' : '席位名称[,席位简称][,席位类型]'}
+        </code>
+        <p>
+          {isSingleton
+            ? '席位简称和投票权都可以省略；投票权填“否”表示无投票权，其他留空或取值默认为有投票权。'
+            : '席位简称和席位类型都可以省略；需要跳过简称填写类型时，请保留空字段，例如：席位名称,,席位类型。'}
+        </p>
         <p>分隔符支持逗号、中文逗号、分号、中文分号和 |。</p>
       </div>
     {/if}
@@ -301,7 +354,11 @@
       <Dialog.Title>粘贴文本席位</Dialog.Title>
       <Dialog.Description>每行一个席位，支持逗号、分号或 | 分隔。</Dialog.Description>
     </Dialog.Header>
-    <Textarea bind:value={textValue} rows={10} placeholder="席位名称[,席位简称][,席位类型]" />
+    <Textarea
+      bind:value={textValue}
+      rows={10}
+      placeholder={isSingleton ? '席位名称[,席位简称][,投票权]' : '席位名称[,席位简称][,席位类型]'}
+    />
     {#if importError}<Field.FieldError>{importError}</Field.FieldError>{/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={() => (textDialogOpen = false)}>取消</Button>
@@ -339,22 +396,36 @@
     <Field.FieldGroup>
       <Field.Field>
         <Field.FieldLabel for="import-target-committee">导入到委员会</Field.FieldLabel>
-        <Select.Select type="single" bind:value={targetCommitteeId}>
-          <Select.SelectTrigger id="import-target-committee" class="w-full">{wizard.committees.find((committee) => committee.id === targetCommitteeId)?.name || '选择委员会'}</Select.SelectTrigger>
-          <Select.SelectContent>
-            {#each wizard.committees as committee (committee.id)}<Select.SelectItem value={committee.id} label={committee.name || '未命名委员会'} />{/each}
-          </Select.SelectContent>
-        </Select.Select>
+        {#if isSingleton}
+          <p class="text-sm text-muted-foreground">导入到：{singletonCommitteeName || '单例会场'}</p>
+        {:else}
+          <Select.Select type="single" bind:value={targetCommitteeId}>
+            <Select.SelectTrigger id="import-target-committee" class="w-full">{wizard.committees.find((committee) => committee.id === targetCommitteeId)?.name || '选择委员会'}</Select.SelectTrigger>
+            <Select.SelectContent>
+              {#each wizard.committees as committee (committee.id)}<Select.SelectItem value={committee.id} label={committee.name || '未命名委员会'} />{/each}
+            </Select.SelectContent>
+          </Select.Select>
+        {/if}
       </Field.Field>
     </Field.FieldGroup>
     <div class="max-h-[50vh] overflow-auto rounded-md border">
       <table class="w-full text-sm">
         <thead class="sticky top-0 bg-muted/90 text-left text-xs text-muted-foreground">
-          <tr><th class="px-3 py-2 font-medium">席位名称</th><th class="px-3 py-2 font-medium">席位简称</th><th class="px-3 py-2 font-medium">席位类型</th><th class="px-3 py-2 font-medium">匹配角色</th></tr>
+          <tr>
+            <th class="px-3 py-2 font-medium">席位名称</th>
+            <th class="px-3 py-2 font-medium">席位简称</th>
+            <th class="px-3 py-2 font-medium">{isSingleton ? '输入值' : '席位类型'}</th>
+            <th class="px-3 py-2 font-medium">{isSingleton ? '投票权' : '匹配角色'}</th>
+          </tr>
         </thead>
         <tbody>
           {#each importedRows as row, index (index)}
-            <tr class="border-t"><td class="px-3 py-2">{row.name || '（空）'}</td><td class="px-3 py-2">{row.shortName || '—'}</td><td class="px-3 py-2">{row.type || '自动匹配'}</td><td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td></tr>
+            <tr class="border-t">
+              <td class="px-3 py-2">{row.name || '（空）'}</td>
+              <td class="px-3 py-2">{row.shortName || '—'}</td>
+              <td class="px-3 py-2">{isSingleton ? (row.votingRights === false ? '否' : '') : (row.type || '自动匹配')}</td>
+              <td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td>
+            </tr>
           {/each}
         </tbody>
       </table>

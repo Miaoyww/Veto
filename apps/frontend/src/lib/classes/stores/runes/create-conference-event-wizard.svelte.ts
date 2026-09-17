@@ -182,10 +182,15 @@ export class ConferenceCreateWizard {
         (committee) =>
           committee.seats.length > 0 &&
           committee.seats.every(
-            (seat) =>
-              seat.name.trim().length > 0 &&
-              this.roles.some((role) => role.id === seat.roleId) &&
-              this.isRoleAllowedInCommittee(seat.roleId, committee.type)
+            (seat) => {
+              const roleId = seat.roleId
+              return (
+                seat.name.trim().length > 0 &&
+                roleId != null &&
+                this.roles.some((role) => role.id === roleId) &&
+                this.isRoleAllowedInCommittee(roleId, committee.type)
+              )
+            }
           )
       )
     )

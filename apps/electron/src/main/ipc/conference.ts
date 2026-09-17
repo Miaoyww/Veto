@@ -4,7 +4,6 @@
  * 管理双窗口模式下的 Display 窗口：
  * - openDisplay — 打开/复用 Display 窗口
  * - closeDisplay — 关闭 Display 窗口
- * - sendToDisplay — 向 Display 窗口推送数据
  * - toggleFullscreen — 切换全屏
  */
 
@@ -81,7 +80,7 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
       displayWindow.current = win
 
       const devUrl = process.env['ELECTRON_RENDERER_URL']
-      const displayPath = `/conference-display/${encodeURIComponent(conferenceId)}`
+      const displayPath = `/display/${encodeURIComponent(conferenceId)}`
       if (isDev() && devUrl) {
         win.loadURL(`${devUrl}${displayPath}`)
       } else {
@@ -103,13 +102,6 @@ export function registerConferenceIpc(displayWindow: DisplayWindowRef): void {
     if (displayWindow.current && !displayWindow.current.isDestroyed()) {
       displayWindow.current.close()
       displayWindow.current = null
-    }
-    return { success: true }
-  })
-
-  ipcMain.handle('veto:conference:send-to-display', (_event, data: unknown) => {
-    if (displayWindow.current && !displayWindow.current.isDestroyed()) {
-      displayWindow.current.webContents.send('veto:conference:display-update', data)
     }
     return { success: true }
   })

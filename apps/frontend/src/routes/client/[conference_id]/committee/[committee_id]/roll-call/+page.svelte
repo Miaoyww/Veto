@@ -13,15 +13,13 @@
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
-  import { getDisplayBridge, buildDisplayData, initWsPort } from '$lib/classes/clients/conference-display-client'
+  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import type { Attendance, ParticipantSeat } from '$lib/classes/types/conference'
   import { isParticipantSeat, toSeatView } from '$lib/classes/types/delegate'
 
   const conferenceId = $derived($page.params.conference_id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
-
-  let wsPort = $state<number | null>(null)
 
   onMount(() => {
     if (conferenceId) {
@@ -30,7 +28,6 @@
         loadConference(conferenceId, committeeId ?? undefined)
       }
     }
-    initWsPort().then((p) => (wsPort = p))
   })
 
   onDestroy(() => {
@@ -207,15 +204,6 @@
     <span class="text-xs text-muted-foreground">{conf?.name}</span>
 
     <div class="ml-auto flex items-center gap-2">
-      {#if wsPort !== null}
-        <span
-          class="select-none text-[11px] text-muted-foreground/70"
-          title="WebSocket 端口：{wsPort}"
-        >
-          WS :{wsPort}
-        </span>
-      {/if}
-
       <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={openDisplayWindow}>
         <Monitor size={12} />
         显示窗口

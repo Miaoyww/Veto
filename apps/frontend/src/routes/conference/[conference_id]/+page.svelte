@@ -113,6 +113,8 @@
           id,
           state: 'pending'
         }))
+        const prepared = await window.veto.hostConsole.prepareService()
+        if (!prepared.ok) throw new Error(prepared.error ?? 'Host Service 启动失败')
         hostStatus = await runHostPreflight({
           conferenceId: targetId,
           readStatus: readHostStatus,

@@ -73,10 +73,12 @@ export interface VetoAPI {
       conferenceIdOrParams: string | { conferenceId?: string; label?: string }
     ) => Promise<{ success: boolean }>
     closeDisplay: () => Promise<{ success: boolean }>
-    sendToDisplay: (data: unknown) => Promise<{ success: boolean }>
     onDisplayUpdate: (callback: (data: unknown) => void) => () => void
   }
   ws: {
+    getPort: () => Promise<number>
+  }
+  displayWs: {
     getPort: () => Promise<number>
   }
   hostConsole: {
@@ -88,6 +90,7 @@ export interface VetoAPI {
     }>
     startConference: (conferenceId: string) => Promise<unknown>
     stopConference: () => Promise<unknown>
+    prepareService: () => Promise<{ ok: boolean; error?: string }>
     releaseDirectiveClaim: (directiveId: string, reason: string) => Promise<unknown>
     auditLog: () => Promise<unknown>
   }

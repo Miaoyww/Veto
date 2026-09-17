@@ -14,6 +14,7 @@ import { registerWindowIpc } from './window'
 import { registerAppIpc } from './app'
 import { registerWsIpc } from './ws'
 import { registerLanIpc } from './lan'
+import { registerDisplayIpc } from './display'
 import { registerStoreIpc } from './store'
 import { registerConfigIpc } from './config'
 import { registerEventBusIpc } from './event-bus'
@@ -29,10 +30,12 @@ import type { BrowserWindow } from 'electron'
 export interface IpcDependencies {
   pluginInstances: PluginInstance[]
   displayWindow: DisplayWindowRef
-  wsServerPort: number
+  getHostServicePort: () => number
   refreshPlugins: () => void
   hostRuntime: HostRuntime
   getHostConsoleWindow: () => BrowserWindow | null
+  startHostService: () => Promise<number>
+  stopHostService: () => Promise<void>
   onActiveConferenceChanged?: () => void
   refreshConfiguredConferences?: () => void
 }
@@ -51,8 +54,9 @@ export function registerAllIpcHandlers(deps: IpcDependencies): void {
   registerUpdaterIpc()
 
   // 有依赖模块
-  registerWsIpc(() => deps.wsServerPort)
-  registerLanIpc(() => deps.wsServerPort, deps.hostRuntime)
+  registerWsIpc(deps.getHostServicePort)
+  registerLanIpc(deps.getHostServicePort, deps.hostRuntime)
+  registerDisplayIpc()
   registerConfigIpc(deps.refreshPlugins)
   registerPluginsIpc(deps.pluginInstances, deps.refreshPlugins)
   registerAssetsIpc(deps.pluginInstances)
@@ -60,6 +64,8 @@ export function registerAllIpcHandlers(deps: IpcDependencies): void {
   registerHostConsoleIpc({
     runtime: deps.hostRuntime,
     getHostConsoleWindow: deps.getHostConsoleWindow,
+    startHostService: deps.startHostService,
+    stopHostService: deps.stopHostService,
     onConferenceChanged: deps.onActiveConferenceChanged,
     refreshConfiguredConferences: deps.refreshConfiguredConferences
   })

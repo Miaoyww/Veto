@@ -37,20 +37,23 @@ export interface ConferenceDisplayBridge {
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
-/** Compatibility helper for the Chair UI status badge. Display data itself
- * travels over the local Electron IPC channel, while this only reads the
- * Host Service listener port for diagnostics. */
-export async function initWsPort(): Promise<number> {
-  if (typeof window !== 'undefined' && window.veto?.ws) {
-    return window.veto.ws.getPort()
-  }
-  return 19527
-}
-
 let _wsListeners: Array<(data: ConferenceDisplayData) => void> = []
 let _tickListeners: Array<(data: TimerTickData) => void> = []
 let _statusListeners: Array<(status: ConnectionStatus) => void> = []
 let _status: ConnectionStatus = 'disconnected'
+
+type DisplaySocketRole = 'chair' | 'display'
+
+interface DisplaySocketMessage {
+  type: 'display_data' | 'timer_tick'
+  committeeId: string
+  data?: unknown
+}
+
+let displaySocket: WebSocket | null = null
+let displaySocketRole: DisplaySocketRole | null = null
+let displaySocketCommitteeId: string | undefined
+const pendingDisplayMessages: DisplaySocketMessage[] = []
 
 function setStatus(status: ConnectionStatus): void {
   for (const cb of _statusListeners) {
@@ -60,6 +63,94 @@ function setStatus(status: ConnectionStatus): void {
 
 function currentStatus(): ConnectionStatus {
   return _status
+}
+
+function getActiveDisplayCommitteeId(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const displayMatch = window.location.pathname.match(/^\/display\/([^/]+)/)
+  if (displayMatch) return displayMatch[1]
+  return window.location.pathname.match(/^\/(?:client|conference)\/[^/]+\/committee\/([^/]+)/)?.[1]
+}
+
+async function connectDisplaySocket(
+  role: DisplaySocketRole,
+  committeeId?: string
+): Promise<void> {
+  const nextCommitteeId = role === 'display' ? getActiveDisplayCommitteeId() : committeeId
+  if (
+    displaySocket?.readyState === WebSocket.OPEN &&
+    displaySocketRole === role &&
+    displaySocketCommitteeId === nextCommitteeId
+  ) {
+    return
+  }
+
+  if (
+    displaySocket?.readyState === WebSocket.CONNECTING &&
+    displaySocketRole === role
+  ) {
+    displaySocketCommitteeId = nextCommitteeId
+    return
+  }
+
+  displaySocket?.close()
+  displaySocket = null
+  displaySocketRole = role
+  displaySocketCommitteeId = nextCommitteeId
+  _status = 'connecting'
+  setStatus(_status)
+
+  const displayPort = await window.veto.displayWs.getPort()
+  const query = new URLSearchParams({ role })
+  if (nextCommitteeId) query.set('committeeId', nextCommitteeId)
+  const socket = new WebSocket(`ws://127.0.0.1:${displayPort}?${query.toString()}`)
+  displaySocket = socket
+
+  socket.onopen = () => {
+    if (displaySocket !== socket) return
+    _status = 'connected'
+    setStatus(_status)
+    for (const message of pendingDisplayMessages.splice(0)) {
+      socket.send(JSON.stringify(message))
+    }
+  }
+
+  socket.onmessage = (event) => {
+    if (displaySocket !== socket || role !== 'display') return
+    try {
+      const message = JSON.parse(String(event.data)) as DisplaySocketMessage
+      if (message.type === 'timer_tick') {
+        for (const callback of _tickListeners) callback(message.data as TimerTickData)
+      } else if (message.type === 'display_data') {
+        for (const callback of _wsListeners) callback(message.data as ConferenceDisplayData)
+      }
+    } catch {
+      // Ignore malformed transport payloads.
+    }
+  }
+
+  socket.onclose = () => {
+    if (displaySocket !== socket) return
+    displaySocket = null
+    _status = 'disconnected'
+    setStatus(_status)
+  }
+
+  socket.onerror = () => {
+    if (displaySocket !== socket) return
+    _status = 'disconnected'
+    setStatus(_status)
+  }
+}
+
+function queueDisplaySocketMessage(message: DisplaySocketMessage): void {
+  if (displaySocket?.readyState === WebSocket.OPEN) {
+    displaySocket.send(JSON.stringify(message))
+    return
+  }
+
+  pendingDisplayMessages.push(message)
+  void connectDisplaySocket('chair', message.committeeId)
 }
 
 /** Listen for the state of the Chair-to-Display local channel. */
@@ -88,13 +179,17 @@ function createHostBridge(): ConferenceDisplayBridge {
     },
 
     sendUpdate: (data: ConferenceDisplayData): void => {
-      _status = 'connected'
-      setStatus(_status)
-      window.veto?.conference?.sendToDisplay(data)
+      queueDisplaySocketMessage({
+        type: 'display_data',
+        committeeId: data.conferenceId,
+        data
+      })
     },
 
     sendTimerTick: (data: TimerTickData): void => {
-      window.veto?.conference?.sendToDisplay({ type: 'timer_tick', data })
+      const committeeId = getActiveDisplayCommitteeId()
+      if (!committeeId) return
+      queueDisplaySocketMessage({ type: 'timer_tick', committeeId, data })
     },
 
     onHostCommand: (): (() => void) => {
@@ -126,8 +221,7 @@ function createDisplayBridge(): ConferenceDisplayBridge {
 
     onHostCommand: (callback: (data: ConferenceDisplayData) => void): (() => void) => {
       _wsListeners.push(callback)
-      _status = 'connected'
-      setStatus(_status)
+      void connectDisplaySocket('display')
       return () => {
         _wsListeners = _wsListeners.filter((cb) => cb !== callback)
       }
@@ -135,23 +229,12 @@ function createDisplayBridge(): ConferenceDisplayBridge {
 
     onTimerTick: (callback: (data: TimerTickData) => void): (() => void) => {
       _tickListeners.push(callback)
+      void connectDisplaySocket('display')
       return () => {
         _tickListeners = _tickListeners.filter((cb) => cb !== callback)
       }
     }
   }
-}
-
-/** Receive a payload delivered by the Chair-owned Electron Display channel. */
-export function receiveDisplayUpdate(payload: unknown): void {
-  const message = payload as { type?: string; data?: unknown }
-  _status = 'connected'
-  setStatus(_status)
-  if (message.type === 'timer_tick') {
-    for (const callback of _tickListeners) callback(message.data as TimerTickData)
-    return
-  }
-  for (const callback of _wsListeners) callback(payload as ConferenceDisplayData)
 }
 
 // ---- 单例 ----------------------------------------------------------------
@@ -160,11 +243,10 @@ let currentBridge: ConferenceDisplayBridge | null = null
 
 export function getDisplayBridge(): ConferenceDisplayBridge {
   if (!currentBridge) {
-    // 根据 URL 判断是 Host 还是 Display
     const isDisplay =
       typeof window !== 'undefined' &&
-      (window.location.hash.includes('conference-display') ||
-        window.location.pathname.includes('conference-display'))
+      (window.location.hash.includes('/display/') ||
+        window.location.pathname.includes('/display/'))
     currentBridge = isDisplay ? createDisplayBridge() : createHostBridge()
   }
   return currentBridge

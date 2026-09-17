@@ -21,6 +21,14 @@ export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?:
 
 /** Open the conference overview. */
 export function navigateToConference(id: string): void {
+  const conference = getConferenceById(id)
+  const committeeId = conference?.committees[0]?.id
+  if (conference?.mode === 'singleton' && committeeId) {
+    openConference(id)
+    goto(resolve(`/client/${id}/committee/${committeeId}`))
+    return
+  }
+
   openConference(id)
   goto(resolve(`/conference/${id}`))
 }
