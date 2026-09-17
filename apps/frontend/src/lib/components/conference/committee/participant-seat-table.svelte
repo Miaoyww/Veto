@@ -144,8 +144,18 @@
                 onValueChange={(value: string) => handleAttendanceChange(seat.id, value)}
                 aria-label={`设置 ${seat.name} 的出席状态`}
               >
-                <ToggleGroup.Item value="present">出席</ToggleGroup.Item>
-                <ToggleGroup.Item value="absent">缺席</ToggleGroup.Item>
+                <ToggleGroup.Item
+                  value="present"
+                  class="data-[state=on]:border-blue-300 data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 dark:data-[state=on]:border-blue-700 dark:data-[state=on]:bg-blue-950/60 dark:data-[state=on]:text-blue-300"
+                >
+                  出席
+                </ToggleGroup.Item>
+                <ToggleGroup.Item
+                  value="absent"
+                  class="data-[state=on]:border-red-300 data-[state=on]:bg-red-100 data-[state=on]:text-red-700 dark:data-[state=on]:border-red-700 dark:data-[state=on]:bg-red-950/60 dark:data-[state=on]:text-red-300"
+                >
+                  缺席
+                </ToggleGroup.Item>
               </ToggleGroup.Root>
             </div>
           </td>
