@@ -193,21 +193,36 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-
         run: |
-          # Release 不存在时创建
-          if ! gh release view "$TAG" \
-            --repo "$REPO" \
-            >/dev/null 2>&1
-          then
+          set -e
+
+          echo "Release tag: $TAG"
+
+          # Release 不存在就创建
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+          else
+            echo "Creating release $TAG"
             gh release create "$TAG" \
               --repo "$REPO" \
               --title "$TAG" \
               --generate-notes
           fi
 
-          # 收集 Windows + macOS 所有发布文件
-          mapfile -d '' files < <(
+          echo "Files to upload:"
+          find artifacts -type f -print
+
+          # 一个文件一个文件上传，避免复杂的 Bash 数组/括号语法
+          while IFS= read -r file; do
+            echo "Uploading: $file"
+
+            gh release upload "$TAG" "$file" \
+              --repo "$REPO" \
+              --clobber
+          done < <(find artifacts -type f)
+
+          echo "GitHub Release upload completed."
+
       - name: Generate latest.json
         shell: bash
         env:
