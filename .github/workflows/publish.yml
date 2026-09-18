@@ -2,13 +2,14 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     strategy:
       matrix:
         include:
@@ -20,9 +21,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -33,7 +36,130 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish
-        run: npx electron-builder --${{ matrix.platform }} --publish always
+      # 这里只构建，不直接发布 GitHub Release
+      # 避免 win / mac 两个任务同时创建 Release
+      - name: Build Electron
+        run: npx electron-builder --${{ matrix.platform }} --publish never
+
+      # 只收集真正需要发布的安装包和更新文件
+      # 避免把 win-unpacked / mac 等目录整个上传
+      - name: Prepare release files
+        shell: bash
+        run: |
+          mkdir -p release-files
+
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+
+          const source = 'dist';
+          const target = 'release-files';
+
+          if (!fs.existsSync(source)) {
+            console.error('dist directory not found');
+            process.exit(1);
+          }
+
+          const allowed = /\.(exe|dmg|zip|yml|yaml|blockmap)$/i;
+
+          for (const file of fs.readdirSync(source)) {
+            const src = path.join(source, file);
+
+            if (
+              fs.statSync(src).isFile() &&
+              allowed.test(file)
+            ) {
+              console.log('Collect:', file);
+              fs.copyFileSync(
+                src,
+                path.join(target, file)
+              );
+            }
+          }
+          "
+
+          echo "Release files:"
+          ls -lah release-files/
+
+      # 临时保存构建结果，供后面的 GitHub Release job 使用
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: release-files/*
+          if-no-files-found: error
+
+      # AWS CLI 用来上传 R2
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install AWS CLI
+        run: python -m pip install awscli
+
+      # 上传 Cloudflare R2
+      - name: Upload to Cloudflare R2
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          aws s3 sync release-files/ \
+            "s3://${R2_BUCKET}/releases/${GITHUB_REF_NAME}/${{ matrix.platform }}/" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: artifacts
+
+      - name: Show artifacts
+        run: find artifacts -type f
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          # 如果 Release 不存在，就创建
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$REPO" \
+              --title "$TAG" \
+              --generate-notes
+          fi
+
+          # 收集所有 Windows / macOS 构建文件
+          mapfile -d '' files < <(
+            find artifacts -type f \
+              \( \
+                -name "*.exe" \
+                -o -name "*.dmg" \
+                -o -name "*.zip" \
+                -o -name "*.yml" \
+                -o -name "*.yaml" \
+                -o -name "*.blockmap" \
+              \) \
+              -print0
+          )
+
+          printf 'Uploading to GitHub Release:\n'
+          printf '%s\n' "${files[@]}"
+
+          gh release upload "$TAG" \
+            "${files[@]}" \
+            --repo "$REPO" \
+            --clobber
