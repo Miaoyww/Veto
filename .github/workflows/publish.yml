@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -26,7 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 你的项目是 pnpm workspace
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -41,24 +40,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 构建 Svelte 前端
-      - name: Build frontend
-        run: pnpm run build:frontend
-
-      # 把前端构建结果复制给 Electron
-      - name: Copy frontend
-        run: node scripts/copy-frontend.mjs
-
-      # apps/electron/package.json 已经有：
-      # build:win
-      # build:mac
+      # 构建逻辑全部交给 package.json
       #
-      # 内部已经会调用 electron-builder
-      - name: Build Electron
-        run: npm --prefix apps/electron run build:${{ matrix.platform }}
+      # Windows:
+      # pnpm run build:win
+      #
+      # macOS:
+      # pnpm run build:mac
+      - name: Build
+        run: pnpm run build:${{ matrix.platform }}
 
-      # 只提取真正需要发布的文件，
-      # 不上传 win-unpacked / mac 等目录
+      # 构建结果位于：
+      # Veto/apps/electron/dist
+      - name: Show build output
+        shell: bash
+        run: |
+          echo "Build output:"
+          find apps/electron/dist -maxdepth 1 -type f -print
+
+      # ==========================================
+      # 收集发布文件
+      # ==========================================
       - name: Prepare release files
         shell: bash
         run: |
@@ -68,15 +70,24 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          const source = 'apps/electron/dist';
+          const source = path.join(
+            'apps',
+            'electron',
+            'dist'
+          );
+
           const target = 'release-files';
 
           if (!fs.existsSync(source)) {
-            console.error(`Build directory not found: ${source}`);
+            console.error(
+              `Build directory not found: ${source}`
+            );
             process.exit(1);
           }
 
-          const allowed = /\.(exe|dmg|zip|yml|yaml|blockmap)$/i;
+          // Electron Builder 常见发布产物
+          const allowed =
+            /\.(exe|dmg|zip|yml|yaml|blockmap)$/i;
 
           for (const file of fs.readdirSync(source)) {
             const src = path.join(source, file);
@@ -97,7 +108,9 @@ jobs:
           const files = fs.readdirSync(target);
 
           if (files.length === 0) {
-            console.error('No release files found');
+            console.error(
+              `No release files found in ${source}`
+            );
             process.exit(1);
           }
 
@@ -109,7 +122,12 @@ jobs:
           }
           EOF
 
-      # 临时保存，用于最终统一创建 GitHub Release
+      # ==========================================
+      # 上传 Actions Artifact
+      #
+      # 后面的 release job 会把 Windows / macOS
+      # 的文件统一下载下来发布 GitHub Release
+      # ==========================================
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -117,14 +135,13 @@ jobs:
           path: release-files/*
           if-no-files-found: error
 
-      # -------------------------
-      # Cloudflare R2
-      # -------------------------
-
+      # ==========================================
+      # 上传 Cloudflare R2
+      # ==========================================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install AWS CLI
         run: python -m pip install awscli
@@ -140,7 +157,7 @@ jobs:
           R2_BUCKET: ${{ vars.R2_BUCKET }}
 
         run: |
-          echo "Uploading ${{ matrix.platform }} release to R2..."
+          echo "Uploading ${{ matrix.platform }} files to R2..."
 
           aws s3 cp \
             release-files/ \
@@ -150,15 +167,16 @@ jobs:
 
   # ==================================================
   # GitHub Release
-  # 等 Windows + macOS 全部构建成功后执行
+  #
+  # 等待 Windows 和 macOS 都完成后，
+  # 再统一创建 GitHub Release。
   # ==================================================
-
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Windows and macOS artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: veto-*
@@ -166,8 +184,8 @@ jobs:
 
       - name: Show release files
         run: |
-          echo "Release files:"
-          find artifacts -type f
+          echo "Files:"
+          find artifacts -type f -print
 
       - name: Create GitHub Release
         shell: bash
@@ -177,7 +195,7 @@ jobs:
           REPO: ${{ github.repository }}
 
         run: |
-          # 创建 Release（如果还不存在）
+          # Release 不存在时创建
           if ! gh release view "$TAG" \
             --repo "$REPO" \
             >/dev/null 2>&1
@@ -188,30 +206,5 @@ jobs:
               --generate-notes
           fi
 
-          # 找出所有构建产物
+          # 收集 Windows + macOS 所有发布文件
           mapfile -d '' files < <(
-            find artifacts \
-              -type f \
-              \( \
-                -name "*.exe" \
-                -o -name "*.dmg" \
-                -o -name "*.zip" \
-                -o -name "*.yml" \
-                -o -name "*.yaml" \
-                -o -name "*.blockmap" \
-              \) \
-              -print0
-          )
-
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No release files found"
-            exit 1
-          fi
-
-          echo "Uploading:"
-          printf ' - %s\n' "${files[@]}"
-
-          gh release upload "$TAG" \
-            "${files[@]}" \
-            --repo "$REPO" \
-            --clobber
