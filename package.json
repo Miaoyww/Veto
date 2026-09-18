@@ -15,6 +15,7 @@
     "build:frontend": "pnpm --filter @vetoexpress/frontend build",
     "build:electron": "pnpm --filter @vetoexpress/electron build",
     "build:win": "pnpm build:frontend && node scripts/copy-frontend.mjs && npm --prefix apps/electron run build:win",
+    "build:mac": "pnpm build:frontend && node scripts/copy-frontend.mjs && npm --prefix apps/electron run build:mac",
     "build": "pnpm build:win",
     "test": "vitest run",
     "sync-version": "tsx scripts/sync-version.ts",

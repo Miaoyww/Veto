@@ -208,3 +208,49 @@ jobs:
 
           # 收集 Windows + macOS 所有发布文件
           mapfile -d '' files < <(
+      - name: Generate latest.json
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+          DOWNLOAD_BASE: https://download.miaoyww.top
+        run: |
+          VERSION="${TAG#v}"
+
+          WIN_FILE=$(find artifacts -type f -name "*.exe" | head -1)
+          MAC_FILE=$(find artifacts -type f -name "*.dmg" | head -1)
+
+          WIN_NAME=$(basename "$WIN_FILE")
+          MAC_NAME=$(basename "$MAC_FILE")
+
+          cat > latest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "tag": "${TAG}",
+            "windows": {
+              "url": "${DOWNLOAD_BASE}/releases/${TAG}/${WIN_NAME}"
+            },
+            "macArm64": {
+              "url": "${DOWNLOAD_BASE}/releases/${TAG}/${MAC_NAME}"
+            }
+          }
+          EOF
+
+          cat latest.json
+      - name: Upload latest.json to R2
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_REGION: auto
+          AWS_DEFAULT_REGION: auto
+
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+
+        run: |
+          aws s3 cp latest.json \
+            "s3://${R2_BUCKET}/releases/latest.json" \
+            --content-type "application/json" \
+            --cache-control "no-cache" \
+            --region auto \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
