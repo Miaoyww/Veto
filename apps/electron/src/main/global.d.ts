@@ -1,0 +1,1 @@
+declare const __VETO_TELEMETRY_ENDPOINT__: string

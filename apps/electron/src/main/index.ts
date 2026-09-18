@@ -26,6 +26,7 @@ import { loadPlugin, unloadAll } from './plugin-host/extension-host/index'
 import { registerAllIpcHandlers, type IpcDependencies } from './ipc'
 import { publishLanConference, stopLanConference } from './lan-service'
 import { loadStore, saveStore } from './data/store'
+import { scheduleLaunchTelemetry } from './telemetry'
 import {
   HostRuntime,
   type HostConference,
@@ -325,6 +326,7 @@ function registerProtocol(): void {
 app.whenReady().then(async () => {
   // 初始化日志
   initializeLogging()
+  scheduleLaunchTelemetry()
 
   electronApp.setAppUserModelId('com.electron')
 

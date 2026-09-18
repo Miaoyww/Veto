@@ -13,6 +13,8 @@ export interface GlobalSettings {
 	displayOffsetX: number;
 	/** Display 窗口主展示区 Y 偏移（px） */
 	displayOffsetY: number;
+	/** 发送匿名应用启动统计 */
+	usageAnalyticsEnabled: boolean;
 }
 
 const DEFAULTS: GlobalSettings = {
@@ -20,7 +22,8 @@ const DEFAULTS: GlobalSettings = {
 	language: 'zh-cn',
 	theme: 'system',
 	displayOffsetX: 0,
-	displayOffsetY: 0
+	displayOffsetY: 0,
+	usageAnalyticsEnabled: true
 };
 
 function createGlobalSettings() {

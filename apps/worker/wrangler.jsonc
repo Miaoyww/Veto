@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "veto-usage",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-18",
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "Veto"
+    }
+  ]
+}

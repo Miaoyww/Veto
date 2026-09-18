@@ -8,6 +8,7 @@
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
   import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
   import { toast } from 'svelte-sonner'
+  import { Switch } from '$lib/components/ui/switch'
   import { Upload, Trash2, Sun, Moon } from '@lucide/svelte'
   import { setMode, userPrefersMode } from 'mode-watcher'
   import { onDestroy } from 'svelte'
@@ -160,6 +161,17 @@
             English
           </Button>
         </div>
+      </SettingCard>
+
+      <!-- 隐私 -->
+      <SettingCard
+        title="匿名使用统计"
+        description="发送匿名启动事件，包括应用版本、系统、架构和随机安装 ID。关闭后从下次启动开始生效。"
+      >
+        <Switch
+          checked={$globalSettings.usageAnalyticsEnabled}
+          onCheckedChange={(checked) => globalSettings.patch({ usageAnalyticsEnabled: checked })}
+        />
       </SettingCard>
     </div>
   </div>
