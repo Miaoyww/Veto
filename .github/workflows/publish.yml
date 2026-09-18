@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 permissions:
   contents: write
@@ -11,10 +11,12 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             platform: win
+
           - os: macos-latest
             platform: mac
 
@@ -24,8 +26,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 你的项目是 pnpm workspace
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
@@ -38,33 +41,38 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 构建 Svelte 前端
+      - name: Build frontend
+        run: pnpm run build:frontend
+
+      # 把前端构建结果复制给 Electron
+      - name: Copy frontend
+        run: node scripts/copy-frontend.mjs
+
+      # apps/electron/package.json 已经有：
+      # build:win
+      # build:mac
+      #
+      # 内部已经会调用 electron-builder
       - name: Build Electron
-        run: pnpm exec electron-builder --${{ matrix.platform }} --publish never
+        run: npm --prefix apps/electron run build:${{ matrix.platform }}
 
-      - name: Build
-        run: npm run build
-
-      # 这里只构建，不直接发布 GitHub Release
-      # 避免 win / mac 两个任务同时创建 Release
-      - name: Build Electron
-        run: npx electron-builder --${{ matrix.platform }} --publish never
-
-      # 只收集真正需要发布的安装包和更新文件
-      # 避免把 win-unpacked / mac 等目录整个上传
+      # 只提取真正需要发布的文件，
+      # 不上传 win-unpacked / mac 等目录
       - name: Prepare release files
         shell: bash
         run: |
           mkdir -p release-files
 
-          node -e "
+          node <<'EOF'
           const fs = require('fs');
           const path = require('path');
 
-          const source = 'dist';
+          const source = 'apps/electron/dist';
           const target = 'release-files';
 
           if (!fs.existsSync(source)) {
-            console.error('dist directory not found');
+            console.error(`Build directory not found: ${source}`);
             process.exit(1);
           }
 
@@ -77,36 +85,50 @@ jobs:
               fs.statSync(src).isFile() &&
               allowed.test(file)
             ) {
-              console.log('Collect:', file);
+              console.log(`Collect: ${file}`);
+
               fs.copyFileSync(
                 src,
                 path.join(target, file)
               );
             }
           }
-          "
 
-          echo "Release files:"
-          ls -lah release-files/
+          const files = fs.readdirSync(target);
 
-      # 临时保存构建结果，供后面的 GitHub Release job 使用
+          if (files.length === 0) {
+            console.error('No release files found');
+            process.exit(1);
+          }
+
+          console.log('');
+          console.log('Release files:');
+
+          for (const file of files) {
+            console.log(` - ${file}`);
+          }
+          EOF
+
+      # 临时保存，用于最终统一创建 GitHub Release
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.platform }}
+          name: veto-${{ matrix.platform }}
           path: release-files/*
           if-no-files-found: error
 
-      # AWS CLI 用来上传 R2
+      # -------------------------
+      # Cloudflare R2
+      # -------------------------
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install AWS CLI
         run: python -m pip install awscli
 
-      # 上传 Cloudflare R2
       - name: Upload to Cloudflare R2
         shell: bash
         env:
@@ -116,43 +138,60 @@ jobs:
 
           R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
+
         run: |
-          aws s3 sync release-files/ \
-            "s3://${R2_BUCKET}/releases/${GITHUB_REF_NAME}/${{ matrix.platform }}/" \
+          echo "Uploading ${{ matrix.platform }} release to R2..."
+
+          aws s3 cp \
+            release-files/ \
+            "s3://${R2_BUCKET}/releases/${GITHUB_REF_NAME}/" \
+            --recursive \
             --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+  # ==================================================
+  # GitHub Release
+  # 等 Windows + macOS 全部构建成功后执行
+  # ==================================================
 
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download all build artifacts
+      - name: Download Windows and macOS artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: release-*
+          pattern: veto-*
           path: artifacts
 
-      - name: Show artifacts
-        run: find artifacts -type f
+      - name: Show release files
+        run: |
+          echo "Release files:"
+          find artifacts -type f
 
       - name: Create GitHub Release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-        shell: bash
+
         run: |
-          # 如果 Release 不存在，就创建
-          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+          # 创建 Release（如果还不存在）
+          if ! gh release view "$TAG" \
+            --repo "$REPO" \
+            >/dev/null 2>&1
+          then
             gh release create "$TAG" \
               --repo "$REPO" \
               --title "$TAG" \
               --generate-notes
           fi
 
-          # 收集所有 Windows / macOS 构建文件
+          # 找出所有构建产物
           mapfile -d '' files < <(
-            find artifacts -type f \
+            find artifacts \
+              -type f \
               \( \
                 -name "*.exe" \
                 -o -name "*.dmg" \
@@ -164,8 +203,13 @@ jobs:
               -print0
           )
 
-          printf 'Uploading to GitHub Release:\n'
-          printf '%s\n' "${files[@]}"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release files found"
+            exit 1
+          fi
+
+          echo "Uploading:"
+          printf ' - %s\n' "${files[@]}"
 
           gh release upload "$TAG" \
             "${files[@]}" \
