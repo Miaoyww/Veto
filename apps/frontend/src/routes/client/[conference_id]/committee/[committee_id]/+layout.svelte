@@ -57,7 +57,7 @@
       {#if inCommittee && activeConference && activeCommittee}
         <Sidebar.Menu class="p-3">
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton onclick={() => goto(resolve('/'))}>
+            <Sidebar.MenuButton onclick={() => goto(resolve('/conference'))}>
               <ArrowLeft />
               <span>返回首页</span>
             </Sidebar.MenuButton>
