@@ -9,11 +9,10 @@ const log = createLogger('Telemetry')
 const INSTALLATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export interface LaunchTelemetry {
-  event: 'app_started'
-  version: string
+  event: 'app_open'
+  install_id: string
+  app_version: string
   platform: string
-  arch: string
-  installationId: string
 }
 
 export function getTelemetryDirectory(): string {
@@ -46,6 +45,7 @@ export function isTelemetryEnabled(): boolean {
 
 export async function sendLaunchTelemetry(
   endpoint: string,
+  ingestKey: string,
   payload: LaunchTelemetry,
   fetchImpl: typeof fetch = fetch,
   timeoutMs = 3000
@@ -57,7 +57,8 @@ export async function sendLaunchTelemetry(
     const response = await fetchImpl(endpoint, {
       method: 'POST',
       headers: {
-        'content-type': 'application/json'
+        'content-type': 'application/json',
+        'x-ingest-key': ingestKey
       },
       body: JSON.stringify(payload),
       signal: controller.signal
@@ -72,7 +73,7 @@ export async function sendLaunchTelemetry(
 let scheduled = false
 
 function reportLaunch(): void {
-  if (!__VETO_TELEMETRY_ENDPOINT__) return
+  if (!__VETO_USAGE_ENDPOINT__ || !__VETO_USAGE_INGEST_KEY__) return
 
   if (!isTelemetryEnabled()) {
     log.info('Usage telemetry is disabled')
@@ -82,14 +83,13 @@ function reportLaunch(): void {
   try {
     const installationId = getOrCreateInstallationId()
     const payload: LaunchTelemetry = {
-      event: 'app_started',
-      version: app.getVersion(),
-      platform: process.platform,
-      arch: process.arch,
-      installationId
+      event: 'app_open',
+      install_id: installationId,
+      app_version: app.getVersion(),
+      platform: process.platform
     }
 
-    void sendLaunchTelemetry(__VETO_TELEMETRY_ENDPOINT__, payload)
+    void sendLaunchTelemetry(__VETO_USAGE_ENDPOINT__, __VETO_USAGE_INGEST_KEY__, payload)
       .then((sent) => {
         if (sent) {
           log.info('Anonymous usage telemetry sent')

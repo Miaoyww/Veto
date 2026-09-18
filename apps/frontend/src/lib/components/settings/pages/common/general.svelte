@@ -166,7 +166,7 @@
       <!-- 隐私 -->
       <SettingCard
         title="匿名使用统计"
-        description="发送匿名启动事件，包括应用版本、系统、架构和随机安装 ID。关闭后从下次启动开始生效。"
+        description="发送匿名启动事件，包括应用版本、系统平台和随机安装 ID。关闭后从下次启动开始生效。"
       >
         <Switch
           checked={$globalSettings.usageAnalyticsEnabled}
@@ -188,8 +188,9 @@
             <Accordion.Item value="item-1">
               <Accordion.Trigger
                 class="mb-2 text-sm font-semibold text-stone-500 dark:text-stone-400"
-                >{group}</Accordion.Trigger
               >
+                {group}
+              </Accordion.Trigger>
               <Accordion.Content>
                 {#if shortcutsByGroup[group].length === 0}
                   <p class="text-xs text-muted-foreground">暂无快捷键</p>
@@ -206,8 +207,8 @@
                       </SettingCard>
                     {/each}
                   </div>
-                {/if}</Accordion.Content
-              >
+                {/if}
+              </Accordion.Content>
             </Accordion.Item>
           </Accordion.Root>
         </div>

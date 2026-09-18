@@ -35,25 +35,24 @@ describe('telemetry', () => {
 
   describe('launch telemetry', () => {
     const payload: LaunchTelemetry = {
-      event: 'app_started',
-      version: '0.124.0',
-      platform: 'win32',
-      arch: 'x64',
-      installationId: uuid
+      event: 'app_open',
+      install_id: uuid,
+      app_version: '0.124.0',
+      platform: 'win32'
     }
 
     it('posts the payload with a JSON content type', async () => {
       const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
 
       await expect(
-        sendLaunchTelemetry('https://veto-usage.example.workers.dev/v1/events', payload, fetchImpl)
+        sendLaunchTelemetry('https://api.miaoyww.top/event', 'ingest-key', payload, fetchImpl)
       ).resolves.toBe(true)
 
       expect(fetchImpl).toHaveBeenCalledWith(
-        'https://veto-usage.example.workers.dev/v1/events',
+        'https://api.miaoyww.top/event',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'x-ingest-key': 'ingest-key' },
           body: JSON.stringify(payload)
         })
       )
@@ -63,7 +62,12 @@ describe('telemetry', () => {
       const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 500 }))
 
       await expect(
-        sendLaunchTelemetry('https://veto-usage.example.workers.dev/v1/events', payload, fetchImpl)
+        sendLaunchTelemetry(
+          'https://veto-usage.example.workers.dev/v1/events',
+          'ingest-key',
+          payload,
+          fetchImpl
+        )
       ).resolves.toBe(false)
     })
   })
