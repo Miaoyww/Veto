@@ -9,6 +9,7 @@
     "dev": "pnpm --parallel --filter \"@vetoexpress/electron\" --filter \"@vetoexpress/frontend\" dev",
     "dev:electron": "pnpm --filter \"@vetoexpress/electron\" dev",
     "dev:frontend": "pnpm --filter \"@vetoexpress/frontend\" dev",
+    "proxy": "node scripts/api-proxy.mjs",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
     "typecheck": "pnpm -r typecheck",

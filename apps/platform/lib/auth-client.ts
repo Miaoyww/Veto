@@ -33,7 +33,10 @@ async function request<T>(path: string, body: unknown): Promise<T> {
 
   if (!response.ok || payload?.ok === false) {
     const message =
-      typeof payload === "object" && payload !== null && "error" in payload && payload.error
+      typeof payload === "object" &&
+      payload !== null &&
+      "error" in payload &&
+      payload.error
         ? String(payload.error)
         : "请求失败"
     throw new AuthError(message, response.status)
@@ -54,10 +57,7 @@ export async function sendVerificationCode(email: string): Promise<void> {
   await request<{ ok: true }>("/v1/auth/send-code", { email })
 }
 
-export async function verifyCode(
-  email: string,
-  code: string
-): Promise<string> {
+export async function verifyCode(email: string, code: string): Promise<string> {
   const result = await request<{ ok: true; regToken: string }>(
     "/v1/auth/verify-code",
     { email, code }
@@ -70,10 +70,13 @@ export async function register(
   password: string,
   name?: string
 ): Promise<string> {
-  const result = await request<{ ok: true; token: string }>("/v1/auth/register", {
-    regToken,
-    password,
-    name: name?.trim() || undefined,
-  })
+  const result = await request<{ ok: true; token: string }>(
+    "/v1/auth/register",
+    {
+      regToken,
+      password,
+      name: name?.trim() || undefined,
+    }
+  )
   return result.token
 }
