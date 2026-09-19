@@ -1,432 +1,314 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { fly } from 'svelte/transition'
-  import { ArrowLeft, Loader2, LogIn, Monitor } from '@lucide/svelte'
+  import { ArrowRight, Building2, CalendarDays, Play, Plus, Search, Users } from '@lucide/svelte'
+
+  import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
-  import { Input } from '$lib/components/ui/input'
-  import * as InputOTP from '$lib/components/ui/input-otp'
-  import DescContent from '$lib/components/connect/desc-content.svelte'
-  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
-  import favicon from '$lib/assets/favicon.png'
-  import feishu from '$lib/assets/feishu.png'
-  import wechat from '$lib/assets/wechat.png'
+  import * as Empty from '$lib/components/ui/empty'
+  import * as InputGroup from '$lib/components/ui/input-group'
+  import { ScrollArea } from '$lib/components/ui/scroll-area'
+  import ConferenceCard from '$lib/components/home/conference-card.svelte'
+  import TextAnimate from '$lib/components/ui/text-animate.svelte'
+  import TypingAnimation from '$lib/components/ui/typing-animation.svelte'
   import {
-    consumePendingUserClientAuthentication,
-    setPendingUserClientAuthentication,
-    setUserClientWsUrl
-  } from '$lib/classes/clients/delegate-client'
-  import {
-    CloudJoinError,
-    claimCloudSeat,
-    normalizeInviteCode,
-    validateCloudInvite,
-    type CloudJoinTarget
-  } from '$lib/classes/clients/cloud-join-client'
+    conferences,
+    lastOpenedConferenceId,
+    unloadConference
+  } from '$lib/classes/stores/conference/conference-store'
+  import { navigateToConference } from '$lib/classes/utils'
 
-  type JoinStage = 'invite' | 'claim' | 'password'
+  let query = $state('')
 
-  let stage = $state<JoinStage>('invite')
-  let inviteCode = $state('')
-  let joinTarget = $state<CloudJoinTarget | null>(null)
-  let displayName = $state('')
-  let password = $state('')
-  let busy = $state(false)
-  let error = $state('')
+  const filteredConferences = $derived(
+    query.trim()
+      ? $conferences.filter(
+          (conference) =>
+            conference.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+            conference.committees.some((committee) =>
+              committee.name.toLowerCase().includes(query.trim().toLowerCase())
+            )
+        )
+      : $conferences
+  )
 
-  function enterOffline(): void {
-    setUserClientWsUrl(null)
-    goto(resolve('/conference'))
-  }
+  const lastOpened = $derived(
+    $lastOpenedConferenceId
+      ? ($conferences.find((conference) => conference.id === $lastOpenedConferenceId) ?? null)
+      : null
+  )
 
-  function resetJoin(): void {
-    stage = 'invite'
-    joinTarget = null
-    displayName = ''
-    password = ''
-    error = ''
-  }
-
-  function enterCloud(target: CloudJoinTarget): void {
-    setUserClientWsUrl(target.wsUrl)
-    setPendingUserClientAuthentication({
-      inviteCode: target.inviteCode,
-      password: password.trim() || undefined
-    })
-    goto(
-      resolve('/client/[conference_id]', {
-        conference_id: target.conferenceId
-      })
+  const conferenceStats = $derived({
+    total: $conferences.length,
+    committees: $conferences.reduce((count, conference) => count + conference.committees.length, 0),
+    seats: $conferences.reduce(
+      (count, conference) =>
+        count +
+        conference.committees.reduce(
+          (committeeCount, committee) => committeeCount + committee.seats.length,
+          0
+        ),
+      0
     )
+  })
+
+  onMount(() => {
+    unloadConference()
+  })
+
+  function openCreatePage(): void {
+    goto(resolve('/conference/create'))
   }
 
-  function errorMessage(exception: unknown): string {
-    return exception instanceof Error ? exception.message : '加入大会失败'
+  function formatDate(ts: number): string {
+    return new Date(ts).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
   }
 
-  async function submitInvite(event: SubmitEvent): Promise<void> {
-    event.preventDefault()
-    busy = true
-    error = ''
-
-    try {
-      const normalizedCode = normalizeInviteCode(inviteCode)
-      inviteCode = normalizedCode
-      const target = await validateCloudInvite(normalizedCode)
-      joinTarget = { ...target, inviteCode: normalizedCode }
-      password = ''
-
-      if (target.seatState === 'unclaimed') {
-        stage = 'claim'
-      } else if (target.hasPassword) {
-        stage = 'password'
-      } else {
-        enterCloud(joinTarget)
-      }
-    } catch (exception) {
-      error = errorMessage(exception)
-    } finally {
-      busy = false
-    }
-  }
-
-  async function submitClaim(event: SubmitEvent): Promise<void> {
-    event.preventDefault()
-    if (!joinTarget || !displayName.trim()) return
-
-    busy = true
-    error = ''
-
-    try {
-      const target = await claimCloudSeat({
-        inviteCode: joinTarget.inviteCode,
-        displayName: displayName.trim(),
-        password: password.trim() || undefined
-      })
-      enterCloud(target)
-    } catch (exception) {
-      error =
-        exception instanceof CloudJoinError && exception.status === 409
-          ? '该席位已被认领，请返回后使用密码进入'
-          : errorMessage(exception)
-    } finally {
-      busy = false
-    }
-  }
-
-  async function submitClaimed(event: SubmitEvent): Promise<void> {
-    event.preventDefault()
-    if (!joinTarget) return
-
-    busy = true
-    error = ''
-
-    try {
-      enterCloud(joinTarget)
-    } catch (exception) {
-      error = errorMessage(exception)
-    } finally {
-      busy = false
-    }
+  function resumeConference(): void {
+    if (lastOpened) navigateToConference(lastOpened.id)
   }
 </script>
 
-<div class="relative min-h-svh overflow-clip bg-background">
-  <div class="flowing-background" aria-hidden="true">
-    <span class="flowing-background__veil flowing-background__veil--strong"></span>
-    <span class="flowing-background__veil flowing-background__veil--soft"></span>
-  </div>
+<div class="page-shell relative flex h-screen min-h-0 flex-col overflow-hidden bg-background">
+  <div class="page-grid pointer-events-none absolute inset-0 opacity-50" aria-hidden="true"></div>
+  <div
+    class="page-orb page-orb-primary page-orb-primary-compact pointer-events-none"
+    aria-hidden="true"
+  ></div>
 
-  <div class="absolute left-8 top-12 z-20 flex items-center gap-3 text-sm font-medium">
-    <div class="flex size-9 items-center justify-center">
-      <img src={favicon} alt="Veto" class="size-8" />
+  <header
+    class="relative z-10 shrink-0 border-b bg-background/75 px-6 py-6 backdrop-blur-xl sm:px-8 lg:px-10"
+  >
+    <div class="mx-auto flex max-w-6xl flex-col gap-6">
+      <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+        <div class="min-w-0">
+          <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <TextAnimate
+              text="继续你的会议节奏"
+              className="font-semibold"
+              as="span"
+              by="word"
+              animation="blurInUp"
+              startOnView={false}
+              once
+            />
+          </h1>
+          <p class="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+            <span>每一场大会, 都值得悉心准备</span>
+          </p>
+        </div>
+
+        <Button size="lg" class="shrink-0" onclick={openCreatePage}>
+          <Plus data-icon="inline-start" />
+          创建大会
+          <ArrowRight data-icon="inline-end" />
+        </Button>
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <InputGroup.Root class="max-w-xl flex-1 bg-background/70">
+          <InputGroup.Addon>
+            <Search />
+          </InputGroup.Addon>
+          <InputGroup.Input
+            bind:value={query}
+            placeholder="搜索大会或委员会..."
+            aria-label="搜索大会或委员会"
+          />
+        </InputGroup.Root>
+        <Badge variant="secondary" class="self-start px-3 py-1 sm:self-auto">
+          {filteredConferences.length} / {conferenceStats.total} 场大会
+        </Badge>
+      </div>
     </div>
-    <span class="text-lg">Veto</span>
-  </div>
+  </header>
 
-  <div class="absolute left-0 right-0 top-0 z-20 flex h-9 items-center">
-    <div class="drag-region h-full flex-1"></div>
-    <WindowControls />
-  </div>
-
-  <div class="relative z-10 flex min-h-svh items-center justify-center">
-    <div class="flex w-full max-w-7xl items-center">
-      <DescContent />
-
-      <section class="flex w-full items-center justify-center px-6 py-12 lg:w-[560px]">
-        <Card.Root
-          class="w-full max-w-md rounded-2xl border bg-card/90 p-0 shadow-2xl backdrop-blur-xl"
-        >
-          <Card.Header class="p-6 pb-4">
-            <Card.Title class="text-2xl font-bold">加入大会</Card.Title>
-            <Card.Description class="text-sm text-muted-foreground">
-              使用席位邀请码进入云端大会
-            </Card.Description>
+  <ScrollArea class="relative z-10 min-h-0 flex-1">
+    <main class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+      <section aria-labelledby="overview-heading" class="grid gap-3 sm:grid-cols-3">
+        <h2 id="overview-heading" class="sr-only">大会概览</h2>
+        <Card.Root class="bg-card/70 shadow-sm backdrop-blur-sm">
+          <Card.Header class="pb-2">
+            <Card.Description>大会</Card.Description>
+            <Card.Title class="text-3xl tracking-tight">{conferenceStats.total}</Card.Title>
           </Card.Header>
-
-          <Card.Content class="px-6 pb-5">
-            {#key stage}
-              <div in:fly={{ y: 8, duration: 180 }} out:fly={{ y: -8, duration: 120 }}>
-                {#if stage === 'invite'}
-                  <form class="flex flex-col gap-4" onsubmit={submitInvite}>
-                    <InputOTP.Root
-                      bind:value={inviteCode}
-                      class="justify-center"
-                      maxlength={8}
-                      inputmode="text"
-                      pattern="[A-HJ-NP-Za-hj-np-z2-9]"
-                      autocomplete="off"
-                      aria-label="席位邀请码"
-                      pasteTransformer={(value) =>
-                        value.toUpperCase().replace(/[^A-HJ-NP-Za-hj-np-z2-9]/g, '')}
-                    >
-                      {#snippet children({ cells })}
-                        <InputOTP.Group class="gap-2">
-                          {#each cells.slice(0, 4) as cell, index (index)}
-                            <InputOTP.Slot
-                              {cell}
-                              class="h-12 w-10 rounded-lg border text-base font-mono uppercase"
-                            />
-                          {/each}
-                        </InputOTP.Group>
-                        <InputOTP.Separator class="mx-1 text-muted-foreground" />
-                        <InputOTP.Group class="gap-2">
-                          {#each cells.slice(4, 8) as cell, index (index)}
-                            <InputOTP.Slot
-                              {cell}
-                              class="h-12 w-10 rounded-lg border text-base font-mono uppercase"
-                            />
-                          {/each}
-                        </InputOTP.Group>
-                      {/snippet}
-                    </InputOTP.Root>
-                    <Button type="submit" size="lg" disabled={busy || !inviteCode.trim()}>
-                      {#if busy}
-                        <Loader2 class="size-4 animate-spin" />
-                      {:else}
-                        <LogIn class="size-4" />
-                      {/if}
-                      加入
-                    </Button>
-                  </form>
-                {:else if stage === 'claim' && joinTarget}
-                  <div class="rounded-xl border bg-background/60 p-4">
-                    <p class="truncate text-sm font-medium">{joinTarget.conferenceName}</p>
-                    <p class="mt-1 truncate text-xs text-muted-foreground">
-                      {joinTarget.committeeName} · {joinTarget.seatName}
-                    </p>
-                  </div>
-
-                  <form class="mt-4 flex flex-col gap-4" onsubmit={submitClaim}>
-                    <Input
-                      bind:value={displayName}
-                      class="h-12"
-                      aria-label="代表姓名"
-                      placeholder="代表姓名"
-                      autocomplete="name"
-                    />
-                    <Input
-                      bind:value={password}
-                      class="h-12"
-                      type="password"
-                      aria-label="访问密码（可选）"
-                      placeholder="访问密码（可选）"
-                      autocomplete="new-password"
-                    />
-                    <div class="flex gap-3">
-                      <Button
-                        type="submit"
-                        size="lg"
-                        class="flex-1"
-                        disabled={busy || !displayName.trim()}
-                      >
-                        {#if busy}
-                          <Loader2 class="size-4 animate-spin" />
-                        {:else}
-                          <LogIn class="size-4" />
-                        {/if}
-                        确认加入
-                      </Button>
-                      <Button type="button" variant="ghost" size="lg" onclick={resetJoin}>
-                        <ArrowLeft class="size-4" />
-                        返回
-                      </Button>
-                    </div>
-                  </form>
-                {:else if stage === 'password' && joinTarget}
-                  <div class="rounded-xl border bg-background/60 p-4">
-                    <p class="truncate text-sm font-medium">{joinTarget.conferenceName}</p>
-                    <p class="mt-1 truncate text-xs text-muted-foreground">
-                      {joinTarget.committeeName} · {joinTarget.seatName}
-                    </p>
-                  </div>
-
-                  <form class="mt-4 flex flex-col gap-4" onsubmit={submitClaimed}>
-                    <Input
-                      bind:value={password}
-                      class="h-12"
-                      type="password"
-                      aria-label="访问密码"
-                      placeholder="访问密码"
-                      autocomplete="current-password"
-                    />
-                    <div class="flex gap-3">
-                      <Button type="submit" size="lg" class="flex-1" disabled={busy}>
-                        {#if busy}
-                          <Loader2 class="size-4 animate-spin" />
-                        {:else}
-                          <LogIn class="size-4" />
-                        {/if}
-                        进入席位
-                      </Button>
-                      <Button type="button" variant="ghost" size="lg" onclick={resetJoin}>
-                        <ArrowLeft class="size-4" />
-                        返回
-                      </Button>
-                    </div>
-                  </form>
-                {/if}
-
-                {#if error}
-                  <p class="mt-3 text-sm text-destructive">{error}</p>
-                {/if}
-              </div>
-            {/key}
-          </Card.Content>
-
-          <Card.Footer class="flex-col gap-3 border-t p-6">
-            <div class="flex w-full gap-3">
-              <Button
-                variant="outline"
-                type="button"
-                class="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
-                onclick={enterOffline}
-              >
-                <Monitor class="size-5" />
-                离线模式
-              </Button>
-
-              <button
-                type="button"
-                class="size-12 rounded-lg border bg-card p-0 shadow-sm"
-                aria-label="微信登录"
-              >
-                <img src={wechat} class="mx-auto size-5" alt="" />
-              </button>
-
-              <button
-                type="button"
-                class="size-12 rounded-lg border bg-card p-0 shadow-sm"
-                aria-label="飞书登录"
-              >
-                <img src={feishu} class="mx-auto size-5" alt="" />
-              </button>
-            </div>
-          </Card.Footer>
+          <Card.Content class="pt-0 text-xs text-muted-foreground">你的会议总数</Card.Content>
+        </Card.Root>
+        <Card.Root class="bg-card/70 shadow-sm backdrop-blur-sm">
+          <Card.Header class="pb-2">
+            <Card.Description>委员会</Card.Description>
+            <Card.Title class="text-3xl tracking-tight">{conferenceStats.committees}</Card.Title>
+          </Card.Header>
+          <Card.Content class="pt-0 text-xs text-muted-foreground">已配置的讨论空间</Card.Content>
+        </Card.Root>
+        <Card.Root class="bg-card/70 shadow-sm backdrop-blur-sm">
+          <Card.Header class="pb-2">
+            <Card.Description>席位</Card.Description>
+            <Card.Title class="text-3xl tracking-tight">{conferenceStats.seats}</Card.Title>
+          </Card.Header>
+          <Card.Content class="pt-0 text-xs text-muted-foreground">等待参与者入场</Card.Content>
         </Card.Root>
       </section>
-    </div>
-  </div>
+
+      {#if lastOpened && !query.trim()}
+        <section aria-labelledby="continue-heading">
+          <div class="mb-3 flex items-end justify-between gap-4">
+            <div>
+              <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                最近打开
+              </p>
+              <h2 id="continue-heading" class="mt-1 text-lg font-semibold tracking-tight">
+                回到上次的现场
+              </h2>
+            </div>
+            <Badge variant="outline" class="hidden sm:inline-flex">快速进入</Badge>
+          </div>
+
+          <Card.Root
+            class="group relative cursor-pointer overflow-hidden border-primary/25 bg-card/80 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+            role="link"
+            tabindex={0}
+            onclick={resumeConference}
+            onkeydown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                resumeConference()
+              }
+            }}
+          >
+            <div class="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true"></div>
+            <Card.Content class="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
+              <div
+                class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+              >
+                <Play class="size-5" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-medium uppercase tracking-[0.16em] text-primary">继续上次</p>
+                <p class="mt-1 truncate text-lg font-semibold">{lastOpened.name}</p>
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span class="flex items-center gap-1.5">
+                    <Building2 class="size-3.5" />
+                    {lastOpened.committees.length} 个会场
+                  </span>
+                  <span class="flex items-center gap-1.5">
+                    <CalendarDays class="size-3.5" />
+                    {formatDate(lastOpened.createdAt)}
+                  </span>
+                  <span class="flex items-center gap-1.5">
+                    <Users class="size-3.5" />
+                    {lastOpened.committees.reduce(
+                      (count, committee) => count + committee.seats.length,
+                      0
+                    )} 个席位
+                  </span>
+                </div>
+              </div>
+              <Button
+                class="shrink-0"
+                onclick={(event) => {
+                  event.stopPropagation()
+                  resumeConference()
+                }}
+              >
+                进入工作台
+                <ArrowRight data-icon="inline-end" />
+              </Button>
+            </Card.Content>
+          </Card.Root>
+        </section>
+      {/if}
+
+      <section aria-labelledby="conference-list-heading">
+        <div class="mb-3 flex items-end justify-between gap-4">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              你的收藏
+            </p>
+            <h2 id="conference-list-heading" class="mt-1 text-lg font-semibold tracking-tight">
+              所有大会
+            </h2>
+          </div>
+          {#if query.trim()}
+            <span class="text-xs text-muted-foreground">搜索结果已实时更新</span>
+          {/if}
+        </div>
+
+        {#if filteredConferences.length === 0}
+          <Empty.Root class="min-h-64 border bg-card/45 shadow-sm">
+            <Empty.Header>
+              <Empty.Media variant="icon">
+                <Search class="size-4" />
+              </Empty.Media>
+              <Empty.Title>未找到匹配的大会</Empty.Title>
+              <Empty.Description>试试其他关键词，或者清空搜索重新浏览。</Empty.Description>
+            </Empty.Header>
+            <Empty.Content>
+              <Button variant="outline" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+            </Empty.Content>
+          </Empty.Root>
+        {:else}
+          <div class="flex flex-col gap-3">
+            {#each filteredConferences as conference (conference.id)}
+              <ConferenceCard {conference} />
+            {/each}
+          </div>
+        {/if}
+      </section>
+    </main>
+    <div class="h-10"></div>
+  </ScrollArea>
 </div>
 
 <style>
-  .drag-region {
-    -webkit-app-region: drag;
+  .page-shell {
+    isolation: isolate;
   }
 
-  .flowing-background {
-    --flow-color-strong: oklch(0.73 0.14 68);
-    --flow-color-soft: oklch(0.88 0.08 78);
-    --flow-opacity-strong: 0.2;
-    --flow-opacity-soft: 0.32;
-    --flow-blur: 4rem;
-    --flow-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  .page-grid {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in oklch, var(--border) 42%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--border) 42%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, black, transparent 75%);
+  }
 
+  .page-orb {
     position: absolute;
-    inset: -16%;
-    overflow: hidden;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    filter: blur(72px);
     pointer-events: none;
-    contain: paint;
-    background: linear-gradient(
-      135deg,
-      color-mix(in oklch, var(--flow-color-soft) 12%, var(--background)),
-      var(--background)
-    );
+    opacity: 0.18;
   }
 
-  :global(.dark) .flowing-background {
-    --flow-color-strong: oklch(0.62 0.14 68);
-    --flow-color-soft: oklch(0.48 0.09 78);
-    --flow-opacity-strong: 0.24;
-    --flow-opacity-soft: 0.2;
+  .page-orb-primary {
+    top: -18rem;
+    right: -12rem;
+    width: min(48rem, 72vw);
+    background: color-mix(in oklch, var(--primary) 70%, transparent);
   }
 
-  .flowing-background__veil {
-    position: absolute;
-    display: block;
-    border-radius: 50%;
-    filter: blur(var(--flow-blur));
-    will-change: transform;
-  }
-
-  .flowing-background__veil--strong {
-    inset-block-start: -8%;
-    inset-inline-start: -12%;
-    width: clamp(24rem, 62vw, 62rem);
-    aspect-ratio: 1.55;
-    background: var(--flow-color-strong);
-    opacity: var(--flow-opacity-strong);
-    animation: flow-strong 22s var(--flow-ease) -6s infinite alternate;
-  }
-
-  .flowing-background__veil--soft {
-    inset-block-end: -12%;
-    inset-inline-end: -10%;
-    width: clamp(24rem, 62vw, 62rem);
-    aspect-ratio: 1.35;
-    background: var(--flow-color-soft);
-    opacity: var(--flow-opacity-soft);
-    animation: flow-soft 28s var(--flow-ease) -14s infinite alternate;
-  }
-
-  @keyframes flow-strong {
-    from {
-      transform: translate3d(-6%, -4%, 0) rotate(-7deg) scale(1);
-    }
-
-    to {
-      transform: translate3d(24%, 16%, 0) rotate(8deg) scale(1.08);
-    }
-  }
-
-  @keyframes flow-soft {
-    from {
-      transform: translate3d(8%, 10%, 0) rotate(6deg) scale(1.04);
-    }
-
-    to {
-      transform: translate3d(-22%, -14%, 0) rotate(-8deg) scale(0.96);
-    }
-  }
-
-  @media (min-width: 40rem) {
-    .flowing-background {
-      --flow-opacity-strong: 0.28;
-      --flow-opacity-soft: 0.38;
-      --flow-blur: clamp(5rem, 8vw, 8rem);
-    }
-
-    :global(.dark) .flowing-background {
-      --flow-opacity-strong: 0.28;
-      --flow-opacity-soft: 0.24;
-    }
+  .page-orb-primary-compact {
+    top: -24rem;
+    right: -16rem;
+    width: min(40rem, 55vw);
+    opacity: 0.12;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .flowing-background__veil {
-      animation: none;
-      will-change: auto;
+    .page-orb {
+      filter: blur(52px);
     }
   }
 </style>
