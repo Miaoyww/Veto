@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -7,6 +7,10 @@ const api = {}
 // ── Veto Plugin API ────────────────────────────────────────────────────
 
 const veto = {
+  openExternal: (url: string) => {
+    return ipcRenderer.invoke('veto:open-external', url)
+  },
+
   plugins: {
     /** 获取已安装插件列表 */
     list: (): Promise<
@@ -78,10 +82,8 @@ const veto = {
       ipcRenderer.invoke('veto:config:get'),
 
     /** 保存插件配置 */
-    set: (config: {
-      disabled: string[]
-      order?: string[]
-    }): Promise<{ success: boolean }> => ipcRenderer.invoke('veto:config:set', config)
+    set: (config: { disabled: string[]; order?: string[] }): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('veto:config:set', config)
   },
 
   assets: {
@@ -95,11 +97,11 @@ const veto = {
 
   events: {
     /** 订阅主进程事件（返回取消订阅函数） */
-    on: (
-      event: string,
-      callback: (data: unknown) => void
-    ): (() => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, payload: { event: string; data: unknown }) => {
+    on: (event: string, callback: (data: unknown) => void): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { event: string; data: unknown }
+      ) => {
         if (payload.event === event) {
           callback(payload.data)
         }
@@ -113,8 +115,7 @@ const veto = {
 
   store: {
     /** 从文件加载数据 */
-    load: (domain: string): Promise<unknown> =>
-      ipcRenderer.invoke('veto:store:load', domain),
+    load: (domain: string): Promise<unknown> => ipcRenderer.invoke('veto:store:load', domain),
 
     /** 保存数据到文件 */
     save: (domain: string, data: unknown): Promise<{ success: boolean }> =>
@@ -217,7 +218,9 @@ const veto = {
     }> => ipcRenderer.invoke('veto:lan:get-server-info'),
 
     /** 手动查询局域网内某个 Chair 端正在开放的会议 */
-    queryConference: (address: string): Promise<{
+    queryConference: (
+      address: string
+    ): Promise<{
       conferenceId: string
       name: string
       phase: string
@@ -261,6 +264,8 @@ const veto = {
     }
   }
 }
+
+contextBridge.exposeInMainWorld('veto', veto)
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

@@ -1,5 +1,8 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+// global.d.ts
+export {}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -9,6 +12,7 @@ declare global {
 }
 
 export interface VetoAPI {
+  openExternal: (url: string) => Promise<void>
   plugins: {
     list: () => Promise<
       Array<{

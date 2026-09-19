@@ -3,6 +3,7 @@
   import * as ToggleGroup from '$lib/components/ui/toggle-group'
   import type { ConferenceCreateMode } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
+  import { Button } from '$lib/components/ui/button'
 
   function isCreateMode(value: string): value is ConferenceCreateMode {
     return value === 'conference' || value === 'singleton'
@@ -18,9 +19,18 @@
 <Field.FieldGroup>
   <Field.Field data-invalid={showModeError}>
     <Field.FieldTitle id="conference-mode-label">
-      创建模式<span class="text-destructive"> *</span>
+      创建模式
+      <span class="text-destructive">*</span>
     </Field.FieldTitle>
-    <Field.FieldDescription>请先选择会议组织方式，然后继续填写大会信息。</Field.FieldDescription>
+    <Field.FieldDescription>请先选择会议组织方式，然后继续填写大会信息.</Field.FieldDescription>
+    <Field.FieldDescription>
+      请前往<Button
+        variant="link"
+        onclick={() => window.veto.openExternal('https://platform.miaoyww.top/')}
+      >
+        Veto平台
+      </Button>创建大会.
+    </Field.FieldDescription>
 
     <ToggleGroup.Root
       type="single"
@@ -32,6 +42,7 @@
       <ToggleGroup.Item
         value="conference"
         class="h-auto min-w-0 flex-1 flex-col items-start gap-2 rounded-xl border p-4 text-left"
+        disabled
       >
         <span class="text-sm font-medium">大会模式</span>
         <span class="text-sm font-normal text-muted-foreground">
