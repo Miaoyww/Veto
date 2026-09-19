@@ -1,128 +1,143 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Cloud, Loader2, LogOut, Monitor, Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
-
-import { ThemeToggler } from "@/components/theme-toggler"
-import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { useCallback, useEffect, useState } from "react"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  ArchiveRestore,
+  ArrowRight,
+  CalendarDays,
+  Cloud,
+  Loader2,
+  Plus,
+  RefreshCw,
+} from "lucide-react"
+import Link from "next/link"
+
+import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  ConferenceApiError,
+  type ConferenceSummary,
+  listConferences,
+  restoreConference,
+} from "@/lib/conference-client"
+import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { cn } from "@/lib/utils"
 
-const APP_URL = "https://app.miaoyww.top"
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+})
 
 export default function PlatformHome() {
-  const router = useRouter()
-  const [isReady, setIsReady] = useState(false)
+  const { token, isReady, signOut } = usePlatformAuth()
+  const [conferences, setConferences] = useState<ConferenceSummary[]>([])
+  const [deletedConferences, setDeletedConferences] = useState<
+    ConferenceSummary[]
+  >([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [restoringId, setRestoringId] = useState<string>()
+  const [error, setError] = useState("")
+
+  const handleError = useCallback(
+    (caught: unknown) => {
+      if (caught instanceof ConferenceApiError && caught.status === 401) {
+        signOut()
+        return
+      }
+      setError(caught instanceof Error ? caught.message : "加载大会失败")
+    },
+    [signOut]
+  )
+
+  const loadConferences = useCallback(async () => {
+    if (!token) return
+    setIsLoading(true)
+    setError("")
+    try {
+      const [active, deleted] = await Promise.all([
+        listConferences(token, { status: "active", limit: 20 }),
+        listConferences(token, { status: "deleted", limit: 100 }),
+      ])
+      setConferences(active.conferences)
+      setNextCursor(active.nextCursor)
+      setDeletedConferences(deleted.conferences)
+    } catch (caught) {
+      handleError(caught)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [handleError, token])
 
   useEffect(() => {
-    if (!localStorage.getItem("veto_token")) {
-      router.replace("/login")
-      return
+    void loadConferences()
+  }, [loadConferences])
+
+  async function loadMore() {
+    if (!token || !nextCursor || isLoadingMore) return
+    setIsLoadingMore(true)
+    try {
+      const result = await listConferences(token, {
+        status: "active",
+        cursor: nextCursor,
+        limit: 20,
+      })
+      setConferences((current) => [...current, ...result.conferences])
+      setNextCursor(result.nextCursor)
+    } catch (caught) {
+      handleError(caught)
+    } finally {
+      setIsLoadingMore(false)
     }
-
-    setIsReady(true)
-  }, [router])
-
-  function signOut() {
-    localStorage.removeItem("veto_token")
-    router.replace("/login")
   }
 
-  if (!isReady) {
-    return (
-      <main className="grid min-h-svh place-items-center bg-background">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Loader2 className="animate-spin" aria-hidden="true" />
-          正在进入 Platform
-        </div>
-      </main>
-    )
+  async function restore(item: ConferenceSummary) {
+    if (!token || restoringId) return
+    setRestoringId(item.id)
+    setError("")
+    try {
+      await restoreConference(token, item.id, item.version)
+      await loadConferences()
+    } catch (caught) {
+      handleError(caught)
+    } finally {
+      setRestoringId(undefined)
+    }
   }
+
+  if (!isReady) return <PlatformLoading />
 
   return (
-    <div className="platform-shell relative min-h-svh overflow-clip bg-background">
-      <AnimatedGridPattern
-        width={52}
-        height={52}
-        numSquares={20}
-        maxOpacity={0.06}
-        duration={3}
-        repeatDelay={1}
-        className="platform-grid-mask fill-primary/10 stroke-border/60 text-primary"
-      />
-
-      <header className="relative z-10 flex h-20 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/favicon.png" alt="" className="size-9" />
-          <div className="leading-tight">
-            <p className="font-semibold tracking-tight">Veto</p>
-            <p className="text-xs text-muted-foreground">Platform</p>
-          </div>
+    <PlatformShell onSignOut={signOut}>
+      <section className="grid gap-8 border-b pb-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="min-w-0">
+          <h1 className="platform-title text-4xl font-bold tracking-[-0.04em] text-balance sm:text-5xl">
+            云上Veto
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+            创建和管理由 Veto
+            云端托管的大会。配置委员会、席位、角色权限和邀请码。
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <a
-            href={APP_URL}
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "hidden h-11 rounded-full px-4 sm:inline-flex"
-            )}
-          >
-            <Monitor data-icon="inline-start" aria-hidden="true" />
-            返回应用
-          </a>
-          <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted [&_svg]:size-4" />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            className="size-11 rounded-full"
-            onClick={signOut}
-            aria-label="退出登录"
-          >
-            <LogOut aria-hidden="true" />
-          </Button>
-        </div>
-      </header>
-
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
-        <section className="grid gap-8 border-b pb-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="min-w-0">
-            <h1 className="platform-title text-4xl font-bold tracking-[-0.04em] text-balance sm:text-5xl">
-              云上Veto
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-              创建和管理由 Veto 云端托管的大会。大会创建后，会在这里统一显示。
-            </p>
-          </div>
-
-          <div className="flex flex-col items-start gap-2 lg:items-end">
-            <Button
-              type="button"
-              size="lg"
-              className="h-11 rounded-full px-5"
-              disabled
-            >
-              <Plus data-icon="inline-start" aria-hidden="true" />
-              创建云端大会
-            </Button>
-            <p className="text-xs text-muted-foreground">创建接口接入后开放</p>
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="conference-list"
-          className="flex flex-col gap-5 pt-10"
+        <Link
+          href="/conferences/new"
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "h-11 rounded-full px-5"
+          )}
         >
+          <Plus data-icon="inline-start" aria-hidden="true" />
+          创建云端大会
+        </Link>
+      </section>
+
+      <section aria-labelledby="conference-list" className="space-y-5 pt-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2
               id="conference-list"
@@ -131,10 +146,42 @@ export default function PlatformHome() {
               我管理的大会
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              你创建或拥有管理权限的云端大会会出现在这里。
+              按最近更新时间排序。
             </p>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isLoading}
+            onClick={() => void loadConferences()}
+          >
+            <RefreshCw
+              className={cn(isLoading && "animate-spin")}
+              aria-hidden="true"
+            />
+            刷新
+          </Button>
+        </div>
 
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          >
+            {error}
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <Card className="min-h-80 bg-card/70 shadow-none ring-0">
+            <CardContent className="grid flex-1 place-items-center">
+              <Loader2
+                className="animate-spin text-muted-foreground"
+                aria-label="正在加载大会"
+              />
+            </CardContent>
+          </Card>
+        ) : conferences.length === 0 ? (
           <Card className="min-h-80 border-dashed bg-card/70 shadow-none ring-0">
             <CardContent className="grid flex-1 place-items-center px-6 py-14">
               <div className="flex w-full max-w-sm flex-col items-center text-center">
@@ -143,39 +190,120 @@ export default function PlatformHome() {
                 </span>
                 <CardHeader className="w-full justify-items-center text-center">
                   <CardTitle className="text-lg">还没有云端大会</CardTitle>
-                  <CardDescription className="mt-1 max-w-xs">
-                    创建你的第一个云端大会
-                  </CardDescription>
+                  <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                    创建大会后，它会出现在这里。
+                  </p>
                 </CardHeader>
+                <Link
+                  href="/conferences/new"
+                  className={cn(buttonVariants(), "mt-5 rounded-full px-4")}
+                >
+                  <Plus aria-hidden="true" />
+                  创建第一个大会
+                </Link>
               </div>
             </CardContent>
           </Card>
-        </section>
-      </main>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {conferences.map((conference) => (
+              <Link key={conference.id} href={`/conferences/${conference.id}`}>
+                <Card className="h-full shadow-none ring-0 transition-colors hover:border-foreground/25">
+                  <CardHeader className="flex-row items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <CardTitle className="truncate text-lg">
+                        {conference.name}
+                      </CardTitle>
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                        {conference.description || "暂无大会说明"}
+                      </p>
+                    </div>
+                    <ArrowRight
+                      className="mt-1 size-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    {conference.organizer ? (
+                      <Badge variant="secondary">{conference.organizer}</Badge>
+                    ) : null}
+                    <span className="flex items-center gap-1.5">
+                      <CalendarDays className="size-3.5" aria-hidden="true" />
+                      更新于{" "}
+                      {dateFormatter.format(new Date(conference.updatedAt))}
+                    </span>
+                    <span>v{conference.version}</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
 
-      <footer className="relative z-10 flex flex-col items-start justify-between gap-4 border-t bg-muted/50 px-[clamp(1.25rem,4vw,4rem)] py-8 text-[0.625rem] tracking-[0.15em] text-muted-foreground sm:flex-row sm:items-center">
-        <span>© VETO / 2026</span>
-        <span>QUIET TOOLS FOR LOUD MOMENTS</span>
-        <span className="flex items-center gap-[1.375rem]">
-          <a
-            href="https://github.com/Miaoyww/Veto"
-            target="_blank"
-            rel="noreferrer"
-            className="whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
-          >
-            GITHUB
-          </a>
-          <button
-            type="button"
-            className="cursor-pointer whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
-            onClick={() => {
-              window.location.href = "https://veto.miaoyww.top/#contact"
-            }}
-          >
-            CONTACT
-          </button>
-        </span>
-      </footer>
-    </div>
+        {nextCursor ? (
+          <div className="flex justify-center pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={isLoadingMore}
+              onClick={() => void loadMore()}
+            >
+              {isLoadingMore ? (
+                <Loader2 className="animate-spin" aria-hidden="true" />
+              ) : null}
+              加载更多
+            </Button>
+          </div>
+        ) : null}
+      </section>
+
+      {deletedConferences.length > 0 ? (
+        <section className="space-y-4 pt-14" aria-labelledby="deleted-list">
+          <div>
+            <h2
+              id="deleted-list"
+              className="text-lg font-semibold tracking-tight"
+            >
+              最近删除
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              恢复后，原有席位邀请码会重新启用。
+            </p>
+          </div>
+          <div className="divide-y rounded-xl border bg-card/70">
+            {deletedConferences.map((conference) => (
+              <div
+                key={conference.id}
+                className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{conference.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    删除于{" "}
+                    {dateFormatter.format(
+                      new Date(conference.deletedAt ?? conference.updatedAt)
+                    )}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={Boolean(restoringId)}
+                  onClick={() => void restore(conference)}
+                >
+                  {restoringId === conference.id ? (
+                    <Loader2 className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <ArchiveRestore aria-hidden="true" />
+                  )}
+                  恢复
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </PlatformShell>
   )
 }
