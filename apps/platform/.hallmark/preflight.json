@@ -1,0 +1,8 @@
+{
+  "scannedAt": "2026-09-19",
+  "framework": "Next.js 16.3.4 App Router with React 19.2.8",
+  "fontStack": "Geist and Geist Mono via next/font",
+  "palette": "OKLCH semantic variables in app/globals.css",
+  "motion": "motion 13.4.0 and Magic UI components",
+  "spacing": "Tailwind v4 default spacing scale"
+}

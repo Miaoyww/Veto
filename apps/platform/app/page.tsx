@@ -1,424 +1,286 @@
 "use client"
 
-import { useState, type FormEvent, type ReactNode } from "react"
-import { ArrowLeft, Loader2, LogIn, Monitor, UserPlus } from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  ArrowUpRight,
+  Check,
+  CircleDashed,
+  Cloud,
+  Loader2,
+  LockKeyhole,
+  LogOut,
+  Monitor,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
 
-import { Button } from "@/components/ui/button"
+import { ThemeToggler } from "@/components/theme-toggler"
+import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TypingAnimation } from "@/components/ui/typing-animation"
-import { TextAnimate } from "@/components/ui/text-animate"
-import {
-  login,
-  register,
-  sendVerificationCode,
-  verifyCode,
-} from "@/lib/auth-client"
-import { ThemeToggler } from "@/components/theme-toggler"
+import { cn } from "@/lib/utils"
 
-type AuthTab = "login" | "register"
-type RegisterStage = "email" | "code" | "password"
+const APP_URL = "https://app.miaoyww.top"
 
-export default function Page() {
-  const [tab, setTab] = useState<AuthTab>("login")
+export default function PlatformHome() {
+  const router = useRouter()
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    if (!localStorage.getItem("veto_token")) {
+      router.replace("/login")
+      return
+    }
+
+    setIsReady(true)
+  }, [router])
+
+  function signOut() {
+    localStorage.removeItem("veto_token")
+    router.replace("/login")
+  }
+
+  if (!isReady) {
+    return (
+      <main className="grid min-h-svh place-items-center bg-background">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Loader2 className="animate-spin" aria-hidden="true" />
+          正在进入 Platform
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <div className="relative min-h-svh overflow-clip">
-      <a
-        href="https://veto.miaoyww.top"
-        className="absolute left-8 top-6 z-20 flex items-center gap-3 py-2 pr-4 pl-2"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/favicon.png" alt="Veto" className="size-8" />
-        <span className="text-lg font-medium">Veto</span>
-      </a>
+    <div className="platform-shell relative min-h-svh overflow-clip bg-background">
+      <AnimatedGridPattern
+        width={52}
+        height={52}
+        numSquares={24}
+        maxOpacity={0.08}
+        duration={3}
+        repeatDelay={1}
+        className="platform-grid-mask fill-primary/10 stroke-border/70 text-primary"
+      />
 
-      <div className="absolute top-6 right-6 z-20">
-        <ThemeToggler className="flex size-10 items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5 cursor-pointer" />
-      </div>
+      <header className="relative z-10 flex h-20 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/favicon.png" alt="" className="size-9" />
+          <div className="leading-tight">
+            <p className="font-semibold tracking-tight">Veto</p>
+            <p className="text-xs text-muted-foreground">Platform</p>
+          </div>
+        </div>
 
-      <div className="flowing-background" aria-hidden="true">
-        <span className="flowing-background__veil flowing-background__veil--strong" />
-        <span className="flowing-background__veil flowing-background__veil--soft" />
-      </div>
+        <div className="flex items-center gap-2">
+          <a
+            href={APP_URL}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "hidden h-11 rounded-full px-4 sm:inline-flex"
+            )}
+          >
+            <Monitor data-icon="inline-start" aria-hidden="true" />
+            返回应用
+          </a>
+          <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted [&_svg]:size-4" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            className="size-11 rounded-full"
+            onClick={signOut}
+            aria-label="退出登录"
+          >
+            <LogOut aria-hidden="true" />
+          </Button>
+        </div>
+      </header>
 
-      <div className="relative z-10 flex min-h-svh items-center justify-center">
-        <div className="flex w-full max-w-7xl items-center">
-          <HeroSection />
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+        <section className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)] lg:items-end">
+          <div className="min-w-0">
+            <p className="mb-4 font-mono text-xs tracking-[0.16em] text-muted-foreground uppercase">
+              Veto Platform
+            </p>
+            <h1 className="platform-title max-w-3xl text-4xl font-bold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
+              从这里，继续你的会议。
+            </h1>
+          </div>
+          <p className="max-w-xl text-base leading-7 text-muted-foreground lg:justify-self-end">
+            Platform 是 Veto 的账户与在线服务入口。现在先把身份认证和应用入口放稳，后续功能会沿着这里继续生长。
+          </p>
+        </section>
 
-          <section className="flex w-full items-center justify-center px-6 py-12 lg:w-[560px]">
-            <Card className="w-full max-w-md rounded-2xl bg-card/90 p-0 shadow-2xl ring-0 backdrop-blur-xl">
-              <CardHeader className="p-6 pb-4">
-                <CardTitle className="text-2xl font-bold">Veto 平台</CardTitle>
-                <CardDescription className="text-sm">
-                  使用邮箱登录或注册 Veto 账号
+        <section aria-labelledby="platform-sections" className="flex flex-col gap-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 id="platform-sections" className="text-lg font-semibold tracking-tight">
+              现在可以做什么
+            </h2>
+            <Badge variant="outline" className="rounded-full px-3 py-1">
+              会话已连接
+            </Badge>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="platform-feature-card md:col-span-2 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-xl">进入 Veto 应用</CardTitle>
+                <CardDescription className="max-w-xl leading-6">
+                  返回会议工作台，继续会务管理、成员协作与现场流程。
                 </CardDescription>
+                <CardAction>
+                  <span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground">
+                    <Monitor aria-hidden="true" />
+                  </span>
+                </CardAction>
               </CardHeader>
-
-              <CardContent className="px-6 pb-5">
-                <Tabs
-                  value={tab}
-                  onValueChange={(value) => setTab(value as AuthTab)}
-                  className="gap-4"
-                >
-                  <TabsList className="w-full">
-                    <TabsTrigger value="login">登录</TabsTrigger>
-                    <TabsTrigger value="register">注册</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="login">
-                    <LoginForm />
-                  </TabsContent>
-
-                  <TabsContent value="register">
-                    <RegisterForm onSuccess={() => setTab("login")} />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-
-              <CardFooter className="flex-col gap-3 border-t bg-transparent p-6">
-                <div className="flex w-full gap-3">
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
-                    onClick={() => {
-                      window.location.href = "https://app.miaoyww.top"
-                    }}
-                  >
-                    <Monitor className="size-5" />
-                    返回应用
-                  </Button>
-
-                  <SocialLoginButton image="/wechat.png" label="微信登录" />
-                  <SocialLoginButton image="/feishu.png" label="飞书登录" />
+              <CardContent>
+                <div className="platform-app-preview" aria-hidden="true">
+                  <div className="platform-app-preview__rail" />
+                  <div className="platform-app-preview__body">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
                 </div>
+              </CardContent>
+              <CardFooter className="justify-between gap-4 bg-muted/40">
+                <p className="hidden text-sm text-muted-foreground sm:block">
+                  在新页面打开 app.miaoyww.top
+                </p>
+                <a
+                  href={APP_URL}
+                  className={cn(
+                    buttonVariants({ size: "lg" }),
+                    "h-11 rounded-full px-5"
+                  )}
+                >
+                  返回应用
+                  <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
+                </a>
               </CardFooter>
             </Card>
-          </section>
-        </div>
-      </div>
+
+            <Card className="platform-feature-card">
+              <CardHeader>
+                <CardTitle>账户与安全</CardTitle>
+                <CardDescription className="leading-6">
+                  当前设备已保存登录凭证，可安全退出并切换账号。
+                </CardDescription>
+                <CardAction>
+                  <span className="grid size-10 place-items-center rounded-full border bg-background">
+                    <ShieldCheck aria-hidden="true" />
+                  </span>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="mt-auto flex flex-col gap-3">
+                <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-3">
+                  <span className="flex items-center gap-2 text-sm">
+                    <UserRound className="size-4 text-muted-foreground" aria-hidden="true" />
+                    当前会话
+                  </span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
+                    <Check className="size-4" aria-hidden="true" />
+                    已登录
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-11 justify-start"
+                  onClick={signOut}
+                >
+                  <LogOut data-icon="inline-start" aria-hidden="true" />
+                  退出当前账号
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section aria-labelledby="platform-roadmap" className="flex flex-col gap-5">
+          <div>
+            <h2 id="platform-roadmap" className="text-lg font-semibold tracking-tight">
+              Platform 路线
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              主页先展示真实可用状态，尚未完成的入口不会伪装成可点击功能。
+            </p>
+          </div>
+
+          <div className="grid gap-px overflow-hidden rounded-xl border bg-border md:grid-cols-3">
+            <RoadmapItem
+              icon={<LockKeyhole aria-hidden="true" />}
+              title="身份认证"
+              description="邮箱登录、注册与验证码流程"
+              status="可用"
+              ready
+            />
+            <RoadmapItem
+              icon={<UserRound aria-hidden="true" />}
+              title="账户中心"
+              description="资料、安全与设备管理"
+              status="下一步"
+            />
+            <RoadmapItem
+              icon={<Cloud aria-hidden="true" />}
+              title="在线服务"
+              description="云端能力与应用协同"
+              status="待接入"
+            />
+          </div>
+        </section>
+      </main>
+
+      <footer className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-3 border-t px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
+        <p>Veto Platform · 让会议工作保持连续</p>
+        <p>账户入口与 Veto 应用彼此独立</p>
+      </footer>
     </div>
   )
 }
 
-function HeroSection() {
-  return (
-    <section className="hidden flex-1 flex-col justify-center px-12 lg:flex xl:px-24">
-      <div className="max-w-xl flex flex-col gap-4">
-        <h1 className="text-5xl font-bold tracking-tight text-foreground">
-          Build your ideas.
-          <br />
-          Better than ever.
-        </h1>
-
-        <span className="max-w-md text-base text-muted-foreground">
-          管理你的会议, 并与其他成员协作. 让模拟联合国会议的组织变得更简单,
-          更高效.
-        </span>
-
-        <div className="mt-10 flex gap-6 text-sm text-muted-foreground">
-          <HeroStat label="会务管理" title="一站式" />
-          <HeroStat label="局势同步" title="实时" />
-          <HeroStat label="数字化管理" title="全流程" />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function HeroStat({ label, title }: { label: string; title: string }) {
-  return (
-    <div>
-      <div className="text-2xl font-bold text-foreground">{title}</div>
-      <div>{label}</div>
-    </div>
-  )
-}
-
-function LoginForm() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState("")
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!email.trim() || !password) return
-
-    setBusy(true)
-    setError("")
-    try {
-      const token = await login(email.trim(), password)
-      localStorage.setItem("veto_token", token)
-      window.location.href = "https://app.miaoyww.top"
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "登录失败")
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="login-email">邮箱</Label>
-        <Input
-          id="login-email"
-          type="email"
-          className="h-12"
-          placeholder="name@example.com"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="login-password">密码</Label>
-        <Input
-          id="login-password"
-          type="password"
-          className="h-12"
-          placeholder="密码"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </div>
-      <SubmitButton
-        icon={<LogIn className="size-4" />}
-        busyIcon={<Loader2 className="size-4 animate-spin" />}
-        busy={busy}
-        disabled={busy || !email.trim() || !password.trim()}
-        label="登录"
-      />
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-    </form>
-  )
-}
-
-function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
-  const [stage, setStage] = useState<RegisterStage>("email")
-  const [email, setEmail] = useState("")
-  const [code, setCode] = useState("")
-  const [name, setName] = useState("")
-  const [password, setPassword] = useState("")
-  const [regToken, setRegToken] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState("")
-
-  async function submitEmail(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!email.trim()) return
-
-    setBusy(true)
-    setError("")
-    try {
-      await sendVerificationCode(email.trim())
-      setStage("code")
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "发送失败")
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function submitCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (code.length < 6) return
-
-    setBusy(true)
-    setError("")
-    try {
-      const token = await verifyCode(email.trim(), code)
-      setRegToken(token)
-      setStage("password")
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "验证失败")
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function submitPassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (password.length < 6) return
-
-    setBusy(true)
-    setError("")
-    try {
-      await register(regToken, password, name)
-      onSuccess()
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "注册失败")
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  function resetToEmail() {
-    setStage("email")
-    setCode("")
-    setRegToken("")
-    setError("")
-  }
-
-  return (
-    <div>
-      {stage === "email" ? (
-        <form className="flex flex-col gap-4" onSubmit={submitEmail}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="register-email">邮箱</Label>
-            <Input
-              id="register-email"
-              type="email"
-              className="h-12"
-              placeholder="name@example.com"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </div>
-          <SubmitButton
-            icon={<LogIn className="size-4" />}
-            busyIcon={<Loader2 className="size-4 animate-spin" />}
-            busy={busy}
-            disabled={busy || !email.trim()}
-            label="发送验证码"
-          />
-        </form>
-      ) : null}
-
-      {stage === "code" ? (
-        <div>
-          <p className="text-sm text-muted-foreground">
-            验证码已发送至{" "}
-            <span className="font-medium text-foreground">{email}</span>
-          </p>
-          <form className="mt-4 flex flex-col gap-4" onSubmit={submitCode}>
-            <InputOTP
-              maxLength={6}
-              value={code}
-              onChange={setCode}
-              containerClassName="justify-center"
-              aria-label="验证码"
-            >
-              <InputOTPGroup className="gap-2">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <InputOTPSlot
-                    key={index}
-                    index={index}
-                    className="h-12 w-10 rounded-lg border font-mono text-base"
-                  />
-                ))}
-              </InputOTPGroup>
-            </InputOTP>
-            <SubmitButton
-              icon={<LogIn className="size-4" />}
-              busyIcon={<Loader2 className="size-4 animate-spin" />}
-              busy={busy}
-              disabled={busy || code.length < 6}
-              label="验证"
-            />
-          </form>
-          <div className="mt-3 flex justify-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={resetToEmail}
-            >
-              <ArrowLeft className="size-4" />
-              返回
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {stage === "password" ? (
-        <form className="flex flex-col gap-4" onSubmit={submitPassword}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="register-name">姓名（可选）</Label>
-            <Input
-              id="register-name"
-              className="h-12"
-              placeholder="姓名"
-              autoComplete="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="register-password">密码</Label>
-            <Input
-              id="register-password"
-              type="password"
-              className="h-12"
-              placeholder="至少 6 位"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </div>
-          <SubmitButton
-            icon={<UserPlus className="size-4" />}
-            busyIcon={<Loader2 className="size-4 animate-spin" />}
-            busy={busy}
-            disabled={busy || password.length < 6}
-            label="完成注册"
-          />
-        </form>
-      ) : null}
-
-      {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
-    </div>
-  )
-}
-
-function SubmitButton({
+function RoadmapItem({
   icon,
-  busyIcon,
-  busy,
-  disabled,
-  label,
+  title,
+  description,
+  status,
+  ready = false,
 }: {
-  icon: ReactNode
-  busyIcon: ReactNode
-  busy: boolean
-  disabled: boolean
-  label: string
+  icon: React.ReactNode
+  title: string
+  description: string
+  status: string
+  ready?: boolean
 }) {
   return (
-    <Button type="submit" size="lg" disabled={disabled}>
-      {busy ? busyIcon : icon}
-      {label}
-    </Button>
-  )
-}
-
-function SocialLoginButton({ image, label }: { image: string; label: string }) {
-  return (
-    <button
-      type="button"
-      className="size-12 rounded-lg border bg-card p-0 shadow-sm"
-      aria-label={label}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} className="mx-auto size-5" alt="" />
-    </button>
+    <article className="flex min-h-44 flex-col justify-between gap-8 bg-card p-5">
+      <div className="flex items-start justify-between gap-4">
+        <span className="grid size-10 place-items-center rounded-lg border bg-background [&_svg]:size-4">
+          {icon}
+        </span>
+        <Badge variant={ready ? "default" : "secondary"}>
+          {ready ? <Check data-icon="inline-start" aria-hidden="true" /> : <CircleDashed data-icon="inline-start" aria-hidden="true" />}
+          {status}
+        </Badge>
+      </div>
+      <div>
+        <h3 className="font-semibold">{title}</h3>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+      </div>
+    </article>
   )
 }
