@@ -98,7 +98,7 @@ export default function PlatformHome() {
         <section className="grid gap-8 border-b pb-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
             <h1 className="platform-title text-4xl font-bold tracking-[-0.04em] text-balance sm:text-5xl">
-              云端大会
+              云上Veto
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
               创建和管理由 Veto 云端托管的大会。大会创建后，会在这里统一显示。
@@ -141,10 +141,10 @@ export default function PlatformHome() {
                 <span className="mb-5 grid size-12 place-items-center rounded-xl border bg-background shadow-sm">
                   <Cloud className="size-5" aria-hidden="true" />
                 </span>
-                <CardHeader className="w-full items-center px-0 py-0">
+                <CardHeader className="w-full justify-items-center text-center">
                   <CardTitle className="text-lg">还没有云端大会</CardTitle>
-                  <CardDescription className="mt-1 max-w-xs leading-6">
-                    大会数据接入后，这里会成为你的云端大会管理入口。
+                  <CardDescription className="mt-1 max-w-xs">
+                    创建你的第一个云端大会
                   </CardDescription>
                 </CardHeader>
               </div>
@@ -153,7 +153,7 @@ export default function PlatformHome() {
         </section>
       </main>
 
-      <footer className="relative z-10 flex flex-col items-start justify-between gap-4 border-t bg-muted/50 px-[clamp(1.25rem,4vw,4rem)] py-7 text-[0.625rem] tracking-[0.15em] text-muted-foreground sm:flex-row sm:items-center">
+      <footer className="relative z-10 flex flex-col items-start justify-between gap-4 border-t bg-muted/50 px-[clamp(1.25rem,4vw,4rem)] py-8 text-[0.625rem] tracking-[0.15em] text-muted-foreground sm:flex-row sm:items-center">
         <span>© VETO / 2026</span>
         <span>QUIET TOOLS FOR LOUD MOMENTS</span>
         <span className="flex items-center gap-[1.375rem]">
