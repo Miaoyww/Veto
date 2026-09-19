@@ -45,6 +45,15 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --animate-blink-cursor: blink-cursor 1.2s step-end infinite;
+  @keyframes blink-cursor {
+  0%, 49% {
+    opacity: 1;
+        }
+  50%, 100% {
+    opacity: 0;
+        }
+    }
 }
 
 :root {
@@ -123,7 +132,102 @@
   body {
     @apply bg-background text-foreground;
     }
-  html {
+html {
     @apply font-sans;
+    }
+}
+
+.flowing-background {
+    --flow-color-strong: oklch(0.73 0.14 68);
+    --flow-color-soft: oklch(0.88 0.08 78);
+    --flow-opacity-strong: 0.2;
+    --flow-opacity-soft: 0.32;
+    --flow-blur: 4rem;
+    --flow-ease: cubic-bezier(0.65, 0, 0.35, 1);
+
+    position: absolute;
+    inset: -16%;
+    overflow: hidden;
+    pointer-events: none;
+    contain: paint;
+    background: linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--flow-color-soft) 12%, var(--background)),
+        var(--background)
+    );
+}
+
+.dark .flowing-background {
+    --flow-color-strong: oklch(0.62 0.14 68);
+    --flow-color-soft: oklch(0.48 0.09 78);
+    --flow-opacity-strong: 0.24;
+    --flow-opacity-soft: 0.2;
+}
+
+.flowing-background__veil {
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    filter: blur(var(--flow-blur));
+    will-change: transform;
+}
+
+.flowing-background__veil--strong {
+    inset-block-start: -8%;
+    inset-inline-start: -12%;
+    width: clamp(24rem, 62vw, 62rem);
+    aspect-ratio: 1.55;
+    background: var(--flow-color-strong);
+    opacity: var(--flow-opacity-strong);
+    animation: flow-strong 22s var(--flow-ease) -6s infinite alternate;
+}
+
+.flowing-background__veil--soft {
+    inset-block-end: -12%;
+    inset-inline-end: -10%;
+    width: clamp(24rem, 62vw, 62rem);
+    aspect-ratio: 1.35;
+    background: var(--flow-color-soft);
+    opacity: var(--flow-opacity-soft);
+    animation: flow-soft 28s var(--flow-ease) -14s infinite alternate;
+}
+
+@keyframes flow-strong {
+    from {
+        transform: translate3d(-6%, -4%, 0) rotate(-7deg) scale(1);
+    }
+
+    to {
+        transform: translate3d(24%, 16%, 0) rotate(8deg) scale(1.08);
+    }
+}
+
+@keyframes flow-soft {
+    from {
+        transform: translate3d(8%, 10%, 0) rotate(6deg) scale(1.04);
+    }
+
+    to {
+        transform: translate3d(-22%, -14%, 0) rotate(-8deg) scale(0.96);
+    }
+}
+
+@media (min-width: 40rem) {
+    .flowing-background {
+        --flow-opacity-strong: 0.28;
+        --flow-opacity-soft: 0.38;
+        --flow-blur: clamp(5rem, 8vw, 8rem);
+    }
+
+    .dark .flowing-background {
+        --flow-opacity-strong: 0.28;
+        --flow-opacity-soft: 0.24;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .flowing-background__veil {
+        animation: none;
+        will-change: auto;
     }
 }
