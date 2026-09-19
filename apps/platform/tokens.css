@@ -1,18 +1,8 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Ecosystem Index · theme: Coral · enrichment: Magic UI grid · nav: N9 · footer: Ft2 */
-/* Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V4 */
+/* Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: Coral · enrichment: Magic UI grid · nav: N9 · footer: Ft2 */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 */
 
 :root {
-  --color-platform-warm: oklch(0.73 0.14 68);
-  --color-platform-warm-soft: oklch(0.88 0.08 78);
-  --color-platform-preview: oklch(0.975 0.008 78);
-  --color-platform-preview-dark: oklch(0.24 0.012 68);
   --font-platform-display: var(--font-sans);
   --font-platform-body: var(--font-sans);
-  --font-platform-outlier: var(--font-mono);
-  --space-platform-page: clamp(1rem, 4vw, 3rem);
   --text-platform-display: clamp(2.5rem, 5vw, 4rem);
-  --ease-platform-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --dur-platform-fast: 160ms;
-  --rule-platform: 1px;
-  --radius-platform: 0.75rem;
 }
