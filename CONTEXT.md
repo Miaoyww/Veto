@@ -4,11 +4,45 @@
 （Committee），管理角色、席位、新闻、局势与文件，支持常委模式（standing）和危机联动模式
 （crisis）之间的切换。
 
-运行形态包括 **Host Service**（主机服务）、**Host Console**（主机控制台）、**UserClient**（用户端）和 **Display**（投屏端）。
+运行形态包括 **Organizer Platform**（组织者平台）、**Cloud Service**（云端服务）、
+**UserClient**（用户端）和 **Display**（投屏端）。
 
 **Singleton Mode（单例模式）**:
 Conference 的一种组织模式，限定 Conference 只包含一个 Committee，并由 UserClient 直接进行本地主持。
 _Avoid_: Singleton Conference, Single Meeting Mode
+
+**Offline Mode（离线模式）**:
+UserClient 的本地运行边界。用户不登录平台，只能创建、保存和主持 Singleton Mode Conference。
+_Avoid_: Local Mode, Singleton Mode
+
+## Cloud Deployment（云端部署）
+
+**Cloud Conference (云端大会)**:
+由 Cloud Service 持有共享大会数据的 Conference。代表和主席通过 SeatAccess 进入，
+组织者在 Organizer Platform 配置大会。
+_Avoid_: LAN Conference, Hosted Conference
+
+**Cloud Service (云端服务)**:
+云端大会的唯一权威协调服务，持有共享大会数据、SeatAccess、认证、授权、命令处理和实时路由。
+_Avoid_: Cloud Backend, Cloud Host, Server
+
+**Organizer Platform (组织者平台)**:
+组织者创建和配置云端大会的独立平台。它管理大会、席位、角色模板、Capability 和 ChairAssignment，
+不主持某个 Committee 的本地议程或议事状态。
+_Avoid_: Host Console, Admin Console, Creator
+
+**Organizer Account (组织者账号)**:
+Organizer Platform 的登录身份，用于创建和管理 Cloud Conference。它不是 User、Seat 或 UserClient 凭证。
+_Avoid_: Platform Account, Admin Account
+
+**OrganizationName (模联名称)**:
+Organizer Account 上的必填归属名称，标识组织者所在的模联、学校或团队。它只是账号资料，不是 Organization 实体。
+_Avoid_: Organization, Team
+
+**ConferenceLifecycle（大会生命周期）**:
+Cloud Conference 的 `draft → active → closed` 状态流。`draft` 只供组织者配置；`active` 接受席位认证和业务命令；
+`closed` 保留查询与审计，不再接受改变共享大会数据的命令。
+_Avoid_: Status, Phase
 
 ## Conference（大会）
 
@@ -22,8 +56,9 @@ _Avoid_: Meeting, Session, ConferenceEvent
 
 **Committee (委员会 / 会场)**:
 大会下的一场具体会议，如“美国内阁”“英国内阁”“MPC”。每场小会议拥有自己的主席、席位、
-由获得授权的 Chair 在本地维护议程和议事状态；共享大会数据通过唯一的 Host Service 提供。发言名单、
-动议、表决等议事流程属于 Chair 对 Committee 的本地主持工作，而不是 Host Service 的共享数据。
+由获得授权的 Chair 在本地维护议程和议事状态；云端大会的共享大会数据通过唯一的 Cloud Service 提供。
+发言名单、
+动议、表决等议事流程属于 Chair 对 Committee 的本地主持工作，而不是 Cloud Service 的共享数据。
 _Avoid_: Event, Conference, Cabinet, Committee Group
 
 ## SeatGroup（席位组）
@@ -65,21 +100,21 @@ _Avoid_: Chair, Admin, Director
 委员会内、席位组中的具体参与位置，也是 Chair 本地议事状态所引用的主体。Seat 独立于使用它的人存在，
 可以通过 User ID 分配给 User，并携带独立于 SeatGroup 默认值的 Capability 覆盖。Seat 名称始终描述
 会场席位而非使用它的代表姓名。每个 Seat 至多分配给一个 User，分配后不交接。Conference 创建后
-禁止删除 Seat，但可以改名。Chair 的本地议事数据通过 Seat ID 引用它，但不会写回 Host Service。
+禁止删除 Seat，但可以改名。Chair 的本地议事数据通过 Seat ID 引用它，但不会写回 Cloud Service。
 在 crisis 模式下，Seat 绑定具体部门（如"海军部长""情报局局长"）；在 standing 模式下，
 Seat 代表一个国家或政治实体（如"德国"）。
 _Avoid_: Member, User, Delegate, Delegation
 
 **ProcedureSeatState（议事席位状态）**:
 Chair 为一个受管 Committee 在本地维护的 Seat 覆盖层，包含出席状态、投票权和议事排序等流程状态。
-它基于 Host Service 投影出的 Seat 身份和 ProceduralSeatProfile 工作，不改变 Seat 的身份、角色、
-Capability、User 绑定或委员会归属，也不向 Host Service 或普通 UserClient 同步。
+它基于 Cloud Service 投影出的 Seat 身份和 ProceduralSeatProfile 工作，不改变 Seat 的身份、角色、
+Capability、User 绑定或委员会归属，也不向 Cloud Service 或普通 UserClient 同步。
 Chair 重新连接时，以当前 ChairCommitteeProjection 确定可用 Seat：仍有效 Seat 的本地流程状态保留，
 新增 Seat 从默认状态开始，已不属于该 Committee 的 Seat 状态移除。
 _Avoid_: Delegation, Voting Seat
 
 **ProceduralSeatProfile（议事席位配置）**:
-Host Service 持有的静态 Seat 配置，包含简称、旗帜和是否具备议事资格等信息。它只在
+Cloud Service 持有的静态 Seat 配置，包含简称、旗帜和是否具备议事资格等信息。它只在
 ChairCommitteeProjection 中提供给获授权 Chair；出席、投票权、排序和发言队列等运行中状态不属于它。
 _Avoid_: Procedure State, Attendance
 
@@ -92,7 +127,7 @@ _Avoid_: Full Conference Sync, Seat DTO
 **AuthenticatedSeatSession（已认证席位会话）**:
 UserClient 成功认证后获得的临时连接上下文，包含 UserClientSessionProjection 所需的身份与授权信息。
 它不持久化，也不包含邀请码、密码摘要、其他 Seat 或完整的 Host Conference 数据。
-Host Console 变更其 Capability、ChairAssignment、User、邀请码或 Committee 归属时，Host Service 会立即撤销该会话。
+Organizer Platform 变更其 Capability、ChairAssignment、User、邀请码或 Committee 归属时，Cloud Service 会立即撤销该会话。
 一个 Seat 同时至多拥有一个已认证会话；该 Seat 在另一台 UserClient 上重新登录时，原会话立即撤销并返回首页。
 _Avoid_: DelegateSession, User Session, SeatAccess
 
@@ -101,26 +136,31 @@ _Avoid_: DelegateSession, User Session, SeatAccess
 **User (用户)**:
 大会内由 Veto 识别的自然人身份，与一个 Seat 严格一对一。User 保存自主设置的登录密码；User 不等同于
 其使用的 Seat，当前也不要求跨大会或跨设备延续。User 包含代表姓名，密码为可选；未设置密码时，
-邀请码本身就是完整认证凭证。Host Console 可以在误认领或遗忘密码时重置 Seat 的 User，允许重新认领。
+邀请码本身就是完整认证凭证。Organizer Platform 可以在误认领或遗忘密码时重置 Seat 的 User，允许重新认领。
 User 由 Conference 持有，只能在认领 Seat 时创建；重置 Seat 时直接删除原 User。
 _Avoid_: Account, Seat, Delegate
 
 ## SeatAccess（席位访问入口）
 
 **SeatAccess (席位访问入口)**:
-通过唯一邀请码指向一个 Seat 的本地访问入口。SeatAccess 只持有邀请码，不持有密码；首次使用邀请码时
-为该 Seat 创建 User。Host Console 可以轮换邀请码，旧邀请码随即失效，而 Seat、User 与 Chair 本地议事记录保持不变。
-SeatAccess 由 Conference 持有，邀请码在同一主席端保存的所有 Conference 中全局唯一。
+通过唯一邀请码指向一个 Seat 的访问入口。SeatAccess 只持有邀请码，不持有密码；首次使用邀请码时
+为该 Seat 创建 User。Organizer Platform 可以轮换邀请码，旧邀请码随即失效，而 Seat、User 与 Chair 本地议事记录保持不变。
+SeatAccess 由 Conference 持有，云端大会的邀请码在同一 Cloud Service 中全局唯一；离线单例大会不生成 SeatAccess。
 _Avoid_: User, Account, Credential
 
 ## inviteCode（邀请码 / Key）
 
 **inviteCode（邀请码 / Key）**:
 授予持有者进入指定 Seat 权限的 4-4-4 登录凭证（代码字段 `inviteCode`，UI 中称"Key"）。
-创建向导不配置它；Host Console 在席位管理中查看与批量复制。
+云端大会由 Organizer Platform 生成、查看、复制和轮换；创建向导不配置它。
 邀请码首次使用时确定该 Seat 的 User，由 User 自主设置密码；后续使用"邀请码 + User 密码"连接席位。
 密码可以留空；此时后续仅凭邀请码即可连接。邀请码只定位并授予 Seat 访问入口，密码属于 User。
 _Avoid_: Password, 席位 key
+
+**SeatClaim（席位认领）**:
+Cloud Conference 中首次成功使用 SeatAccess 将 User 绑定到未占用 Seat 的动作。
+认领时确定代表姓名，密码可选；认领完成后，该 Seat 不得被第二次认领，只能由 User 凭证进入。
+_Avoid_: Register, Login, Sign-up
 
 ## RoleTemplate（角色模板）
 
@@ -155,7 +195,7 @@ Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（
 _Avoid_: Permission, Right, Role
 
 **ChairAssignment（主席委员会授权）**:
-Host Console 授予一个拥有 `control_conference` 的 Seat 对一个 Committee 的本地主持资格。一个 Seat 至多拥有一项
+Organizer Platform 授予一个拥有 `control_conference` 的 Seat 对一个 Committee 的本地主持资格。一个 Seat 至多拥有一项
 ChairAssignment。只有 Capability 与 ChairAssignment 同时存在时，该 UserClient 才能取得对应 Committee 的
 ChairCommitteeProjection；其目标 Committee 必须就是该 Seat 所属的 Committee。这项授权不扩大该 Seat 对
 其他 Committee 的数据访问范围。
@@ -164,7 +204,7 @@ _Avoid_: Chair Role, Global Admin
 ## ContentAudience（内容受众）
 
 **ContentAudience（内容受众）**:
-Host Service 从内容类型和工作流状态推导出的可见主体集合，不是创作者填写的收件人字段，也不支持定向给单一 Seat。第一版已发布 News 与 SituationUpdate 固定广播至整个 Conference；Directive 只使用唯一的 DirectiveTarget；File 的路由规则随文件子系统延期。主体仍须拥有对应查看或工作流 Capability 才能取得其被授权内容；系统不再使用公开、保密或其他密级标签推断可见性。
+Cloud Service 从内容类型和工作流状态推导出的可见主体集合，不是创作者填写的收件人字段，也不支持定向给单一 Seat。第一版已发布 News 与 SituationUpdate 固定广播至整个 Conference；Directive 只使用唯一的 DirectiveTarget；File 的路由规则随文件子系统延期。主体仍须拥有对应查看或工作流 Capability 才能取得其被授权内容；系统不再使用公开、保密或其他密级标签推断可见性。
 _Avoid_: Content Scope, Classification, Security Level
 
 **WorkflowAudience（工作流受众）**:
@@ -172,23 +212,28 @@ _Avoid_: Content Scope, Classification, Security Level
 不授予普通内容列表的浏览权限，也不改变 ContentAudience。
 _Avoid_: General Reader, Global Visibility
 
+**OrganizerModeration（组织者管理）**:
+Organizer Platform 对 Cloud Conference 的特权管理能力：查看全部共享内容、附原因撤回内容、
+释放异常指令认领，以及管理会话与席位访问。第一版不管理 File，也不能创建、修改或代发 Seat 业务内容。
+_Avoid_: Host Console, Admin Console
+
 **LocalDraft（本地草稿）**:
-UserClient 在明确提交前仅保存在本机的内容草稿，不属于 Host Service 的共享大会数据，也不会传输或排队重放。
-明确提交成功后，Host Service 创建权威内容；被驳回内容及其后续修订由 Host Service 保存。
+UserClient 在明确提交前仅保存在本机的内容草稿，不属于 Cloud Service 的共享大会数据，也不会传输或排队重放。
+明确提交成功后，Cloud Service 创建权威内容；被驳回内容及其后续修订由 Cloud Service 保存。
 LocalDraft 跨同一 UserClient 的应用重启保留，并绑定原 Host、Conference 与 Seat；重新认证后的身份不匹配时，
 草稿只可查看或复制，不能自动提交。
 _Avoid_: Shared Draft, Offline Command
 
 **ContentOrigin（内容来源）**:
-每条指令、新闻、局势更新或文件都保留其来源 Seat 与来源 Committee。认证 Seat 创建的内容自动绑定其所属 Committee，不能伪造其他 Committee；Chair 通过 UserClient 创建内容时仍署名其认证 Seat；Host Console 不创建或发布业务内容。普通内容署名展示 Committee、Seat 展示名或角色，新闻另展示 source，且不展示 User 真实姓名。
+每条指令、新闻、局势更新或文件都保留其来源 Seat 与来源 Committee。认证 Seat 创建的内容自动绑定其所属 Committee，不能伪造其他 Committee；Chair 通过 UserClient 创建内容时仍署名其认证 Seat；Organizer Platform 不创建、修改或代发业务内容。普通内容署名展示 Committee、Seat 展示名或角色，新闻另展示 source，且不展示 User 真实姓名。
 _Avoid_: Author, Impersonation
 
 **AuditLog（审计记录）**:
-Host Service 保留共享内容与管理操作的权威历史，包括撤回原因、已取消指令和异常释放指令认领。全局审计只对 Host Console 可见；UserClient 只能查看与自身内容相关的历史。
+Cloud Service 保留共享内容与管理操作的权威历史，包括撤回原因、已取消指令和异常释放指令认领。全局审计只对 Organizer Platform 可见；UserClient 只能查看与自身内容相关的历史。
 _Avoid_: Activity Feed, User Log
 
 **Withdrawal（撤回）**:
-拥有对应 `withdraw_*` Capability 的 Seat 对已发布内容执行的、必须带原因的操作。它从普通列表移除内容但不删除权威审计记录；原作者不因创作自动获得撤回权，Host Console 也不能撤回业务内容。
+拥有对应 `withdraw_*` Capability 的 Seat，或 Organizer Platform 通过 OrganizerModeration，对已发布内容执行的、必须带原因的操作。它从普通列表移除内容但不删除权威审计记录；原作者不因创作自动获得撤回权。
 _Avoid_: Delete, Edit, Unpublish
 
 ## Directive（指令）
@@ -200,7 +245,7 @@ _Avoid_: Delete, Edit, Unpublish
 _Avoid_: Target Text, Seat Target, IPC String
 
 **Directive (指令)**:
-危机模式下 Seat 发出的结构化请求，有发送方、单一 DirectiveTarget 及所属 Committee。它依次处于 `submitted`、`processing`、`approved`、`rejected` 或 `cancelled` 状态；发送方只可在尚未被原子认领的 `submitted` 状态取消，取消记录审计。目标 Committee 内拥有 `process_directive` 的 Seat 由 Host Service 原子认领后处理，批准和驳回都必须附处理说明；进入 `processing` 后，只有认领者可批准或驳回，Host Console 仅可在异常时释放认领并记录审计。驳回后可修改重发，本地保留修改记录。
+危机模式下 Seat 发出的结构化请求，有发送方、单一 DirectiveTarget 及所属 Committee。它依次处于 `submitted`、`processing`、`approved`、`rejected` 或 `cancelled` 状态；发送方只可在尚未被原子认领的 `submitted` 状态取消，取消记录审计。目标 Committee 内拥有 `process_directive` 的 Seat 由 Cloud Service 原子认领后处理，批准和驳回都必须附处理说明；进入 `processing` 后，只有认领者可批准或驳回，Organizer Platform 仅可在异常时释放认领并记录审计。驳回后可修改重发，本地保留修改记录。
 _Avoid_: Order, Command, Request
 
 ## News（新闻）
@@ -220,33 +265,26 @@ _Avoid_: Event, Update, Intel
 
 ## 角色（Role）
 
-**Host Service（主机服务）**:
-运行在一台本地主机上的权威协调服务，持有共享大会数据、认证、权限校验、命令处理与局域网实时路由；第一版同时仅暴露一个活动 Conference，并按 Conference 与 Committee 隔离数据和消息。每次重启后没有活动 Conference，必须由 Host Console 显式启动。它是共享大会数据的唯一权威来源：UserClient 只能拉取其授权范围内的数据并提交内容命令，不能在本地修改这些数据后再同步。Chair 的本地议事状态不属于 Host Service 的共享数据。
-局域网发现只用于公布可连接的大会身份与地址，不公布 Committee 的阶段、发言人、动议、表决、计时或其他 Agenda 状态。
-_Avoid_: Chair, Client
-
-**Host Console（主机控制台）**:
-仅在主机本机访问的管理界面，用于配置大会、管理席位与显式切换活动 Conference；它不主持会议，也不创建、发布、编辑、审核、批准、驳回或撤回业务内容。它只执行安全与故障恢复操作，例如撤销会话、重置访问、切换活动 Conference 和异常释放指令认领。
-_Avoid_: UserClient, Server
-
 **Chair (主席)**:
-同时具有 `control_conference` Capability 与一项 ChairAssignment 的 UserClient 角色。Chair 以自己的 Seat 认证 Host Service，并主动取得其被授权 Committee 的 ChairCommitteeProjection；它在本地进行会议主持与议程处理，并直接向绑定的 Display 输出投影。Chair 的 Agenda 与 ProcedureSeatState 仅持久化在其本机，第一版不做跨设备迁移或接管。Chair 不等同于 Host Service 或 Host Console。
+同时具有 `control_conference` Capability 与一项 ChairAssignment 的 UserClient 角色。Chair 以自己的 Seat 认证 Cloud Service，并主动取得其被授权 Committee 的 ChairCommitteeProjection；它在本地进行会议主持与议程处理，并直接向绑定的 Display 输出投影。Chair 的 Agenda 与 ProcedureSeatState 仅持久化在其本机，第一版不做跨设备迁移或接管。Chair 不等同于 Cloud Service 或 Organizer Platform。
 
 **UserClient（用户端）**:
-以 Seat 身份使用的 Veto 桌面应用，涵盖代表、MPC 与 IPC 等所有用户。它通过邀请码+密码连接 Host Service 中的会议，查看同步的会议状态，
-根据 Seat 的 Capability 执行操作（提交指令、起草新闻等）。普通 UserClient 只向 Host Service 传输指令、新闻和局势；断开连接时可以保留本地草稿，但不排队或稍后重放任何改变共享大会数据的命令。拥有 `control_conference` Capability 的 UserClient 是 Chair，并有额外的本地议程与 Display 职责。
+以 Seat 身份使用的 Veto 桌面应用，涵盖代表、MPC 与 IPC 等所有用户。它通过邀请码+密码连接 Cloud Service 中的 Cloud Conference，
+也可以在 Offline Mode 中直接主持 Singleton Mode Conference。它根据 Seat 的 Capability 执行操作（提交指令、起草新闻等）。
+普通 UserClient 只向 Cloud Service 传输指令、新闻和局势；断开连接时可以保留本地草稿，但不排队或稍后重放任何改变共享大会数据的命令。
+拥有 `control_conference` Capability 的 UserClient 是 Chair，并有额外的本地议程与 Display 职责。
 _Avoid_: Delegate, Member
 
 **Agenda（议程）**:
-由 Chair 在本地用于线下主持的会议流程信息。它不向普通 UserClient 或 Host Service 同步，也不接受普通 UserClient 的状态变更；Host Service 与 Chair 对这部分只交换完成身份识别、授权和主持所需的 ChairCommitteeProjection。
+由 Chair 在本地用于线下主持的会议流程信息。它不向普通 UserClient 或 Cloud Service 同步，也不接受普通 UserClient 的状态变更；Cloud Service 与 Chair 对这部分只交换完成身份识别、授权和主持所需的 ChairCommitteeProjection。
 _Avoid_: UserClient workflow, Remote procedure
 
 **Display (投屏端)**:
-与一个 Chair 绑定的只读投影窗口（已有）。它只直接接收 Chair 输出的展示数据，不连接 Host Service，也不维护自身计时器（见 ADR-0002）。Host Service 的权限边界止于 Chair；Chair 对其输出到 Display 的数据负责。活动 Conference 切换或 Chair 与 Host Service 断开时，Chair 必须使绑定 Display 显示断开连接，不能保留旧大会的冻结投影。
+与一个 Chair 绑定的只读投影窗口（已有）。它只直接接收 Chair 输出的展示数据，不连接 Cloud Service，也不维护自身计时器（见 ADR-0002）。Cloud Service 的权限边界止于 Chair；Chair 对其输出到 Display 的数据负责。活动 Conference 切换或 Chair 与 Cloud Service 断开时，Chair 必须使绑定 Display 显示断开连接，不能保留旧大会的冻结投影。
 _Avoid_: Projector, Screen
 
 **ChairCommitteeProjection（主席委员会投影）**:
-Host Service 按已认证 Chair 的 Capability 与 ChairAssignment 返回的受限 Committee 席位数据，用于 Chair 在本地执行议程与会议控制。它包含 Seat 身份、角色和 ProceduralSeatProfile 等静态资料，而不包含运行中的 ProcedureSeatState。它不是普通 UserClient 的同步快照，也不授予 Chair 对其他 Committee 数据的访问权。
+Cloud Service 按已认证 Chair 的 Capability 与 ChairAssignment 返回的受限 Committee 席位数据，用于 Chair 在本地执行议程与会议控制。它包含 Seat 身份、角色和 ProceduralSeatProfile 等静态资料，而不包含运行中的 ProcedureSeatState。它不是普通 UserClient 的同步快照，也不授予 Chair 对其他 Committee 数据的访问权。
 为支持线下主持，它还包含该 Committee 各 Seat 已绑定 User 的真实姓名；这是一项仅限获授权 Chair 的 User 数据例外。
 _Avoid_: Full Conference Sync, Display Snapshot
 
@@ -268,7 +306,7 @@ _Avoid_: Full Conference Sync, Display Snapshot
 - **RollCall (点名)** — 会议出席确认
 
 **Participants（参会席位）**:
-一个 Committee 中由 Chair 的本地 ProcedureSeatState 纳入议事的 Seats；它们共同构成点名、发言、动议和投票的参与者集合。它不是 Host Service 向普通 UserClient 公开的集合。
+一个 Committee 中由 Chair 的本地 ProcedureSeatState 纳入议事的 Seats；它们共同构成点名、发言、动议和投票的参与者集合。它不是 Cloud Service 向普通 UserClient 公开的集合。
 _Avoid_: Delegations, Members
 
 ## Timeline（时间线）
@@ -281,7 +319,7 @@ _Avoid_: Delegations, Members
 _Avoid_: Clock, Timer, Speed
 
 **TimelineProjection（时间线最小投影）**:
-Host Service 向拥有 `publish_situation` 的 IPC Seat 提供的局势发布上下文，只包含 Timeline ID、名称、当前模拟时间和状态；不包含 Battle、地图或议程。
+Cloud Service 向拥有 `publish_situation` 的 IPC Seat 提供的局势发布上下文，只包含 Timeline ID、名称、当前模拟时间和状态；不包含 Battle、地图或议程。
 _Avoid_: Battle Projection, Agenda Snapshot
 
 ## Battle（兵棋推演 / 军事推演）

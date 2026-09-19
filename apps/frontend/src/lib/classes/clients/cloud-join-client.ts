@@ -1,0 +1,75 @@
+const cloudApiBaseUrl = (import.meta.env.VITE_CLOUD_API_URL ?? '').replace(/\/$/, '')
+
+export type CloudSeatState = 'unclaimed' | 'claimed'
+
+export interface CloudJoinTarget {
+  inviteCode: string
+  conferenceId: string
+  conferenceName: string
+  committeeName: string
+  seatName: string
+  seatState: CloudSeatState
+  hasPassword: boolean
+  wsUrl: string
+}
+
+export interface CloudClaimInput {
+  inviteCode: string
+  displayName: string
+  password?: string
+}
+
+export class CloudJoinError extends Error {
+  readonly status?: number
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'CloudJoinError'
+    this.status = status
+  }
+}
+
+export function normalizeInviteCode(value: string): string {
+  const characters = value.trim().toUpperCase().replaceAll(/[\s-]/g, '')
+  if (!/^[A-HJ-NP-Z2-9]{12}$/.test(characters)) {
+    throw new CloudJoinError('邀请码格式应为 4-4-4')
+  }
+
+  return [characters.slice(0, 4), characters.slice(4, 8), characters.slice(8)].join('-')
+}
+
+async function request<T>(path: string, body: unknown): Promise<T> {
+  if (!cloudApiBaseUrl) {
+    throw new CloudJoinError('云端服务暂未配置')
+  }
+
+  let response: Response
+  try {
+    response = await fetch(new URL(path.replace(/^\//, ''), `${cloudApiBaseUrl}/`), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+  } catch {
+    throw new CloudJoinError('无法连接云端服务')
+  }
+
+  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null
+  if (!response.ok) {
+    const message =
+      typeof payload === 'object' && payload !== null && 'message' in payload
+        ? String(payload.message)
+        : '云端服务请求失败'
+    throw new CloudJoinError(message, response.status)
+  }
+
+  return payload as T
+}
+
+export function validateCloudInvite(inviteCode: string): Promise<CloudJoinTarget> {
+  return request<CloudJoinTarget>('/veto/join/validate', { inviteCode })
+}
+
+export function claimCloudSeat(input: CloudClaimInput): Promise<CloudJoinTarget> {
+  return request<CloudJoinTarget>('/veto/join/claim', input)
+}

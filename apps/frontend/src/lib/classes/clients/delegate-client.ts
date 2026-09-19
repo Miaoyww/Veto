@@ -36,7 +36,9 @@ export interface UserClientCallbacks {
   onChairProjection?: (projection: ChairCommitteeProjection) => void
   onContentChanged?: (content: Directive | News | SituationUpdate) => void
   onCommandResult?: (result: HostExecuteResult) => void
-  onSessionRevoked?: (reason: 'replaced' | 'permissions_changed' | 'conference_switched' | 'host_shutdown') => void
+  onSessionRevoked?: (
+    reason: 'replaced' | 'permissions_changed' | 'conference_switched' | 'host_shutdown'
+  ) => void
   onError?: (error: HostError) => void
   onConnectionStatus?: (status: ConnectionStatus) => void
 }
@@ -44,6 +46,7 @@ export interface UserClientCallbacks {
 let wsPort: number | null = null
 let externalWsUrl: string | null = null
 let currentClient: UserClient | null = null
+let pendingAuthentication: { inviteCode: string; password?: string } | null = null
 
 /** Read the packaged Host Service port when running inside Electron. */
 export async function initWsPort(): Promise<number> {
@@ -70,6 +73,22 @@ export function setUserClientWsUrl(url: string | null): void {
   if (externalWsUrl === url) return
   externalWsUrl = url
   currentClient?.disconnect()
+}
+
+export function setPendingUserClientAuthentication(authentication: {
+  inviteCode: string
+  password?: string
+}): void {
+  pendingAuthentication = authentication
+}
+
+export function consumePendingUserClientAuthentication(): {
+  inviteCode: string
+  password?: string
+} | null {
+  const authentication = pendingAuthentication
+  pendingAuthentication = null
+  return authentication
 }
 
 function createRequestId(): string {
@@ -104,7 +123,11 @@ export class UserClient {
   }
 
   querySessionProjection(): void {
-    this.send({ type: 'query', requestId: createRequestId(), query: { type: 'session_projection' } })
+    this.send({
+      type: 'query',
+      requestId: createRequestId(),
+      query: { type: 'session_projection' }
+    })
   }
 
   queryWorkflowQueue(): void {

@@ -11,6 +11,7 @@
     WorkflowAudienceProjection
   } from '../../../../../shared'
   import {
+    consumePendingUserClientAuthentication,
     getUserClient,
     initWsPort,
     type ConnectionStatus
@@ -130,6 +131,10 @@
     })
 
     void initWsPort()
+    const pendingAuthentication = consumePendingUserClientAuthentication()
+    if (pendingAuthentication) {
+      handleAuthenticate(pendingAuthentication.inviteCode, pendingAuthentication.password)
+    }
     return () => client.disconnect()
   })
 </script>
@@ -158,7 +163,8 @@
           execute({ type: 'approve_directive', directiveId, processingNote })}
         onReject={(directiveId, processingNote) =>
           execute({ type: 'reject_directive', directiveId, processingNote })}
-        onCancel={(directiveId, reason) => execute({ type: 'cancel_directive', directiveId, reason })}
+        onCancel={(directiveId, reason) =>
+          execute({ type: 'cancel_directive', directiveId, reason })}
       />
     {/snippet}
     {#snippet news()}
@@ -169,7 +175,8 @@
         canReview={capabilities.includes('review_news')}
         canWithdraw={capabilities.includes('withdraw_news')}
         onSubmit={(data) => execute({ type: 'submit_news', ...data })}
-        onReview={(newsId, decision, note) => execute({ type: 'review_news', newsId, decision, note })}
+        onReview={(newsId, decision, note) =>
+          execute({ type: 'review_news', newsId, decision, note })}
         onWithdraw={(newsId, reason) => execute({ type: 'withdraw_news', newsId, reason })}
       />
     {/snippet}
@@ -180,7 +187,8 @@
         canPublish={capabilities.includes('publish_situation')}
         canWithdraw={capabilities.includes('withdraw_situation')}
         onPublish={(data) => execute({ type: 'publish_situation', ...data })}
-        onWithdraw={(situationId, reason) => execute({ type: 'withdraw_situation', situationId, reason })}
+        onWithdraw={(situationId, reason) =>
+          execute({ type: 'withdraw_situation', situationId, reason })}
       />
     {/snippet}
   </DelegateShell>

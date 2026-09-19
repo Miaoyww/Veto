@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by ADR-0011
 
 One local Veto Host Service is the authoritative source for shared Conference data, authentication, authorization, command handling, and LAN routing on one computer. Its dependency-free Host Runtime owns ordinary TypeScript domain state and exposes one authoritative `execute(actor, command)` mutation path for Host Console and UserClient writes that change shared data. Each UserClient command includes a durable idempotency key so a lost acknowledgement cannot create duplicate content. The first release exposes one active Conference, selected by an explicit Host Console action; after a Host restart no Conference is active until explicitly started again. The service isolates every query, command, connection, and event by its Conference and Committee, persists each successful command before acknowledging it, and restores UserClients from a fresh snapshot after a restart. Switching the active Conference disconnects UserClients, returns them to their home screen, and requires each affected Chair to put its bound Display into a disconnected state. Security-relevant Host Console changes to a Seat revoke its active session immediately. The local-only Host Console is an administrative interface, not a Chair control surface. Seat-authenticated UserClients remain the primary source of directives, news, and situation updates; they pull Host-owned state, may retain disconnected LocalDrafts, and never queue state-changing commands. A normal UserClient receives only its own identity, Committee, resolved Capabilities, and authorized content; it never receives other seats, procedural state, agenda, Battle, Participants, User data, or invite codes.
 

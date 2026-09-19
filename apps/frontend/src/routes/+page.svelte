@@ -1,109 +1,135 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
   import { fly } from 'svelte/transition'
-  import { Loader2, LogIn, Network, Plus, RefreshCw, Server } from '@lucide/svelte'
+  import { ArrowLeft, Loader2, LogIn, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
   import { Input } from '$lib/components/ui/input'
-  import { Badge } from '$lib/components/ui/badge'
-  import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { Separator } from '$lib/components/ui/separator'
+  import * as InputOTP from '$lib/components/ui/input-otp'
   import DescContent from '$lib/components/connect/desc-content.svelte'
   import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
   import favicon from '$lib/assets/favicon.png'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { setUserClientWsUrl } from '$lib/classes/clients/delegate-client'
-  import { conferences } from '$lib/classes/stores/conference/conference-store'
+  import feishu from '$lib/assets/feishu.png'
+  import wechat from '$lib/assets/wechat.png'
+  import {
+    consumePendingUserClientAuthentication,
+    setPendingUserClientAuthentication,
+    setUserClientWsUrl
+  } from '$lib/classes/clients/delegate-client'
+  import {
+    CloudJoinError,
+    claimCloudSeat,
+    normalizeInviteCode,
+    validateCloudInvite,
+    type CloudJoinTarget
+  } from '$lib/classes/clients/cloud-join-client'
 
-  interface LanMeeting {
-    conferenceId: string
-    name: string
-    phase: string
-    host: string
-    port: number
-    wsUrl: string
+  type JoinStage = 'invite' | 'claim' | 'password'
+
+  let stage = $state<JoinStage>('invite')
+  let inviteCode = $state('')
+  let joinTarget = $state<CloudJoinTarget | null>(null)
+  let displayName = $state('')
+  let password = $state('')
+  let busy = $state(false)
+  let error = $state('')
+
+  function enterOffline(): void {
+    setUserClientWsUrl(null)
+    goto(resolve('/conference'))
   }
 
-  let meetings = $state<LanMeeting[]>([])
-  let scanning = $state(false)
-  let scanError = $state('')
-  let manualAddress = $state('')
-  let manualBusy = $state(false)
-  let manualError = $state('')
-
-  async function scan(): Promise<void> {
-    scanning = true
-    scanError = ''
-
-    try {
-      if (!window.veto?.lan) {
-        scanError = '请通过 Veto Electron 客户端加入会议'
-        meetings = []
-        return
-      }
-      meetings = await window.veto.lan.scan()
-    } catch {
-      scanError = '扫描失败，请检查网络或使用手动连接'
-    } finally {
-      scanning = false
-    }
+  function resetJoin(): void {
+    stage = 'invite'
+    joinTarget = null
+    displayName = ''
+    password = ''
+    error = ''
   }
 
-  function join(meeting: LanMeeting): void {
-    if (!window.veto?.lan) {
-      scanError = '请通过 Veto Electron 客户端加入会议'
-      return
-    }
-
-    scanError = ''
-    setUserClientWsUrl(meeting.wsUrl)
+  function enterCloud(target: CloudJoinTarget): void {
+    setUserClientWsUrl(target.wsUrl)
+    setPendingUserClientAuthentication({
+      inviteCode: target.inviteCode,
+      password: password.trim() || undefined
+    })
     goto(
       resolve('/client/[conference_id]', {
-        conference_id: meeting.conferenceId
+        conference_id: target.conferenceId
       })
     )
   }
 
-  async function joinManual(event: Event): Promise<void> {
-    event.preventDefault()
-    const value = manualAddress.trim()
-    if (!value) return
+  function errorMessage(exception: unknown): string {
+    return exception instanceof Error ? exception.message : '加入大会失败'
+  }
 
-    manualBusy = true
-    manualError = ''
+  async function submitInvite(event: SubmitEvent): Promise<void> {
+    event.preventDefault()
+    busy = true
+    error = ''
 
     try {
-      if (!window.veto?.lan) {
-        manualError = '请通过 Veto Electron 客户端加入会议'
-        return
-      }
+      const normalizedCode = normalizeInviteCode(inviteCode)
+      inviteCode = normalizedCode
+      const target = await validateCloudInvite(normalizedCode)
+      joinTarget = { ...target, inviteCode: normalizedCode }
+      password = ''
 
-      const meeting = await window.veto.lan.queryConference(value)
-      if (!meeting) {
-        manualError = '该地址上没有正在开放的会议'
-        return
+      if (target.seatState === 'unclaimed') {
+        stage = 'claim'
+      } else if (target.hasPassword) {
+        stage = 'password'
+      } else {
+        enterCloud(joinTarget)
       }
-      join(meeting)
-    } catch {
-      manualError = '无法连接到该会议地址'
+    } catch (exception) {
+      error = errorMessage(exception)
     } finally {
-      manualBusy = false
+      busy = false
     }
   }
 
-  function enterOrganizerMode(): void {
-    setUserClientWsUrl(null)
-    if ($conferences.length === 0) {
-      goto(resolve('/empty'))
-      return
-    }
+  async function submitClaim(event: SubmitEvent): Promise<void> {
+    event.preventDefault()
+    if (!joinTarget || !displayName.trim()) return
 
-    goto(resolve('/conference'))
+    busy = true
+    error = ''
+
+    try {
+      const target = await claimCloudSeat({
+        inviteCode: joinTarget.inviteCode,
+        displayName: displayName.trim(),
+        password: password.trim() || undefined
+      })
+      enterCloud(target)
+    } catch (exception) {
+      error =
+        exception instanceof CloudJoinError && exception.status === 409
+          ? '该席位已被认领，请返回后使用密码进入'
+          : errorMessage(exception)
+    } finally {
+      busy = false
+    }
   }
 
-  onMount(scan)
+  async function submitClaimed(event: SubmitEvent): Promise<void> {
+    event.preventDefault()
+    if (!joinTarget) return
+
+    busy = true
+    error = ''
+
+    try {
+      enterCloud(joinTarget)
+    } catch (exception) {
+      error = errorMessage(exception)
+    } finally {
+      busy = false
+    }
+  }
 </script>
 
 <div class="relative min-h-svh overflow-clip bg-background">
@@ -133,110 +159,170 @@
           class="w-full max-w-md rounded-2xl border bg-card/90 p-0 shadow-2xl backdrop-blur-xl"
         >
           <Card.Header class="p-6 pb-4">
-            <Card.Title class="text-2xl font-bold">加入会议</Card.Title>
+            <Card.Title class="text-2xl font-bold">加入大会</Card.Title>
             <Card.Description class="text-sm text-muted-foreground">
-              局域网会议会自动出现在下方
+              使用席位邀请码进入云端大会
             </Card.Description>
           </Card.Header>
 
           <Card.Content class="px-6 pb-5">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 text-sm font-medium">
-                <Network class="size-4 text-primary" />
-                附近的会议
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={scanning}
-                onclick={() => void scan()}
-                title="重新扫描"
-              >
-                {#if scanning}
-                  <Loader2 class="size-4 animate-spin" />
-                {:else}
-                  <RefreshCw class="size-4" />
-                {/if}
-              </Button>
-            </div>
-
-            <ScrollArea class="-mr-3 mt-3 h-44 pr-3">
-              {#if meetings.length > 0}
-                <div class="flex flex-col gap-2">
-                  {#each meetings as meeting (meeting.conferenceId)}
-                    <button
-                      type="button"
-                      class="flex w-full items-center gap-3 rounded-lg border bg-background/70 p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
-                      onclick={() => join(meeting)}
+            {#key stage}
+              <div in:fly={{ y: 8, duration: 180 }} out:fly={{ y: -8, duration: 120 }}>
+                {#if stage === 'invite'}
+                  <form class="flex flex-col gap-4" onsubmit={submitInvite}>
+                    <InputOTP.Root
+                      bind:value={inviteCode}
+                      class="justify-center"
+                      maxlength={8}
+                      inputmode="text"
+                      pattern="[A-HJ-NP-Za-hj-np-z2-9]"
+                      autocomplete="off"
+                      aria-label="席位邀请码"
+                      pasteTransformer={(value) =>
+                        value.toUpperCase().replace(/[^A-HJ-NP-Za-hj-np-z2-9]/g, '')}
                     >
-                      <span
-                        class="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
+                      {#snippet children({ cells })}
+                        <InputOTP.Group class="gap-2">
+                          {#each cells.slice(0, 4) as cell, index (index)}
+                            <InputOTP.Slot
+                              {cell}
+                              class="h-12 w-10 rounded-lg border text-base font-mono uppercase"
+                            />
+                          {/each}
+                        </InputOTP.Group>
+                        <InputOTP.Separator class="mx-1 text-muted-foreground" />
+                        <InputOTP.Group class="gap-2">
+                          {#each cells.slice(4, 8) as cell, index (index)}
+                            <InputOTP.Slot
+                              {cell}
+                              class="h-12 w-10 rounded-lg border text-base font-mono uppercase"
+                            />
+                          {/each}
+                        </InputOTP.Group>
+                      {/snippet}
+                    </InputOTP.Root>
+                    <Button type="submit" size="lg" disabled={busy || !inviteCode.trim()}>
+                      {#if busy}
+                        <Loader2 class="size-4 animate-spin" />
+                      {:else}
+                        <LogIn class="size-4" />
+                      {/if}
+                      加入
+                    </Button>
+                  </form>
+                {:else if stage === 'claim' && joinTarget}
+                  <div class="rounded-xl border bg-background/60 p-4">
+                    <p class="truncate text-sm font-medium">{joinTarget.conferenceName}</p>
+                    <p class="mt-1 truncate text-xs text-muted-foreground">
+                      {joinTarget.committeeName} · {joinTarget.seatName}
+                    </p>
+                  </div>
+
+                  <form class="mt-4 flex flex-col gap-4" onsubmit={submitClaim}>
+                    <Input
+                      bind:value={displayName}
+                      class="h-12"
+                      aria-label="代表姓名"
+                      placeholder="代表姓名"
+                      autocomplete="name"
+                    />
+                    <Input
+                      bind:value={password}
+                      class="h-12"
+                      type="password"
+                      aria-label="访问密码（可选）"
+                      placeholder="访问密码（可选）"
+                      autocomplete="new-password"
+                    />
+                    <div class="flex gap-3">
+                      <Button
+                        type="submit"
+                        size="lg"
+                        class="flex-1"
+                        disabled={busy || !displayName.trim()}
                       >
-                        <Server class="size-4" />
-                      </span>
-                      <span class="min-w-0 flex-1">
-                        <span class="block truncate text-sm font-medium">{meeting.name}</span>
-                        <span class="block truncate text-xs text-muted-foreground">
-                          {meeting.host}:{meeting.port}
-                        </span>
-                      </span>
-                      <Badge variant="outline" class="max-w-24 shrink-0 truncate text-[10px]">
-                        {PHASE_LABELS[meeting.phase as keyof typeof PHASE_LABELS] ?? meeting.phase}
-                      </Badge>
-                      <LogIn class="size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  {/each}
-                </div>
-              {:else if scanning}
-                <div class="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                  <Loader2 class="mr-2 size-4 animate-spin" />
-                  正在扫描
-                </div>
-              {:else}
-                <div
-                  class="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-muted-foreground"
-                  in:fly={{ y: 4, duration: 180 }}
-                >
-                  <Network class="size-5 opacity-50" />
-                  {scanError || '暂无会议'}
-                </div>
-              {/if}
-            </ScrollArea>
+                        {#if busy}
+                          <Loader2 class="size-4 animate-spin" />
+                        {:else}
+                          <LogIn class="size-4" />
+                        {/if}
+                        确认加入
+                      </Button>
+                      <Button type="button" variant="ghost" size="lg" onclick={resetJoin}>
+                        <ArrowLeft class="size-4" />
+                        返回
+                      </Button>
+                    </div>
+                  </form>
+                {:else if stage === 'password' && joinTarget}
+                  <div class="rounded-xl border bg-background/60 p-4">
+                    <p class="truncate text-sm font-medium">{joinTarget.conferenceName}</p>
+                    <p class="mt-1 truncate text-xs text-muted-foreground">
+                      {joinTarget.committeeName} · {joinTarget.seatName}
+                    </p>
+                  </div>
 
-            <div class="relative mt-5 h-5">
-              <Separator class="absolute top-1/2" />
-              <span
-                class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground"
-              >
-                手动连接
-              </span>
-            </div>
-
-            <form class="mt-4 flex gap-2" onsubmit={joinManual}>
-              <Input
-                placeholder="192.168.1.10:19527"
-                bind:value={manualAddress}
-                disabled={manualBusy}
-              />
-              <Button type="submit" disabled={manualBusy || !manualAddress.trim()}>
-                {#if manualBusy}
-                  <Loader2 class="size-4 animate-spin" />
-                {:else}
-                  <LogIn class="size-4" />
+                  <form class="mt-4 flex flex-col gap-4" onsubmit={submitClaimed}>
+                    <Input
+                      bind:value={password}
+                      class="h-12"
+                      type="password"
+                      aria-label="访问密码"
+                      placeholder="访问密码"
+                      autocomplete="current-password"
+                    />
+                    <div class="flex gap-3">
+                      <Button type="submit" size="lg" class="flex-1" disabled={busy}>
+                        {#if busy}
+                          <Loader2 class="size-4 animate-spin" />
+                        {:else}
+                          <LogIn class="size-4" />
+                        {/if}
+                        进入席位
+                      </Button>
+                      <Button type="button" variant="ghost" size="lg" onclick={resetJoin}>
+                        <ArrowLeft class="size-4" />
+                        返回
+                      </Button>
+                    </div>
+                  </form>
                 {/if}
-                加入
-              </Button>
-            </form>
-            {#if manualError}
-              <p class="mt-2 text-xs text-destructive">{manualError}</p>
-            {/if}
+
+                {#if error}
+                  <p class="mt-3 text-sm text-destructive">{error}</p>
+                {/if}
+              </div>
+            {/key}
           </Card.Content>
 
           <Card.Footer class="flex-col gap-3 border-t p-6">
-            <Button class="w-full gap-2" size="lg" onclick={enterOrganizerMode}>
-              <Plus class="size-4" />
-              组织者入口
-            </Button>
+            <div class="flex w-full gap-3">
+              <Button
+                variant="outline"
+                type="button"
+                class="h-12 flex-1 justify-center gap-2 rounded-lg shadow-sm"
+                onclick={enterOffline}
+              >
+                <Monitor class="size-5" />
+                离线模式
+              </Button>
+
+              <button
+                type="button"
+                class="size-12 rounded-lg border bg-card p-0 shadow-sm"
+                aria-label="微信登录"
+              >
+                <img src={wechat} class="mx-auto size-5" alt="" />
+              </button>
+
+              <button
+                type="button"
+                class="size-12 rounded-lg border bg-card p-0 shadow-sm"
+                aria-label="飞书登录"
+              >
+                <img src={feishu} class="mx-auto size-5" alt="" />
+              </button>
+            </div>
           </Card.Footer>
         </Card.Root>
       </section>
@@ -245,10 +331,6 @@
 </div>
 
 <style>
-  /* Hallmark · pre-emit critique: P4 H5 E5 S4 R5 V4 */
-  /* Hallmark · component: flowing-background · genre: atmospheric · theme: project-tokens
-   * motion: transform-only · reduced-motion: static · contrast: decorative layer only
-   */
   .drag-region {
     -webkit-app-region: drag;
   }
@@ -291,7 +373,7 @@
   .flowing-background__veil--strong {
     inset-block-start: -8%;
     inset-inline-start: -12%;
-    width: clamp(26rem, 62vw, 62rem);
+    width: clamp(24rem, 62vw, 62rem);
     aspect-ratio: 1.55;
     background: var(--flow-color-strong);
     opacity: var(--flow-opacity-strong);
@@ -301,7 +383,7 @@
   .flowing-background__veil--soft {
     inset-block-end: -12%;
     inset-inline-end: -10%;
-    width: clamp(24rem, 54vw, 54rem);
+    width: clamp(24rem, 62vw, 62rem);
     aspect-ratio: 1.35;
     background: var(--flow-color-soft);
     opacity: var(--flow-opacity-soft);
@@ -345,14 +427,6 @@
     .flowing-background__veil {
       animation: none;
       will-change: auto;
-    }
-
-    .flowing-background__veil--strong {
-      transform: translate3d(8%, 4%, 0) rotate(-4deg) scale(1.04);
-    }
-
-    .flowing-background__veil--soft {
-      transform: translate3d(-8%, -4%, 0) rotate(4deg) scale(1);
     }
   }
 </style>
