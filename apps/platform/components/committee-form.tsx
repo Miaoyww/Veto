@@ -126,7 +126,7 @@ export function CommitteeForm({
         className="flex flex-col gap-3"
         aria-labelledby={`seats-${reference}`}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 id={`seats-${reference}`} className="font-medium">
               席位
@@ -135,7 +135,7 @@ export function CommitteeForm({
               每个委员会至少需要一个席位。
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SeatImportDialog
               disabled={disabled}
               roleLabel={importedRoleLabel}

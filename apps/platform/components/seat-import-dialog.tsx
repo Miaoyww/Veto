@@ -14,14 +14,15 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
+
+type ImportMode = "excel" | "text"
+type ImportStep = "format" | "text" | "sheet" | "preview"
 
 interface SeatImportDialogProps {
   disabled?: boolean
@@ -44,12 +45,17 @@ export function SeatImportDialog({
   onImport,
 }: SeatImportDialogProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [open, setOpen] = useState(false)
+  const [step, setStep] = useState<ImportStep | null>(null)
+  const [mode, setMode] = useState<ImportMode>("excel")
   const [text, setText] = useState("")
   const [error, setError] = useState("")
   const [workbook, setWorkbook] = useState<SeatWorkbook | null>(null)
   const [selectedSheet, setSelectedSheet] = useState("")
   const [rows, setRows] = useState<ImportedSeat[]>([])
+
+  const hasUnmatchedRole = rows.some(
+    (row) => row.roleName && roleLabel(row.roleName) === "未匹配角色"
+  )
 
   function clear(): void {
     setText("")
@@ -59,20 +65,25 @@ export function SeatImportDialog({
     setRows([])
   }
 
-  function handleOpenChange(nextOpen: boolean): void {
-    setOpen(nextOpen)
-    if (!nextOpen) clear()
+  function close(): void {
+    setStep(null)
+    clear()
   }
 
-  function selectSheet(reader: SeatWorkbook, sheetName: string): void {
-    setSelectedSheet(sheetName)
-    try {
-      setRows(reader.importSheet(sheetName, "conference"))
-      setError("")
-    } catch (cause) {
-      setRows([])
-      setError(errorMessage(cause, "Sheet 读取失败"))
+  function openFormat(nextMode: ImportMode): void {
+    clear()
+    setMode(nextMode)
+    setStep("format")
+  }
+
+  function continueFromFormat(): void {
+    setError("")
+    if (mode === "excel") {
+      setStep(null)
+      inputRef.current?.click()
+      return
     }
+    setStep("text")
   }
 
   async function handleFile(
@@ -85,157 +96,289 @@ export function SeatImportDialog({
     try {
       const reader = readSeatWorkbook(await file.arrayBuffer())
       setWorkbook(reader)
-      selectSheet(reader, reader.sheetNames[0])
+      setSelectedSheet(reader.sheetNames[0])
+      setError("")
+      setStep("sheet")
     } catch (cause) {
-      setWorkbook(null)
-      setRows([])
       setError(errorMessage(cause, "Excel 文件读取失败"))
+      setStep("format")
+    }
+  }
+
+  function readSelectedSheet(): void {
+    if (!workbook || !selectedSheet) return
+    try {
+      setRows(workbook.importSheet(selectedSheet, "conference"))
+      setError("")
+      setStep("preview")
+    } catch (cause) {
+      setRows([])
+      setError(errorMessage(cause, "没有读取到有效数据，请检查表格内容"))
     }
   }
 
   function readText(): void {
     try {
       setRows(parseSeatText(text, "conference"))
-      setWorkbook(null)
-      setSelectedSheet("")
       setError("")
+      setStep("preview")
     } catch (cause) {
       setRows([])
-      setError(errorMessage(cause, "文本读取失败"))
+      setError(errorMessage(cause, "没有读取到有效数据，请按格式逐行输入"))
     }
   }
 
   function confirmImport(): void {
     if (rows.length === 0) return
     onImport(rows)
-    setOpen(false)
-    clear()
+    close()
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-          />
-        }
+    <>
+      <input
+        ref={inputRef}
+        className="hidden"
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        onChange={(event) => void handleFile(event)}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => openFormat("excel")}
       >
-        <Upload aria-hidden="true" />
-        导入席位
-      </DialogTrigger>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>导入席位</DialogTitle>
-          <DialogDescription>
-            Excel 第一行作为表头；文本每行一个席位，格式为“名称, 简称, 角色”。
-          </DialogDescription>
-        </DialogHeader>
+        <FileSpreadsheet aria-hidden="true" />从 Excel 导入
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => openFormat("text")}
+      >
+        <FileText aria-hidden="true" />
+        从文本导入
+      </Button>
 
-        <div className="flex flex-col gap-4">
-          <input
-            ref={inputRef}
-            className="hidden"
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={(event) => void handleFile(event)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => inputRef.current?.click()}
-          >
-            <FileSpreadsheet aria-hidden="true" />
-            选择 Excel 文件
-          </Button>
+      <Dialog
+        open={step !== null}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+      >
+        <DialogContent
+          className={
+            step === "preview"
+              ? "max-h-[85dvh] w-[calc(100%-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-4xl"
+              : step === "text"
+                ? "w-[calc(100%-2rem)] min-w-0 sm:max-w-2xl"
+                : "w-[calc(100%-2rem)] min-w-0 sm:max-w-2xl"
+          }
+        >
+          {step === "format" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {mode === "excel" ? "从 Excel 导入席位" : "从文本导入席位"}
+                </DialogTitle>
+                <DialogDescription>
+                  开始读取前，请确认导入内容符合以下格式。
+                </DialogDescription>
+              </DialogHeader>
 
-          {workbook ? (
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              工作表
+              {mode === "excel" ? (
+                <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+                  <p>第一行作为表头，从第二行开始读取：</p>
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full min-w-lg text-sm">
+                      <thead className="bg-muted/50 text-left text-xs">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">A 列</th>
+                          <th className="px-3 py-2 font-medium">
+                            B 列（可选）
+                          </th>
+                          <th className="px-3 py-2 font-medium">
+                            C 列（可选）
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t text-foreground">
+                          <td className="px-3 py-2">席位名称</td>
+                          <td className="px-3 py-2">席位简称</td>
+                          <td className="px-3 py-2">席位类型（角色名称）</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p>选择文件后还需要选择要读取的 Sheet。</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                  <p>每行一个席位，格式为：</p>
+                  <code className="rounded-lg bg-muted px-3 py-2 text-foreground">
+                    席位名称[,席位简称][,席位类型]
+                  </code>
+                  <p>
+                    席位简称和席位类型都可以省略；需要跳过简称填写类型时，请保留空字段，例如：席位名称,,席位类型。
+                  </p>
+                  <p>分隔符支持逗号、中文逗号、分号、中文分号和 |。</p>
+                </div>
+              )}
+
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={close}>
+                  取消
+                </Button>
+                <Button type="button" onClick={continueFromFormat}>
+                  <Upload aria-hidden="true" />
+                  {mode === "excel" ? "选择文件" : "继续输入"}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+
+          {step === "text" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>粘贴文本席位</DialogTitle>
+                <DialogDescription>
+                  每行一个席位，支持逗号、分号或 | 分隔。
+                </DialogDescription>
+              </DialogHeader>
+              <textarea
+                className="min-h-56 resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                value={text}
+                placeholder="席位名称[,席位简称][,席位类型]"
+                aria-label="席位文本"
+                onChange={(event) => setText(event.target.value)}
+              />
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={close}>
+                  取消
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!text.trim()}
+                  onClick={readText}
+                >
+                  读取并预览
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+
+          {step === "sheet" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>选择 Sheet</DialogTitle>
+                <DialogDescription>
+                  请选择要读取的工作表，第一行将作为表头跳过。
+                </DialogDescription>
+              </DialogHeader>
               <select
-                className="h-9 rounded-lg border border-input bg-background px-2.5 font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 value={selectedSheet}
-                onChange={(event) => selectSheet(workbook, event.target.value)}
+                aria-label="工作表"
+                onChange={(event) => {
+                  setSelectedSheet(event.target.value)
+                  setError("")
+                }}
               >
-                {workbook.sheetNames.map((sheet) => (
+                {workbook?.sheetNames.map((sheet) => (
                   <option key={sheet} value={sheet}>
                     {sheet}
                   </option>
                 ))}
               </select>
-            </label>
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={close}>
+                  取消
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!selectedSheet}
+                  onClick={readSelectedSheet}
+                >
+                  读取并预览
+                </Button>
+              </DialogFooter>
+            </>
           ) : null}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="seat-import-text" className="text-sm font-medium">
-              或粘贴文本
-            </label>
-            <textarea
-              id="seat-import-text"
-              className="min-h-28 resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              value={text}
-              placeholder="中国, CHN, 常规代表"
-              onChange={(event) => setText(event.target.value)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!text.trim()}
-              onClick={readText}
-            >
-              <FileText aria-hidden="true" />
-              读取文本
-            </Button>
-          </div>
-
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-          {rows.length > 0 ? (
-            <div className="max-h-72 overflow-auto rounded-lg border">
-              <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-muted">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">席位名称</th>
-                    <th className="px-3 py-2 font-medium">简称</th>
-                    <th className="px-3 py-2 font-medium">输入角色</th>
-                    <th className="px-3 py-2 font-medium">匹配角色</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, index) => (
-                    <tr key={`${row.name}-${index}`} className="border-t">
-                      <td className="px-3 py-2">{row.name || "（空）"}</td>
-                      <td className="px-3 py-2">{row.shortName || "—"}</td>
-                      <td className="px-3 py-2">
-                        {row.roleName || "自动匹配"}
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        {roleLabel(row.roleName ?? "")}
-                      </td>
+          {step === "preview" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>导入数据预览</DialogTitle>
+                <DialogDescription>
+                  确认后将把以下 {rows.length} 条席位追加到当前委员会。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[50dvh] overflow-auto rounded-lg border">
+                <table className="w-full min-w-2xl text-left text-sm">
+                  <thead className="sticky top-0 bg-muted/95 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">席位名称</th>
+                      <th className="px-3 py-2 font-medium">席位简称</th>
+                      <th className="px-3 py-2 font-medium">席位类型</th>
+                      <th className="px-3 py-2 font-medium">匹配角色</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, index) => (
+                      <tr key={`${row.name}-${index}`} className="border-t">
+                        <td className="px-3 py-2">{row.name || "（空）"}</td>
+                        <td className="px-3 py-2">{row.shortName || "—"}</td>
+                        <td className="px-3 py-2">
+                          {row.roleName || "自动匹配"}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {roleLabel(row.roleName ?? "")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {hasUnmatchedRole ? (
+                <p role="alert" className="text-sm text-destructive">
+                  存在无法匹配到当前委员会的席位类型，导入后请在席位列表中重新选择角色。
+                </p>
+              ) : null}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={close}>
+                  取消
+                </Button>
+                <Button
+                  type="button"
+                  disabled={rows.length === 0}
+                  onClick={confirmImport}
+                >
+                  确认导入
+                </Button>
+              </DialogFooter>
+            </>
           ) : null}
-        </div>
-
-        <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>
-            取消
-          </DialogClose>
-          <Button
-            type="button"
-            disabled={rows.length === 0}
-            onClick={confirmImport}
-          >
-            导入 {rows.length || ""} 个席位
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
