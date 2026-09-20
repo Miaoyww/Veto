@@ -1,9 +1,10 @@
 "use client"
 
 import type { JSX } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
 import type { ImportedSeat } from "@vetoexpress/utils/seat-import"
 
+import { CommitteeSeatTable } from "@/components/committee-seat-table"
 import { SeatImportDialog } from "@/components/seat-import-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,15 +33,6 @@ export function CommitteeForm({
   onChange,
 }: CommitteeFormProps): JSX.Element {
   const reference = value.id ?? value.clientId ?? "committee"
-
-  function updateSeat(
-    index: number,
-    patch: Partial<CommitteeInput["seats"][number]>
-  ): void {
-    const seats = [...value.seats]
-    seats[index] = { ...seats[index], ...patch }
-    onChange({ ...value, seats })
-  }
 
   function roleReferenceForImportedName(roleName: string): string {
     const allowedRoles = roles.filter((role) =>
@@ -168,116 +160,13 @@ export function CommitteeForm({
           </div>
         </div>
 
-        {value.seats.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            尚未添加席位
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {value.seats.map((seat, seatIndex) => {
-              const seatReference =
-                seat.id ?? seat.clientId ?? String(seatIndex)
-              return (
-                <div
-                  key={seatReference}
-                  className="grid gap-3 rounded-xl border bg-muted/20 p-4 lg:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_auto_auto] lg:items-end"
-                >
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor={`seat-name-${seatReference}`}>
-                      席位名称
-                    </Label>
-                    <Input
-                      id={`seat-name-${seatReference}`}
-                      value={seat.name}
-                      disabled={disabled}
-                      onChange={(event) =>
-                        updateSeat(seatIndex, { name: event.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor={`seat-short-${seatReference}`}>简称</Label>
-                    <Input
-                      id={`seat-short-${seatReference}`}
-                      value={seat.shortName ?? ""}
-                      disabled={disabled}
-                      maxLength={32}
-                      onChange={(event) =>
-                        updateSeat(seatIndex, { shortName: event.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor={`seat-role-${seatReference}`}>角色</Label>
-                    <select
-                      id={`seat-role-${seatReference}`}
-                      value={seat.roleTemplateId}
-                      disabled={disabled}
-                      className={selectClassName}
-                      onChange={(event) =>
-                        updateSeat(seatIndex, {
-                          roleTemplateId: event.target.value,
-                        })
-                      }
-                    >
-                      <option value="">选择角色</option>
-                      {roles
-                        .filter((role) =>
-                          roleAllowedInCommittee(role, value.type)
-                        )
-                        .map((role) => (
-                          <option
-                            key={roleReference(role)}
-                            value={roleReference(role)}
-                          >
-                            {role.name || "未命名角色"}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <label className="flex h-9 items-center gap-2 text-sm whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={seat.hasVotingRights}
-                      disabled={disabled}
-                      onChange={(event) =>
-                        updateSeat(seatIndex, {
-                          hasVotingRights: event.target.checked,
-                        })
-                      }
-                    />
-                    投票权
-                  </label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={disabled}
-                    onClick={() =>
-                      onChange({
-                        ...value,
-                        seats: value.seats.filter(
-                          (_, index) => index !== seatIndex
-                        ),
-                      })
-                    }
-                    aria-label="删除席位"
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </Button>
-                  {seat.inviteCode ? (
-                    <p className="text-xs text-muted-foreground lg:col-span-5">
-                      邀请码：
-                      <span className="font-mono text-foreground">
-                        {seat.inviteCode}
-                      </span>
-                    </p>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <CommitteeSeatTable
+          seats={value.seats}
+          roles={roles}
+          committeeType={value.type}
+          disabled={disabled}
+          onChange={(seats) => onChange({ ...value, seats })}
+        />
       </section>
     </div>
   )
