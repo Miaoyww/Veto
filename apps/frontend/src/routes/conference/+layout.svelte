@@ -3,6 +3,7 @@
   import { onMount, tick } from 'svelte'
   import '$units' // 初始化 ModRegistry 基础数据
   import handoffLogo from '$lib/assets/favicon.png'
+  import JoinConferenceDialog from '$lib/components/conference/join-conference-dialog.svelte'
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
   import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
@@ -14,6 +15,7 @@
     FileText,
     Globe,
     House,
+    LogIn,
     Monitor,
     Newspaper,
     Plus,
@@ -33,6 +35,7 @@
   import { conferences } from '$lib/classes/stores/conference/conference-store'
   import {
     activeSettingsSection,
+    joinConferenceDialogOpen,
     settingsDialogOpen
   } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
@@ -161,6 +164,7 @@
 </script>
 
 <TimerDialog bind:open={$timerDialogOpen} />
+<JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
 
 {#if conferenceHandoffActive}
   <div class="conference-handoff" data-phase={conferenceHandoffPhase} aria-hidden="true">
@@ -249,6 +253,13 @@
               <Sidebar.MenuButton onclick={() => goTo('/conference/create')}>
                 <Plus />
                 <span>创建大会</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton onclick={() => joinConferenceDialogOpen.set(true)}>
+                <LogIn />
+                <span>加入大会</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
 

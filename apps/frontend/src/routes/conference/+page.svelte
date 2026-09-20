@@ -2,7 +2,16 @@
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { ArrowRight, Building2, CalendarDays, Play, Plus, Search, Users } from '@lucide/svelte'
+  import {
+    ArrowRight,
+    Building2,
+    CalendarDays,
+    LogIn,
+    Play,
+    Plus,
+    Search,
+    Users
+  } from '@lucide/svelte'
 
   import { Badge } from '$lib/components/ui/badge'
   import { Button } from '$lib/components/ui/button'
@@ -18,6 +27,7 @@
     lastOpenedConferenceId,
     unloadConference
   } from '$lib/classes/stores/conference/conference-store'
+  import { joinConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { navigateToConference } from '$lib/classes/utils'
 
   let query = $state('')
@@ -100,11 +110,17 @@
           </p>
         </div>
 
-        <Button size="lg" class="shrink-0" onclick={openCreatePage}>
-          <Plus data-icon="inline-start" />
-          创建大会
-          <ArrowRight data-icon="inline-end" />
-        </Button>
+        <div class="flex shrink-0 gap-2">
+          <Button size="lg" variant="outline" onclick={() => joinConferenceDialogOpen.set(true)}>
+            <LogIn data-icon="inline-start" />
+            加入大会
+          </Button>
+          <Button size="lg" onclick={openCreatePage}>
+            <Plus data-icon="inline-start" />
+            创建大会
+            <ArrowRight data-icon="inline-end" />
+          </Button>
+        </div>
       </div>
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
