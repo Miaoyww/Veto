@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onNavigate } from '$app/navigation'
-  import { tick } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import '$units' // 初始化 ModRegistry 基础数据
   import handoffLogo from '$lib/assets/favicon.png'
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
@@ -31,6 +31,11 @@
 
   import { navigateToConference, navigateToCommittee } from '$lib/utils'
   import { conferences } from '$lib/classes/stores/conference/conference-store'
+  import {
+    activeSettingsSection,
+    settingsDialogOpen
+  } from '$lib/classes/stores/app/global-ui-store'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   let { children } = $props()
   let conferenceHandoffActive = $state(false)
@@ -127,6 +132,11 @@
   }
 
   let displayOnlyDialogOpen = $state(false)
+  let electronEnvironment = $state(false)
+
+  onMount(() => {
+    electronEnvironment = isElectron()
+  })
 
   const recentConferences = $derived([...$conferences].reverse().slice(0, 5))
   const conferenceId = $derived($page.params.conference_id ?? '')
@@ -142,6 +152,11 @@
   function goTo(path: string): void {
     // @ts-expect-error resolve requires a literal route type for dynamic paths.
     goto(resolve(path))
+  }
+
+  function openModsSettings(): void {
+    activeSettingsSection.set('mods')
+    settingsDialogOpen.set(true)
   }
 </script>
 
@@ -274,15 +289,17 @@
         <Monitor />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-        onclick={() => goTo('/tools')}
-        title="插件"
-      >
-        <Puzzle />
-      </Button>
+      {#if electronEnvironment}
+        <Button
+          variant="ghost"
+          size="sm"
+          class="no-drag px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          onclick={openModsSettings}
+          title="插件"
+        >
+          <Puzzle />
+        </Button>
+      {/if}
     {/snippet}
 
     {@render children()}

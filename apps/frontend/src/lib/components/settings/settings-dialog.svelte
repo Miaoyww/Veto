@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { Settings, Info, X, Puzzle, Map } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Separator from '$lib/components/ui/separator/index.js'
@@ -9,10 +10,15 @@
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
-  import { settingsDialogOpen, activeSettingsSection } from '$lib/classes/stores/app/global-ui-store'
+  import {
+    settingsDialogOpen,
+    activeSettingsSection
+  } from '$lib/classes/stores/app/global-ui-store'
+  import { isElectron } from '$lib/classes/utils/runtime'
   const version = __APP_VERSION__
 
   let activeSection = $state<Section>('general')
+  let electronEnvironment = $state(false)
   type Section = 'general' | 'mods' | 'venue' | 'about'
 
   interface NavItem {
@@ -30,13 +36,24 @@
   let NAV_BOTTOM: NavItem[] = $state([{ key: 'about', label: '关于', icon: Info }])
 
   let open = $state(false)
+
+  onMount(() => {
+    electronEnvironment = isElectron()
+    if (!electronEnvironment && activeSection === 'mods') {
+      activeSection = 'general'
+    }
+  })
+
   settingsDialogOpen.subscribe((v) => {
     const wasClosed = !open && v
     open = v
     if (wasClosed) {
       // 打开时读取指定的 section，否则默认 general
       const target = $activeSettingsSection
-      if (target && target !== 'account') {
+      if (target === 'mods' && !electronEnvironment) {
+        activeSection = 'general'
+        activeSettingsSection.set(null)
+      } else if (target && target !== 'account') {
         activeSection = target
         activeSettingsSection.set(null)
       } else {
@@ -105,14 +122,16 @@
 
           <div class="flex flex-1 flex-col gap-0.5 px-3 pt-3">
             {#each NAV_TOP as item (item.key)}
-              <Button
-                class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
-                variant={activeSection === item.key ? 'secondary' : 'ghost'}
-                onclick={() => (activeSection = item.key)}
-              >
-                <item.icon size={18} />
-                <span class="text-sm">{item.label}</span>
-              </Button>
+              {#if item.key !== 'mods' || electronEnvironment}
+                <Button
+                  class="w-full cursor-pointer justify-start gap-2.5 px-3 h-9"
+                  variant={activeSection === item.key ? 'secondary' : 'ghost'}
+                  onclick={() => (activeSection = item.key)}
+                >
+                  <item.icon size={18} />
+                  <span class="text-sm">{item.label}</span>
+                </Button>
+              {/if}
             {/each}
           </div>
           <div class="mt-auto flex flex-col gap-0.5 px-3 pt-2 pb-5">
@@ -141,7 +160,7 @@
           <ScrollArea class="h-full w-full">
             <div class="p-10">
               {#if activeSection === 'general'}<GeneralPage />{/if}
-              {#if activeSection === 'mods'}<ModsPage />{/if}
+              {#if activeSection === 'mods' && electronEnvironment}<ModsPage />{/if}
               {#if activeSection === 'venue'}<VenuePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
             </div>
