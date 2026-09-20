@@ -2,7 +2,9 @@
 
 import type { JSX } from "react"
 import { Plus, Trash2 } from "lucide-react"
+import type { ImportedSeat } from "@vetoexpress/utils/seat-import"
 
+import { SeatImportDialog } from "@/components/seat-import-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,6 +40,41 @@ export function CommitteeForm({
     const seats = [...value.seats]
     seats[index] = { ...seats[index], ...patch }
     onChange({ ...value, seats })
+  }
+
+  function roleReferenceForImportedName(roleName: string): string {
+    const allowedRoles = roles.filter((role) =>
+      roleAllowedInCommittee(role, value.type)
+    )
+    const normalized = roleName.replace(/\s+/g, "").toLowerCase()
+    if (!normalized)
+      return allowedRoles[0] ? roleReference(allowedRoles[0]) : ""
+    const role = allowedRoles.find(
+      (item) => item.name.replace(/\s+/g, "").toLowerCase() === normalized
+    )
+    return role ? roleReference(role) : ""
+  }
+
+  function importedRoleLabel(roleName: string): string {
+    const reference = roleReferenceForImportedName(roleName)
+    const role = roles.find((item) => roleReference(item) === reference)
+    return role?.name || (roleName ? "未匹配角色" : "无可用角色")
+  }
+
+  function importSeats(seats: ImportedSeat[]): void {
+    onChange({
+      ...value,
+      seats: [
+        ...value.seats,
+        ...seats.map((seat) => ({
+          clientId: createClientId("seat"),
+          name: seat.name,
+          shortName: seat.shortName,
+          roleTemplateId: roleReferenceForImportedName(seat.roleName ?? ""),
+          hasVotingRights: seat.hasVotingRights ?? true,
+        })),
+      ],
+    })
   }
 
   return (
@@ -98,30 +135,37 @@ export function CommitteeForm({
               每个委员会至少需要一个席位。
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            onClick={() =>
-              onChange({
-                ...value,
-                seats: [
-                  ...value.seats,
-                  {
-                    clientId: createClientId("seat"),
-                    name: "",
-                    shortName: "",
-                    roleTemplateId: "",
-                    hasVotingRights: true,
-                  },
-                ],
-              })
-            }
-          >
-            <Plus aria-hidden="true" />
-            添加席位
-          </Button>
+          <div className="flex items-center gap-2">
+            <SeatImportDialog
+              disabled={disabled}
+              roleLabel={importedRoleLabel}
+              onImport={importSeats}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              onClick={() =>
+                onChange({
+                  ...value,
+                  seats: [
+                    ...value.seats,
+                    {
+                      clientId: createClientId("seat"),
+                      name: "",
+                      shortName: "",
+                      roleTemplateId: "",
+                      hasVotingRights: true,
+                    },
+                  ],
+                })
+              }
+            >
+              <Plus aria-hidden="true" />
+              添加席位
+            </Button>
+          </div>
         </div>
 
         {value.seats.length === 0 ? (

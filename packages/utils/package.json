@@ -1,0 +1,21 @@
+{
+  "name": "@vetoexpress/utils",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./seat-import": "./src/seat-import.ts"
+  },
+  "scripts": {
+    "test": "vitest run src/seat-import.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10"
+  }
+}

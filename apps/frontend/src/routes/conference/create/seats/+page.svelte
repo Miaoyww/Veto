@@ -9,10 +9,15 @@
   import * as Dialog from '$lib/components/ui/dialog'
   import { Textarea } from '$lib/components/ui/textarea'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
-  import * as XLSX from 'xlsx'
+  import {
+    SeatImportError,
+    parseSeatText,
+    readSeatWorkbook,
+    type ImportedSeat,
+    type SeatWorkbook
+  } from '@vetoexpress/utils/seat-import'
 
   type ImportMode = 'excel' | 'text'
-  type ImportedSeat = { name: string; shortName: string; type: string; votingRights?: boolean }
 
   const isSingleton = $derived(wizard.mode === 'singleton')
 
@@ -26,7 +31,7 @@
   let selectedSheet = $state('')
   let targetCommitteeId = $state('')
   let importedRows = $state<ImportedSeat[]>([])
-  let workbook = $state<any>(null)
+  let workbook = $state<SeatWorkbook | null>(null)
   let fileInput = $state<HTMLInputElement | undefined>(undefined)
 
   const showInvalidRole = $derived(
@@ -40,7 +45,7 @@
 
   const hasUnmatchedImportedRole = $derived(
     !isSingleton &&
-      importedRows.some((row) => row.type && !roleIdForType(row.type, targetCommitteeId))
+      importedRows.some((row) => row.roleName && !roleIdForType(row.roleName, targetCommitteeId))
   )
   const singletonCommitteeName = $derived(wizard.committees[0]?.name ?? '')
 
@@ -66,12 +71,11 @@
     input.value = ''
     if (!file) return
     try {
-      workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
-      if (workbook.SheetNames.length === 0) throw new Error('文件中没有可读取的 sheet')
-      selectedSheet = workbook.SheetNames[0]
+      workbook = readSeatWorkbook(await file.arrayBuffer())
+      selectedSheet = workbook.sheetNames[0]
       sheetDialogOpen = true
     } catch (error) {
-      importError = error instanceof Error ? error.message : 'Excel 文件读取失败'
+      importError = importErrorMessage(error, 'Excel 文件读取失败')
       formatDialogOpen = true
     }
   }
@@ -79,52 +83,31 @@
   function readSelectedSheet(): void {
     if (!workbook || !selectedSheet) return
     try {
-      const sheet = workbook.Sheets[selectedSheet]
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][]
-      importedRows = rows
-        .slice(1)
-        .map(toImportedSeat)
-        .filter((row) => row.name || row.shortName || row.type)
-      if (importedRows.length === 0) throw new Error('没有读取到有效数据，请检查表格内容')
+      importedRows = workbook.importSheet(selectedSheet, isSingleton ? 'singleton' : 'conference')
       sheetDialogOpen = false
       openPreview()
     } catch (error) {
-      importError = error instanceof Error ? error.message : 'Sheet 读取失败'
+      importError = importErrorMessage(error, '没有读取到有效数据，请检查表格内容')
     }
   }
 
-  function toImportedSeat(row: unknown): ImportedSeat {
-    const cells = Array.isArray(row) ? row : []
-    const thirdColumn = String(cells[2] ?? '').trim()
-    if (isSingleton) {
-      return {
-        name: String(cells[0] ?? '').trim(),
-        shortName: String(cells[1] ?? '').trim(),
-        type: '',
-        votingRights: !/^(否|无|没有|false|0)$/i.test(thirdColumn)
-      }
-    }
-
-    return {
-      name: String(cells[0] ?? '').trim(),
-      shortName: String(cells[1] ?? '').trim(),
-      type: thirdColumn
-    }
+  function importErrorMessage(error: unknown, fallback: string): string {
+    if (!(error instanceof SeatImportError))
+      return error instanceof Error ? error.message : fallback
+    if (error.code === 'empty_workbook') return '文件中没有可读取的 sheet'
+    if (error.code === 'sheet_not_found') return '找不到所选 Sheet'
+    if (error.code === 'no_valid_rows') return fallback
+    return fallback
   }
 
   function readText(): void {
-    importedRows = textValue
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => toImportedSeat(line.split(/[,，;；|]/)))
-      .filter((row) => row.name || row.shortName || row.type)
-    if (importedRows.length === 0) {
-      importError = '没有读取到有效数据，请按格式逐行输入'
-      return
+    try {
+      importedRows = parseSeatText(textValue, isSingleton ? 'singleton' : 'conference')
+      textDialogOpen = false
+      openPreview()
+    } catch (error) {
+      importError = importErrorMessage(error, '没有读取到有效数据，请按格式逐行输入')
     }
-    textDialogOpen = false
-    openPreview()
   }
 
   function openPreview(): void {
@@ -155,10 +138,10 @@
   }
 
   function matchedRoleName(row: ImportedSeat): string {
-    if (isSingleton) return row.votingRights === false ? '无投票权' : '有投票权'
+    if (isSingleton) return row.hasVotingRights === false ? '无投票权' : '有投票权'
 
-    const roleId = roleIdForType(row.type, targetCommitteeId)
-    return roleId ? wizard.roleName(roleId) : row.type ? '未匹配角色' : '自动匹配'
+    const roleId = roleIdForType(row.roleName ?? '', targetCommitteeId)
+    return roleId ? wizard.roleName(roleId) : row.roleName ? '未匹配角色' : '自动匹配'
   }
 
   function confirmImport(): void {
@@ -170,12 +153,12 @@
           ? {
               name: row.name,
               shortName: row.shortName,
-              hasVotingRights: row.votingRights ?? true
+              hasVotingRights: row.hasVotingRights ?? true
             }
           : {
               name: row.name,
               shortName: row.shortName,
-              roleId: roleIdForType(row.type, targetCommitteeId)
+              roleId: roleIdForType(row.roleName ?? '', targetCommitteeId)
             }
       )
     )
@@ -397,7 +380,7 @@
         {selectedSheet || '选择工作表'}
       </Select.SelectTrigger>
       <Select.SelectContent>
-        {#each workbook?.SheetNames ?? [] as sheet}<Select.SelectItem
+        {#each workbook?.sheetNames ?? [] as sheet}<Select.SelectItem
             value={sheet}
             label={sheet}
           />{/each}
@@ -458,7 +441,11 @@
               <td class="px-3 py-2">{row.name || '（空）'}</td>
               <td class="px-3 py-2">{row.shortName || '—'}</td>
               <td class="px-3 py-2">
-                {isSingleton ? (row.votingRights === false ? '否' : '') : row.type || '自动匹配'}
+                {isSingleton
+                  ? row.hasVotingRights === false
+                    ? '否'
+                    : ''
+                  : row.roleName || '自动匹配'}
               </td>
               <td class="px-3 py-2 text-muted-foreground">{matchedRoleName(row)}</td>
             </tr>
