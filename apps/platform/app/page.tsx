@@ -1,19 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import {
-  ArchiveRestore,
-  ArrowRight,
-  CalendarDays,
-  Cloud,
-  Loader2,
-  Plus,
-  RefreshCw,
-} from "lucide-react"
+import { ArchiveRestore, Cloud, Loader2, Plus, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
+import { ConferenceCard } from "@/components/conference-card"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
-import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -207,35 +199,7 @@ export default function PlatformHome() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {conferences.map((conference) => (
-              <Link key={conference.id} href={`/conferences/${conference.id}`}>
-                <Card className="h-full shadow-none ring-0 transition-colors hover:border-foreground/25">
-                  <CardHeader className="flex-row items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-lg">
-                        {conference.name}
-                      </CardTitle>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                        {conference.description || "暂无大会说明"}
-                      </p>
-                    </div>
-                    <ArrowRight
-                      className="mt-1 size-4 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    {conference.organizer ? (
-                      <Badge variant="secondary">{conference.organizer}</Badge>
-                    ) : null}
-                    <span className="flex items-center gap-1.5">
-                      <CalendarDays className="size-3.5" aria-hidden="true" />
-                      更新于{" "}
-                      {dateFormatter.format(new Date(conference.updatedAt))}
-                    </span>
-                    <span>v{conference.version}</span>
-                  </CardContent>
-                </Card>
-              </Link>
+              <ConferenceCard key={conference.id} conference={conference} />
             ))}
           </div>
         )}
