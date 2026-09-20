@@ -383,7 +383,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                         大会结构
                       </h2>
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        配置角色权限、委员会、席位与议程。
+                        配置角色权限、委员会与席位。
                       </p>
                     </div>
                   </div>
@@ -392,6 +392,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                     value={structure}
                     onChange={setStructure}
                     disabled={Boolean(saving)}
+                    conferenceId={conference.id}
                   />
 
                   <div className="sticky bottom-4 mt-8 flex justify-end rounded-xl border bg-background p-3 shadow-sm">

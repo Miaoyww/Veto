@@ -1,9 +1,29 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
+import type { JSX } from "react"
+import { ChevronDown, Pencil, Plus } from "lucide-react"
+import Link from "next/link"
 
-import { Button } from "@/components/ui/button"
+import { CommitteeForm } from "@/components/committee-form"
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -14,628 +34,540 @@ import {
   type ConferenceStructure,
   type RoleTemplateInput,
 } from "@/lib/conference-client"
+import {
+  committeeReference,
+  createClientId,
+  createCommittee,
+  roleReference,
+} from "@/lib/conference-structure"
+import { cn } from "@/lib/utils"
 
-const selectClassName =
-  "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 const textareaClassName =
   "min-h-24 w-full resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
 
-function clientId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`
-}
-
-function roleReference(role: RoleTemplateInput) {
-  return role.id ?? role.clientId ?? ""
-}
-
-function roleAllowedInCommittee(
-  role: RoleTemplateInput,
-  committeeType: CommitteeInput["type"]
-) {
-  if (role.systemCode === "staff") return true
-  if (role.systemCode === "mpc_press") return committeeType === "mpc"
-  if (role.systemCode === "ipc") return committeeType === "ipc"
-  return committeeType !== "ipc"
+const committeeTypeLabels: Record<CommitteeInput["type"], string> = {
+  cabinet: "委员会 / Cabinet",
+  mpc: "MPC",
+  ipc: "IPC",
 }
 
 function createRole(): RoleTemplateInput {
   return {
-    clientId: clientId("role"),
+    clientId: createClientId("role"),
     name: "",
     description: "",
     capabilities: [],
   }
 }
 
-function createCommittee(): CommitteeInput {
-  return {
-    clientId: clientId("committee"),
-    name: "",
-    type: "cabinet",
-    seats: [],
-    agenda: [],
-  }
+interface ConferenceStructureEditorProps {
+  value: ConferenceStructure
+  onChange: (value: ConferenceStructure) => void
+  disabled?: boolean
+  conferenceId?: string
 }
 
 export function ConferenceStructureEditor({
   value,
   onChange,
   disabled = false,
-}: {
-  value: ConferenceStructure
-  onChange: (value: ConferenceStructure) => void
-  disabled?: boolean
-}) {
-  function updateRole(index: number, patch: Partial<RoleTemplateInput>) {
+  conferenceId,
+}: ConferenceStructureEditorProps): JSX.Element {
+  const [rolesOpen, setRolesOpen] = useState(true)
+  const [committeesOpen, setCommitteesOpen] = useState(true)
+  const [editingRoleIndex, setEditingRoleIndex] = useState<number | null>(null)
+  const [editingCommitteeIndex, setEditingCommitteeIndex] = useState<
+    number | null
+  >(null)
+
+  const editingRole =
+    editingRoleIndex === null
+      ? undefined
+      : value.roleTemplates[editingRoleIndex]
+  const editingCommittee =
+    editingCommitteeIndex === null
+      ? undefined
+      : value.committees[editingCommitteeIndex]
+
+  function updateRole(index: number, patch: Partial<RoleTemplateInput>): void {
     const roles = [...value.roleTemplates]
     roles[index] = { ...roles[index], ...patch }
     onChange({ ...value, roleTemplates: roles })
   }
 
-  function removeRole(index: number) {
-    const reference = roleReference(value.roleTemplates[index])
-    if (
-      value.committees.some((committee) =>
-        committee.seats.some((seat) => seat.roleTemplateId === reference)
-      )
-    ) {
-      return
-    }
+  function addRole(): void {
+    const index = value.roleTemplates.length
+    onChange({
+      ...value,
+      roleTemplates: [...value.roleTemplates, createRole()],
+    })
+    setEditingRoleIndex(index)
+    setRolesOpen(true)
+  }
+
+  function removeRole(index: number): void {
     onChange({
       ...value,
       roleTemplates: value.roleTemplates.filter(
         (_, itemIndex) => itemIndex !== index
       ),
     })
+    if (editingRoleIndex === index) setEditingRoleIndex(null)
   }
 
-  function updateCommittee(index: number, patch: Partial<CommitteeInput>) {
+  function addCommittee(): void {
+    const index = value.committees.length
+    onChange({
+      ...value,
+      committees: [...value.committees, createCommittee()],
+    })
+    setEditingCommitteeIndex(index)
+    setCommitteesOpen(true)
+  }
+
+  function updateCommittee(index: number, committee: CommitteeInput): void {
     const committees = [...value.committees]
-    committees[index] = { ...committees[index], ...patch }
+    committees[index] = committee
     onChange({ ...value, committees })
   }
 
-  function updateSeat(
-    committeeIndex: number,
-    seatIndex: number,
-    patch: Partial<CommitteeInput["seats"][number]>
-  ) {
-    const committee = value.committees[committeeIndex]
-    const seats = [...committee.seats]
-    seats[seatIndex] = { ...seats[seatIndex], ...patch }
-    updateCommittee(committeeIndex, { seats })
-  }
-
-  function updateAgenda(
-    committeeIndex: number,
-    agendaIndex: number,
-    patch: Partial<CommitteeInput["agenda"][number]>
-  ) {
-    const committee = value.committees[committeeIndex]
-    const agenda = [...committee.agenda]
-    agenda[agendaIndex] = { ...agenda[agendaIndex], ...patch }
-    updateCommittee(committeeIndex, { agenda })
+  function removeCommittee(index: number): void {
+    onChange({
+      ...value,
+      committees: value.committees.filter(
+        (_, itemIndex) => itemIndex !== index
+      ),
+    })
+    if (editingCommitteeIndex === index) setEditingCommitteeIndex(null)
   }
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-4" aria-labelledby="roles-heading">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2
-              id="roles-heading"
-              className="text-xl font-semibold tracking-tight"
-            >
-              角色与权限
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              每个角色至少选择一项权限。系统角色会限制可使用的委员会类型。
-            </p>
+    <div className="flex flex-col gap-6">
+      <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
+        <section
+          className="rounded-xl border bg-card"
+          aria-labelledby="roles-heading"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2
+                  id="roles-heading"
+                  className="text-lg font-semibold tracking-tight"
+                >
+                  角色与权限
+                </h2>
+                <Badge variant="secondary">{value.roleTemplates.length}</Badge>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                每个角色至少选择一项权限。系统角色会限制可使用的委员会类型。
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={disabled}
+                onClick={addRole}
+              >
+                <Plus aria-hidden="true" />
+                添加角色
+              </Button>
+              <CollapsibleTrigger
+                render={<Button type="button" variant="ghost" size="icon" />}
+                aria-label={rolesOpen ? "收起角色与权限" : "展开角色与权限"}
+              >
+                <ChevronDown
+                  className={cn(rolesOpen && "rotate-180")}
+                  aria-hidden="true"
+                />
+              </CollapsibleTrigger>
+            </div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            disabled={disabled}
-            onClick={() =>
-              onChange({
-                ...value,
-                roleTemplates: [...value.roleTemplates, createRole()],
-              })
-            }
-          >
-            <Plus aria-hidden="true" />
-            添加角色
-          </Button>
-        </div>
 
-        {value.roleTemplates.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
-            尚未添加角色
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {value.roleTemplates.map((role, roleIndex) => {
-              const reference = roleReference(role)
-              const inUse = value.committees.some((committee) =>
-                committee.seats.some(
-                  (seat) => seat.roleTemplateId === reference
-                )
-              )
-              return (
-                <Card key={reference} className="shadow-none ring-0">
-                  <CardHeader className="flex-row items-center justify-between gap-4">
-                    <CardTitle className="text-base">
-                      {role.name.trim() || `角色 ${roleIndex + 1}`}
-                    </CardTitle>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={disabled || inUse}
-                      onClick={() => removeRole(roleIndex)}
-                      aria-label={inUse ? "角色正在被席位使用" : "删除角色"}
+          <CollapsibleContent className="border-t p-4 sm:p-5">
+            {value.roleTemplates.length === 0 ? (
+              <div className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
+                尚未添加角色
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {value.roleTemplates.map((role, roleIndex) => {
+                  const reference = roleReference(role)
+                  const inUse = value.committees.some((committee) =>
+                    committee.seats.some(
+                      (seat) => seat.roleTemplateId === reference
+                    )
+                  )
+                  return (
+                    <Card
+                      key={reference}
+                      className="relative gap-3 bg-muted/25 py-4 shadow-none ring-0 transition-colors hover:bg-muted/45"
                     >
-                      <Trash2 aria-hidden="true" />
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor={`role-name-${reference}`}>
-                          角色名称
-                        </Label>
-                        <Input
-                          id={`role-name-${reference}`}
-                          value={role.name}
-                          disabled={disabled}
-                          maxLength={120}
-                          onChange={(event) =>
-                            updateRole(roleIndex, { name: event.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`role-system-${reference}`}>
-                          角色类型
-                        </Label>
-                        <select
-                          id={`role-system-${reference}`}
-                          value={role.systemCode ?? "custom"}
-                          disabled={disabled}
-                          className={selectClassName}
-                          onChange={(event) =>
-                            updateRole(roleIndex, {
-                              systemCode:
-                                event.target.value === "custom"
-                                  ? undefined
-                                  : (event.target
-                                      .value as RoleTemplateInput["systemCode"]),
-                            })
-                          }
-                        >
-                          <option value="custom">自定义角色</option>
-                          <option value="staff">Staff</option>
-                          <option value="mpc_press">MPC 记者</option>
-                          <option value="ipc">IPC</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`role-description-${reference}`}>
-                        角色说明
-                      </Label>
-                      <Input
-                        id={`role-description-${reference}`}
-                        value={role.description ?? ""}
+                      <button
+                        type="button"
+                        className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                         disabled={disabled}
-                        maxLength={2000}
-                        onChange={(event) =>
-                          updateRole(roleIndex, {
-                            description: event.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <fieldset>
-                      <legend className="text-sm font-medium">权限</legend>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {CAPABILITIES.map((capability) => (
-                          <label
-                            key={capability}
-                            className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm has-checked:bg-muted"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={role.capabilities.includes(capability)}
-                              disabled={disabled}
-                              onChange={() => {
-                                const capabilities = role.capabilities.includes(
-                                  capability
-                                )
-                                  ? role.capabilities.filter(
-                                      (item) => item !== capability
-                                    )
-                                  : [...role.capabilities, capability]
-                                updateRole(roleIndex, {
-                                  capabilities: capabilities as Capability[],
-                                })
-                              }}
-                            />
-                            {CAPABILITY_LABELS[capability]}
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4" aria-labelledby="committees-heading">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2
-              id="committees-heading"
-              className="text-xl font-semibold tracking-tight"
-            >
-              委员会与席位
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              每个委员会至少需要一个席位；议程可稍后补充。
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            disabled={disabled}
-            onClick={() =>
-              onChange({
-                ...value,
-                committees: [...value.committees, createCommittee()],
-              })
-            }
-          >
-            <Plus aria-hidden="true" />
-            添加委员会
-          </Button>
-        </div>
-
-        {value.committees.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
-            尚未添加委员会
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {value.committees.map((committee, committeeIndex) => {
-              const committeeReference =
-                committee.id ?? committee.clientId ?? String(committeeIndex)
-              return (
-                <Card key={committeeReference} className="shadow-none ring-0">
-                  <CardHeader className="flex-row items-center justify-between gap-4">
-                    <CardTitle className="text-base">
-                      {committee.name.trim() || `委员会 ${committeeIndex + 1}`}
-                    </CardTitle>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={disabled}
-                      onClick={() =>
-                        onChange({
-                          ...value,
-                          committees: value.committees.filter(
-                            (_, itemIndex) => itemIndex !== committeeIndex
-                          ),
-                        })
-                      }
-                      aria-label="删除委员会"
-                    >
-                      <Trash2 aria-hidden="true" />
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="space-y-7">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor={`committee-name-${committeeReference}`}>
-                          委员会名称
-                        </Label>
-                        <Input
-                          id={`committee-name-${committeeReference}`}
-                          value={committee.name}
-                          disabled={disabled}
-                          maxLength={120}
-                          onChange={(event) =>
-                            updateCommittee(committeeIndex, {
-                              name: event.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`committee-type-${committeeReference}`}>
-                          委员会类型
-                        </Label>
-                        <select
-                          id={`committee-type-${committeeReference}`}
-                          value={committee.type}
-                          disabled={disabled}
-                          className={selectClassName}
-                          onChange={(event) => {
-                            const type = event.target
-                              .value as CommitteeInput["type"]
-                            updateCommittee(committeeIndex, {
-                              type,
-                              seats: committee.seats.map((seat) => {
-                                const role = value.roleTemplates.find(
-                                  (item) =>
-                                    roleReference(item) === seat.roleTemplateId
-                                )
-                                return role &&
-                                  !roleAllowedInCommittee(role, type)
-                                  ? { ...seat, roleTemplateId: "" }
-                                  : seat
-                              }),
-                            })
-                          }}
-                        >
-                          <option value="cabinet">委员会 / Cabinet</option>
-                          <option value="mpc">MPC</option>
-                          <option value="ipc">IPC</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="font-medium">席位</h3>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={disabled}
-                          onClick={() =>
-                            updateCommittee(committeeIndex, {
-                              seats: [
-                                ...committee.seats,
-                                {
-                                  clientId: clientId("seat"),
-                                  name: "",
-                                  shortName: "",
-                                  roleTemplateId: "",
-                                  hasVotingRights: true,
-                                },
-                              ],
-                            })
-                          }
-                        >
-                          <Plus aria-hidden="true" />
-                          添加席位
-                        </Button>
-                      </div>
-                      {committee.seats.length === 0 ? (
-                        <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                          尚未添加席位
+                        onClick={() => setEditingRoleIndex(roleIndex)}
+                      >
+                        <span className="sr-only">
+                          编辑{role.name.trim() || `角色 ${roleIndex + 1}`}
+                        </span>
+                      </button>
+                      <CardHeader className="pointer-events-none relative px-4">
+                        <CardTitle className="truncate text-base">
+                          {role.name.trim() || `角色 ${roleIndex + 1}`}
+                        </CardTitle>
+                        <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">
+                          {role.description?.trim() || "暂无角色说明"}
                         </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {committee.seats.map((seat, seatIndex) => {
-                            const seatReference =
-                              seat.id ?? seat.clientId ?? String(seatIndex)
-                            return (
-                              <div
-                                key={seatReference}
-                                className="grid gap-3 rounded-xl border bg-muted/20 p-4 lg:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_auto_auto] lg:items-end"
-                              >
-                                <div className="space-y-2">
-                                  <Label htmlFor={`seat-name-${seatReference}`}>
-                                    席位名称
-                                  </Label>
-                                  <Input
-                                    id={`seat-name-${seatReference}`}
-                                    value={seat.name}
-                                    disabled={disabled}
-                                    onChange={(event) =>
-                                      updateSeat(committeeIndex, seatIndex, {
-                                        name: event.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label
-                                    htmlFor={`seat-short-${seatReference}`}
-                                  >
-                                    简称
-                                  </Label>
-                                  <Input
-                                    id={`seat-short-${seatReference}`}
-                                    value={seat.shortName ?? ""}
-                                    disabled={disabled}
-                                    maxLength={32}
-                                    onChange={(event) =>
-                                      updateSeat(committeeIndex, seatIndex, {
-                                        shortName: event.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor={`seat-role-${seatReference}`}>
-                                    角色
-                                  </Label>
-                                  <select
-                                    id={`seat-role-${seatReference}`}
-                                    value={seat.roleTemplateId}
-                                    disabled={disabled}
-                                    className={selectClassName}
-                                    onChange={(event) =>
-                                      updateSeat(committeeIndex, seatIndex, {
-                                        roleTemplateId: event.target.value,
-                                      })
-                                    }
-                                  >
-                                    <option value="">选择角色</option>
-                                    {value.roleTemplates
-                                      .filter((role) =>
-                                        roleAllowedInCommittee(
-                                          role,
-                                          committee.type
-                                        )
-                                      )
-                                      .map((role) => (
-                                        <option
-                                          key={roleReference(role)}
-                                          value={roleReference(role)}
-                                        >
-                                          {role.name || "未命名角色"}
-                                        </option>
-                                      ))}
-                                  </select>
-                                </div>
-                                <label className="flex h-9 items-center gap-2 text-sm whitespace-nowrap">
-                                  <input
-                                    type="checkbox"
-                                    checked={seat.hasVotingRights}
-                                    disabled={disabled}
-                                    onChange={(event) =>
-                                      updateSeat(committeeIndex, seatIndex, {
-                                        hasVotingRights: event.target.checked,
-                                      })
-                                    }
-                                  />
-                                  投票权
-                                </label>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={disabled}
-                                  onClick={() =>
-                                    updateCommittee(committeeIndex, {
-                                      seats: committee.seats.filter(
-                                        (_, itemIndex) =>
-                                          itemIndex !== seatIndex
-                                      ),
-                                    })
-                                  }
-                                  aria-label="删除席位"
-                                >
-                                  <Trash2 aria-hidden="true" />
-                                </Button>
-                                {seat.inviteCode ? (
-                                  <p className="text-xs text-muted-foreground lg:col-span-5">
-                                    邀请码：
-                                    <span className="font-mono text-foreground">
-                                      {seat.inviteCode}
-                                    </span>
-                                  </p>
-                                ) : null}
-                              </div>
-                            )
-                          })}
+                      </CardHeader>
+                      <CardContent className="relative flex flex-wrap items-center justify-between gap-3 px-4">
+                        <div className="pointer-events-none flex flex-wrap items-center gap-2">
+                          {role.systemCode ? (
+                            <Badge variant="outline">系统角色</Badge>
+                          ) : null}
+                          <span className="text-xs text-muted-foreground">
+                            {role.capabilities.length} 项权限
+                          </span>
                         </div>
-                      )}
-                    </div>
+                        <div className="relative flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={disabled}
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              setEditingRoleIndex(roleIndex)
+                            }}
+                          >
+                            <Pencil aria-hidden="true" />
+                            编辑
+                          </Button>
+                          <ConfirmDeleteButton
+                            disabled={disabled || inUse}
+                            disabledLabel={
+                              inUse ? "角色正在被席位使用" : undefined
+                            }
+                            onConfirm={() => removeRole(roleIndex)}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </CollapsibleContent>
+        </section>
+      </Collapsible>
 
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="font-medium">议程</h3>
-                        <Button
+      <Collapsible open={committeesOpen} onOpenChange={setCommitteesOpen}>
+        <section
+          className="rounded-xl border bg-card"
+          aria-labelledby="committees-heading"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2
+                  id="committees-heading"
+                  className="text-lg font-semibold tracking-tight"
+                >
+                  委员会与席位
+                </h2>
+                <Badge variant="secondary">{value.committees.length}</Badge>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                每个委员会至少需要一个席位。
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {conferenceId ? (
+                <Link
+                  href={`/conferences/${conferenceId}/committees/new`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  <Plus aria-hidden="true" />
+                  添加委员会
+                </Link>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={disabled}
+                  onClick={addCommittee}
+                >
+                  <Plus aria-hidden="true" />
+                  添加委员会
+                </Button>
+              )}
+              <CollapsibleTrigger
+                render={<Button type="button" variant="ghost" size="icon" />}
+                aria-label={
+                  committeesOpen ? "收起委员会与席位" : "展开委员会与席位"
+                }
+              >
+                <ChevronDown
+                  className={cn(committeesOpen && "rotate-180")}
+                  aria-hidden="true"
+                />
+              </CollapsibleTrigger>
+            </div>
+          </div>
+
+          <CollapsibleContent className="border-t p-4 sm:p-5">
+            {value.committees.length === 0 ? (
+              <div className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
+                尚未添加委员会
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {value.committees.map((committee, committeeIndex) => {
+                  const reference = committeeReference(
+                    committee,
+                    committeeIndex
+                  )
+                  const href = conferenceId
+                    ? `/conferences/${conferenceId}/committees/${reference}`
+                    : undefined
+                  return (
+                    <Card
+                      key={reference}
+                      className="relative gap-3 bg-muted/25 py-4 shadow-none ring-0 transition-colors hover:bg-muted/45"
+                    >
+                      {href ? (
+                        <Link
+                          href={href}
+                          className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        >
+                          <span className="sr-only">
+                            编辑
+                            {committee.name.trim() ||
+                              `委员会 ${committeeIndex + 1}`}
+                          </span>
+                        </Link>
+                      ) : (
+                        <button
                           type="button"
-                          variant="outline"
-                          size="sm"
+                          className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                           disabled={disabled}
                           onClick={() =>
-                            updateCommittee(committeeIndex, {
-                              agenda: [
-                                ...committee.agenda,
-                                {
-                                  clientId: clientId("agenda"),
-                                  title: "",
-                                  description: "",
-                                },
-                              ],
-                            })
+                            setEditingCommitteeIndex(committeeIndex)
                           }
                         >
-                          <Plus aria-hidden="true" />
-                          添加议程
-                        </Button>
-                      </div>
-                      {committee.agenda.map((item, agendaIndex) => {
-                        const agendaReference =
-                          item.id ?? item.clientId ?? String(agendaIndex)
-                        return (
-                          <div
-                            key={agendaReference}
-                            className="grid gap-3 rounded-xl border bg-muted/20 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] lg:items-end"
-                          >
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor={`agenda-title-${agendaReference}`}
-                              >
-                                标题
-                              </Label>
-                              <Input
-                                id={`agenda-title-${agendaReference}`}
-                                value={item.title}
-                                disabled={disabled}
-                                onChange={(event) =>
-                                  updateAgenda(committeeIndex, agendaIndex, {
-                                    title: event.target.value,
-                                  })
-                                }
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor={`agenda-description-${agendaReference}`}
-                              >
-                                说明
-                              </Label>
-                              <Input
-                                id={`agenda-description-${agendaReference}`}
-                                value={item.description ?? ""}
-                                disabled={disabled}
-                                onChange={(event) =>
-                                  updateAgenda(committeeIndex, agendaIndex, {
-                                    description: event.target.value,
-                                  })
-                                }
-                              />
-                            </div>
+                          <span className="sr-only">
+                            编辑
+                            {committee.name.trim() ||
+                              `委员会 ${committeeIndex + 1}`}
+                          </span>
+                        </button>
+                      )}
+                      <CardHeader className="pointer-events-none relative px-4">
+                        <CardTitle className="truncate text-base">
+                          {committee.name.trim() ||
+                            `委员会 ${committeeIndex + 1}`}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {committeeTypeLabels[committee.type]}
+                        </p>
+                      </CardHeader>
+                      <CardContent className="relative flex flex-wrap items-center justify-between gap-3 px-4">
+                        <span className="pointer-events-none text-xs text-muted-foreground">
+                          {committee.seats.length} 个席位
+                        </span>
+                        <div className="relative flex items-center gap-1">
+                          {href ? (
+                            <Link
+                              href={href}
+                              className={buttonVariants({
+                                variant: "ghost",
+                                size: "sm",
+                              })}
+                            >
+                              <Pencil aria-hidden="true" />
+                              编辑
+                            </Link>
+                          ) : (
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
+                              size="sm"
                               disabled={disabled}
-                              onClick={() =>
-                                updateCommittee(committeeIndex, {
-                                  agenda: committee.agenda.filter(
-                                    (_, itemIndex) => itemIndex !== agendaIndex
-                                  ),
-                                })
-                              }
-                              aria-label="删除议程"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                setEditingCommitteeIndex(committeeIndex)
+                              }}
                             >
-                              <Trash2 aria-hidden="true" />
+                              <Pencil aria-hidden="true" />
+                              编辑
                             </Button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
-      </section>
+                          )}
+                          <ConfirmDeleteButton
+                            disabled={disabled}
+                            onConfirm={() => removeCommittee(committeeIndex)}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </CollapsibleContent>
+        </section>
+      </Collapsible>
+
+      <Dialog
+        open={editingRole !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setEditingRoleIndex(null)
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingRole?.name.trim() || "编辑角色"}</DialogTitle>
+            <DialogDescription>
+              设置角色名称、类型以及该角色可使用的大会能力。
+            </DialogDescription>
+          </DialogHeader>
+          {editingRole && editingRoleIndex !== null ? (
+            <div className="flex flex-col gap-5 py-2">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`role-name-${roleReference(editingRole)}`}>
+                    角色名称
+                  </Label>
+                  <Input
+                    id={`role-name-${roleReference(editingRole)}`}
+                    value={editingRole.name}
+                    disabled={disabled}
+                    maxLength={120}
+                    onChange={(event) =>
+                      updateRole(editingRoleIndex, {
+                        name: event.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`role-system-${roleReference(editingRole)}`}>
+                    角色类型
+                  </Label>
+                  <select
+                    id={`role-system-${roleReference(editingRole)}`}
+                    value={editingRole.systemCode ?? "custom"}
+                    disabled={disabled}
+                    className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    onChange={(event) =>
+                      updateRole(editingRoleIndex, {
+                        systemCode:
+                          event.target.value === "custom"
+                            ? undefined
+                            : (event.target
+                                .value as RoleTemplateInput["systemCode"]),
+                      })
+                    }
+                  >
+                    <option value="custom">自定义角色</option>
+                    <option value="staff">Staff</option>
+                    <option value="mpc_press">MPC 记者</option>
+                    <option value="ipc">IPC</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor={`role-description-${roleReference(editingRole)}`}
+                >
+                  角色说明
+                </Label>
+                <Input
+                  id={`role-description-${roleReference(editingRole)}`}
+                  value={editingRole.description ?? ""}
+                  disabled={disabled}
+                  maxLength={2000}
+                  onChange={(event) =>
+                    updateRole(editingRoleIndex, {
+                      description: event.target.value,
+                    })
+                  }
+                />
+              </div>
+              <fieldset>
+                <legend className="text-sm font-medium">权限</legend>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {CAPABILITIES.map((capability) => (
+                    <label
+                      key={capability}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm has-checked:bg-muted"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editingRole.capabilities.includes(capability)}
+                        disabled={disabled}
+                        onChange={() => {
+                          const capabilities =
+                            editingRole.capabilities.includes(capability)
+                              ? editingRole.capabilities.filter(
+                                  (item) => item !== capability
+                                )
+                              : [...editingRole.capabilities, capability]
+                          updateRole(editingRoleIndex, {
+                            capabilities: capabilities as Capability[],
+                          })
+                        }}
+                      />
+                      {CAPABILITY_LABELS[capability]}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              完成
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!conferenceId && editingCommittee !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setEditingCommitteeIndex(null)
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCommittee?.name.trim() || "编辑委员会"}
+            </DialogTitle>
+            <DialogDescription>
+              大会创建完成后，委员会将使用独立页面进行编辑。
+            </DialogDescription>
+          </DialogHeader>
+          {editingCommittee && editingCommitteeIndex !== null ? (
+            <CommitteeForm
+              value={editingCommittee}
+              roles={value.roleTemplates}
+              disabled={disabled}
+              onChange={(committee) =>
+                updateCommittee(editingCommitteeIndex, committee)
+              }
+            />
+          ) : null}
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              完成
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
