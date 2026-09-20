@@ -25,20 +25,24 @@ export function navigateToConference(id: string): void {
   const committeeId = conference?.committees[0]?.id
   if (conference?.mode === 'singleton' && committeeId) {
     openConference(id)
-    goto(resolve(`/client/${id}/committee/${committeeId}`))
+    goto(resolve(`/client/${id}/committee/${committeeId}/chair`))
     return
   }
-
-  openConference(id)
-  goto(resolve(`/conference/${id}`))
 }
 
 /** Load a committee and navigate to its workspace. */
 export function navigateToCommittee(id: string, committeeId?: string): void {
   const conference = getConferenceById(id)
-  const selectedCommitteeId = committeeId && conference?.committees.some((committee) => committee.id === committeeId)
-    ? committeeId
-    : conference?.committees[0]?.id
+  const selectedCommitteeId =
+    committeeId && conference?.committees.some((committee) => committee.id === committeeId)
+      ? committeeId
+      : conference?.committees[0]?.id
   loadConference(id, selectedCommitteeId)
-  goto(resolve(selectedCommitteeId ? `/conference/${id}/committee/${selectedCommitteeId}` : `/conference/${id}`))
+  goto(
+    resolve(
+      selectedCommitteeId
+        ? `/conference/${id}/committee/${selectedCommitteeId}`
+        : `/conference/${id}`
+    )
+  )
 }

@@ -1,16 +1,5 @@
 <script lang="ts">
-  import {
-    Trash2,
-    Play,
-    Pencil,
-    Check,
-    X,
-    CalendarDays,
-    Users,
-    Building2,
-    Mic,
-    Bell
-  } from '@lucide/svelte'
+  import { Trash2, Play, Pencil, Check, X, CalendarDays, Users, Building2 } from '@lucide/svelte'
   import type { Conference } from '$lib/classes/types/conference'
   import {
     currentConferenceId,
@@ -23,14 +12,8 @@
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { getCurrentSpeakerName, getPendingMotionCount } from './conference-status'
 
   let { conference }: { conference: Conference } = $props()
-
-  const primaryCommittee = $derived(conference.committees[0] ?? null)
-  const currentSpeaker = $derived(primaryCommittee ? getCurrentSpeakerName(primaryCommittee) : null)
-  const pendingCount = $derived(primaryCommittee ? getPendingMotionCount(primaryCommittee) : 0)
 
   let editing = $state(false)
   let editName = $state('')

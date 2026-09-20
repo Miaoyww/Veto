@@ -81,11 +81,11 @@
     wizard.reset()
     const committeeId = event?.committees[0]?.id
     if (event && committeeId && event.mode === 'singleton') {
-      void goto(resolve(`/client/${event.id}/committee/${committeeId}`))
+      void goto(resolve(`/client/${event.id}/committee/${committeeId}/chair`))
       return
     }
     void goto(
-      resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}` : '/')
+      resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}/chair` : '/')
     )
   }
 </script>
