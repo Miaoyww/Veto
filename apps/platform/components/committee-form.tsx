@@ -15,6 +15,13 @@ import {
   roleAllowedInCommittee,
   roleReference,
 } from "@/lib/conference-structure"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectItem,
+  SelectContent,
+} from "@/components/ui/select"
 
 const selectClassName =
   "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -86,13 +93,12 @@ export function CommitteeForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor={`committee-type-${reference}`}>委员会类型</Label>
-          <select
-            id={`committee-type-${reference}`}
+          <Select
             value={value.type}
             disabled={disabled}
-            className={selectClassName}
-            onChange={(event) => {
-              const type = event.target.value as CommitteeInput["type"]
+            onValueChange={(newValue) => {
+              const type = newValue as CommitteeInput["type"]
+
               onChange({
                 ...value,
                 type,
@@ -100,6 +106,7 @@ export function CommitteeForm({
                   const role = roles.find(
                     (item) => roleReference(item) === seat.roleTemplateId
                   )
+
                   return role && !roleAllowedInCommittee(role, type)
                     ? { ...seat, roleTemplateId: "" }
                     : seat
@@ -107,10 +114,19 @@ export function CommitteeForm({
               })
             }}
           >
-            <option value="cabinet">委员会 / Cabinet</option>
-            <option value="mpc">MPC</option>
-            <option value="ipc">IPC</option>
-          </select>
+            <SelectTrigger
+              id={`committee-type-${reference}`}
+              className={selectClassName}
+            >
+              <SelectValue placeholder="选择委员会类型" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="cabinet">委员会 / Cabinet</SelectItem>
+              <SelectItem value="mpc">MPC</SelectItem>
+              <SelectItem value="ipc">IPC</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
