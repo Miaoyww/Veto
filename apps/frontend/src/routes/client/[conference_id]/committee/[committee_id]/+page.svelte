@@ -7,7 +7,6 @@
   import { VETO_NAME } from '$lib/classes/const'
 
   import {
-    conferences,
     currentCommittee,
     loadConference,
     pointDraft,
@@ -49,32 +48,15 @@
   const committeeId = $derived($page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
-  const conference = $derived($conferences.find((item) => item.id === conferenceId) ?? null)
-  const isSingleton = $derived(conference?.mode === 'singleton')
-
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
   let logDialogOpen = $state(false)
-  let wsPort = $state<number | null>(null)
-  let lanUrl = $state<string | null>(null)
 
   onMount(async () => {
     if (conferenceId) {
       await loadConference(conferenceId, committeeId ?? undefined)
     }
 
-    if (!isSingleton) {
-      wsPort = window.veto?.ws ? await window.veto.ws.getPort() : 19527
-      if (window.veto?.lan) {
-        const serverInfo = await window.veto.lan.getServerInfo()
-        lanUrl = serverInfo.urls[0] ?? null
-      }
-    }
-  })
-
-  $effect(() => {
-    if (!conf) return
-    if (!isSingleton) void window.veto?.lan?.publishConference()
   })
 
   // 自动同步 Display 窗口
@@ -101,7 +83,6 @@
   onDestroy(async () => {
     // 离开页面保存状态
     await saveConferencesNow()
-    if (!isSingleton) await window.veto?.lan?.unpublishConference()
 
     destroyAllTimers()
   })
@@ -186,19 +167,6 @@
       showBackButton={false}
     >
       {#snippet actions()}
-        {#if !isSingleton && wsPort !== null}
-          <span
-            class="select-none text-[11px] text-muted-foreground/70"
-            title="WebSocket 端口：{wsPort}"
-          >
-            {#if lanUrl}
-              {lanUrl}
-            {:else}
-              WS :{wsPort}
-            {/if}
-          </span>
-        {/if}
-
         <Button
           size="sm"
           variant="outline"

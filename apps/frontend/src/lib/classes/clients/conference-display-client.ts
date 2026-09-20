@@ -4,7 +4,7 @@
  * Display 窗口通信抽象层。
  *
  * Display is a direct, local Chair-to-Display link. It deliberately does not
- * connect to the Host Service: the Chair owns its local procedure projection.
+ * connect to the Cloud Service: the Chair owns its local procedure projection.
  */
 
 import type {

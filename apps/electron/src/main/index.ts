@@ -20,20 +20,10 @@ import { createLogger, initializeLogging, log as baseLog } from './logger'
 import icon from '../../resources/icon.png?asset'
 import { ensurePluginsDir, scanPluginDirectory } from './plugin-discovery'
 import { loadPluginConfig } from './plugin-store'
-import { startDisplayWs as startHostServiceWs, setHostRuntime, stopDisplayWs as stopHostServiceWs } from './ws-display'
 import { stopDisplayWs as stopDisplayDataWs } from './display-ws'
 import { loadPlugin, unloadAll } from './plugin-host/extension-host/index'
 import { registerAllIpcHandlers, type IpcDependencies } from './ipc'
-import { publishLanConference, stopLanConference } from './lan-service'
-import { loadStore, saveStore } from './data/store'
 import { scheduleLaunchTelemetry } from './telemetry'
-import {
-  HostRuntime,
-  type HostConference,
-  type HostRuntimeRepository,
-  type HostRuntimeState
-} from './host-runtime'
-import type { Capability } from '../../../shared/content-types'
 import type { PluginInstance } from './plugin-discovery'
 import type { DisplayWindowRef } from './ipc/conference'
 
@@ -46,102 +36,6 @@ const log = createLogger('Main')
 let pluginInstances: PluginInstance[] = []
 let mainWindow: BrowserWindow | null = null
 const displayWindow: DisplayWindowRef = { current: null }
-let wsServerPort = 0
-let hostRuntime: HostRuntime | null = null
-
-const hostRuntimeRepository: HostRuntimeRepository = {
-  load: () => loadStore<HostRuntimeState>('host-runtime'),
-  save: (state) => saveStore('host-runtime', state)
-}
-
-function loadOrMigrateHostRuntime(): HostRuntime {
-  const existing = loadStore<HostRuntimeState>('host-runtime')
-  if (existing) return new HostRuntime(hostRuntimeRepository)
-
-  const legacy = loadStore<Array<Record<string, unknown>>>('conferences') ?? []
-  const migrated: HostRuntimeState = {
-    version: 1,
-    conferences: legacy.map(migrateLegacyConference).filter((item): item is HostConference => item !== null),
-    auditLog: [],
-    idempotency: []
-  }
-  if (migrated.conferences.length > 0) saveStore('host-runtime', migrated)
-  return new HostRuntime({
-    load: () => migrated,
-    save: (state) => saveStore('host-runtime', state)
-  })
-}
-
-function refreshConfiguredConferences(): void {
-  if (!hostRuntime) return
-  const legacy = loadStore<Array<Record<string, unknown>>>('conferences') ?? []
-  for (const raw of legacy) {
-    const conference = migrateLegacyConference(raw)
-    if (conference) hostRuntime.registerConfiguredConference(conference)
-  }
-}
-
-function migrateLegacyConference(raw: Record<string, unknown>): HostConference | null {
-  if (typeof raw.id !== 'string' || typeof raw.name !== 'string') return null
-  const committees = Array.isArray(raw.committees)
-    ? raw.committees.map((committee, committeeIndex) => {
-        const item = committee as Record<string, unknown>
-        const committeeId = typeof item.id === 'string' ? item.id : `committee-${committeeIndex}`
-        const seats = Array.isArray(item.seats)
-          ? item.seats.map((seat, seatIndex) => {
-              const value = seat as Record<string, unknown>
-              const seatId = typeof value.id === 'string' ? value.id : `${committeeId}-seat-${seatIndex}`
-              return {
-                id: seatId,
-                committeeId,
-                name: typeof value.name === 'string' ? value.name : seatId,
-                role: typeof value.role === 'string' ? value.role : undefined,
-                roleId: typeof value.roleId === 'string' ? value.roleId : undefined,
-                userId: typeof value.userId === 'string' ? value.userId : undefined,
-                capabilityOverrides: (value.capabilityOverrides ?? {}) as Partial<Record<Capability, boolean>>,
-                proceduralProfile: value.procedure as HostConference['committees'][number]['seats'][number]['proceduralProfile']
-              }
-            })
-          : []
-        return {
-          id: committeeId,
-          conferenceId: raw.id as string,
-          name: typeof item.name === 'string' ? item.name : committeeId,
-          type: (item.type === 'mpc' || item.type === 'ipc' ? item.type : 'cabinet') as 'mpc' | 'ipc' | 'cabinet',
-          mode: (item.mode === 'crisis' ? 'crisis' : item.mode === 'standing' ? 'standing' : undefined) as 'crisis' | 'standing' | undefined,
-          defaultCapabilities: Array.isArray(item.defaultCapabilities) ? item.defaultCapabilities as Capability[] : [],
-          seats
-        }
-      })
-    : []
-  const seatAccesses = Array.isArray(raw.seatAccesses)
-    ? raw.seatAccesses.filter((entry): entry is { seatId: string; inviteCode: string } => {
-        const value = entry as Record<string, unknown>
-        return typeof value.seatId === 'string' && typeof value.inviteCode === 'string'
-      })
-    : []
-  const users = Array.isArray(raw.users)
-    ? raw.users.filter((entry): entry is { id: string; name: string; passwordHash?: string; passwordSalt?: string } => {
-        const value = entry as Record<string, unknown>
-        return typeof value.id === 'string' && typeof value.name === 'string'
-      })
-    : []
-  return {
-    id: raw.id as string,
-    name: raw.name as string,
-    committees,
-    users,
-    seatAccesses,
-    seatGroups: Array.isArray(raw.seatGroups) ? raw.seatGroups as HostConference['seatGroups'] : [],
-    chairAssignments: Array.isArray(raw.chairAssignments) ? raw.chairAssignments as HostConference['chairAssignments'] : [],
-    timelines: Array.isArray(raw.timelines) ? raw.timelines as HostConference['timelines'] : [],
-    directives: Array.isArray(raw.directives) ? raw.directives as HostConference['directives'] : [],
-    news: Array.isArray(raw.news) ? raw.news as HostConference['news'] : [],
-    situations: Array.isArray(raw.situations)
-      ? raw.situations as HostConference['situations']
-      : Array.isArray(raw.situationUpdates) ? raw.situationUpdates as HostConference['situations'] : []
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // 插件刷新
@@ -338,40 +232,11 @@ app.whenReady().then(async () => {
   ensurePluginsDir()
   refreshPlugins()
 
-  hostRuntime = loadOrMigrateHostRuntime()
-  setHostRuntime(hostRuntime)
-
-  // Host Service WS is lazily started when a normal conference is explicitly started.
-  log.info('Host Service WS deferred until normal conference startup')
-
   // IPC 处理器注册
   const ipcDeps: IpcDependencies = {
     pluginInstances,
     displayWindow,
-    getHostServicePort: () => wsServerPort,
-    refreshPlugins,
-    hostRuntime,
-    getHostConsoleWindow: () => mainWindow,
-    startHostService: async () => {
-      wsServerPort = await startHostServiceWs(hostRuntime ?? undefined)
-      return wsServerPort
-    },
-    stopHostService: async () => {
-      await stopHostServiceWs()
-      wsServerPort = 0
-    },
-    onActiveConferenceChanged: () => {
-      const active = hostRuntime?.activeConference
-      if (active) {
-        publishLanConference(
-          { conferenceId: active.id, name: active.name, phase: 'active' },
-          wsServerPort
-        )
-      } else {
-        stopLanConference()
-      }
-    },
-    refreshConfiguredConferences
+    refreshPlugins
   }
   registerAllIpcHandlers(ipcDeps)
 
@@ -413,8 +278,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', async () => {
-  hostRuntime?.shutdown()
-  setHostRuntime(null)
   await unloadAll()
-  await Promise.all([stopHostServiceWs(), stopDisplayDataWs()])
+  await stopDisplayDataWs()
 })

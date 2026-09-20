@@ -220,7 +220,7 @@ _Avoid_: Host Console, Admin Console
 **LocalDraft（本地草稿）**:
 UserClient 在明确提交前仅保存在本机的内容草稿，不属于 Cloud Service 的共享大会数据，也不会传输或排队重放。
 明确提交成功后，Cloud Service 创建权威内容；被驳回内容及其后续修订由 Cloud Service 保存。
-LocalDraft 跨同一 UserClient 的应用重启保留，并绑定原 Host、Conference 与 Seat；重新认证后的身份不匹配时，
+LocalDraft 跨同一 UserClient 的应用重启保留，并绑定原 Cloud Service、Conference 与 Seat；重新认证后的身份不匹配时，
 草稿只可查看或复制，不能自动提交。
 _Avoid_: Shared Draft, Offline Command
 

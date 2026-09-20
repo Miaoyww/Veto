@@ -5,19 +5,19 @@
 // 代表端核心类型定义。
 
 import type {
-  AuthenticatedSeatSession as HostAuthenticatedSeatSession,
-  Capability as HostCapability,
-  Directive as HostDirective,
-  DirectiveStatus as HostDirectiveStatus,
-  News as HostNews,
-  NewsStatus as HostNewsStatus,
-  SituationUpdate as HostSituationUpdate
+  AuthenticatedSeatSession as SharedAuthenticatedSeatSession,
+  Capability as SharedCapability,
+  Directive as SharedDirective,
+  DirectiveStatus as SharedDirectiveStatus,
+  News as SharedNews,
+  NewsStatus as SharedNewsStatus,
+  SituationUpdate as SharedSituationUpdate
 } from '../../../../../shared'
 
 // ---- 能力系统 -------------------------------------------------------------
 
 /** Seat 可执行的操作能力 */
-export type Capability = HostCapability
+export type Capability = SharedCapability
 
 /** 能力中文标签（与 CONTEXT.md 术语表一致，全库唯一真源，条目须覆盖全部 Capability） */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
@@ -144,19 +144,19 @@ export interface UserView {
 }
 
 /** 代表端认证后使用的临时连接上下文，不持久化 */
-export type AuthenticatedSeatSession = HostAuthenticatedSeatSession
+export type AuthenticatedSeatSession = SharedAuthenticatedSeatSession
 
 // ---- 指令 -----------------------------------------------------------------
 
-/** Host-routed Directive. A target is always one Committee, never a Seat. */
-export type Directive = HostDirective
-export type DirectiveStatus = HostDirectiveStatus
+/** Cloud-routed Directive. A target is always one Committee, never a Seat. */
+export type Directive = SharedDirective
+export type DirectiveStatus = SharedDirectiveStatus
 
 // ---- 新闻 -----------------------------------------------------------------
 
-export type News = HostNews
-export type NewsStatus = HostNewsStatus
+export type News = SharedNews
+export type NewsStatus = SharedNewsStatus
 
 // ---- 局势更新 -------------------------------------------------------------
 
-export type SituationUpdate = HostSituationUpdate
+export type SituationUpdate = SharedSituationUpdate

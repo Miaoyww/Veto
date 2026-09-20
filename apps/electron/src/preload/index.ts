@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, shell } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -180,64 +180,8 @@ const veto = {
     }
   },
 
-  ws: {
-    /** 获取 WebSocket 服务器当前监听端口 */
-    getPort: (): Promise<number> => ipcRenderer.invoke('veto:ws:get-port')
-  },
-
   displayWs: {
     getPort: (): Promise<number> => ipcRenderer.invoke('veto:display:get-port')
-  },
-
-  hostConsole: {
-    status: (): Promise<{
-      ok: boolean
-      error?: string
-      activeConferenceId?: string | null
-      conferences?: Array<{ id: string; name: string; active: boolean }>
-    }> => ipcRenderer.invoke('veto:host-console:status'),
-    startConference: (conferenceId: string): Promise<unknown> =>
-      ipcRenderer.invoke('veto:host-console:start-conference', conferenceId),
-    stopConference: (): Promise<unknown> => ipcRenderer.invoke('veto:host-console:stop-conference'),
-    prepareService: (): Promise<{ ok: boolean; error?: string }> =>
-      ipcRenderer.invoke('veto:host-console:prepare-service'),
-    releaseDirectiveClaim: (directiveId: string, reason: string): Promise<unknown> =>
-      ipcRenderer.invoke('veto:host-console:release-directive-claim', directiveId, reason),
-    auditLog: (): Promise<unknown> => ipcRenderer.invoke('veto:host-console:audit-log')
-  },
-
-  lan: {
-    /** 扫描局域网内正在广播的 Veto 会议 */
-    scan: (timeoutMs?: number) => ipcRenderer.invoke('veto:lan:scan', timeoutMs),
-
-    /** 获取本机 Chair 端的局域网地址 */
-    getServerInfo: (): Promise<{
-      port: number
-      addresses: string[]
-      urls: string[]
-    }> => ipcRenderer.invoke('veto:lan:get-server-info'),
-
-    /** 手动查询局域网内某个 Chair 端正在开放的会议 */
-    queryConference: (
-      address: string
-    ): Promise<{
-      conferenceId: string
-      name: string
-      phase: string
-      host: string
-      port: number
-      url: string
-      wsUrl: string
-      appVersion: string
-    } | null> => ipcRenderer.invoke('veto:lan:query', address),
-
-    /** 广播当前由 Host Console 启动的会议 */
-    publishConference: (): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('veto:lan:publish-conference'),
-
-    /** 停止广播当前会议 */
-    unpublishConference: (): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke('veto:lan:unpublish-conference')
   },
 
   services: {
