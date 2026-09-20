@@ -24,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -457,26 +464,32 @@ export function ConferenceStructureEditor({
                   <Label htmlFor={`role-system-${roleReference(editingRole)}`}>
                     角色类型
                   </Label>
-                  <select
-                    id={`role-system-${roleReference(editingRole)}`}
+                  <Select
                     value={editingRole.systemCode ?? "custom"}
                     disabled={disabled}
-                    className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    onChange={(event) =>
+                    onValueChange={(newValue) =>
                       updateRole(editingRoleIndex, {
                         systemCode:
-                          event.target.value === "custom"
+                          newValue === "custom"
                             ? undefined
-                            : (event.target
-                                .value as RoleTemplateInput["systemCode"]),
+                            : (newValue as RoleTemplateInput["systemCode"]),
                       })
                     }
                   >
-                    <option value="custom">自定义角色</option>
-                    <option value="staff">Staff</option>
-                    <option value="mpc_press">MPC 记者</option>
-                    <option value="ipc">IPC</option>
-                  </select>
+                    <SelectTrigger
+                      id={`role-system-${roleReference(editingRole)}`}
+                      className="h-9 w-full"
+                    >
+                      <SelectValue placeholder="选择角色类型" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="custom">自定义角色</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="mpc_press">MPC 记者</SelectItem>
+                      <SelectItem value="ipc">IPC</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
