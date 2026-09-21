@@ -167,7 +167,7 @@
 
   function handleComplete(): void {
     completeRollCall()
-    goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
+    goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
   }
 
   function handleKeydown(e: KeyboardEvent): void {
@@ -192,7 +192,7 @@
   <PageTopBar
     title="点名"
     subtitle={conf?.name}
-    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
   >
     {#snippet actions()}
       <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={openDisplayWindow}>

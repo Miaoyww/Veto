@@ -69,14 +69,14 @@
 
   function goBack(): void {
     if (conf) {
-      goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
     }
   }
 
   // 如果没有最近的问题，自动返回
   $effect(() => {
     if (conf && !latestPoint) {
-      goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
     }
   })
 
@@ -103,7 +103,7 @@
       title="问题"
       subtitle={conf?.name}
       iconClass={iconColor}
-      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
     />
 
     <!-- 主内容 -->

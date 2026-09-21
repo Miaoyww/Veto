@@ -238,7 +238,7 @@
                     onclick={() =>
                       goto(
                         resolve(
-                          `/client/${activeConference.id}/committee/${activeCommittee.id}/participants`
+                          `/client/${activeConference.id}/committee/${activeCommittee.id}/chair/participants`
                         )
                       )}
                   >

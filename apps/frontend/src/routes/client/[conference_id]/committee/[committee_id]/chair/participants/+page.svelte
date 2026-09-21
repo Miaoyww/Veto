@@ -138,7 +138,7 @@
   icon={Users}
   title="参会席位"
   subtitle={conf?.name}
-  backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+  backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
 >
   {#snippet actions()}
     <Button
@@ -179,7 +179,7 @@
             onclick={() => {
               resetRollCall()
               showResetConfirm = false
-              goto(resolve(`/client/${conferenceId}/committee/${committeeId}/roll-call`))
+              goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/roll-call`))
             }}
           >
             确认重新点名

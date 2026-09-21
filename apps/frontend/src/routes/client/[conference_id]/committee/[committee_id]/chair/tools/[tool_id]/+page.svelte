@@ -45,7 +45,7 @@
     title={timelineName || '时间线'}
     subtitle="时间线模拟器"
     iconClass="text-muted-foreground"
-    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair/tools`)}
   />
 
   <!-- 内容区域 -->

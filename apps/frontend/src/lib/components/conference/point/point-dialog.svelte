@@ -74,7 +74,7 @@
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
-    goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/question`))
+    goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/chair/question`))
 
     open = false
     resetForm()

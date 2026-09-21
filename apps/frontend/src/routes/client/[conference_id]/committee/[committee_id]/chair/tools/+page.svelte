@@ -12,6 +12,6 @@
   <PageTopBar
     icon={Wrench}
     title="工具"
-    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+    backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
   />
 </div>

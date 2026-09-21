@@ -89,7 +89,7 @@
 
   function goBack(): void {
     if (conf) {
-      goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
     }
   }
 
@@ -101,7 +101,7 @@
         (m) => m.status === 'approved' || m.status === 'rejected'
       )
       if (!hasProcessedMotion) {
-        goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
+        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
       }
     }
   })
@@ -125,7 +125,7 @@
       icon={Icon}
       title="动议表决"
       subtitle={conf.name}
-      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
+      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
     />
 
     <!-- 主内容 -->

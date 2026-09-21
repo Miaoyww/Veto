@@ -226,7 +226,7 @@
         }
       }
     } else {
-      goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/motion`))
+      goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/chair/motion`))
     }
 
     open = false

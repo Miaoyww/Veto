@@ -107,7 +107,7 @@
     setPhase('roll_call')
 
     const route =
-      `/client/${conferenceId}/committee/${committeeId}/roll-call` as `/client/${string}/committee/${string}/roll-call`
+      `/client/${conferenceId}/committee/${committeeId}/chair/roll-call` as `/client/${string}/committee/${string}/chair/roll-call`
     goto(resolve(route))
   }
 
