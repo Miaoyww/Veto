@@ -182,14 +182,7 @@
     title="点名"
     subtitle={conf?.name}
     backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
-  >
-    {#snippet actions()}
-      <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={openDisplayWindow}>
-        <Monitor size={12} />
-        显示窗口
-      </Button>
-    {/snippet}
-  </PageTopBar>
+  />
 
   <!-- 内容 -->
   <div class="flex flex-1 items-center justify-center overflow-hidden p-6">

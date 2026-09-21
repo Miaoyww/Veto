@@ -38,20 +38,6 @@
   let pointDialogOpen = $state(false)
   let logDialogOpen = $state(false)
 
-  async function openDisplayWindow(): Promise<void> {
-    if (!conf) return
-
-    const bridge = getDisplayBridge()
-
-    const ok = await bridge.openDisplay(conf.id)
-
-    if (ok) {
-      await new Promise((r) => setTimeout(r, 500))
-
-      bridge.sendUpdate(buildDisplayData(conf))
-    }
-  }
-
   function startRollCall(): void {
     if (!conf) return
 
@@ -81,17 +67,6 @@
       showBackButton={false}
     >
       {#snippet actions()}
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="打开显示窗口（投影/第二屏幕）"
-          onclick={openDisplayWindow}
-        >
-          <Monitor size={12} />
-          显示窗口
-        </Button>
-
         <Button
           size="sm"
           variant="outline"
