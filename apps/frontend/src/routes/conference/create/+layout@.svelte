@@ -85,7 +85,7 @@
       return
     }
     void goto(
-      resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}/chair` : '/')
+      resolve(event && committeeId ? `/client/${event.id}/committee/${committeeId}` : '/')
     )
   }
 </script>

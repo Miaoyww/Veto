@@ -22,7 +22,6 @@
   const conf = $derived($currentCommittee)
   const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
-  const routePrefix = $derived($page.url.pathname.startsWith('/client/') ? '/client' : '/conference')
 
   const pointTypes: PointType[] = [
     'point_of_order',
@@ -74,7 +73,9 @@
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
-    goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/chair/question`))
+    if (conferenceId && committeeId) {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/question`))
+    }
 
     open = false
     resetForm()

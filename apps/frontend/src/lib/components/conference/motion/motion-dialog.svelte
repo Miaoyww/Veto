@@ -38,9 +38,6 @@
   const conf = $derived($currentCommittee)
   const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
   const committeeId = $derived($page.params.committee_id ?? null)
-  const routePrefix = $derived(
-    $page.url.pathname.startsWith('/client/') ? '/client' : '/conference'
-  )
 
   // Proposer
   let selectedProposer = $state<ParticipantSeat | null>(null)
@@ -226,7 +223,9 @@
         }
       }
     } else {
-      goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/chair/motion`))
+      if (conferenceId && committeeId) {
+        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/motion`))
+      }
     }
 
     open = false

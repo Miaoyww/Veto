@@ -38,11 +38,9 @@ export function navigateToCommittee(id: string, committeeId?: string): void {
       ? committeeId
       : conference?.committees[0]?.id
   loadConference(id, selectedCommitteeId)
-  goto(
-    resolve(
-      selectedCommitteeId
-        ? `/conference/${id}/committee/${selectedCommitteeId}`
-        : `/conference/${id}`
-    )
-  )
+  if (selectedCommitteeId) {
+    goto(resolve(`/client/${id}/committee/${selectedCommitteeId}`))
+    return
+  }
+  goto(resolve('/conference'))
 }
