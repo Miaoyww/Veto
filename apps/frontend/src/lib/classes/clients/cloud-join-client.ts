@@ -1,4 +1,8 @@
-const cloudApiBaseUrl = (import.meta.env.VITE_CLOUD_API_URL ?? '').replace(/\/$/, '')
+const cloudApiBaseUrl = (
+  import.meta.env.VITE_CLOUD_API_URL ?? 'https://api.miaoyww.top/v1'
+).replace(/\/$/, '')
+
+const CLOUD_SEAT_SESSION_KEY = 'veto.cloud-seat-session'
 
 export type CloudSeatState = 'unclaimed' | 'claimed'
 
@@ -6,8 +10,16 @@ export interface CloudJoinTarget {
   inviteCode: string
   conferenceId: string
   conferenceName: string
+  organizer: string
+  committeeId: string
   committeeName: string
+  committeeType: 'cabinet' | 'mpc' | 'ipc'
+  seatId: string
   seatName: string
+  seatShortName: string
+  roleTemplateId: string
+  roleName: string
+  capabilities: string[]
   seatState: CloudSeatState
   hasPassword: boolean
   wsUrl: string
@@ -17,6 +29,27 @@ export interface CloudClaimInput {
   inviteCode: string
   displayName: string
   password?: string
+}
+
+export interface CloudJoinIdentity {
+  userId: string
+  displayName: string
+  conferenceId: string
+  committeeId: string
+  seatId: string
+  roleTemplateId: string
+  roleName: string
+  capabilities: string[]
+}
+
+export interface CloudClaimResult extends CloudJoinTarget {
+  token: string
+  identity: CloudJoinIdentity
+}
+
+export interface CloudSeatSession {
+  result: CloudClaimResult
+  connectedAt: number
 }
 
 export class CloudJoinError extends Error {
@@ -67,9 +100,36 @@ async function request<T>(path: string, body: unknown): Promise<T> {
 }
 
 export function validateCloudInvite(inviteCode: string): Promise<CloudJoinTarget> {
-  return request<CloudJoinTarget>('/veto/join/validate', { inviteCode })
+  return request<CloudJoinTarget>('/veto/join/validate', {
+    inviteCode: normalizeInviteCode(inviteCode)
+  })
 }
 
-export function claimCloudSeat(input: CloudClaimInput): Promise<CloudJoinTarget> {
-  return request<CloudJoinTarget>('/veto/join/claim', input)
+export function claimCloudSeat(input: CloudClaimInput): Promise<CloudClaimResult> {
+  return request<CloudClaimResult>('/veto/join/claim', {
+    ...input,
+    inviteCode: normalizeInviteCode(input.inviteCode)
+  })
+}
+
+export function saveCloudSeatSession(result: CloudClaimResult): void {
+  if (typeof sessionStorage === 'undefined') return
+  sessionStorage.setItem(
+    CLOUD_SEAT_SESSION_KEY,
+    JSON.stringify({ result, connectedAt: Date.now() } satisfies CloudSeatSession)
+  )
+}
+
+export function getCloudSeatSession(): CloudSeatSession | null {
+  if (typeof sessionStorage === 'undefined') return null
+
+  try {
+    const value = JSON.parse(sessionStorage.getItem(CLOUD_SEAT_SESSION_KEY) ?? 'null') as unknown
+    if (!value || typeof value !== 'object' || !('result' in value) || !('connectedAt' in value)) {
+      return null
+    }
+    return value as CloudSeatSession
+  } catch {
+    return null
+  }
 }
