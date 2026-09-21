@@ -11,18 +11,25 @@
   let {
     open,
     target,
+    hasStoredCredential = false,
+    isSubmitting = false,
+    requestError = '',
     onBack,
     onConfirm,
     onOpenChange
   }: {
     open: boolean
     target: CloudJoinTarget
+    hasStoredCredential?: boolean
+    isSubmitting?: boolean
+    requestError?: string
     onBack: () => void
     onConfirm: () => void
     onOpenChange: (open: boolean) => void
   } = $props()
 
   const seatClaimed = $derived(target.seatState === 'claimed')
+  const canRejoin = $derived(seatClaimed && (hasStoredCredential || !target.hasPassword))
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
@@ -62,17 +69,41 @@
       </Card.Content>
     </Card.Root>
 
-    {#if seatClaimed}
+    {#if canRejoin}
+      <Alert.Root>
+        <TriangleAlert />
+        <Alert.Title>重新入会</Alert.Title>
+        <Alert.Description>
+          {hasStoredCredential
+            ? '已在本机找到入会密码，确认后将直接重新进入该席位。'
+            : '该席位没有设置入会密码，确认后将直接重新进入。'}
+        </Alert.Description>
+      </Alert.Root>
+    {:else if seatClaimed}
       <Alert.Root variant="destructive">
         <TriangleAlert />
         <Alert.Title>该席位已被认领</Alert.Title>
-        <Alert.Description>当前加入接口暂不支持重新登录该席位。</Alert.Description>
+        <Alert.Description>未在本机找到有效入会密码，继续后需要重新填写密码。</Alert.Description>
+      </Alert.Root>
+    {/if}
+
+    {#if requestError}
+      <Alert.Root variant="destructive">
+        <TriangleAlert />
+        <Alert.Title>无法重新入会</Alert.Title>
+        <Alert.Description>{requestError}</Alert.Description>
       </Alert.Root>
     {/if}
 
     <Dialog.Footer>
-      <Button variant="outline" onclick={onBack}>返回</Button>
-      <Button onclick={onConfirm} disabled={seatClaimed}>确认大会</Button>
+      <Button variant="outline" onclick={onBack} disabled={isSubmitting}>返回</Button>
+      <Button onclick={onConfirm} disabled={isSubmitting}>
+        {#if isSubmitting}
+          正在重新入会
+        {:else}
+          确认大会
+        {/if}
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

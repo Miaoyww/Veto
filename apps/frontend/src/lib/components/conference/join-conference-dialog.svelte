@@ -1,15 +1,23 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { CircleAlert, ClipboardPaste, X } from '@lucide/svelte'
   import { REGEXP_ONLY_DIGITS_AND_CHARS } from 'bits-ui'
 
   import {
+    authenticateCloudSeat,
     CloudJoinError,
     saveCloudSeatSession,
     validateCloudInvite,
     type CloudClaimResult,
     type CloudJoinTarget
   } from '$lib/classes/clients/cloud-join-client'
+  import {
+    getCloudMembershipByInviteCode,
+    getCloudMembershipPassword,
+    rememberCloudMembership,
+    type CloudMembership
+  } from '$lib/classes/stores/conference/cloud-membership-store'
   import * as Alert from '$lib/components/ui/alert'
   import { Button } from '$lib/components/ui/button'
   import * as Dialog from '$lib/components/ui/dialog'
@@ -17,18 +25,21 @@
   import * as InputOTP from '$lib/components/ui/input-otp'
   import { Spinner } from '$lib/components/ui/spinner'
   import ConferenceConfirmDialog from './join/conference-confirm-dialog.svelte'
-  import ConferenceReadyDialog from './join/conference-ready-dialog.svelte'
   import JoinCredentialsDialog from './join/join-credentials-dialog.svelte'
 
-  type JoinStage = 'invite' | 'confirm' | 'credentials' | 'ready'
+  type JoinStage = 'invite' | 'confirm' | 'credentials'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
   let stage = $state<JoinStage>('invite')
   let inviteCode = $state('')
   let target = $state<CloudJoinTarget | null>(null)
-  let claimResult = $state<CloudClaimResult | null>(null)
   let validationError = $state('')
   let isValidating = $state(false)
+  let flowMode = $state<'claim' | 'authenticate'>('claim')
+  let membership = $state<CloudMembership | null>(null)
+  let storedPassword = $state<string | null>(null)
+  let confirmError = $state('')
+  let isRejoining = $state(false)
 
   function getInviteCode(): string {
     return inviteCode
@@ -57,9 +68,13 @@
     stage = 'invite'
     inviteCode = ''
     target = null
-    claimResult = null
     validationError = ''
     isValidating = false
+    flowMode = 'claim'
+    membership = null
+    storedPassword = null
+    confirmError = ''
+    isRejoining = false
   }
 
   function closeFlow(): void {
@@ -78,6 +93,10 @@
 
     try {
       target = await validateCloudInvite(inviteCode)
+      membership = getCloudMembershipByInviteCode(target.inviteCode)
+      storedPassword = membership ? await getCloudMembershipPassword(membership) : null
+      flowMode = target.seatState === 'claimed' ? 'authenticate' : 'claim'
+      confirmError = ''
       stage = 'confirm'
     } catch (error) {
       validationError = error instanceof CloudJoinError ? error.message : '无法验证邀请码，请重试'
@@ -86,17 +105,49 @@
     }
   }
 
-  function handleClaimed(result: CloudClaimResult): void {
-    claimResult = result
+  async function handleClaimed(result: CloudClaimResult, password?: string): Promise<void> {
+    const { conferenceId, committeeId } = result
+    await rememberCloudMembership(result, password)
     saveCloudSeatSession(result)
-    stage = 'ready'
+    open = false
+    resetFlow()
+    void goto(resolve(`/client/${conferenceId}/committee/${committeeId}/seat`))
   }
 
-  function enterConference(): void {
-    if (!claimResult) return
-    const { conferenceId, committeeId } = claimResult
-    closeFlow()
-    void goto(`/client/${conferenceId}/committee/${committeeId}/seat`)
+  async function handleConfirmed(): Promise<void> {
+    if (!target || isRejoining) return
+
+    if (target.seatState === 'unclaimed') {
+      flowMode = 'claim'
+      stage = 'credentials'
+      return
+    }
+
+    flowMode = 'authenticate'
+    if (target.hasPassword && storedPassword === null) {
+      stage = 'credentials'
+      return
+    }
+
+    confirmError = ''
+    isRejoining = true
+    try {
+      const result = await authenticateCloudSeat({
+        inviteCode: target.inviteCode,
+        password: storedPassword ?? undefined
+      })
+      await handleClaimed(result, storedPassword ?? undefined)
+    } catch (error) {
+      if (error instanceof CloudJoinError && (error.status === 401 || error.status === 409)) {
+        storedPassword = null
+        stage = 'credentials'
+      } else {
+        confirmError =
+          error instanceof CloudJoinError ? error.message : '无法重新入会，请检查网络后重试'
+      }
+    } finally {
+      isRejoining = false
+    }
   }
 </script>
 
@@ -191,25 +242,23 @@
   <ConferenceConfirmDialog
     open={open && stage === 'confirm'}
     {target}
+    hasStoredCredential={Boolean(storedPassword) || target.hasPassword === false}
+    isSubmitting={isRejoining}
+    requestError={confirmError}
     onBack={() => (stage = 'invite')}
-    onConfirm={() => (stage = 'credentials')}
+    onConfirm={() => void handleConfirmed()}
     onOpenChange={handleDialogOpenChange}
   />
 
   <JoinCredentialsDialog
     open={open && stage === 'credentials'}
     {target}
-    onBack={() => (stage = 'confirm')}
-    onClaimed={handleClaimed}
-    onOpenChange={handleDialogOpenChange}
-  />
-{/if}
-
-{#if claimResult}
-  <ConferenceReadyDialog
-    open={open && stage === 'ready'}
-    result={claimResult}
-    onEnter={enterConference}
+    mode={flowMode}
+    onBack={() => {
+      confirmError = ''
+      stage = 'confirm'
+    }}
+    onClaimed={(result, password) => void handleClaimed(result, password)}
     onOpenChange={handleDialogOpenChange}
   />
 {/if}

@@ -31,6 +31,11 @@ export interface CloudClaimInput {
   password?: string
 }
 
+export interface CloudAuthenticateInput {
+  inviteCode: string
+  password?: string
+}
+
 export interface CloudJoinIdentity {
   userId: string
   displayName: string
@@ -107,6 +112,13 @@ export function validateCloudInvite(inviteCode: string): Promise<CloudJoinTarget
 
 export function claimCloudSeat(input: CloudClaimInput): Promise<CloudClaimResult> {
   return request<CloudClaimResult>('/veto/join/claim', {
+    ...input,
+    inviteCode: normalizeInviteCode(input.inviteCode)
+  })
+}
+
+export function authenticateCloudSeat(input: CloudAuthenticateInput): Promise<CloudClaimResult> {
+  return request<CloudClaimResult>('/veto/join/authenticate', {
     ...input,
     inviteCode: normalizeInviteCode(input.inviteCode)
   })

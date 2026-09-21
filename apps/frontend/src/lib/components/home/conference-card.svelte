@@ -1,5 +1,15 @@
 <script lang="ts">
-  import { Trash2, Play, Pencil, Check, X, CalendarDays, Users, Building2 } from '@lucide/svelte'
+  import {
+    Trash2,
+    Play,
+    Pencil,
+    Check,
+    X,
+    KeyRound,
+    CalendarDays,
+    Users,
+    Building2
+  } from '@lucide/svelte'
   import type { Conference } from '$lib/classes/types/conference'
   import {
     currentConferenceId,
@@ -13,7 +23,15 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
 
-  let { conference }: { conference: Conference } = $props()
+  let {
+    conference,
+    onJoin,
+    onUpdatePassword
+  }: {
+    conference: Conference
+    onJoin?: (conference: Conference) => void
+    onUpdatePassword?: (conference: Conference) => void
+  } = $props()
 
   let editing = $state(false)
   let editName = $state('')
@@ -23,6 +41,10 @@
 
   function handleLoad(): void {
     if (editing) return
+    if (conference.source === 'cloud' && onJoin) {
+      onJoin(conference)
+      return
+    }
     navigateToConference(conference.id)
   }
 
@@ -70,7 +92,7 @@
 >
   <CardHeader class="px-5">
     <CardTitle class="flex min-w-0 items-center gap-1.5 text-sm">
-      {#if editing}
+      {#if !conference.source && editing}
         <Input
           bind:ref={inputRef}
           bind:value={editName}
@@ -104,18 +126,22 @@
         </Button>
       {:else}
         <span class="truncate font-semibold">{conference.name}</span>
-        {#if conference.mode === 'singleton'}
+        {#if conference.source === 'cloud'}
+          <Badge variant="outline" class="shrink-0">云端</Badge>
+        {:else if conference.mode === 'singleton'}
           <Badge variant="outline" class="shrink-0">单例</Badge>
         {/if}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-          title="重命名"
-          onclick={startEdit}
-        >
-          <Pencil />
-        </Button>
+        {#if conference.source !== 'cloud'}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+            title="重命名"
+            onclick={startEdit}
+          >
+            <Pencil />
+          </Button>
+        {/if}
       {/if}
     </CardTitle>
 
@@ -130,11 +156,29 @@
         }}
       >
         <Play class="size-3" />
-        {conference.mode === 'singleton' ? '主持' : '进入'}
+        {conference.source === 'cloud'
+          ? '重新入会'
+          : conference.mode === 'singleton'
+            ? '主持'
+            : '进入'}
       </Button>
-      <Button variant="destructive" size="icon-sm" title="删除大会" onclick={handleDelete}>
-        <Trash2 />
-      </Button>
+      {#if conference.source === 'cloud'}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          title="重新填写密码"
+          onclick={(e: MouseEvent) => {
+            e.stopPropagation()
+            onUpdatePassword?.(conference)
+          }}
+        >
+          <KeyRound />
+        </Button>
+      {:else}
+        <Button variant="destructive" size="icon-sm" title="删除大会" onclick={handleDelete}>
+          <Trash2 />
+        </Button>
+      {/if}
     </CardAction>
   </CardHeader>
 
