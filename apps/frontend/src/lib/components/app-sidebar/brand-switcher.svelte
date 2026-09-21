@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronsUpDown, House, CalendarRange } from '@lucide/svelte'
+  import { ChevronsUpDown, Grip, House, LayoutGrid } from '@lucide/svelte'
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import { goto } from '$app/navigation'
@@ -12,8 +12,6 @@
   } from '$lib/classes/stores/conference/conference-store'
 
   let {
-    hasConf = false,
-    confPrefix = '/conference',
     conferenceName,
     committeeName
   }: {
@@ -64,15 +62,20 @@
           <House size={16} />
           首页
         </DropdownMenu.Item>
-        {#if hasConf}
-          <DropdownMenu.Item
-            onclick={() => goto('/' + confPrefix.split('/').slice(1).join('/'))}
-            class="gap-2 p-2"
-          >
-            <CalendarRange size={16} />
-            议程
-          </DropdownMenu.Item>
-        {/if}
+        <DropdownMenu.Item
+          onclick={() => window.location.replace('https://veto.miaoyww.top')}
+          class="gap-2 p-2"
+        >
+          <Grip size={16} />
+          官网
+        </DropdownMenu.Item>
+        <DropdownMenu.Item
+          onclick={() => window.location.replace('https://platform.miaoyww.top')}
+          class="gap-2 p-2"
+        >
+          <LayoutGrid size={16} />
+          云平台
+        </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu.Root>
   </Sidebar.MenuItem>

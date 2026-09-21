@@ -26,7 +26,6 @@
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import CloudPasswordDialog from '$lib/components/conference/join/cloud-password-dialog.svelte'
   import TextAnimate from '$lib/components/ui/text-animate.svelte'
-  import TypingAnimation from '$lib/components/ui/typing-animation.svelte'
   import {
     conferences,
     deleteConference,
