@@ -4,34 +4,22 @@
    * ─────────────────────────────────────────
    * 问题页面 —— 提交问题后导航至此页，主席可随时结束问题返回。
    */
-  import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { AlertTriangle, HelpCircle, User } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import {
     currentCommittee,
-    loadConference,
     dismissLatestPoint
   } from '$lib/classes/stores/conference/conference-store'
   import { POINT_LABELS } from '$lib/classes/types/conference'
   import type { PointType } from '$lib/classes/types/conference'
-  import {
-    getDisplayBridge,
-    buildDisplayData
-  } from '$lib/classes/clients/conference-display-client'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
   import { VETO_NAME } from '$lib/classes/const'
 
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
-
-  onMount(() => {
-    if (conferenceId) {
-      void loadConference(conferenceId, committeeId ?? undefined)
-    }
-  })
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
 
@@ -79,13 +67,6 @@
       goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
     }
   })
-
-  // 同步 Display
-  $effect(() => {
-    if (conf) {
-      getDisplayBridge().sendUpdate(buildDisplayData(conf))
-    }
-  })
 </script>
 
 <svelte:head>
@@ -124,7 +105,7 @@
               由 <span class="font-semibold text-foreground">
                 {proposerDel?.name ?? latestPoint.proposedBySeatId}
               </span>
-               提出
+              提出
             </div>
           </div>
         </div>

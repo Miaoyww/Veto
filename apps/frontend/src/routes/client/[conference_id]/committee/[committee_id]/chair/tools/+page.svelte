@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { resolve } from '$app/paths'
   import { Wrench } from '@lucide/svelte'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
-  const conferenceId = $derived($page.params.conference_id ?? '')
-  const committeeId = $derived($page.params.committee_id ?? '')
+  const conferenceId = $derived(page.params.conference_id ?? '')
+  const committeeId = $derived(page.params.committee_id ?? '')
 </script>
 
 <div class="flex h-full flex-col bg-background">

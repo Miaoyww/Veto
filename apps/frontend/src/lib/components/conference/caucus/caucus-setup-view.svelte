@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * caucus-setup-panel.svelte
+   * caucus-setup-view.svelte
    * ─────────────────────────
    * 磋商发言名单设置面板（caucus_setup phase）。
    * 主席团设置动议席位标首/标尾，添加发言席位。
@@ -24,7 +24,9 @@
   const setup = $derived(conf?.caucusSetup ?? null)
   const motion = $derived(setup ? conf?.motions.find((m) => m.id === setup.motionId) : null)
   const proposerSeat = $derived(
-    motion ? conf?.participantSeats.find((seat) => seat.id === motion.proposedBySeatId) ?? null : null
+    motion
+      ? (conf?.participantSeats.find((seat) => seat.id === motion.proposedBySeatId) ?? null)
+      : null
   )
 
   // 已在名单中的席位 ID（用于排除）
@@ -159,9 +161,7 @@
       </div>
 
       {#if listedIds.length === 0}
-        <div class="px-4 pb-4 text-center text-xs text-muted-foreground">
-          名单为空，请添加席位
-        </div>
+        <div class="px-4 pb-4 text-center text-xs text-muted-foreground">名单为空，请添加席位</div>
       {:else}
         <div class="divide-y">
           {#each listedIds as delId, i}

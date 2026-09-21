@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { Wrench } from '@lucide/svelte'
   import { resolve } from '$app/paths'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import TimelineControl from '$lib/components/tools/timeline-control.svelte'
   import {
     getTimelineEngine,
@@ -14,9 +14,9 @@
   import { TimelineEngine } from '$lib/classes/services/engine/timeline-engine.svelte'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
-  const toolId = $derived($page.params.tool_id ?? null)
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
+  const toolId = $derived(page.params.tool_id ?? null)
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   let engine = $state<TimelineEngine | null>(null)
   let timelineName = $state('')

@@ -27,7 +27,7 @@
   import { resolveMotion, calcMaxSpeakers } from '$lib/classes/services/engine/conference-engine'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
   import type { MotionType, Attendance, ParticipantSeat } from '$lib/classes/types/conference'
   import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
@@ -36,8 +36,8 @@
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   const conf = $derived($currentCommittee)
-  const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
+  const conferenceId = $derived(page.params.conference_id ?? conf?.id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   // Proposer
   let selectedProposer = $state<ParticipantSeat | null>(null)
@@ -419,7 +419,7 @@
               >
                 {committedMcTotalSec}秒 ÷ 每人{committedMcSpeakerSec}秒 = 最多
                 <span class="font-semibold text-foreground">{mcMaxSpeakers}</span>
-                 人发言
+                人发言
               </div>
             {/if}
           </div>
@@ -463,7 +463,7 @@
             {#if conf?.documentNames?.length}
               <datalist id="document-name-suggestions">
                 {#each conf.documentNames as name (name)}
-                  <option value={name} />
+                  <option value={name}></option>
                 {/each}
               </datalist>
             {/if}

@@ -1,0 +1,53 @@
+<script lang="ts">
+  import { page } from '$app/state'
+  import {
+    currentCommittee,
+    loadConference,
+    motionDraft,
+    pointDraft,
+    saveConferencesNow
+  } from '$lib/classes/stores/conference/conference-store'
+  import {
+    chairDisplayExtra,
+    resetChairDisplayExtra
+  } from '$lib/classes/stores/conference/chair-display-store'
+  import { destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
+  import {
+    buildDisplayData,
+    getDisplayBridge
+  } from '$lib/classes/clients/conference-display-client'
+
+  let { children } = $props()
+
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
+
+  $effect(() => {
+    const activeConferenceId = conferenceId
+    const activeCommitteeId = committeeId
+    if (activeConferenceId) {
+      void loadConference(activeConferenceId, activeCommitteeId ?? undefined)
+    }
+
+    return () => {
+      resetChairDisplayExtra()
+      void saveConferencesNow()
+      destroyAllTimers()
+    }
+  })
+
+  $effect(() => {
+    const committee = $currentCommittee
+    if (!committee || committee.id !== committeeId) return
+
+    getDisplayBridge().sendUpdate(
+      buildDisplayData(committee, {
+        ...$chairDisplayExtra,
+        motionDraft: $motionDraft ?? undefined,
+        pointDraft: $pointDraft ?? undefined
+      })
+    )
+  })
+</script>
+
+{@render children()}

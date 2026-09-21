@@ -17,7 +17,6 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import { cn } from '$lib/classes/utils.js'
-  import PanelHeader from '../common/panel-header.svelte'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
 
   const conf = $derived($currentCommittee)
@@ -64,15 +63,15 @@
     conf
       ? conf.seats
           .filter(isParticipantSeat)
-          .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+          .filter(
+            (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
+          )
           .sort((a, b) => a.procedure.sortOrder - b.procedure.sortOrder)
       : []
   )
 
   // 当前正在投票的席位
-  const currentSeat = $derived(
-    presentSeats.find((d) => d.id === currentSeatId) ?? null
-  )
+  const currentSeat = $derived(presentSeats.find((d) => d.id === currentSeatId) ?? null)
 
   // 当前席位的序号（1-based）
   const currentPosition = $derived(

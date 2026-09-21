@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { Plus, RotateCcw, Users } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { Card, CardContent } from '$lib/components/ui/card'
@@ -30,16 +29,11 @@
   import {
     currentCommittee,
     currentConferenceRecord,
-    loadConference,
     setSeatVotingRights,
-    resetRollCall,
-    saveConferencesNow
+    resetRollCall
   } from '$lib/classes/stores/conference/conference-store'
   import { addSeat, updateSeat } from '$lib/classes/stores/delegate/delegate-store'
-  import {
-    calculateMajorityThresholds,
-    destroyAllTimers
-  } from '$lib/classes/services/engine/conference-engine'
+  import { calculateMajorityThresholds } from '$lib/classes/services/engine/conference-engine'
   import { VETO_NAME } from '$lib/classes/const'
   import { isParticipantSeat } from '$lib/classes/types/delegate'
   import { resolve } from '$app/paths'
@@ -47,19 +41,8 @@
   import ParticipantSeatTable from '$lib/components/conference/committee/participant-seat-table.svelte'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
 
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
-
-  onMount(() => {
-    if (conferenceId) {
-      void loadConference(conferenceId, committeeId ?? undefined)
-    }
-  })
-
-  onDestroy(async () => {
-    await saveConferencesNow()
-    destroyAllTimers()
-  })
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
   const conference = $derived($currentConferenceRecord)

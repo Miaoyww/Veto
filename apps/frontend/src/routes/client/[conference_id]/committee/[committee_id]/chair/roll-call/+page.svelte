@@ -1,13 +1,12 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { Check, X, Users, Monitor } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import {
     currentCommittee,
-    loadConference,
     changeSeatAttendance,
     completeRollCall
   } from '$lib/classes/stores/conference/conference-store'
@@ -20,18 +19,17 @@
   import type { Attendance, ParticipantSeat } from '$lib/classes/types/conference'
   import { isParticipantSeat, toSeatView } from '$lib/classes/types/delegate'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
+  import {
+    chairDisplayExtra,
+    resetChairDisplayExtra
+  } from '$lib/classes/stores/conference/chair-display-store'
 
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
-
-  onMount(() => {
-    if (conferenceId) {
-      void loadConference(conferenceId, committeeId ?? undefined)
-    }
-  })
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   onDestroy(() => {
     if (transitionTimeout) clearTimeout(transitionTimeout)
+    resetChairDisplayExtra()
   })
 
   // 刚标记的席位（传给 Display 端展示确认动画，发送后即清除）
@@ -41,14 +39,8 @@
     index: number
   } | null>(null)
 
-  // 自动同步当前状态到 Display 窗口（含点名进度）
-  // 用 rAF 合并同一帧内的多次更新，避免重复构建/发送
-  let _sendRaf = 0
+  // 将点名页面的附加投影交给 chair layout 统一发送到 Display。
   $effect(() => {
-    const c = $currentCommittee
-    if (!c) return
-
-    // 在此处读取所有响应式值，确保 Svelte 正确追踪依赖
     const rollCallInfo = thresholds
       ? {
           currentIndex,
@@ -63,10 +55,7 @@
         }
       : undefined
 
-    cancelAnimationFrame(_sendRaf)
-    _sendRaf = requestAnimationFrame(() => {
-      getDisplayBridge().sendUpdate(buildDisplayData(c, { rollCall: rollCallInfo }))
-    })
+    chairDisplayExtra.set({ rollCall: rollCallInfo })
   })
 
   async function openDisplayWindow(): Promise<void> {
@@ -75,7 +64,7 @@
     await bridge.openDisplay(conf.id)
     // 等待 Display 端 WebSocket 连接就绪
     await new Promise((r) => setTimeout(r, 500))
-    bridge.sendUpdate(buildDisplayData(conf))
+    bridge.sendUpdate(buildDisplayData(conf, $chairDisplayExtra))
   }
 
   const conf = $derived($currentCommittee)

@@ -15,6 +15,8 @@ import type {
 } from './committee'
 import type { TimerStatus } from './timer'
 
+export type DisplayPhase = ConferencePhase | 'motion'
+
 export interface MotionDraft {
   proposedBy?: SeatView
   type?: MotionType
@@ -42,7 +44,7 @@ export interface ConferenceDisplaySpeaker {
 
 export interface ConferenceDisplayData {
   conferenceId: string
-  phase: ConferencePhase
+  phase: DisplayPhase
   venue: string
   name: string
   presentCount: number

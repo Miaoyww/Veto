@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * general-debate-panel.svelte
+   * general-debate-view.svelte
    * ────────────────────────────
    * 一般性辩论面板 —— 主发言名单的添加/删除/让渡/逐人计时。
    */

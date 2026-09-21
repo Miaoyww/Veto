@@ -1,12 +1,12 @@
 <script lang="ts">
   /**
-   * free-caucus-panel.svelte
+   * caucus-countdown-view.svelte
    * ────────────────────────
    * 自由磋商 / 个人演讲面板 —— 总倒计时 + 暂停/恢复/结束控制。
    */
   import { onDestroy } from 'svelte'
   import { get } from 'svelte/store'
-  import { Timer, Coffee } from '@lucide/svelte'
+  import { Timer, Coffee, Mic } from '@lucide/svelte'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -19,11 +19,18 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { destroyTimer } from '$lib/classes/services/engine/conference-engine'
   import { formatTime } from '$lib/classes/formatters/time-formater'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
+  import {
+    getDisplayBridge,
+    buildDisplayData
+  } from '$lib/classes/clients/conference-display-client'
   import { useCaucusCountdown } from '$lib/classes/services/hooks/use-caucus-countdown.svelte'
   import type { Committee } from '$lib/classes/domain/committee.svelte'
 
+  let { mode }: { mode: 'unmoderated' | 'individual' } = $props()
+
   const conf = $derived($currentCommittee)
+  const title = $derived(mode === 'individual' ? '个人演讲' : '自由磋商')
+  const HeaderIcon = $derived(mode === 'individual' ? Mic : Coffee)
 
   function getEngine(): Committee | null | undefined {
     return get(currentCommittee)
@@ -83,7 +90,7 @@
 <div class="flex w-full flex-col gap-4">
   {#if conf}
     <div class="flex flex-col items-center gap-6">
-      <PanelHeader icon={Coffee} title="自由磋商" />
+      <PanelHeader icon={HeaderIcon} {title} />
 
       <div class="text-center">
         {#if caucusCountdown.isCaucusPaused}

@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * moderated-caucus-panel.svelte
+   * moderated-caucus-view.svelte
    * ─────────────────────────────
    * 有主持核心磋商面板 —— 逐人计时 + 总时间预算 + 发言队列管理。
    */
@@ -24,8 +24,14 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { destroyTimer } from '$lib/classes/services/engine/conference-engine'
   import { formatTime } from '$lib/classes/formatters/time-formater'
-  import { getDisplayBridge, buildDisplayData } from '$lib/classes/clients/conference-display-client'
-  import { SpeakerTimerState, usePerSpeakerTimer } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
+  import {
+    getDisplayBridge,
+    buildDisplayData
+  } from '$lib/classes/clients/conference-display-client'
+  import {
+    SpeakerTimerState,
+    usePerSpeakerTimer
+  } from '$lib/classes/services/hooks/use-speaker-timer.svelte'
   import { usePausedStateRestore } from '$lib/classes/services/hooks/use-paused-state-restore.svelte'
   import type { Committee } from '$lib/classes/domain/committee.svelte'
   import type { SpeakerDisplayEntry } from '$lib/classes/types/conference'
@@ -239,11 +245,11 @@
 
 <div class="flex w-full flex-col gap-4">
   {#if conf}
-
     <div class="flex items-center gap-3 text-sm text-muted-foreground">
       <span>总剩余</span>
-      <span class="font-mono font-semibold text-foreground">{formatTime(totalBudgetRemaining)}</span
-      >
+      <span class="font-mono font-semibold text-foreground">
+        {formatTime(totalBudgetRemaining)}
+      </span>
       <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
         <div
           class="h-full rounded-full transition-all duration-1000 {totalBudgetRemaining <= 30
@@ -259,11 +265,12 @@
     {@const perTime = activeSpeaker?.allocatedTimeSec ?? 60}
     {@const maxCapacity = Math.floor(totalBudgetRemaining / perTime)}
     <div class="text-center text-xs {maxCapacity === 0 ? 'text-red-400' : 'text-muted-foreground'}">
-      剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span> 人（{formatTime(
-        totalBudgetRemaining
-      )} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span class="ml-1 text-red-400"
-          >— 当前发言人结束后将自动终止磋商</span
-        >{/if}
+      剩余时间尚可容纳 <span class="font-semibold">{maxCapacity}</span>
+      人（{formatTime(totalBudgetRemaining)} ÷ {perTime}秒/人）{#if maxCapacity === 0}<span
+          class="ml-1 text-red-400"
+        >
+          — 当前发言人结束后将自动终止磋商
+        </span>{/if}
     </div>
 
     <Separator />

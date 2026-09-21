@@ -1,0 +1,87 @@
+import type { Committee } from '$lib/classes/types/committee'
+import { PHASE_LABELS } from './phase'
+
+type ChairCommitteeState = Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'>
+
+export type ChairScreen =
+  | { kind: 'preamble' }
+  | { kind: 'roll_call' }
+  | { kind: 'pending_speakers_list' }
+  | { kind: 'general_debate' }
+  | { kind: 'caucus_setup' }
+  | { kind: 'moderated_caucus' }
+  | { kind: 'caucus_countdown'; mode: 'unmoderated' | 'individual' }
+  | { kind: 'voting' }
+  | { kind: 'suspended' }
+  | { kind: 'closed' }
+  | { kind: 'invalid'; message: string }
+
+export interface ChairPresentation {
+  title: string
+  screen: ChairScreen
+  hasPrimaryAction: boolean
+  canProposeMotion: boolean
+  canProposePoint: boolean
+  motionDisabledReason: string
+  canResumeMeeting: boolean
+}
+
+const MOTION_PHASES = new Set<Committee['phase']>([
+  'pending_speakers_list',
+  'general_debate',
+  'caucus_setup',
+  'caucus',
+  'voting'
+])
+
+function getChairScreen(committee: ChairCommitteeState): ChairScreen {
+  switch (committee.phase) {
+    case 'preamble':
+      return { kind: 'preamble' }
+    case 'roll_call':
+      return { kind: 'roll_call' }
+    case 'pending_speakers_list':
+      return { kind: 'pending_speakers_list' }
+    case 'general_debate':
+      return { kind: 'general_debate' }
+    case 'caucus_setup':
+      return { kind: 'caucus_setup' }
+    case 'caucus':
+      if (!committee.activeCaucus) {
+        return { kind: 'invalid', message: '会议处于磋商阶段，但缺少进行中的磋商数据' }
+      }
+      switch (committee.activeCaucus.type) {
+        case 'moderated':
+          return { kind: 'moderated_caucus' }
+        case 'unmoderated':
+        case 'individual':
+          return { kind: 'caucus_countdown', mode: committee.activeCaucus.type }
+      }
+    case 'voting':
+      return { kind: 'voting' }
+    case 'suspended':
+      return { kind: 'suspended' }
+    case 'closed':
+      return { kind: 'closed' }
+  }
+}
+
+export function getChairPresentation(committee: ChairCommitteeState): ChairPresentation {
+  const hasPrimaryAction = MOTION_PHASES.has(committee.phase)
+  const isMotionInProgress = committee.phase === 'caucus' || committee.phase === 'caucus_setup'
+  const isTimerActive = committee.activeSpeaker != null
+
+  return {
+    title: PHASE_LABELS[committee.phase],
+    screen: getChairScreen(committee),
+    hasPrimaryAction,
+    canProposeMotion: hasPrimaryAction && !isTimerActive && !isMotionInProgress,
+    canProposePoint: committee.phase !== 'closed',
+    motionDisabledReason: isTimerActive
+      ? '发言计时进行中，无法提出动议'
+      : isMotionInProgress
+        ? '磋商进行中，无法提出新动议'
+        : '',
+    canResumeMeeting: committee.phase === 'suspended'
+  }
+}

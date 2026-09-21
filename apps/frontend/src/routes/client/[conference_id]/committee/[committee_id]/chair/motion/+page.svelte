@@ -6,10 +6,9 @@
    *
    * 当动议提交后导航至此页，主席团观察举牌后手动裁决。
    */
-  import { onMount, onDestroy } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import {
     Presentation,
     Timer,
@@ -26,27 +25,16 @@
   import { Separator } from '$lib/components/ui/separator'
   import {
     currentCommittee,
-    loadConference,
     approveMotion,
     rejectMotion
   } from '$lib/classes/stores/conference/conference-store'
   import { resolveMotion } from '$lib/classes/services/engine/conference-engine'
   import { MOTION_LABELS } from '$lib/classes/types/conference'
-  import {
-    getDisplayBridge,
-    buildDisplayData
-  } from '$lib/classes/clients/conference-display-client'
   import { VETO_NAME } from '$lib/classes/const'
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
-
-  onMount(() => {
-    if (conferenceId) {
-      void loadConference(conferenceId, committeeId ?? undefined)
-    }
-  })
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
 
@@ -105,13 +93,6 @@
       }
     }
   })
-
-  // 同步 Display
-  $effect(() => {
-    if (conf) {
-      getDisplayBridge().sendUpdate(buildDisplayData(conf))
-    }
-  })
 </script>
 
 <svelte:head>
@@ -146,7 +127,7 @@
             </div>
             <div class="text-base text-muted-foreground">
               由 <span class="font-semibold text-foreground">{proposerDel?.name}</span>
-               提出
+              提出
             </div>
 
             {#if pendingMotion.type === 'moderated_caucus'}
@@ -169,7 +150,7 @@
                   <span class="font-medium text-foreground">
                     {(pendingMotion as any).maxSpeakers}
                   </span>
-                   人
+                  人
                 </p>
               </div>
             {:else if pendingMotion.type === 'unmoderated_caucus'}

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
 
@@ -8,30 +7,18 @@
 
   import {
     currentCommittee,
-    loadConference,
-    pointDraft,
-    saveConferencesNow,
     setPhase,
     resumeMeeting
   } from '$lib/classes/stores/conference/conference-store'
-
-  import { destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
-
   import {
     getDisplayBridge,
     buildDisplayData
   } from '$lib/classes/clients/conference-display-client'
 
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
 
-  import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
-  import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
-  import GeneralDebatePanel from '$lib/components/conference/speakers/general-debate-panel.svelte'
-  import ModeratedCaucusPanel from '$lib/components/conference/speakers/moderated-caucus-panel.svelte'
-  import FreeCaucusPanel from '$lib/components/conference/speakers/free-caucus-panel.svelte'
-  import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
+  import ChairPhaseView from '$lib/components/conference/chair/chair-phase-view.svelte'
+  import { getChairPresentation } from '$lib/classes/utils/committee/chair-presentation'
 
   import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
   import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
@@ -39,53 +26,17 @@
 
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
-  import { Gavel, Play, Users, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
-
-  import { ScrollArea } from '$lib/components/ui/scroll-area'
+  import { Gavel, Play, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
 
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   const conf = $derived($currentCommittee)
+  const presentation = $derived(conf ? getChairPresentation(conf) : null)
   let motionDialogOpen = $state(false)
   let pointDialogOpen = $state(false)
   let logDialogOpen = $state(false)
-
-  onMount(async () => {
-    if (conferenceId) {
-      await loadConference(conferenceId, committeeId ?? undefined)
-    }
-
-  })
-
-  // 自动同步 Display 窗口
-  $effect(() => {
-    const conference = $currentCommittee
-
-    if (conference) {
-      getDisplayBridge().sendUpdate(
-        buildDisplayData(conference, {
-          pointDraft: $pointDraft ?? undefined
-        })
-      )
-    }
-  })
-
-  $effect(() => {
-    console.log('当前会议状态更新:', {
-      phase: conf?.phase,
-      activeSpeaker: conf?.activeSpeaker,
-      caucusSetup: conf?.caucusSetup
-    })
-  })
-
-  onDestroy(async () => {
-    // 离开页面保存状态
-    await saveConferencesNow()
-
-    destroyAllTimers()
-  })
 
   async function openDisplayWindow(): Promise<void> {
     if (!conf) return
@@ -112,45 +63,8 @@
   }
 
   function handlePrimaryAction(): void {
-    if (!conf) return
-
-    switch (conf.phase) {
-      case 'pending_speakers_list':
-      case 'general_debate':
-      case 'caucus':
-      case 'caucus_setup':
-      case 'voting':
-        motionDialogOpen = true
-        break
-
-      default:
-        break
-    }
+    if (presentation?.hasPrimaryAction) motionDialogOpen = true
   }
-
-  const primaryActionLabel = $derived.by(() => {
-    if (!conf) return ''
-
-    switch (conf.phase) {
-      case 'pending_speakers_list':
-      case 'general_debate':
-      case 'caucus':
-      case 'caucus_setup':
-      case 'voting':
-        return '动议与程序'
-
-      default:
-        return ''
-    }
-  })
-
-  const isTimerActive = $derived(conf?.activeSpeaker != null)
-
-  const isMotionInProgress = $derived(conf?.phase === 'caucus' || conf?.phase === 'caucus_setup')
-
-  const canProposeMotion = $derived(!isTimerActive && !isMotionInProgress)
-
-  const canProposePoint = $derived(conf?.phase !== 'closed')
 </script>
 
 <svelte:head>
@@ -158,10 +72,10 @@
 </svelte:head>
 
 <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
-  {#if conf}
+  {#if conf && presentation}
     <PageTopBar
       icon={Gavel}
-      title={PHASE_LABELS[conf.phase] ?? conf.phase}
+      title={presentation.title}
       subtitle={conf.name}
       backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
       showBackButton={false}
@@ -202,7 +116,7 @@
           计时器
         </Button>
 
-        {#if canProposePoint}
+        {#if presentation.canProposePoint}
           <Button
             size="sm"
             variant="outline"
@@ -215,24 +129,20 @@
           </Button>
         {/if}
 
-        {#if primaryActionLabel}
+        {#if presentation.hasPrimaryAction}
           <Button
             size="sm"
             class="h-8 gap-1.5 text-xs"
             onclick={handlePrimaryAction}
-            disabled={!canProposeMotion}
-            title={isTimerActive
-              ? '发言计时进行中，无法提出动议'
-              : isMotionInProgress
-                ? '磋商进行中，无法提出新动议'
-                : ''}
+            disabled={!presentation.canProposeMotion}
+            title={presentation.motionDisabledReason}
           >
             <Play size={12} />
-            {primaryActionLabel}
+            动议与程序
           </Button>
         {/if}
 
-        {#if conf.phase === 'suspended'}
+        {#if presentation.canResumeMeeting}
           <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
             <Play size={12} />
             恢复会议
@@ -241,54 +151,7 @@
       {/snippet}
     </PageTopBar>
 
-    <!-- 阶段对应内容 -->
-    <div class="flex flex-1 min-h-0 overflow-hidden p-6">
-      {#if conf.phase === 'preamble'}
-        <PlaceholderPage title="会前准备" subtitle="所有参会席位已就位，准备开始点名" icon={Users}>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            开始点名
-          </Button>
-        </PlaceholderPage>
-      {:else if conf.phase === 'roll_call'}
-        <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立窗口中打开" icon={Users}>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            进入点名页面
-          </Button>
-        </PlaceholderPage>
-      {:else if conf.phase === 'pending_speakers_list'}
-        <PlaceholderPage
-          title="等待开启主发言名单"
-          subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论"
-          icon={Users}
-        />
-      {:else if conf.phase === 'general_debate'}
-        <ScrollArea class="flex-1">
-          <GeneralDebatePanel />
-        </ScrollArea>
-      {:else if conf.phase === 'caucus_setup'}
-        <ScrollArea class="flex-1">
-          <CaucusSetupPanel />
-        </ScrollArea>
-      {:else if conf.phase === 'caucus'}
-        <ScrollArea class="flex-1">
-          {#if conf.activeCaucus?.type === 'moderated'}
-            <ModeratedCaucusPanel />
-          {:else}
-            <FreeCaucusPanel />
-          {/if}
-        </ScrollArea>
-      {:else if conf.phase === 'voting'}
-        <ScrollArea class="flex-1">
-          <VotingPanel />
-        </ScrollArea>
-      {:else if conf.phase === 'suspended'}
-        <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续" icon={Gavel} />
-      {:else if conf.phase === 'closed'}
-        <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与" icon={Gavel} />
-      {/if}
-    </div>
+    <ChairPhaseView screen={presentation.screen} onStartRollCall={startRollCall} />
 
     <!-- Motion Dialog -->
     {#key motionDialogOpen}
