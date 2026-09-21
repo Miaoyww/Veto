@@ -306,6 +306,7 @@ export function deleteConference(id: string): void {
   const conference = getConferenceById(id)
   conferences.update((list) => list.filter((c) => c.id !== id))
   for (const committee of conference?.committees ?? []) unregisterEngine(committee.id)
+  if (get(lastOpenedConferenceId) === id) lastOpenedConferenceId.set(null)
   if (get(currentConferenceId) === id) {
     currentConferenceId.set(null)
     currentCommitteeId.set(null)

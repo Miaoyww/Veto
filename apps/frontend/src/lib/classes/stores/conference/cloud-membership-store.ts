@@ -322,6 +322,13 @@ export function getCloudMembershipByConferenceId(conferenceId: string): CloudMem
   return loadMemberships().find((membership) => membership.conferenceId === conferenceId) ?? null
 }
 
+/** Remove every locally remembered seat for a cloud conference. */
+export function removeCloudMembership(conferenceId: string): void {
+  saveMemberships(
+    loadMemberships().filter((membership) => membership.conferenceId !== conferenceId)
+  )
+}
+
 export function getCloudMembershipByInviteCode(inviteCode: string): CloudMembership | null {
   return (
     loadMemberships().find(

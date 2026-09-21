@@ -26,11 +26,13 @@
   let {
     conference,
     onJoin,
-    onUpdatePassword
+    onUpdatePassword,
+    onDelete
   }: {
     conference: Conference
     onJoin?: (conference: Conference) => void
     onUpdatePassword?: (conference: Conference) => void
+    onDelete?: (conference: Conference) => void
   } = $props()
 
   let editing = $state(false)
@@ -50,10 +52,13 @@
 
   function handleDelete(e: MouseEvent): void {
     e.stopPropagation()
+    const isCloudConference = conference.source === 'cloud'
     showConfirm(
-      '确认删除',
-      `将永久删除大会「${conference.name}」，此操作无法撤销。是否继续？`,
-      () => deleteConference(conference.id)
+      isCloudConference ? '确认从本机移除' : '确认删除',
+      isCloudConference
+        ? `将从本机移除大会「${conference.name}」及保存的席位信息，不会删除云端大会。是否继续？`
+        : `将永久删除大会「${conference.name}」，此操作无法撤销。是否继续？`,
+      () => (isCloudConference ? onDelete?.(conference) : deleteConference(conference.id))
     )
   }
 
@@ -174,8 +179,14 @@
         >
           <KeyRound />
         </Button>
-      {:else}
-        <Button variant="destructive" size="icon-sm" title="删除大会" onclick={handleDelete}>
+      {/if}
+      {#if conference.source !== 'cloud' || onDelete}
+        <Button
+          variant="destructive"
+          size="icon-sm"
+          title={conference.source === 'cloud' ? '从本机移除' : '删除大会'}
+          onclick={handleDelete}
+        >
           <Trash2 />
         </Button>
       {/if}

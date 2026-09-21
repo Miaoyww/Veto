@@ -29,6 +29,7 @@
   import TypingAnimation from '$lib/components/ui/typing-animation.svelte'
   import {
     conferences,
+    deleteConference,
     lastOpenedConferenceId,
     unloadConference
   } from '$lib/classes/stores/conference/conference-store'
@@ -39,6 +40,7 @@
     getCloudMembershipByConferenceId,
     getCloudMembershipPassword,
     rememberCloudMembership,
+    removeCloudMembership,
     type CloudMembership
   } from '$lib/classes/stores/conference/cloud-membership-store'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
@@ -135,6 +137,11 @@
     rejoinError = ''
     passwordMembership = membership
     passwordDialogOpen = true
+  }
+
+  function removeCloudConference(conference: Conference): void {
+    removeCloudMembership(conference.id)
+    deleteConference(conference.id)
   }
 </script>
 
@@ -337,6 +344,7 @@
                 {conference}
                 onJoin={conference.source === 'cloud' ? rejoinCloudConference : undefined}
                 onUpdatePassword={openCloudPasswordDialog}
+                onDelete={conference.source === 'cloud' ? removeCloudConference : undefined}
               />
             {/each}
           </div>

@@ -11,7 +11,8 @@
     Plus,
     Puzzle,
     ScrollText,
-    UserRoundCheck
+    UserRoundCheck,
+    Users
   } from '@lucide/svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
@@ -94,6 +95,7 @@
       ? cloudSession.chairProjection
       : null
   )
+  const isChair = $derived(!isCloudSession || cloudProjection !== null)
   const cloudChairSeats = $derived(
     cloudProjection?.committee.id === committeeId ? cloudProjection.seats : ([] as CloudSeat[])
   )
@@ -163,6 +165,18 @@
           </Sidebar.MenuItem>
 
           <Sidebar.Separator class="my-1" />
+
+          {#if isChair}
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                isActive={$page.url.pathname.startsWith(`${committeeRoute}/chair`)}
+                onclick={() => goTo(`${committeeRoute}/chair`)}
+              >
+                <Users />
+                <span>主席</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+          {/if}
 
           {#if canViewDirectives || canViewFiles || canViewSituation || canViewNews}
             <Sidebar.Separator class="my-1" />
