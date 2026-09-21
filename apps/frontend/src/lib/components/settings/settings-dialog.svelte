@@ -15,7 +15,7 @@
     activeSettingsSection
   } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
-  const version = __APP_VERSION__
+  const version = `${__APP_VERSION__}-${__APP_BUILD_TIME__}`
 
   let activeSection = $state<Section>('general')
   let electronEnvironment = $state(false)

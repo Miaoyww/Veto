@@ -17,7 +17,7 @@
   import { fly } from 'svelte/transition'
   import { onMount, onDestroy } from 'svelte'
 
-  const version = __APP_VERSION__
+  const version = `${__APP_VERSION__}-${__APP_BUILD_TIME__}`
   import favicon from '$lib/assets/favicon.png'
   import { isElectron } from '$lib/classes/utils/runtime'
 
