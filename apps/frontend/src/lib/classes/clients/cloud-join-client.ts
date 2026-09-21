@@ -20,6 +20,7 @@ export interface CloudJoinTarget {
   roleTemplateId: string
   roleName: string
   capabilities: string[]
+  chair?: CloudChairAssignment | null
   seatState: CloudSeatState
   hasPassword: boolean
   wsUrl: string
@@ -45,11 +46,56 @@ export interface CloudJoinIdentity {
   roleTemplateId: string
   roleName: string
   capabilities: string[]
+  isChair: boolean
 }
 
 export interface CloudClaimResult extends CloudJoinTarget {
   token: string
+  isChair: boolean
   identity: CloudJoinIdentity
+}
+
+export interface CloudChairAssignment {
+  committeeId: string
+  committeeName: string
+}
+
+export interface CloudChairUser {
+  id: string
+  displayName: string
+}
+
+export interface CloudChairSeat {
+  id: string
+  name: string
+  shortName?: string
+  roleTemplateId: string
+  roleName: string
+  hasVotingRights: boolean
+  user: CloudChairUser | null
+}
+
+export interface CloudChairCommittee {
+  conference: {
+    id: string
+    name: string
+    organizer: string
+  }
+  committee: {
+    id: string
+    name: string
+    type: 'cabinet' | 'mpc' | 'ipc'
+  }
+  chairSeat: {
+    id: string
+    name: string
+    shortName?: string
+    roleTemplateId: string
+    roleName: string
+    capabilities: string[]
+    user: CloudChairUser | null
+  }
+  seats: CloudChairSeat[]
 }
 
 export interface CloudSeatSession {
@@ -76,6 +122,23 @@ export function normalizeInviteCode(value: string): string {
   return [characters.slice(0, 4), characters.slice(4, 8), characters.slice(8)].join('-')
 }
 
+function responseError(payload: unknown, fallback: string): string {
+  if (typeof payload === 'object' && payload !== null) {
+    if ('message' in payload && typeof payload.message === 'string') return payload.message
+    if (
+      'error' in payload &&
+      typeof payload.error === 'object' &&
+      payload.error !== null &&
+      'message' in payload.error &&
+      typeof payload.error.message === 'string'
+    ) {
+      return payload.error.message
+    }
+  }
+
+  return fallback
+}
+
 async function request<T>(path: string, body: unknown): Promise<T> {
   if (!cloudApiBaseUrl) {
     throw new CloudJoinError('云端服务暂未配置')
@@ -92,13 +155,9 @@ async function request<T>(path: string, body: unknown): Promise<T> {
     throw new CloudJoinError('无法连接云端服务')
   }
 
-  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null
+  const payload = (await response.json().catch(() => null)) as T | unknown | null
   if (!response.ok) {
-    const message =
-      typeof payload === 'object' && payload !== null && 'message' in payload
-        ? String(payload.message)
-        : '云端服务请求失败'
-    throw new CloudJoinError(message, response.status)
+    throw new CloudJoinError(responseError(payload, '云端服务请求失败'), response.status)
   }
 
   return payload as T
@@ -122,6 +181,24 @@ export function authenticateCloudSeat(input: CloudAuthenticateInput): Promise<Cl
     ...input,
     inviteCode: normalizeInviteCode(input.inviteCode)
   })
+}
+
+export async function getCloudChairCommittee(token: string): Promise<CloudChairCommittee> {
+  if (!cloudApiBaseUrl) throw new CloudJoinError('云端服务暂未配置')
+
+  let response: Response
+  try {
+    response = await fetch(new URL('veto/chair/committee', `${cloudApiBaseUrl}/`), {
+      headers: { authorization: `Bearer ${token}` }
+    })
+  } catch {
+    throw new CloudJoinError('无法连接云端服务')
+  }
+  const payload = (await response.json().catch(() => null)) as CloudChairCommittee | unknown | null
+  if (!response.ok) {
+    throw new CloudJoinError(responseError(payload, '无法获取主席席位信息'), response.status)
+  }
+  return payload as CloudChairCommittee
 }
 
 export function saveCloudSeatSession(result: CloudClaimResult): void {

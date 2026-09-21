@@ -11,14 +11,23 @@
     currentConferenceRecord
   } from '$lib/classes/stores/conference/conference-store'
 
-  let { hasConf = false, confPrefix = '/conference' }: { hasConf?: boolean; confPrefix?: string } =
-    $props()
+  let {
+    hasConf = false,
+    confPrefix = '/conference',
+    conferenceName,
+    committeeName
+  }: {
+    hasConf?: boolean
+    confPrefix?: string
+    conferenceName?: string
+    committeeName?: string
+  } = $props()
 
-  const conference = $derived($currentConferenceRecord)
-  const committee = $derived($currentCommittee)
+  const conference = $derived(conferenceName ?? $currentConferenceRecord?.name)
+  const committee = $derived(committeeName ?? $currentCommittee?.name)
 
-  let title = $derived(committee?.name ?? conference?.name ?? VETO_NAME)
-  let subTitle = $derived(committee && conference ? conference.name : '会议系统')
+  let title = $derived(committee ?? conference ?? VETO_NAME)
+  let subTitle = $derived(committee && conference ? conference : '会议系统')
 </script>
 
 <Sidebar.Menu>
@@ -56,7 +65,10 @@
           首页
         </DropdownMenu.Item>
         {#if hasConf}
-          <DropdownMenu.Item onclick={() => goto('/' + confPrefix.split('/').slice(1).join('/'))} class="gap-2 p-2">
+          <DropdownMenu.Item
+            onclick={() => goto('/' + confPrefix.split('/').slice(1).join('/'))}
+            class="gap-2 p-2"
+          >
             <CalendarRange size={16} />
             议程
           </DropdownMenu.Item>

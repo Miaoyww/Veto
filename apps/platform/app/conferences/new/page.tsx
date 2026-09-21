@@ -108,14 +108,23 @@ const defaultRoles: RoleTemplateInput[] = [
     ],
   },
   {
-    clientId: "role-preset-observer",
-    name: "观察员",
+    clientId: "role-preset-chair",
+    name: "主席",
+    description: "主持委员会并处理会议流程",
     builtIn: true,
     capabilities: [
       "view_conference",
       "view_situation",
       "view_news",
       "view_files",
+      "process_directive",
+      "send_files",
+      "publish_situation",
+      "withdraw_news",
+      "withdraw_situation",
+      "withdraw_files",
+      "control_conference",
+      "draft_resolution",
     ],
   },
   {
@@ -590,6 +599,7 @@ export default function NewConferencePage() {
                             </Label>
                             <Select
                               value={committee.type}
+                              items={committeeTypeLabels}
                               disabled={isSaving}
                               onValueChange={(value) =>
                                 changeCommitteeType(
@@ -809,6 +819,13 @@ export default function NewConferencePage() {
                                     />
                                     <Select
                                       value={seat.roleTemplateId || null}
+                                      items={allowedRoles.map(
+                                        (allowedRole) => ({
+                                          value: roleReference(allowedRole),
+                                          label:
+                                            allowedRole.name || "未命名角色",
+                                        })
+                                      )}
                                       disabled={isSaving}
                                       onValueChange={(value) =>
                                         updateSeat(committeeIndex, seatIndex, {

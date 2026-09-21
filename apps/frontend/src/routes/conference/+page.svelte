@@ -34,17 +34,14 @@
   } from '$lib/classes/stores/conference/conference-store'
   import { joinConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { navigateToConference } from '$lib/classes/utils'
-  import {
-    authenticateCloudSeat,
-    CloudJoinError,
-    saveCloudSeatSession
-  } from '$lib/classes/clients/cloud-join-client'
+  import { authenticateCloudSeat, CloudJoinError } from '$lib/classes/clients/cloud-join-client'
   import {
     getCloudMembershipByConferenceId,
     getCloudMembershipPassword,
     rememberCloudMembership,
     type CloudMembership
   } from '$lib/classes/stores/conference/cloud-membership-store'
+  import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
 
   let query = $state('')
   let passwordDialogOpen = $state(false)
@@ -114,8 +111,8 @@
         password: password ?? undefined
       })
       await rememberCloudMembership(result, password ?? undefined)
-      saveCloudSeatSession(result)
-      goto(resolve(`/client/${result.conferenceId}/committee/${result.committeeId}/seat`))
+      cloudSession.setResult(result)
+      goto(resolve(`/client/${result.conferenceId}/committee/${result.committeeId}`))
     } catch (error) {
       if (error instanceof CloudJoinError && error.status === 401) {
         passwordMembership = membership

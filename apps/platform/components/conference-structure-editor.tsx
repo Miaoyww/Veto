@@ -58,6 +58,16 @@ const committeeTypeLabels: Record<CommitteeInput["type"], string> = {
   ipc: "IPC",
 }
 
+const roleSystemLabels: Record<
+  NonNullable<RoleTemplateInput["systemCode"]> | "custom",
+  string
+> = {
+  custom: "自定义角色",
+  staff: "Staff",
+  mpc_press: "MPC 记者",
+  ipc: "IPC",
+}
+
 function createRole(): RoleTemplateInput {
   return {
     clientId: createClientId("role"),
@@ -466,6 +476,7 @@ export function ConferenceStructureEditor({
                   </Label>
                   <Select
                     value={editingRole.systemCode ?? "custom"}
+                    items={roleSystemLabels}
                     disabled={disabled}
                     onValueChange={(newValue) =>
                       updateRole(editingRoleIndex, {

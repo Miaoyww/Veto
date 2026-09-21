@@ -33,6 +33,9 @@ export interface CloudMembership {
   roleTemplateId: string
   roleName: string
   capabilities: string[]
+  isChair: boolean
+  chairCommitteeId?: string
+  chairCommitteeName?: string
   userId: string
   displayName: string
   hasPassword: boolean
@@ -160,6 +163,9 @@ function membershipFromResult(result: CloudClaimResult): CloudMembership {
     roleTemplateId: result.roleTemplateId,
     roleName: result.roleName,
     capabilities: [...result.capabilities],
+    isChair: result.isChair,
+    chairCommitteeId: result.chair?.committeeId,
+    chairCommitteeName: result.chair?.committeeName,
     userId: result.identity.userId,
     displayName: result.identity.displayName,
     hasPassword: result.hasPassword,
@@ -221,7 +227,7 @@ function toConferenceDTO(membership: CloudMembership): ConferenceDTO {
     id: membership.conferenceId,
     name: membership.conferenceName,
     source: 'cloud',
-    description: membership.roleName,
+    description: membership.isChair ? '云端主席席位' : membership.roleName,
     organizer: membership.organizer,
     createdAt: membership.createdAt,
     updatedAt: membership.updatedAt,

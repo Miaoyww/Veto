@@ -46,24 +46,27 @@ export default function PlatformHome() {
     [signOut]
   )
 
-  const loadConferences = useCallback(async () => {
-    if (!token) return
-    setIsLoading(true)
-    setError("")
-    try {
-      const [active, deleted] = await Promise.all([
-        listConferences(token, { status: "active", limit: 20 }),
-        listConferences(token, { status: "deleted", limit: 100 }),
-      ])
-      setConferences(active.conferences)
-      setNextCursor(active.nextCursor)
-      setDeletedConferences(deleted.conferences)
-    } catch (caught) {
-      handleError(caught)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [handleError, token])
+  const loadConferences = useCallback(
+    async (refresh = false) => {
+      if (!token) return
+      setIsLoading(true)
+      setError("")
+      try {
+        const [active, deleted] = await Promise.all([
+          listConferences(token, { status: "active", limit: 20, refresh }),
+          listConferences(token, { status: "deleted", limit: 100, refresh }),
+        ])
+        setConferences(active.conferences)
+        setNextCursor(active.nextCursor)
+        setDeletedConferences(deleted.conferences)
+      } catch (caught) {
+        handleError(caught)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [handleError, token]
+  )
 
   useEffect(() => {
     void loadConferences()
@@ -145,7 +148,7 @@ export default function PlatformHome() {
             type="button"
             variant="ghost"
             disabled={isLoading}
-            onClick={() => void loadConferences()}
+            onClick={() => void loadConferences(true)}
           >
             <RefreshCw
               className={cn(isLoading && "animate-spin")}

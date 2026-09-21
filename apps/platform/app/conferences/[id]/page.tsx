@@ -85,27 +85,30 @@ export default function ConferenceDetailPage(): JSX.Element {
     [signOut]
   )
 
-  const load = useCallback(async (): Promise<void> => {
-    if (!token || !conferenceId) return
-    setIsLoading(true)
-    setError("")
-    setFieldErrors([])
-    try {
-      const next = await getConference(token, conferenceId)
-      setConference(next)
-      setName(next.name)
-      setDescription(next.description ?? "")
-      setOrganizer(next.organizer ?? "")
-      setStructure({
-        roleTemplates: next.roleTemplates,
-        committees: next.committees,
-      })
-    } catch (caught) {
-      handleError(caught, "加载大会失败")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [conferenceId, handleError, token])
+  const load = useCallback(
+    async (refresh = false): Promise<void> => {
+      if (!token || !conferenceId) return
+      setIsLoading(true)
+      setError("")
+      setFieldErrors([])
+      try {
+        const next = await getConference(token, conferenceId, { refresh })
+        setConference(next)
+        setName(next.name)
+        setDescription(next.description ?? "")
+        setOrganizer(next.organizer ?? "")
+        setStructure({
+          roleTemplates: next.roleTemplates,
+          committees: next.committees,
+        })
+      } catch (caught) {
+        handleError(caught, "加载大会失败")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [conferenceId, handleError, token]
+  )
 
   useEffect(() => {
     void load()
@@ -259,7 +262,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                   variant="outline"
                   size="sm"
                   className="mt-3"
-                  onClick={() => void load()}
+                  onClick={() => void load(true)}
                 >
                   重新加载
                 </Button>

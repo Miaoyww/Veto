@@ -26,6 +26,12 @@ import {
 const selectClassName =
   "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
+const committeeTypeLabels: Record<CommitteeInput["type"], string> = {
+  cabinet: "委员会 / Cabinet",
+  mpc: "MPC",
+  ipc: "IPC",
+}
+
 interface CommitteeFormProps {
   value: CommitteeInput
   roles: RoleTemplateInput[]
@@ -95,6 +101,7 @@ export function CommitteeForm({
           <Label htmlFor={`committee-type-${reference}`}>委员会类型</Label>
           <Select
             value={value.type}
+            items={committeeTypeLabels}
             disabled={disabled}
             onValueChange={(newValue) => {
               const type = newValue as CommitteeInput["type"]
@@ -122,9 +129,11 @@ export function CommitteeForm({
             </SelectTrigger>
 
             <SelectContent>
-              <SelectItem value="cabinet">委员会 / Cabinet</SelectItem>
-              <SelectItem value="mpc">MPC</SelectItem>
-              <SelectItem value="ipc">IPC</SelectItem>
+              {Object.entries(committeeTypeLabels).map(([type, label]) => (
+                <SelectItem key={type} value={type}>
+                  {label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

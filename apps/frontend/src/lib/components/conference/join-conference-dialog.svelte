@@ -7,7 +7,6 @@
   import {
     authenticateCloudSeat,
     CloudJoinError,
-    saveCloudSeatSession,
     validateCloudInvite,
     type CloudClaimResult,
     type CloudJoinTarget
@@ -18,6 +17,7 @@
     rememberCloudMembership,
     type CloudMembership
   } from '$lib/classes/stores/conference/cloud-membership-store'
+  import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import * as Alert from '$lib/components/ui/alert'
   import { Button } from '$lib/components/ui/button'
   import * as Dialog from '$lib/components/ui/dialog'
@@ -108,10 +108,10 @@
   async function handleClaimed(result: CloudClaimResult, password?: string): Promise<void> {
     const { conferenceId, committeeId } = result
     await rememberCloudMembership(result, password)
-    saveCloudSeatSession(result)
+    cloudSession.setResult(result)
     open = false
     resetFlow()
-    void goto(resolve(`/client/${conferenceId}/committee/${committeeId}/seat`))
+    void goto(resolve(`/client/${conferenceId}/committee/${committeeId}`))
   }
 
   async function handleConfirmed(): Promise<void> {

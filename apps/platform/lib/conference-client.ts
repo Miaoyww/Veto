@@ -1,3 +1,5 @@
+import { clearApiCache, readApiCache, writeApiCache } from "@/lib/api-cache"
+
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
 
 export const CAPABILITIES = [
@@ -105,6 +107,39 @@ export interface CreateConferenceInput extends ConferenceStructure {
   organizer?: string
 }
 
+export interface SeatCommitteeUser {
+  id: string
+  displayName: string
+}
+
+export interface SeatCommitteeSession {
+  ok: true
+  conference: {
+    id: string
+    name: string
+    organizer: string
+  }
+  committee: {
+    id: string
+    name: string
+    type: CommitteeType
+  }
+  seat: {
+    id: string
+    name: string
+    shortName?: string
+    roleTemplateId: string
+    roleName: string
+    capabilities: Capability[]
+    hasVotingRights: boolean
+  }
+  user: SeatCommitteeUser | null
+  chair: {
+    committeeId: string
+  } | null
+  isChair: boolean
+}
+
 interface ApiFieldError {
   path: string
   code: string
@@ -119,6 +154,10 @@ interface ApiErrorBody {
     fields?: ApiFieldError[]
   }
 }
+
+type ApiRequestInit = RequestInit & { refreshCache?: boolean }
+
+const pendingGetRequests = new Map<string, Promise<unknown>>()
 
 export class ConferenceApiError extends Error {
   readonly status?: number
@@ -140,44 +179,90 @@ export class ConferenceApiError extends Error {
 async function apiRequest<T>(
   token: string,
   path: string,
-  init: RequestInit = {}
+  init: ApiRequestInit = {}
 ): Promise<T> {
   if (!apiBaseUrl) {
     throw new ConferenceApiError("API 服务暂未配置")
   }
 
-  const headers = new Headers(init.headers)
-  headers.set("Authorization", `Bearer ${token}`)
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json")
+  const method = (init.method ?? "GET").toUpperCase()
+  const isGet = method === "GET"
+  const shouldCache = isGet && !init.refreshCache
+  const cacheKey = `${token}\u0000${path}`
+
+  if (shouldCache) {
+    const cached = readApiCache<T>(token, path)
+    if (cached !== undefined) return cached
+
+    const pending = pendingGetRequests.get(cacheKey)
+    if (pending) return pending as Promise<T>
   }
 
-  let response: Response
-  try {
-    response = await fetch(new URL(path.replace(/^\//, ""), `${apiBaseUrl}/`), {
-      ...init,
-      headers,
-    })
-  } catch {
-    throw new ConferenceApiError("无法连接大会服务")
+  if (!isGet) clearApiCache()
+
+  const request = (async (): Promise<T> => {
+    const headers = new Headers(init.headers)
+    headers.set("Authorization", `Bearer ${token}`)
+    if (init.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json")
+    }
+
+    let response: Response
+    try {
+      response = await fetch(
+        new URL(path.replace(/^\//, ""), `${apiBaseUrl}/`),
+        {
+          ...init,
+          headers,
+        }
+      )
+    } catch {
+      throw new ConferenceApiError("无法连接大会服务")
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      T | ApiErrorBody | null
+
+    if (!response.ok) {
+      const error =
+        payload && typeof payload === "object" && "error" in payload
+          ? payload.error
+          : undefined
+      throw new ConferenceApiError(error?.message ?? "请求失败", {
+        status: response.status,
+        code: error?.code,
+        fields: error?.fields,
+      })
+    }
+
+    if (shouldCache && payload !== null) {
+      writeApiCache(token, path, payload)
+    }
+
+    return payload as T
+  })()
+
+  if (shouldCache) {
+    pendingGetRequests.set(cacheKey, request)
+    try {
+      return await request
+    } finally {
+      pendingGetRequests.delete(cacheKey)
+    }
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    T | ApiErrorBody | null
+  return request
+}
 
-  if (!response.ok) {
-    const error =
-      payload && typeof payload === "object" && "error" in payload
-        ? payload.error
-        : undefined
-    throw new ConferenceApiError(error?.message ?? "请求失败", {
-      status: response.status,
-      code: error?.code,
-      fields: error?.fields,
-    })
-  }
+function conferencePath(id: string): string {
+  return `/v1/conferences/${encodeURIComponent(id)}`
+}
 
-  return payload as T
+function cacheConference(token: string, conference: Conference): void {
+  writeApiCache(token, conferencePath(conference.id), {
+    ok: true,
+    conference,
+  })
 }
 
 export async function listConferences(
@@ -186,6 +271,7 @@ export async function listConferences(
     status?: "active" | "deleted"
     cursor?: string
     limit?: number
+    refresh?: boolean
   } = {}
 ): Promise<{ conferences: ConferenceSummary[]; nextCursor: string | null }> {
   const query = new URLSearchParams({
@@ -193,16 +279,20 @@ export async function listConferences(
     limit: String(options.limit ?? 20),
   })
   if (options.cursor) query.set("cursor", options.cursor)
-  return apiRequest(token, `/v1/conferences?${query}`)
+  return apiRequest(token, `/v1/conferences?${query}`, {
+    refreshCache: options.refresh,
+  })
 }
 
 export async function getConference(
   token: string,
-  id: string
+  id: string,
+  options: { refresh?: boolean } = {}
 ): Promise<Conference> {
   const result = await apiRequest<{ ok: true; conference: Conference }>(
     token,
-    `/v1/conferences/${encodeURIComponent(id)}`
+    conferencePath(id),
+    { refreshCache: options.refresh }
   )
   return result.conference
 }
@@ -221,6 +311,7 @@ export async function createConference(
       body: JSON.stringify(input),
     }
   )
+  cacheConference(token, result.conference)
   return result.conference
 }
 
@@ -239,6 +330,7 @@ export async function updateConferenceMetadata(
       body: JSON.stringify(input),
     }
   )
+  cacheConference(token, result.conference)
   return result.conference
 }
 
@@ -257,6 +349,7 @@ export async function replaceConferenceStructure(
       body: JSON.stringify(structure),
     }
   )
+  cacheConference(token, result.conference)
   return result.conference
 }
 
@@ -265,7 +358,7 @@ export async function deleteConference(
   id: string,
   version: number
 ): Promise<void> {
-  await apiRequest(token, `/v1/conferences/${encodeURIComponent(id)}`, {
+  await apiRequest(token, conferencePath(id), {
     method: "DELETE",
     headers: { "If-Match": `"${version}"` },
   })
@@ -278,11 +371,27 @@ export async function restoreConference(
 ): Promise<Conference> {
   const result = await apiRequest<{ ok: true; conference: Conference }>(
     token,
-    `/v1/conferences/${encodeURIComponent(id)}/restore`,
+    `${conferencePath(id)}/restore`,
     {
       method: "POST",
       headers: { "If-Match": `"${version}"` },
     }
   )
+  cacheConference(token, result.conference)
   return result.conference
+}
+
+export async function getCommitteeBySeat(
+  seatToken: string,
+  conferenceId: string,
+  committeeId: string,
+  options: { refresh?: boolean } = {}
+): Promise<SeatCommitteeSession> {
+  return apiRequest<SeatCommitteeSession>(
+    seatToken,
+    `/v1/veto/committee/${encodeURIComponent(conferenceId)}/${encodeURIComponent(
+      committeeId
+    )}`,
+    { refreshCache: options.refresh }
+  )
 }
