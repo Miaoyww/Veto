@@ -15,20 +15,25 @@
   import { dbGetAllPlugins } from '$lib/classes/services/plugin/plugin-db'
   import CampaignModeDialog from './campaign-mode-dialog.svelte'
   import FreeModeForm from './free-mode-form.svelte'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   /** 已安装的插件列表（异步从主进程文件系统加载） */
   let installedPlugins = $state<InstalledPlugin[]>([])
+  let electronEnvironment = $state(false)
   onMount(async () => {
-    installedPlugins = await dbGetAllPlugins()
+    electronEnvironment = isElectron()
+    if (electronEnvironment) {
+      installedPlugins = await dbGetAllPlugins()
+    }
   })
 
   const campaignPlugins = $derived(installedPlugins.filter((p) => p.manifest.type === 'campaign'))
   const factionPlugins = $derived(installedPlugins.filter((p) => p.manifest.type === 'faction'))
   const hasAnyMods = $derived(factionPlugins.length > 0)
 
-  let step = $state<'mode_select' | 'free'>('mode_select')
+  let step = $state<'mode_select' | 'free'>('free')
 
   /** 战役模式独立对话框 */
   let campaignDialogOpen = $state(false)
@@ -76,7 +81,7 @@
   function handleOpenChange(value: boolean) {
     if (value) {
       resetDraft()
-      step = 'mode_select'
+      step = electronEnvironment ? 'mode_select' : 'free'
     }
     open = value
   }
@@ -111,14 +116,14 @@
     <Dialog.Content class="max-w-xl">
       <Dialog.Header class="pb-1">
         <Dialog.Title class="text-base font-semibold tracking-wide">
-          {#if step === 'mode_select'}
+          {#if step === 'mode_select' && electronEnvironment}
             新建战局
           {:else}
             新建自由推演
           {/if}
         </Dialog.Title>
         <Dialog.Description class="text-xs text-muted-foreground">
-          {#if step === 'mode_select'}
+          {#if step === 'mode_select' && electronEnvironment}
             选择推演模式开始。战役模式将自动加载预设的阵营、地图与事件。
           {:else}
             自由配置所有参数，从头构建一场推演。
@@ -127,7 +132,7 @@
       </Dialog.Header>
 
       <div class="flex flex-col gap-0 py-2">
-        {#if step === 'mode_select'}
+        {#if step === 'mode_select' && electronEnvironment}
           <div class="grid grid-cols-2 gap-4 px-1 py-4">
             <!-- 战役模式卡片 -->
             <button
@@ -210,15 +215,17 @@
           </div>
         {:else}
           <!-- 自由模式表单 -->
-          <button
-            type="button"
-            class="mb-1 flex items-center gap-1 px-1 text-xs text-muted-foreground
-              transition-colors hover:text-stone-800 dark:hover:text-stone-200"
-            onclick={backToModeSelect}
-          >
-            <ArrowLeftIcon size={12} />
-            返回模式选择
-          </button>
+          {#if electronEnvironment}
+            <button
+              type="button"
+              class="mb-1 flex items-center gap-1 px-1 text-xs text-muted-foreground
+                transition-colors hover:text-stone-800 dark:hover:text-stone-200"
+              onclick={backToModeSelect}
+            >
+              <ArrowLeftIcon size={12} />
+              返回模式选择
+            </button>
+          {/if}
           <FreeModeForm
             bind:draft
             {factionPlugins}
@@ -229,13 +236,17 @@
       </div>
 
       <Dialog.Footer class="pt-1">
-        {#if step === 'mode_select'}
+        {#if step === 'mode_select' && electronEnvironment}
           <Button variant="outline" onclick={() => (open = false)}>取消</Button>
         {:else}
-          <Button variant="outline" onclick={backToModeSelect}>
-            <ArrowLeftIcon size={13} class="mr-1" />
-            返回
-          </Button>
+          {#if electronEnvironment}
+            <Button variant="outline" onclick={backToModeSelect}>
+              <ArrowLeftIcon size={13} class="mr-1" />
+              返回
+            </Button>
+          {:else}
+            <Button variant="outline" onclick={() => (open = false)}>取消</Button>
+          {/if}
           <Button onclick={handleCreate} disabled={!draft.name.trim()} class="min-w-[120px] gap-2">
             <PlusIcon size={15} />
             初始化战局
@@ -247,12 +258,14 @@
 </Dialog.Root>
 
 <!-- 战役模式独立大对话框 -->
-<CampaignModeDialog
-  bind:open={campaignDialogOpen}
-  {campaignPlugins}
-  onclose={() => {
-    campaignDialogOpen = false
-    open = true
-  }}
-  oncreate={handleCampaignCreate}
-/>
+{#if electronEnvironment}
+  <CampaignModeDialog
+    bind:open={campaignDialogOpen}
+    {campaignPlugins}
+    onclose={() => {
+      campaignDialogOpen = false
+      open = true
+    }}
+    oncreate={handleCampaignCreate}
+  />
+{/if}

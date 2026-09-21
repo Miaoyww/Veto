@@ -8,6 +8,7 @@ import { writable } from 'svelte/store'
 import { getPluginStorage, initPluginStorage } from './storage/plugin-storage-factory'
 import { setPluginListChangeCallback } from './storage/plugin-storage'
 import { createLogger } from '$lib/classes/logger';
+import { isElectron } from '$lib/classes/utils/runtime'
 
 const log = createLogger('plugin-db')
 
@@ -29,16 +30,18 @@ export const installedPluginsRevision = writable(0)
 
 // ─── 初始化存储和响应式回调 ──────────────────────────────────────
 
-initPluginStorage()
-  .then(() => {
-    storageInitialized.set(true)
-    log.info('Storage initialized successfully')
-  })
-  .catch((err) => {
-    const errorMsg = err instanceof Error ? err.message : String(err)
-    storageError.set(errorMsg)
-    log.error('Failed to initialize storage:', err)
-  })
+if (isElectron()) {
+  initPluginStorage()
+    .then(() => {
+      storageInitialized.set(true)
+      log.info('Storage initialized successfully')
+    })
+    .catch((err) => {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      storageError.set(errorMsg)
+      log.error('Failed to initialize storage:', err)
+    })
+}
 
 setPluginListChangeCallback(() => {
   installedPluginsRevision.update((n) => n + 1)
@@ -48,6 +51,10 @@ setPluginListChangeCallback(() => {
  * 等待存储初始化完成，超时时间为 5 秒。
  */
 export async function ensureStorageInitialized(): Promise<void> {
+  if (!isElectron()) {
+    throw new Error('Plugins are only available in the desktop app')
+  }
+
   let initialized = false
   storageInitialized.subscribe((v) => {
     initialized = v
@@ -154,11 +161,13 @@ export async function dbSavePlugin(plugin: InstalledPlugin): Promise<void> {
 }
 
 export async function dbGetPlugin(id: string): Promise<InstalledPlugin | undefined> {
+  if (!isElectron()) return undefined
   await ensureStorageInitialized()
   return await getPluginStorage().getPlugin(id)
 }
 
 export async function dbGetAllPlugins(): Promise<InstalledPlugin[]> {
+  if (!isElectron()) return []
   await ensureStorageInitialized()
   return await getPluginStorage().getAllPlugins()
 }
@@ -169,22 +178,27 @@ export async function dbDeletePlugin(id: string): Promise<void> {
 }
 
 export async function dbIsInstalled(id: string): Promise<boolean> {
+  if (!isElectron()) return false
   await ensureStorageInitialized()
   return await getPluginStorage().isInstalled(id)
 }
 
 export async function dbSaveAsset(asset: ModAsset): Promise<void> {
+  await ensureStorageInitialized()
   await getPluginStorage().saveAsset(asset)
 }
 
 export async function dbGetAsset(key: string): Promise<ModAsset | undefined> {
+  if (!isElectron()) return undefined
   return await getPluginStorage().getAsset(key)
 }
 
 export async function dbGetAssetUrl(key: string): Promise<string | null> {
+  if (!isElectron()) return null
   return await getPluginStorage().getAssetUrl(key)
 }
 
 export async function dbDeletePluginAssets(assetKeys: string[]): Promise<void> {
+  await ensureStorageInitialized()
   await getPluginStorage().deleteAssets(assetKeys)
 }

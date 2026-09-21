@@ -16,6 +16,7 @@
   import { useKeyboardShortcuts } from '$lib/classes/services/hooks/use-keyboard-shortcuts.svelte'
   import { VETO_NAME } from '$lib/classes/const'
   import logo from '$lib/assets/logo.svg'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   useKeyboardShortcuts()
 
@@ -38,10 +39,14 @@
       zoom.set(battle.mapZoom)
       mapFlyTo.set({ lat: battle.mapCenter[0], lng: battle.mapCenter[1] })
 
-      // 等待插件加载完成
-      await pluginsReady
-      // 然后加载战局对应的 Mod
-      mods.loadMods(battle.enabledMods ?? [])
+      if (isElectron()) {
+        // 桌面端等待插件加载完成，再恢复战局启用的 Mod。
+        await pluginsReady
+        mods.loadMods(battle.enabledMods ?? [])
+      } else {
+        // Web 端只使用内置基础数据，不加载用户插件。
+        mods.loadMods(['base'])
+      }
     }
   })
 

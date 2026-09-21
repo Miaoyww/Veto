@@ -119,15 +119,19 @@
     })
   })
 
-  // 从主进程文件系统恢复用户已安装的插件 + 加载应用数据
+  // 桌面端恢复用户插件；Web 端不初始化或读取任何插件存储。
   if (typeof window !== 'undefined') {
+    const pluginsInitialization = isElectron()
+      ? dbGetAllPlugins().then((plugins) => {
+          for (const plugin of plugins) {
+            injectToRegistry(plugin)
+          }
+          markPluginsReady()
+        })
+      : Promise.resolve().then(markPluginsReady)
+
     Promise.all([
-      dbGetAllPlugins().then((plugins) => {
-        for (const plugin of plugins) {
-          injectToRegistry(plugin)
-        }
-        markPluginsReady()
-      }),
+      pluginsInitialization,
       import('$lib/classes/stores/conference/conference-store').then((m) => m.conferencesReady),
       import('$lib/classes/stores/battle/battle-store').then((m) => m.battlesReady),
       import('$lib/classes/stores/timeline-store').then((m) => m.timelinesReady)

@@ -7,7 +7,6 @@
     Download,
     Loader,
     CheckCircle2,
-    AlertCircle,
     Terminal
   } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
@@ -20,6 +19,7 @@
 
   const version = __APP_VERSION__
   import favicon from '$lib/assets/favicon.png'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   // ── 更新状态 ──────────────────────────────────────────────────────
   type UpdateStatus =
@@ -163,92 +163,93 @@
       <Label>v{version}</Label>
     </SettingCard>
 
-    <!-- 开发者工具 -->
-    <SettingCard title="开发者工具" description="打开 Chromium DevTools 进行调试。">
-      <Button variant="outline" size="sm" onclick={openDevTools}>
-        <Terminal size={13} class="mr-1.5" />
-        打开开发者工具
-      </Button>
-    </SettingCard>
+    {#if isElectron()}
+      <!-- 开发者工具 -->
+      <SettingCard title="开发者工具" description="打开 Chromium DevTools 进行调试。">
+        <Button variant="outline" size="sm" onclick={openDevTools}>
+          <Terminal size={13} class="mr-1.5" />
+          打开开发者工具
+        </Button>
+      </SettingCard>
 
-    <!-- 检查更新 -->
-    <SettingCard
-      title="版本更新"
-      description={updateStatus === 'not-available'
-        ? '当前已是最新版本。'
-        : updateStatus === 'available'
-          ? `发现新版本 v${updateVersion ?? ''}，点击下载更新。`
-          : updateStatus === 'downloading'
-            ? '正在下载更新...'
-            : updateStatus === 'downloaded'
-              ? '更新已就绪，重启应用以完成安装。'
-              : updateStatus === 'error'
-                ? (errorMessage ?? '检查更新时发生错误。')
-                : '检查是否有新版本可用。'}
-    >
-      <div class="flex items-center gap-2">
-        {#if updateStatus === 'checking'}
-          <Button variant="outline" size="sm" disabled>
-            <Loader size={13} class="mr-1.5 animate-spin" />
-            检查中...
-          </Button>
-        {:else if updateStatus === 'downloading'}
-          <Button variant="outline" size="sm" disabled>
-            <Loader size={13} class="mr-1.5 animate-spin" />
-            下载中 {downloadPercent}%
-          </Button>
-        {:else if updateStatus === 'available'}
-          <Button variant="default" size="sm" onclick={downloadUpdate}>
-            <Download size={13} class="mr-1.5" />
-            下载更新
-          </Button>
-          <Button variant="ghost" size="sm" onclick={checkForUpdates}>
-            <RefreshCw size={13} class="mr-1.5" />
-            重新检查
-          </Button>
-        {:else if updateStatus === 'downloaded'}
-          <div class="flex items-center gap-2">
-            <CheckCircle2 size={14} class="text-green-500" />
-            <span class="text-xs text-green-600 dark:text-green-400">
-              v{updateVersion ?? ''} 已就绪
-            </span>
-          </div>
-          <Button variant="default" size="sm" onclick={quitAndInstall}>立即重启安装</Button>
-        {:else if updateStatus === 'not-available'}
-          <div class="flex items-center gap-2">
-            <CheckCircle2 size={14} class="text-muted-foreground" />
-            <span class="text-xs text-muted-foreground">已是最新</span>
-          </div>
-          <Button variant="outline" size="sm" onclick={checkForUpdates}>
-            <RefreshCw size={13} class="mr-1.5" />
-            重新检查
-          </Button>
-        {:else if updateStatus === 'error'}
-          <Button variant="outline" size="sm" onclick={checkForUpdates}>
-            <RefreshCw size={13} class="mr-1.5" />
-            重试
-          </Button>
-        {:else}
-          <Button variant="outline" size="sm" onclick={checkForUpdates}>
-            <RefreshCw size={13} class="mr-1.5" />
-            检查更新
-          </Button>
-        {/if}
-      </div>
-    </SettingCard>
-
-    <!-- 下载进度条 (在 downloading 状态下显示) -->
-    {#if updateStatus === 'downloading'}
-      <div class="px-0.5">
-        <div class="h-2 w-full rounded-full bg-muted">
-          <div
-            class="h-2 rounded-full bg-primary transition-all duration-300"
-            style="width: {downloadPercent}%"
-          ></div>
+      <!-- 检查更新 -->
+      <SettingCard
+        title="版本更新"
+        description={updateStatus === 'not-available'
+          ? '当前已是最新版本。'
+          : updateStatus === 'available'
+            ? `发现新版本 v${updateVersion ?? ''}，点击下载更新。`
+            : updateStatus === 'downloading'
+              ? '正在下载更新...'
+              : updateStatus === 'downloaded'
+                ? '更新已就绪，重启应用以完成安装。'
+                : updateStatus === 'error'
+                  ? (errorMessage ?? '检查更新时发生错误。')
+                  : '检查是否有新版本可用。'}
+      >
+        <div class="flex items-center gap-2">
+          {#if updateStatus === 'checking'}
+            <Button variant="outline" size="sm" disabled>
+              <Loader size={13} class="mr-1.5 animate-spin" />
+              检查中...
+            </Button>
+          {:else if updateStatus === 'downloading'}
+            <Button variant="outline" size="sm" disabled>
+              <Loader size={13} class="mr-1.5 animate-spin" />
+              下载中 {downloadPercent}%
+            </Button>
+          {:else if updateStatus === 'available'}
+            <Button variant="default" size="sm" onclick={downloadUpdate}>
+              <Download size={13} class="mr-1.5" />
+              下载更新
+            </Button>
+            <Button variant="ghost" size="sm" onclick={checkForUpdates}>
+              <RefreshCw size={13} class="mr-1.5" />
+              重新检查
+            </Button>
+          {:else if updateStatus === 'downloaded'}
+            <div class="flex items-center gap-2">
+              <CheckCircle2 size={14} class="text-green-500" />
+              <span class="text-xs text-green-600 dark:text-green-400">
+                v{updateVersion ?? ''} 已就绪
+              </span>
+            </div>
+            <Button variant="default" size="sm" onclick={quitAndInstall}>立即重启安装</Button>
+          {:else if updateStatus === 'not-available'}
+            <div class="flex items-center gap-2">
+              <CheckCircle2 size={14} class="text-muted-foreground" />
+              <span class="text-xs text-muted-foreground">已是最新</span>
+            </div>
+            <Button variant="outline" size="sm" onclick={checkForUpdates}>
+              <RefreshCw size={13} class="mr-1.5" />
+              重新检查
+            </Button>
+          {:else if updateStatus === 'error'}
+            <Button variant="outline" size="sm" onclick={checkForUpdates}>
+              <RefreshCw size={13} class="mr-1.5" />
+              重试
+            </Button>
+          {:else}
+            <Button variant="outline" size="sm" onclick={checkForUpdates}>
+              <RefreshCw size={13} class="mr-1.5" />
+              检查更新
+            </Button>
+          {/if}
         </div>
-      </div>
-    {/if}
+      </SettingCard>
 
+      <!-- 下载进度条 (在 downloading 状态下显示) -->
+      {#if updateStatus === 'downloading'}
+        <div class="px-0.5">
+          <div class="h-2 w-full rounded-full bg-muted">
+            <div
+              class="h-2 rounded-full bg-primary transition-all duration-300"
+              style="width: {downloadPercent}%"
+            ></div>
+          </div>
+        </div>
+      {/if}
+    {/if}
     <!-- 联系我们 -->
     <SettingCard title="联系我们" description="加入我们的社区交流或反馈问题。">
       <Dialog.Root>
