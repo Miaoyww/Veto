@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Committee } from '$lib/classes/types/committee'
-import { getChairPresentation } from './chair-presentation'
+import { getChairPresentation, getChairRosterEntries } from './chair-presentation'
 
 function committeeState(
   overrides: Partial<Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'>> = {}
@@ -14,6 +14,59 @@ function committeeState(
 }
 
 describe('chair presentation', () => {
+  it('builds sidebar attendance from local procedure state', () => {
+    const roster = getChairRosterEntries([
+      {
+        id: 'present-voter',
+        name: 'France',
+        shortName: 'FR',
+        seatGroupId: 'group-1',
+        capabilityOverrides: {},
+        userId: 'claimed-user',
+        procedure: { attendance: 'present', hasVotingRights: true, sortOrder: 0 }
+      },
+      {
+        id: 'absent-claimed',
+        name: 'Germany',
+        seatGroupId: 'group-1',
+        capabilityOverrides: {},
+        userId: 'another-claimed-user',
+        procedure: { attendance: 'absent', hasVotingRights: true, sortOrder: 1 }
+      },
+      {
+        id: 'present-observer',
+        name: 'Observer',
+        seatGroupId: 'group-1',
+        capabilityOverrides: {},
+        procedure: { attendance: 'present', hasVotingRights: false, sortOrder: 2 }
+      }
+    ])
+
+    expect(roster).toEqual([
+      {
+        id: 'present-voter',
+        name: 'FR',
+        isPresent: true,
+        isVoter: true,
+        isObserver: false
+      },
+      {
+        id: 'absent-claimed',
+        name: 'Germany',
+        isPresent: false,
+        isVoter: false,
+        isObserver: false
+      },
+      {
+        id: 'present-observer',
+        name: 'Observer',
+        isPresent: true,
+        isVoter: false,
+        isObserver: true
+      }
+    ])
+  })
+
   it('maps general debate to its screen and enables chair actions', () => {
     const presentation = getChairPresentation(committeeState())
 

@@ -357,6 +357,22 @@ export function getConferenceById(id: string): Conference | null {
   return get(conferences).find((c) => c.id === id) ?? null
 }
 
+/** Reconcile a cloud Chair projection into the local procedure aggregate. */
+export function reconcileCommitteeSeats(
+  conferenceId: string,
+  committeeId: string,
+  seats: Seat[]
+): void {
+  const conference = getConferenceById(conferenceId)
+  const committee = conference?.getCommittee(committeeId)
+  if (!conference || !committee) return
+
+  committee.reconcileSeats(seats)
+  conference.replaceCommittee(committee)
+  registerEngine(committee)
+  conferences.update((list) => [...list])
+}
+
 // ---- 点名 -----------------------------------------------------------------
 
 /** 更改参会席位出席状态（含会议记录 + Display 通知） */

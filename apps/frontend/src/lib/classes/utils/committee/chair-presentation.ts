@@ -1,4 +1,5 @@
 import type { Committee } from '$lib/classes/types/committee'
+import type { ParticipantSeat } from '$lib/classes/types/delegate'
 import { PHASE_LABELS } from './phase'
 
 type ChairCommitteeState = Pick<Committee, 'phase' | 'activeSpeaker' | 'activeCaucus'>
@@ -24,6 +25,33 @@ export interface ChairPresentation {
   canProposePoint: boolean
   motionDisabledReason: string
   canResumeMeeting: boolean
+}
+
+export interface ChairRosterEntry {
+  id: string
+  name: string
+  isPresent: boolean
+  isVoter: boolean
+  isObserver: boolean
+}
+
+/** Build the sidebar roster from Chair-owned procedure state, never claim state. */
+export function getChairRosterEntries(
+  seats: ParticipantSeat[],
+  chairSeatId?: string
+): ChairRosterEntry[] {
+  return seats
+    .filter((seat) => seat.id !== chairSeatId)
+    .map((seat) => {
+      const isPresent = seat.procedure.attendance === 'present'
+      return {
+        id: seat.id,
+        name: seat.shortName || seat.name,
+        isPresent,
+        isVoter: isPresent && seat.procedure.hasVotingRights,
+        isObserver: isPresent && !seat.procedure.hasVotingRights
+      }
+    })
 }
 
 const MOTION_PHASES = new Set<Committee['phase']>([

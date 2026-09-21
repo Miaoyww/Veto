@@ -8,6 +8,7 @@ import {
   type CloudSeatSession
 } from '$lib/classes/clients/cloud-join-client'
 import type { Capability } from '$lib/classes/types/delegate'
+import { applyCloudChairProjection } from '$lib/classes/stores/conference/cloud-membership-store'
 
 class CloudSessionStore {
   session = $state<CloudSeatSession | null>(getCloudSeatSession())
@@ -75,6 +76,7 @@ class CloudSessionStore {
     try {
       const projection = await getCloudChairCommittee(session.result.token)
       if (requestSequence !== this.chairRequestSequence) return
+      applyCloudChairProjection(projection)
       this.chairProjection = projection
     } catch (error) {
       if (requestSequence !== this.chairRequestSequence) return

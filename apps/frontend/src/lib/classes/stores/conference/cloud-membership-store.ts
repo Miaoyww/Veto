@@ -1,8 +1,15 @@
 import { get } from 'svelte/store'
 
-import { CloudJoinError, type CloudClaimResult } from '$lib/classes/clients/cloud-join-client'
+import {
+  CloudJoinError,
+  type CloudChairCommittee,
+  type CloudClaimResult
+} from '$lib/classes/clients/cloud-join-client'
 import { Conference } from '$lib/classes/domain/conference.svelte'
-import { conferences } from '$lib/classes/stores/conference/conference-store'
+import {
+  conferences,
+  reconcileCommitteeSeats
+} from '$lib/classes/stores/conference/conference-store'
 import type { Capability, Seat, SeatAccess, User } from '$lib/classes/types/delegate'
 import type { RoleTemplate } from '$lib/classes/types/event'
 import type {
@@ -254,6 +261,33 @@ function ensureCloudConference(membership: CloudMembership): void {
   if (exists) return
 
   conferences.update((list) => [...list, Conference.fromJSON(toConferenceDTO(membership))])
+}
+
+/** Apply the authorized Chair roster while keeping procedure runtime state local. */
+export function applyCloudChairProjection(projection: CloudChairCommittee): void {
+  const seatGroupId = `${projection.committee.id}:group`
+  const participantSeats: Seat[] = projection.seats
+    .filter((seat) => seat.id !== projection.chairSeat.id)
+    .map((seat, sortOrder) => ({
+      id: seat.id,
+      name: seat.name,
+      shortName: seat.shortName,
+      seatGroupId,
+      userId: seat.user?.id,
+      capabilityOverrides: {},
+      role: seat.roleName,
+      roleId: seat.roleTemplateId,
+      procedure:
+        projection.committee.type === 'cabinet'
+          ? {
+              attendance: 'absent',
+              hasVotingRights: seat.hasVotingRights,
+              sortOrder
+            }
+          : undefined
+    }))
+
+  reconcileCommitteeSeats(projection.conference.id, projection.committee.id, participantSeats)
 }
 
 export async function rememberCloudMembership(

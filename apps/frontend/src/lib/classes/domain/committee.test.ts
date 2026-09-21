@@ -48,4 +48,54 @@ describe('Committee domain aggregate', () => {
     expect(committee.waitingSpeakers).toHaveLength(1)
     expect(committee.speakerLists.entries).toHaveLength(1)
   })
+
+  it('reconciles authoritative seats while preserving local attendance', () => {
+    const committee = new Committee({
+      seats: [
+        {
+          id: 'kept',
+          name: 'Old name',
+          seatGroupId: 'group-1',
+          capabilityOverrides: {},
+          procedure: { attendance: 'present', hasVotingRights: true, sortOrder: 0 }
+        },
+        {
+          id: 'removed',
+          name: 'Removed',
+          seatGroupId: 'group-1',
+          capabilityOverrides: {},
+          procedure: { attendance: 'absent', hasVotingRights: true, sortOrder: 1 }
+        }
+      ]
+    })
+
+    committee.reconcileSeats([
+      {
+        id: 'kept',
+        name: 'Updated name',
+        seatGroupId: 'group-1',
+        capabilityOverrides: {},
+        procedure: { attendance: 'absent', hasVotingRights: false, sortOrder: 1 }
+      },
+      {
+        id: 'added',
+        name: 'Added',
+        seatGroupId: 'group-1',
+        capabilityOverrides: {},
+        procedure: { attendance: 'absent', hasVotingRights: true, sortOrder: 0 }
+      }
+    ])
+
+    expect(committee.participantSeats).toEqual([
+      expect.objectContaining({
+        id: 'kept',
+        name: 'Updated name',
+        procedure: { attendance: 'present', hasVotingRights: false, sortOrder: 1 }
+      }),
+      expect.objectContaining({
+        id: 'added',
+        procedure: { attendance: 'absent', hasVotingRights: true, sortOrder: 0 }
+      })
+    ])
+  })
 })

@@ -25,16 +25,7 @@
   import { conferences } from '$lib/classes/stores/conference/conference-store'
   import { cn, navigateToConference } from '$lib/classes/utils'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
-  import type { CloudChairSeat } from '$lib/classes/clients/cloud-join-client'
-
-  type CloudSeat = CloudChairSeat
-  type SidebarRosterEntry = {
-    id: string
-    name: string
-    isPresent: boolean
-    isVoter: boolean
-    isObserver: boolean
-  }
+  import { getChairRosterEntries } from '$lib/classes/utils/committee/chair-presentation'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import {
     activeSettingsSection,
@@ -96,31 +87,8 @@
       : null
   )
   const isChair = $derived(!isCloudSession || cloudProjection !== null)
-  const cloudChairSeats = $derived(
-    cloudProjection?.committee.id === committeeId ? cloudProjection.seats : ([] as CloudSeat[])
-  )
-  const localRoster = $derived(
-    participantSeats.map((seat) => ({
-      id: seat.id,
-      name: seat.shortName || seat.name,
-      isPresent: seat.procedure.attendance === 'present',
-      isVoter: seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights,
-      isObserver: seat.procedure.attendance === 'present' && !seat.procedure.hasVotingRights
-    }))
-  )
-  const cloudRoster = $derived(
-    cloudChairSeats.map((seat) => ({
-      id: seat.id,
-      name: seat.shortName || seat.name,
-      isPresent: seat.user !== null,
-      isVoter: seat.hasVotingRights && seat.user !== null,
-      isObserver: !seat.hasVotingRights && seat.user !== null
-    }))
-  )
   const rosterEntries = $derived(
-    (isCloudSession ? cloudRoster : localRoster).filter(
-      (entry) => entry.id !== cloudProjection?.chairSeat.id
-    )
+    getChairRosterEntries(participantSeats, cloudProjection?.chairSeat.id)
   )
   const displayConferenceName = $derived(
     cloudIdentity

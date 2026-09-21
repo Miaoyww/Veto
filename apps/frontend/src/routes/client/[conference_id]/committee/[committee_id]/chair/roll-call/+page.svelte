@@ -58,15 +58,6 @@
     chairDisplayExtra.set({ rollCall: rollCallInfo })
   })
 
-  async function openDisplayWindow(): Promise<void> {
-    if (!conf) return
-    const bridge = getDisplayBridge()
-    await bridge.openDisplay(conf.id)
-    // 等待 Display 端 WebSocket 连接就绪
-    await new Promise((r) => setTimeout(r, 500))
-    bridge.sendUpdate(buildDisplayData(conf, $chairDisplayExtra))
-  }
-
   const conf = $derived($currentCommittee)
 
   const sortedSeats = $derived(
