@@ -7,7 +7,7 @@
   import { buttonVariants } from '$lib/components/ui/button'
   import * as Collapsible from '$lib/components/ui/collapsible'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
-  import CommitteeCard from './meeting-card.svelte'
+  import MeetingCard from './meeting-card.svelte'
 
   const capabilityLabel = (capability: Capability): string =>
     CAPABILITY_LABELS[capability] ?? capability
@@ -54,7 +54,7 @@
 
   <div class="grid gap-4">
     {#each wizard.committees as committee (committee.id)}
-      <CommitteeCard {committee} isSingleton={wizard.mode === 'singleton'} />
+      <MeetingCard {committee} isSingleton={wizard.mode === 'singleton'} />
     {/each}
   </div>
 

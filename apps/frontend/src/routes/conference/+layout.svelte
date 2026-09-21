@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { onNavigate } from '$app/navigation'
-  import { onMount, tick } from 'svelte'
+  import { onMount } from 'svelte'
   import '$units' // 初始化 ModRegistry 基础数据
-  import handoffLogo from '$lib/assets/favicon.png'
   import JoinConferenceDialog from '$lib/components/conference/join-conference-dialog.svelte'
   import TimerDialog from '$lib/components/conference/timer/timer-dialog.svelte'
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
@@ -35,89 +33,13 @@
   import { conferences } from '$lib/classes/stores/conference/conference-store'
   import {
     activeSettingsSection,
+    createConferenceDialogOpen,
     joinConferenceDialogOpen,
     settingsDialogOpen
   } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
 
   let { children } = $props()
-  let conferenceHandoffActive = $state(false)
-  let conferenceHandoffPhase = $state<'covering' | 'drawing' | 'revealing'>('covering')
-
-  const wait = (duration: number): Promise<void> =>
-    new Promise((resolve) => setTimeout(resolve, duration))
-
-  function isCreateToConference(fromPath: string | undefined, toPath: string | undefined): boolean {
-    return Boolean(
-      fromPath?.startsWith('/conference/create') &&
-      toPath?.startsWith('/conference/') &&
-      !toPath.startsWith('/conference/create')
-    )
-  }
-
-  onNavigate((navigation) => {
-    const fromPath = navigation.from?.url.pathname
-    const toPath = navigation.to?.url.pathname
-    console.log('onNavigate', { fromPath, toPath })
-    if (isCreateToConference(fromPath, toPath)) {
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const coverDuration = reducedMotion ? 120 : 560
-      const drawDuration = reducedMotion ? 120 : 900
-      const revealDuration = reducedMotion ? 120 : 560
-
-      conferenceHandoffActive = true
-      conferenceHandoffPhase = 'covering'
-
-      // Keep the destination hidden while the logo interstitial completes. The
-      // navigation is released only after the logo has finished drawing.
-      return new Promise<void>((resolve) => {
-        void (async () => {
-          await tick()
-          await wait(coverDuration)
-          conferenceHandoffPhase = 'drawing'
-          await tick()
-          await wait(drawDuration)
-
-          resolve()
-          try {
-            await navigation.complete
-          } catch {
-            // A cancelled navigation still needs to release the overlay.
-          }
-
-          conferenceHandoffPhase = 'revealing'
-          await tick()
-          await wait(revealDuration)
-          conferenceHandoffActive = false
-        })()
-      })
-    }
-
-    const isCreateHandoff =
-      (fromPath === '/empty' ||
-        fromPath === '/conference' ||
-        (fromPath?.startsWith('/conference/') && !fromPath.startsWith('/conference/create'))) &&
-      (toPath === '/conference/create' || toPath?.startsWith('/conference/create/'))
-
-    if (!isCreateHandoff || typeof document.startViewTransition !== 'function') return
-
-    const root = document.documentElement
-    root.dataset.vetoRouteTransition = 'create'
-
-    const clearTransitionState = () => {
-      delete root.dataset.vetoRouteTransition
-    }
-
-    return new Promise<void>((resolve) => {
-      const transition = document.startViewTransition(async () => {
-        // Resolve before waiting for SvelteKit so the navigation can update the DOM.
-        resolve()
-        await navigation.complete
-      })
-
-      transition.finished.then(clearTransitionState, clearTransitionState)
-    })
-  })
 
   // 桌面端恢复用户插件；Web 端不初始化或读取任何插件存储。
   if (typeof window !== 'undefined') {
@@ -169,12 +91,6 @@
 
 <TimerDialog bind:open={$timerDialogOpen} />
 <JoinConferenceDialog bind:open={$joinConferenceDialogOpen} />
-
-{#if conferenceHandoffActive}
-  <div class="conference-handoff" data-phase={conferenceHandoffPhase} aria-hidden="true">
-    <img class="conference-handoff__logo" src={handoffLogo} alt="" />
-  </div>
-{/if}
 
 <div>
   <GlobalSidebar>
@@ -254,7 +170,7 @@
             </Sidebar.MenuItem>
 
             <Sidebar.MenuItem>
-              <Sidebar.MenuButton onclick={() => goTo('/conference/create')}>
+              <Sidebar.MenuButton onclick={() => createConferenceDialogOpen.set(true)}>
                 <Plus />
                 <span>创建大会</span>
               </Sidebar.MenuButton>

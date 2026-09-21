@@ -4,6 +4,7 @@
   import type { ConferenceCreateMode } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import { wizard } from '$lib/classes/stores/runes/create-conference-event-wizard.svelte'
   import { Button } from '$lib/components/ui/button'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   function isCreateMode(value: string): value is ConferenceCreateMode {
     return value === 'conference' || value === 'singleton'
@@ -12,7 +13,13 @@
   function handleModeChange(value: string): void {
     if (isCreateMode(value)) wizard.setMode(value)
   }
-
+  function handleOpenLink(url: string): void {
+    if (isElectron()) {
+      window.veto.openExternal(url)
+      return
+    }
+    window.location.replace(url)
+  }
   const showModeError = $derived(wizard.attempted && wizard.mode === null)
 </script>
 
@@ -24,10 +31,7 @@
     </Field.FieldTitle>
     <Field.FieldDescription>请先选择会议组织方式，然后继续填写大会信息.</Field.FieldDescription>
     <Field.FieldDescription>
-      请前往<Button
-        variant="link"
-        onclick={() => window.veto.openExternal('https://platform.miaoyww.top/')}
-      >
+      请前往<Button variant="link" onclick={() => handleOpenLink('https://platform.miaoyww.top/')}>
         Veto平台
       </Button>创建大会.
     </Field.FieldDescription>

@@ -1,8 +1,10 @@
 <script>
   import { VETO_NAME } from '$lib/classes/const'
   import { ModeWatcher } from 'mode-watcher'
+  import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
   import SettingsDialog from '$lib/components/settings/settings-dialog.svelte'
+  import CreateConferenceDialog from '$lib/components/conference/create/create-conference-dialog.svelte'
 
   import logo from '$lib/assets/logo.svg'
   import '../app.css'
@@ -20,4 +22,5 @@
 <ModeWatcher />
 <MyAlertDialog />
 <SettingsDialog />
+<CreateConferenceDialog bind:open={$createConferenceDialogOpen} />
 {@render children()}

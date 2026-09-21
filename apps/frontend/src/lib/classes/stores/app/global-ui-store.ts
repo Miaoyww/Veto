@@ -4,6 +4,8 @@ export const settingsDialogOpen = writable(false)
 
 export const joinConferenceDialogOpen = writable(false)
 
+export const createConferenceDialogOpen = writable(false)
+
 export type SettingsSection = 'general' | 'mods' | 'venue' | 'about' | 'account'
 
 export const activeSettingsSection = writable<SettingsSection | null>(null)

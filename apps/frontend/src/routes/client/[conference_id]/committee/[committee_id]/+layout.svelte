@@ -29,6 +29,7 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import {
     activeSettingsSection,
+    createConferenceDialogOpen,
     settingsDialogOpen
   } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
@@ -260,7 +261,7 @@
           </Sidebar.MenuItem>
 
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton onclick={() => goTo('/conference/create')}>
+            <Sidebar.MenuButton onclick={() => createConferenceDialogOpen.set(true)}>
               <Plus />
               <span>创建大会</span>
             </Sidebar.MenuButton>
