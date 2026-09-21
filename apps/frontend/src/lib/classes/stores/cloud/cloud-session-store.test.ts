@@ -4,7 +4,12 @@ import { get } from 'svelte/store'
 import type { CloudChairCommittee, CloudClaimResult } from '$lib/classes/clients/cloud-join-client'
 import { Committee } from '$lib/classes/domain/committee.svelte'
 import { Conference } from '$lib/classes/domain/conference.svelte'
-import { conferences } from '$lib/classes/stores/conference/conference-store'
+import {
+  changeSeatAttendance,
+  conferences,
+  currentCommitteeId,
+  currentConferenceId
+} from '$lib/classes/stores/conference/conference-store'
 
 const getCloudChairCommittee = vi.hoisted(() => vi.fn())
 
@@ -18,6 +23,11 @@ vi.mock('$lib/classes/clients/cloud-join-client', async (importOriginal) => {
     saveCloudSeatSession: vi.fn()
   }
 })
+
+vi.mock('$lib/classes/clients/conference-display-client', () => ({
+  getDisplayBridge: () => ({ sendUpdate: vi.fn() }),
+  buildDisplayData: vi.fn()
+}))
 
 import { cloudSession } from './cloud-session-store.svelte'
 
@@ -72,6 +82,8 @@ describe('CloudSessionStore', () => {
   beforeEach(() => {
     cloudSession.clear()
     conferences.set([])
+    currentConferenceId.set(null)
+    currentCommitteeId.set(null)
     getCloudChairCommittee.mockReset().mockResolvedValue(projection)
   })
 
@@ -138,5 +150,12 @@ describe('CloudSessionStore', () => {
       .find((conference) => conference.id === 'conference-1')
       ?.getCommittee('committee-1')?.participantSeats
     expect(participants?.map((seat) => seat.id)).toEqual(['seat-2'])
+
+    currentConferenceId.set('conference-1')
+    currentCommitteeId.set('committee-1')
+    changeSeatAttendance('seat-2', 'present', { silent: true })
+
+    const updatedSeat = get(conferences)[0]?.getCommittee('committee-1')?.getSeat('seat-2')
+    expect(updatedSeat?.procedure?.attendance).toBe('present')
   })
 })
