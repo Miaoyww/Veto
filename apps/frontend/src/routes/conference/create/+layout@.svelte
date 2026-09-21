@@ -81,11 +81,11 @@
     wizard.reset()
     const committeeId = event?.committees[0]?.id
     if (event && committeeId && event.mode === 'singleton') {
-      void goto(resolve(`/client/${event.id}/committee/${committeeId}`))
+      void goto(resolve(`/client/${event.id}/committee/${committeeId}/chair`))
       return
     }
     void goto(
-      resolve(event && committeeId ? `/conference/${event.id}/committee/${committeeId}` : '/')
+      resolve(event && committeeId ? `/client/${event.id}/committee/${committeeId}` : '/')
     )
   }
 </script>
@@ -97,11 +97,11 @@
     >
       <div>
         <h1 class="text-xl font-semibold">创建大会</h1>
-            <p class="mt-1 text-sm text-muted-foreground">
-              {wizard.mode === 'singleton'
-                ? '配置一场独立主持的会议与席位'
-                : '配置大会、委员会、角色权限与席位'}
-            </p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          {wizard.mode === 'singleton'
+            ? '配置一场独立主持的会议与席位'
+            : '配置大会、委员会、角色权限与席位'}
+        </p>
       </div>
       <Badge variant="outline" class="shrink-0">
         步骤 {currentIndex + 1}/{visibleSteps.length}

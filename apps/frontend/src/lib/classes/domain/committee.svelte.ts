@@ -1714,6 +1714,29 @@ export class Committee {
     this.touch()
   }
 
+  /**
+   * Reconcile the Chair's local seat layer with an authoritative Committee roster.
+   * Runtime attendance survives for seats that still exist; static profile fields
+   * and ordering come from the new roster.
+   */
+  reconcileSeats(authoritativeSeats: Seat[]): void {
+    const authoritativeIds = new Set(authoritativeSeats.map((seat) => seat.id))
+    for (const seat of this.seats) {
+      if (!authoritativeIds.has(seat.id)) this.removeSeat(seat.id)
+    }
+
+    const existingSeats = new Map(this.seats.map((seat) => [seat.id, seat]))
+    this.seats = authoritativeSeats.map((seat) => {
+      const existing = existingSeats.get(seat.id)
+      const next = cloneSeat(seat)
+      if (next.procedure && existing?.procedure) {
+        next.procedure.attendance = existing.procedure.attendance
+      }
+      return next
+    })
+    this.touch()
+  }
+
   removeSeat(id: string): void {
     if (!this.seats.some((seat) => seat.id === id)) return
 

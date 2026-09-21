@@ -36,7 +36,7 @@
   import ReadyDisplay from './ready/index.svelte'
   import ConnectionStatusDisplay from './connection-status/index.svelte'
   import AttendanceChangeDisplay from './attendance-change.svelte'
-  import type { ConferencePhase } from '$lib/classes/types/committee'
+  import type { DisplayPhase } from '$lib/classes/types/committee-display'
 
   let displayData = $state<ConferenceDisplayData | null>(null)
   let connectionStatus = $state<ConnectionStatus>('connecting')
@@ -131,7 +131,7 @@
   const hasActiveMotion = $derived(displayData?.activeMotion != null)
 
   // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
-  let effectivePhase = $state<ConferencePhase | null>(null)
+  let effectivePhase = $state<DisplayPhase | null>(null)
   let phaseDelayTimer: ReturnType<typeof setTimeout> | null = null
 
   $effect(() => {
@@ -262,7 +262,10 @@
       />
     {:else}
       <!-- 主展示区（phase 动态切换） -->
-      <div class="flex flex-1 items-center justify-center overflow-hidden px-16" style={contentStyle}>
+      <div
+        class="flex flex-1 items-center justify-center overflow-hidden px-16"
+        style={contentStyle}
+      >
         {#if displayData.pointDraft?.proposedBy || displayData.activePoint}
           <QuestionDisplay data={displayData} />
         {:else if effectivePhase === 'motion' && !isSpecialMotion && hasActiveMotion}

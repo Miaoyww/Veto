@@ -8,7 +8,6 @@ export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {
   general_debate: ['caucus', 'voting', 'suspended', 'closed'],
   caucus: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
   voting: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
-  motion: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
   caucus_setup: ['caucus', 'general_debate', 'suspended', 'closed'],
   suspended: ['general_debate', 'closed'],
   closed: []
@@ -22,7 +21,6 @@ export const PHASE_LABELS: Record<ConferencePhase, string> = {
   general_debate: '一般性辩论',
   caucus: '磋商',
   voting: '投票表决',
-  motion: '动议',
   caucus_setup: '磋商准备',
   suspended: '休会',
   closed: '闭幕'

@@ -1,9 +1,9 @@
 /**
  * Dedicated Chair-to-Display WebSocket transport.
  *
- * This link intentionally owns no conference state and never touches
- * HostRuntime: the Chair renderer projects local meeting state, and a Display
- * renderer subscribes to that projection.
+ * This link intentionally owns no conference state: the Chair renderer
+ * projects local meeting state, and a Display renderer subscribes to that
+ * projection.
  */
 
 import { createServer, type IncomingMessage, type Server } from 'http'

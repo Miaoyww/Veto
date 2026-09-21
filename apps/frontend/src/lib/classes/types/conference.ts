@@ -71,6 +71,7 @@ export { ACTION_LABELS, MOTION_LABELS, POINT_LABELS }
 export interface Conference {
   id: string
   name: string
+  source?: 'cloud'
   mode?: 'conference' | 'singleton'
   description?: string
   organizer?: string

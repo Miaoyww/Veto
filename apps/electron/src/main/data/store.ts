@@ -22,7 +22,6 @@ const log = createLogger('DataStore')
 /** 数据域 */
 export type StoreDomain =
   | 'conferences'
-  | 'host-runtime'
   | 'events'
   | 'battles'
   | 'settings'
@@ -31,7 +30,6 @@ export type StoreDomain =
 /** 数据域 → 文件名映射 */
 const FILES: Record<StoreDomain, string> = {
   conferences: 'conferences.json',
-  'host-runtime': 'host-runtime.json',
   events: 'conference-events.json',
   battles: 'battles.json',
   settings: 'settings.json',

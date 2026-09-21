@@ -166,7 +166,7 @@ export function resolveCapabilities(seatId: string): Capability[] {
 // ---- 模式切换 -------------------------------------------------------------
 
 export function setCabinetMode(seatGroupId: string, mode: CabinetMode): void {
-  // Procedure is local to the Chair and is never routed through the Host Service.
+  // Procedure is local to the Chair and is never routed through the Cloud Service.
   void seatGroupId
   void mode
 }

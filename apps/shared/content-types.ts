@@ -1,16 +1,16 @@
 /**
- * Shared Host Service domain contracts.
+ * Shared Cloud Service domain contracts.
  *
  * These types are deliberately transport friendly: they contain no Svelte,
  * Electron, or persistence implementation details and can be used by both the
- * Host runtime and a UserClient renderer.
+ * Cloud Service and a UserClient renderer.
  */
 
 // ---------------------------------------------------------------------------
 // Authorization and identities
 // ---------------------------------------------------------------------------
 
-/** Capabilities understood by the first Host Service release. */
+/** Capabilities understood by the first Cloud Service release. */
 export type Capability =
   | 'view_conference'
   | 'view_news'
@@ -251,7 +251,7 @@ export interface ChairCommitteeProjection {
 
 /**
  * Static seat data that a Chair needs to run its local procedure. Capability
- * configuration remains a Host Console concern and is not part of this view.
+ * configuration remains an Organizer Platform concern and is not part of this view.
  */
 export interface ChairSeatProjection {
   id: string

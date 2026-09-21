@@ -1,0 +1,7 @@
+packages:
+  - "../../packages/utils"
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+  msw: false

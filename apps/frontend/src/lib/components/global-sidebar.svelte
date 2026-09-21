@@ -2,6 +2,7 @@
   import type { ComponentProps, Snippet } from 'svelte'
   import * as Sidebar from '$lib/components/ui/sidebar/index.js'
   import WindowControls from './app-sidebar/window-controls.svelte'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   let {
     class: className = '',
@@ -28,6 +29,7 @@
   <Sidebar.Inset class="min-h-0 overflow-hidden">
     <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
       {@render toolbar?.()}
+
       <WindowControls />
     </header>
 

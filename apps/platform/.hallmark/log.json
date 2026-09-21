@@ -1,0 +1,16 @@
+[
+  {
+    "date": "2026-09-20",
+    "macrostructure": "Workbench",
+    "theme": "Coral",
+    "enrichment": "none",
+    "brief": "Conference detail workbench with settings and operational content areas"
+  },
+  {
+    "date": "2026-09-19",
+    "macrostructure": "Catalogue",
+    "theme": "Coral",
+    "enrichment": "Magic UI animated grid",
+    "brief": "Cloud conference catalogue and empty-state management home"
+  }
+]

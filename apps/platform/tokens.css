@@ -1,0 +1,8 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: Coral · enrichment: Magic UI grid · nav: N9 · footer: Ft2 */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 */
+
+:root {
+  --font-platform-display: var(--font-sans);
+  --font-platform-body: var(--font-sans);
+  --text-platform-display: clamp(2.5rem, 5vw, 4rem);
+}

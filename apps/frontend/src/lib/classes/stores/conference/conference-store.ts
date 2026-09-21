@@ -306,6 +306,7 @@ export function deleteConference(id: string): void {
   const conference = getConferenceById(id)
   conferences.update((list) => list.filter((c) => c.id !== id))
   for (const committee of conference?.committees ?? []) unregisterEngine(committee.id)
+  if (get(lastOpenedConferenceId) === id) lastOpenedConferenceId.set(null)
   if (get(currentConferenceId) === id) {
     currentConferenceId.set(null)
     currentCommitteeId.set(null)
@@ -354,6 +355,22 @@ export function openConference(id: string): void {
 
 export function getConferenceById(id: string): Conference | null {
   return get(conferences).find((c) => c.id === id) ?? null
+}
+
+/** Reconcile a cloud Chair projection into the local procedure aggregate. */
+export function reconcileCommitteeSeats(
+  conferenceId: string,
+  committeeId: string,
+  seats: Seat[]
+): void {
+  const conference = getConferenceById(conferenceId)
+  const committee = conference?.getCommittee(committeeId)
+  if (!conference || !committee) return
+
+  committee.reconcileSeats(seats)
+  conference.replaceCommittee(committee)
+  registerEngine(committee)
+  conferences.update((list) => [...list])
 }
 
 // ---- 点名 -----------------------------------------------------------------

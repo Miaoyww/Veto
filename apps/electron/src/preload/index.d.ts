@@ -1,5 +1,8 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+// global.d.ts
+export {}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -9,6 +12,7 @@ declare global {
 }
 
 export interface VetoAPI {
+  openExternal: (url: string) => Promise<void>
   plugins: {
     list: () => Promise<
       Array<{
@@ -75,55 +79,8 @@ export interface VetoAPI {
     closeDisplay: () => Promise<{ success: boolean }>
     onDisplayUpdate: (callback: (data: unknown) => void) => () => void
   }
-  ws: {
-    getPort: () => Promise<number>
-  }
   displayWs: {
     getPort: () => Promise<number>
-  }
-  hostConsole: {
-    status: () => Promise<{
-      ok: boolean
-      error?: string
-      activeConferenceId?: string | null
-      conferences?: Array<{ id: string; name: string; active: boolean }>
-    }>
-    startConference: (conferenceId: string) => Promise<unknown>
-    stopConference: () => Promise<unknown>
-    prepareService: () => Promise<{ ok: boolean; error?: string }>
-    releaseDirectiveClaim: (directiveId: string, reason: string) => Promise<unknown>
-    auditLog: () => Promise<unknown>
-  }
-  lan: {
-    scan: (timeoutMs?: number) => Promise<
-      Array<{
-        conferenceId: string
-        name: string
-        phase: string
-        host: string
-        port: number
-        url: string
-        wsUrl: string
-        appVersion: string
-      }>
-    >
-    getServerInfo: () => Promise<{
-      port: number
-      addresses: string[]
-      urls: string[]
-    }>
-    queryConference: (address: string) => Promise<{
-      conferenceId: string
-      name: string
-      phase: string
-      host: string
-      port: number
-      url: string
-      wsUrl: string
-      appVersion: string
-    } | null>
-    publishConference: () => Promise<{ success: boolean; error?: string }>
-    unpublishConference: () => Promise<{ success: boolean }>
   }
   services: {
     list: () => Promise<

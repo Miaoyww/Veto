@@ -5,11 +5,10 @@
     Pencil,
     Check,
     X,
+    KeyRound,
     CalendarDays,
     Users,
-    Building2,
-    Mic,
-    Bell
+    Building2
   } from '@lucide/svelte'
   import type { Conference } from '$lib/classes/types/conference'
   import {
@@ -23,14 +22,18 @@
   import { Card, CardHeader, CardTitle, CardAction, CardContent } from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import { getCurrentSpeakerName, getPendingMotionCount } from './conference-status'
 
-  let { conference }: { conference: Conference } = $props()
-
-  const primaryCommittee = $derived(conference.committees[0] ?? null)
-  const currentSpeaker = $derived(primaryCommittee ? getCurrentSpeakerName(primaryCommittee) : null)
-  const pendingCount = $derived(primaryCommittee ? getPendingMotionCount(primaryCommittee) : 0)
+  let {
+    conference,
+    onJoin,
+    onUpdatePassword,
+    onDelete
+  }: {
+    conference: Conference
+    onJoin?: (conference: Conference) => void
+    onUpdatePassword?: (conference: Conference) => void
+    onDelete?: (conference: Conference) => void
+  } = $props()
 
   let editing = $state(false)
   let editName = $state('')
@@ -40,15 +43,22 @@
 
   function handleLoad(): void {
     if (editing) return
+    if (conference.source === 'cloud' && onJoin) {
+      onJoin(conference)
+      return
+    }
     navigateToConference(conference.id)
   }
 
   function handleDelete(e: MouseEvent): void {
     e.stopPropagation()
+    const isCloudConference = conference.source === 'cloud'
     showConfirm(
-      '确认删除',
-      `将永久删除大会「${conference.name}」，此操作无法撤销。是否继续？`,
-      () => deleteConference(conference.id)
+      isCloudConference ? '确认从本机移除' : '确认删除',
+      isCloudConference
+        ? `将从本机移除大会「${conference.name}」及保存的席位信息，不会删除云端大会。是否继续？`
+        : `将永久删除大会「${conference.name}」，此操作无法撤销。是否继续？`,
+      () => (isCloudConference ? onDelete?.(conference) : deleteConference(conference.id))
     )
   }
 
@@ -87,7 +97,7 @@
 >
   <CardHeader class="px-5">
     <CardTitle class="flex min-w-0 items-center gap-1.5 text-sm">
-      {#if editing}
+      {#if !conference.source && editing}
         <Input
           bind:ref={inputRef}
           bind:value={editName}
@@ -121,18 +131,22 @@
         </Button>
       {:else}
         <span class="truncate font-semibold">{conference.name}</span>
-        {#if conference.mode === 'singleton'}
+        {#if conference.source === 'cloud'}
+          <Badge variant="outline" class="shrink-0">云端</Badge>
+        {:else if conference.mode === 'singleton'}
           <Badge variant="outline" class="shrink-0">单例</Badge>
         {/if}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-          title="重命名"
-          onclick={startEdit}
-        >
-          <Pencil />
-        </Button>
+        {#if conference.source !== 'cloud'}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+            title="重命名"
+            onclick={startEdit}
+          >
+            <Pencil />
+          </Button>
+        {/if}
       {/if}
     </CardTitle>
 
@@ -147,11 +161,35 @@
         }}
       >
         <Play class="size-3" />
-        {conference.mode === 'singleton' ? '主持' : '进入'}
+        {conference.source === 'cloud'
+          ? '重新入会'
+          : conference.mode === 'singleton'
+            ? '主持'
+            : '进入'}
       </Button>
-      <Button variant="destructive" size="icon-sm" title="删除大会" onclick={handleDelete}>
-        <Trash2 />
-      </Button>
+      {#if conference.source === 'cloud'}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          title="重新填写密码"
+          onclick={(e: MouseEvent) => {
+            e.stopPropagation()
+            onUpdatePassword?.(conference)
+          }}
+        >
+          <KeyRound />
+        </Button>
+      {/if}
+      {#if conference.source !== 'cloud' || onDelete}
+        <Button
+          variant="destructive"
+          size="icon-sm"
+          title={conference.source === 'cloud' ? '从本机移除' : '删除大会'}
+          onclick={handleDelete}
+        >
+          <Trash2 />
+        </Button>
+      {/if}
     </CardAction>
   </CardHeader>
 

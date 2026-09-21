@@ -1,0 +1,223 @@
+<script lang="ts">
+  /**
+   * conference/[conference_id]/motion.svelte
+   * ─────────────────────────────────────────
+   * 动议表决页 —— 类似 roll-call 的单开页面。
+   *
+   * 当动议提交后导航至此页，主席团观察举牌后手动裁决。
+   */
+  import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
+  import { page } from '$app/state'
+  import {
+    Presentation,
+    Timer,
+    MessageSquare,
+    Pencil,
+    Gavel,
+    Coffee,
+    LogOut,
+    Check,
+    X,
+    Vote
+  } from '@lucide/svelte'
+  import { Button } from '$lib/components/ui/button'
+  import { Separator } from '$lib/components/ui/separator'
+  import {
+    currentCommittee,
+    approveMotion,
+    rejectMotion
+  } from '$lib/classes/stores/conference/conference-store'
+  import { resolveMotion } from '$lib/classes/services/engine/conference-engine'
+  import { MOTION_LABELS } from '$lib/classes/types/conference'
+  import { VETO_NAME } from '$lib/classes/const'
+  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
+
+  const conferenceId = $derived(page.params.conference_id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
+
+  const conf = $derived($currentCommittee)
+
+  const MOTION_ICONS: Record<string, typeof Presentation> = {
+    open_speakers_list: Presentation,
+    moderated_caucus: MessageSquare,
+    unmoderated_caucus: Coffee,
+    modify_speaking_time: Pencil,
+    closure_debate: Gavel,
+    suspend_meeting: Timer,
+    close_meeting: LogOut,
+    substantive_vote: Vote
+  }
+
+  const pendingMotion = $derived(conf?.motions.find((m) => m.status === 'pending') ?? null)
+
+  const resolution = $derived(pendingMotion ? resolveMotion(pendingMotion.type) : null)
+
+  const proposerDel = $derived(
+    pendingMotion
+      ? (conf?.seats.find((seat) => seat.id === pendingMotion.proposedBySeatId) ?? null)
+      : null
+  )
+
+  const majorityLabel = $derived(
+    resolution?.votingMajority === 'simple_majority' ? '简单多数' : '2/3多数'
+  )
+
+  function handleApprove(): void {
+    if (!pendingMotion) return
+    approveMotion(pendingMotion.id)
+    goBack()
+  }
+
+  function handleReject(): void {
+    if (!pendingMotion) return
+    rejectMotion(pendingMotion.id)
+    goBack()
+  }
+
+  function goBack(): void {
+    if (conf) {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+    }
+  }
+
+  // 如果没有待表决动议，自动返回
+  $effect(() => {
+    if (conf && !pendingMotion) {
+      // 检查是否有刚被处理的动议（短暂延迟后返回）
+      const hasProcessedMotion = conf.motions.some(
+        (m) => m.status === 'approved' || m.status === 'rejected'
+      )
+      if (!hasProcessedMotion) {
+        goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair`))
+      }
+    }
+  })
+</script>
+
+<svelte:head>
+  <title>{VETO_NAME} - 动议表决</title>
+</svelte:head>
+
+<div class="flex h-full w-full flex-col bg-background">
+  {#if conf && pendingMotion}
+    {@const Icon = MOTION_ICONS[pendingMotion.type] ?? Presentation}
+    <PageTopBar
+      icon={Icon}
+      title="动议表决"
+      subtitle={conf.name}
+      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}/chair`)}
+    />
+
+    <!-- 主内容 -->
+    <div class="flex flex-1 items-center justify-center p-8">
+      <div class="flex w-full max-w-xl flex-col gap-6">
+        <!-- 动议详情 -->
+        <div
+          class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-8 text-center dark:border-indigo-700 dark:bg-indigo-950/30"
+        >
+          <div class="flex items-center justify-center gap-2">
+            <Icon size={24} class="text-indigo-600 dark:text-indigo-400" />
+            <span class="text-lg font-semibold text-indigo-700 dark:text-indigo-400">动议裁决</span>
+          </div>
+
+          <div class="mt-4 space-y-2">
+            <div class="text-2xl font-bold text-foreground">
+              {MOTION_LABELS[pendingMotion.type]}
+            </div>
+            <div class="text-base text-muted-foreground">
+              由 <span class="font-semibold text-foreground">{proposerDel?.name}</span>
+              提出
+            </div>
+
+            {#if pendingMotion.type === 'moderated_caucus'}
+              <div
+                class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
+              >
+                <p>
+                  主题：
+                  <span class="font-medium text-foreground">{(pendingMotion as any).topic}</span>
+                </p>
+                <p class="mt-0.5">
+                  总时长 <span class="font-medium text-foreground">
+                    {(pendingMotion as any).totalTimeSec / 60} 分钟
+                  </span>
+                  ，每人发言
+                  <span class="font-medium text-foreground">
+                    {(pendingMotion as any).speakingTimePerPersonSec} 秒
+                  </span>
+                  ，最多
+                  <span class="font-medium text-foreground">
+                    {(pendingMotion as any).maxSpeakers}
+                  </span>
+                  人
+                </p>
+              </div>
+            {:else if pendingMotion.type === 'unmoderated_caucus'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                时长 {(pendingMotion as any).durationSec / 60} 分钟
+              </div>
+            {:else if pendingMotion.type === 'modify_speaking_time'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                新发言时间：
+                <span class="font-medium text-foreground">
+                  {(pendingMotion as any).newTimeSec} 秒
+                </span>
+              </div>
+            {:else if pendingMotion.type === 'closure_debate'}
+              <div class="mt-3 text-sm text-muted-foreground">
+                结束当前议题辩论，进入投票表决阶段
+              </div>
+            {:else if pendingMotion.type === 'substantive_vote'}
+              <div
+                class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
+              >
+                <span class="font-medium text-foreground">
+                  {(pendingMotion as any).documentName}
+                </span>
+              </div>
+            {/if}
+          </div>
+
+          <div
+            class="mt-4 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400"
+          >
+            表决规则：{majorityLabel}
+          </div>
+        </div>
+
+        <Separator />
+
+        <!-- 主席裁决 -->
+        <div class="text-center">
+          <p class="text-base font-medium text-foreground">请支持该动议的席位高举国家牌</p>
+          <p class="mt-1 text-sm text-muted-foreground">主席团观察举牌后手动裁决</p>
+        </div>
+
+        <div class="flex items-center justify-center gap-4">
+          <Button
+            size="lg"
+            variant="outline"
+            class="min-w-[140px] gap-2 text-base text-red-600 hover:text-red-700"
+            onclick={handleReject}
+          >
+            <X size={18} />
+            否决
+          </Button>
+          <Button size="lg" class="min-w-[140px] gap-2 text-base" onclick={handleApprove}>
+            <Check size={18} />
+            通过
+          </Button>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <div class="flex flex-1 items-center justify-center">
+      <div class="flex flex-col items-center gap-4 text-muted-foreground">
+        <Vote size={48} class="opacity-30" />
+        <p class="text-lg font-medium">没有待表决的动议</p>
+        <Button variant="outline" size="sm" onclick={goBack}>返回会议</Button>
+      </div>
+    </div>
+  {/if}
+</div>

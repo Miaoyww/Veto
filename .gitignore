@@ -11,3 +11,4 @@ release.ps1
 docs/*
 !docs/adr/
 !docs/adr/*.md
+scripts/api-proxy.mjs

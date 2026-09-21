@@ -2,6 +2,7 @@
   import { Minus, Settings, Square, X } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import { settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
+  import { isElectron } from '$lib/classes/utils/runtime'
 
   function minimize() {
     window.electron.ipcRenderer.send('window:minimize')
@@ -25,31 +26,32 @@
   </Button>
 
   <div class="mx-0.5 h-5 w-px bg-border/40"></div>
+  {#if isElectron()}
+    <Button
+      class="no-drag flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
+      onclick={minimize}
+      variant="ghost"
+      title="最小化"
+    >
+      <Minus size={14} />
+    </Button>
 
-  <Button
-    class="no-drag flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
-    onclick={minimize}
-    variant="ghost"
-    title="最小化"
-  >
-    <Minus size={14} />
-  </Button>
+    <Button
+      class="no-drag flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
+      onclick={maximize}
+      variant="ghost"
+      title="最大化"
+    >
+      <Square size={11} />
+    </Button>
 
-  <Button
-    class="no-drag flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
-    onclick={maximize}
-    variant="ghost"
-    title="最大化"
-  >
-    <Square size={11} />
-  </Button>
-
-  <Button
-    class="no-drag close-btn flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white"
-    onclick={close}
-    variant="ghost"
-    title="关闭"
-  >
-    <X size={14} />
-  </Button>
+    <Button
+      class="no-drag close-btn flex h-full w-11 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white"
+      onclick={close}
+      variant="ghost"
+      title="关闭"
+    >
+      <X size={14} />
+    </Button>
+  {/if}
 </div>

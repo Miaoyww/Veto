@@ -2,25 +2,53 @@
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { ArrowRight, Building2, CalendarDays, Play, Plus, Search, Users } from '@lucide/svelte'
+  import {
+    ArrowRight,
+    Building2,
+    CircleAlert,
+    CalendarDays,
+    LogIn,
+    Play,
+    Plus,
+    Search,
+    Users
+  } from '@lucide/svelte'
+
+  import type { Conference } from '$lib/classes/types/conference'
 
   import { Badge } from '$lib/components/ui/badge'
+  import * as Alert from '$lib/components/ui/alert'
   import { Button } from '$lib/components/ui/button'
   import * as Card from '$lib/components/ui/card'
   import * as Empty from '$lib/components/ui/empty'
   import * as InputGroup from '$lib/components/ui/input-group'
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
+  import CloudPasswordDialog from '$lib/components/conference/join/cloud-password-dialog.svelte'
   import TextAnimate from '$lib/components/ui/text-animate.svelte'
   import TypingAnimation from '$lib/components/ui/typing-animation.svelte'
   import {
     conferences,
+    deleteConference,
     lastOpenedConferenceId,
     unloadConference
   } from '$lib/classes/stores/conference/conference-store'
+  import { joinConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import { navigateToConference } from '$lib/classes/utils'
+  import { authenticateCloudSeat, CloudJoinError } from '$lib/classes/clients/cloud-join-client'
+  import {
+    getCloudMembershipByConferenceId,
+    getCloudMembershipPassword,
+    rememberCloudMembership,
+    removeCloudMembership,
+    type CloudMembership
+  } from '$lib/classes/stores/conference/cloud-membership-store'
+  import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
 
   let query = $state('')
+  let passwordDialogOpen = $state(false)
+  let passwordMembership = $state<CloudMembership | null>(null)
+  let rejoinError = $state('')
 
   const filteredConferences = $derived(
     query.trim()
@@ -69,6 +97,52 @@
   function resumeConference(): void {
     if (lastOpened) navigateToConference(lastOpened.id)
   }
+
+  async function rejoinCloudConference(conference: Conference): Promise<void> {
+    const membership = getCloudMembershipByConferenceId(conference.id)
+    if (!membership) {
+      rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
+      return
+    }
+
+    rejoinError = ''
+    try {
+      const password = await getCloudMembershipPassword(membership)
+      const result = await authenticateCloudSeat({
+        inviteCode: membership.inviteCode,
+        password: password ?? undefined
+      })
+      await rememberCloudMembership(result, password ?? undefined)
+      cloudSession.setResult(result)
+      goto(resolve(`/client/${result.conferenceId}/committee/${result.committeeId}`))
+    } catch (error) {
+      if (error instanceof CloudJoinError && error.status === 401) {
+        passwordMembership = membership
+        passwordDialogOpen = true
+        return
+      }
+
+      rejoinError =
+        error instanceof CloudJoinError ? error.message : '无法重新入会，请检查网络后重试'
+    }
+  }
+
+  function openCloudPasswordDialog(conference: Conference): void {
+    const membership = getCloudMembershipByConferenceId(conference.id)
+    if (!membership) {
+      rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
+      return
+    }
+
+    rejoinError = ''
+    passwordMembership = membership
+    passwordDialogOpen = true
+  }
+
+  function removeCloudConference(conference: Conference): void {
+    removeCloudMembership(conference.id)
+    deleteConference(conference.id)
+  }
 </script>
 
 <div class="page-shell relative flex h-screen min-h-0 flex-col overflow-hidden bg-background">
@@ -100,11 +174,17 @@
           </p>
         </div>
 
-        <Button size="lg" class="shrink-0" onclick={openCreatePage}>
-          <Plus data-icon="inline-start" />
-          创建大会
-          <ArrowRight data-icon="inline-end" />
-        </Button>
+        <div class="flex shrink-0 gap-2">
+          <Button size="lg" variant="outline" onclick={() => joinConferenceDialogOpen.set(true)}>
+            <LogIn data-icon="inline-start" />
+            加入大会
+          </Button>
+          <Button size="lg" onclick={openCreatePage}>
+            <Plus data-icon="inline-start" />
+            创建大会
+            <ArrowRight data-icon="inline-end" />
+          </Button>
+        </div>
       </div>
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -236,6 +316,14 @@
           {/if}
         </div>
 
+        {#if rejoinError}
+          <Alert.Root variant="destructive" class="mb-3">
+            <CircleAlert />
+            <Alert.Title>无法重新入会</Alert.Title>
+            <Alert.Description>{rejoinError}</Alert.Description>
+          </Alert.Root>
+        {/if}
+
         {#if filteredConferences.length === 0}
           <Empty.Root class="min-h-64 border bg-card/45 shadow-sm">
             <Empty.Header>
@@ -252,7 +340,12 @@
         {:else}
           <div class="flex flex-col gap-3">
             {#each filteredConferences as conference (conference.id)}
-              <ConferenceCard {conference} />
+              <ConferenceCard
+                {conference}
+                onJoin={conference.source === 'cloud' ? rejoinCloudConference : undefined}
+                onUpdatePassword={openCloudPasswordDialog}
+                onDelete={conference.source === 'cloud' ? removeCloudConference : undefined}
+              />
             {/each}
           </div>
         {/if}
@@ -260,6 +353,11 @@
     </main>
     <div class="h-10"></div>
   </ScrollArea>
+  <CloudPasswordDialog
+    open={passwordDialogOpen}
+    membership={passwordMembership}
+    onOpenChange={(value) => (passwordDialogOpen = value)}
+  />
 </div>
 
 <style>

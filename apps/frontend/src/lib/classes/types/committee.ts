@@ -3,7 +3,11 @@
 // ============================================================
 
 import type { Attendance, Seat } from './delegate'
-import type { ConferenceActionType, Entry, ConferenceEntry } from '../../../../../shared/action-types'
+import type {
+  ConferenceActionType,
+  Entry,
+  ConferenceEntry
+} from '../../../../../shared/action-types'
 import { ACTION_LABELS } from '../../../../../shared/action-types'
 
 export type { Attendance, ParticipantSeat, Seat, SeatView } from './delegate'
@@ -17,7 +21,6 @@ export type ConferencePhase =
   | 'general_debate'
   | 'caucus'
   | 'voting'
-  | 'motion'
   | 'caucus_setup'
   | 'suspended'
   | 'closed'
@@ -31,12 +34,7 @@ export interface AgendaItem {
 
 export type YieldType = 'chair' | 'delegate' | 'question' | 'comment'
 
-export type SpeakerEntryStatus =
-  | 'waiting'
-  | 'ready'
-  | 'speaking'
-  | 'finished'
-  | 'interrupted'
+export type SpeakerEntryStatus = 'waiting' | 'ready' | 'speaking' | 'finished' | 'interrupted'
 
 export type CaucusSpeakerStatus = 'waiting' | 'ready' | 'speaking'
 
@@ -79,10 +77,7 @@ export interface SpeakerListData {
   entries: SpeakerEntry[]
 }
 
-export type PointType =
-  | 'point_of_order'
-  | 'point_of_inquiry'
-  | 'point_of_personal_privilege'
+export type PointType = 'point_of_order' | 'point_of_inquiry' | 'point_of_personal_privilege'
 
 export const POINT_LABELS: Record<PointType, string> = {
   point_of_order: '程序性问题',

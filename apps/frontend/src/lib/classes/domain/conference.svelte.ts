@@ -3,7 +3,13 @@ import type {
   Committee as CommitteeDTO
 } from '$lib/classes/types/conference'
 import type { RoleTemplate as RoleTemplateData } from '$lib/classes/types/event'
-import type { News, SeatAccess, SeatGroup, SituationUpdate, User } from '$lib/classes/types/delegate'
+import type {
+  News,
+  SeatAccess,
+  SeatGroup,
+  SituationUpdate,
+  User
+} from '$lib/classes/types/delegate'
 import { Committee } from '$lib/classes/domain/committee.svelte'
 import { RoleTemplate } from '$lib/classes/domain/role-template.svelte'
 
@@ -11,6 +17,7 @@ import { RoleTemplate } from '$lib/classes/domain/role-template.svelte'
 export class Conference {
   readonly id: string
   name = $state('')
+  source = $state<'cloud' | undefined>(undefined)
   mode = $state<'conference' | 'singleton'>('conference')
   description = $state<string | undefined>(undefined)
   organizer = $state<string | undefined>(undefined)
@@ -29,6 +36,7 @@ export class Conference {
   constructor(data?: Partial<ConferenceDTO>) {
     this.id = data?.id ?? crypto.randomUUID()
     this.name = data?.name ?? ''
+    this.source = data?.source
     this.mode = data?.mode ?? 'conference'
     this.description = data?.description
     this.organizer = data?.organizer
@@ -175,6 +183,7 @@ export class Conference {
     return {
       id: this.id,
       name: this.name,
+      source: this.source,
       mode: this.mode,
       description: this.description,
       organizer: this.organizer,

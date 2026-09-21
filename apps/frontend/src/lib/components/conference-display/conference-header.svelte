@@ -5,7 +5,12 @@
    * Display 顶部横幅 —— 会场信息 + 阶段指示器。可复用于所有 Display 窗口。
    */
   import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-  import type { ConferencePhase } from '$lib/classes/types/committee'
+  import type { DisplayPhase } from '$lib/classes/types/committee-display'
+
+  const DISPLAY_PHASE_LABELS: Record<DisplayPhase, string> = {
+    ...PHASE_LABELS,
+    motion: '动议'
+  }
 
   let {
     venue,
@@ -16,7 +21,7 @@
   }: {
     venue: string
     name: string
-    phase: ConferencePhase | null
+    phase: DisplayPhase | null
     caucusTopic?: string
     simpleMajority?: number
     twoThirds?: number
@@ -49,7 +54,7 @@
     >
       <div class="h-1.5 w-1.5 rounded-full bg-[#5B92E5]"></div>
       <span class="text-sm font-medium tracking-[0.05em] text-white/70 uppercase">
-        {phase ? PHASE_LABELS[phase] : ''}
+        {phase ? DISPLAY_PHASE_LABELS[phase] : ''}
       </span>
     </div>
   </div>

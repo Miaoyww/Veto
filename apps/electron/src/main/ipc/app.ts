@@ -2,7 +2,7 @@
  * ipc/app.ts — 应用工具 IPC 处理器
  */
 
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, shell } from 'electron'
 
 export function registerAppIpc(): void {
   ipcMain.handle('veto:app:open-devtools', () => {
@@ -14,3 +14,7 @@ export function registerAppIpc(): void {
     return { success: false, error: 'No window found' }
   })
 }
+
+ipcMain.handle('veto:open-external', async (_event, url: string) => {
+  await shell.openExternal(url)
+})

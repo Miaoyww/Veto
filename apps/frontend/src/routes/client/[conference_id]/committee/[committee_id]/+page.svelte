@@ -1,342 +1,83 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { PanelLeft } from '@lucide/svelte'
   import { page } from '$app/stores'
-  import { goto } from '$app/navigation'
-  import { resolve } from '$app/paths'
 
-  import { VETO_NAME } from '$lib/classes/const'
+  import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
+  import { conferences } from '$lib/classes/stores/conference/conference-store'
+  import * as Empty from '$lib/components/ui/empty'
 
-  import {
-    conferences,
-    currentCommittee,
-    loadConference,
-    pointDraft,
-    saveConferencesNow,
-    setPhase,
-    resumeMeeting
-  } from '$lib/classes/stores/conference/conference-store'
+  const conferenceId = $derived($page.params.conference_id ?? '')
+  const committeeId = $derived($page.params.committee_id ?? '')
+  const conference = $derived(
+    $conferences.find((candidate) => candidate.id === conferenceId) ?? null
+  )
+  const committee = $derived(
+    conference?.committees.find((candidate) => candidate.id === committeeId) ?? null
+  )
+  const cloudProjection = $derived(
+    cloudSession.chairProjection?.conference.id === conferenceId &&
+      cloudSession.chairProjection?.committee.id === committeeId
+      ? cloudSession.chairProjection
+      : null
+  )
+  const cloudResult = $derived(
+    cloudSession.session?.result.conferenceId === conferenceId &&
+      cloudSession.session.result.committeeId === committeeId
+      ? cloudSession.session.result
+      : null
+  )
 
-  import { destroyAllTimers } from '$lib/classes/services/engine/conference-engine'
-
-  import {
-    getDisplayBridge,
-    buildDisplayData
-  } from '$lib/classes/clients/conference-display-client'
-
-  import { PHASE_LABELS } from '$lib/classes/services/engine/conference-engine'
-
-  import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
-
-  import VotingPanel from '$lib/components/conference/voting/voting-panel.svelte'
-  import CaucusSetupPanel from '$lib/components/conference/caucus/caucus-setup-panel.svelte'
-  import GeneralDebatePanel from '$lib/components/conference/speakers/general-debate-panel.svelte'
-  import ModeratedCaucusPanel from '$lib/components/conference/speakers/moderated-caucus-panel.svelte'
-  import FreeCaucusPanel from '$lib/components/conference/speakers/free-caucus-panel.svelte'
-  import PlaceholderPage from '$lib/components/conference/layout/placeholder-page.svelte'
-
-  import MotionDialog from '$lib/components/conference/motion/motion-dialog.svelte'
-  import PointDialog from '$lib/components/conference/point/point-dialog.svelte'
-  import ConferenceLogDialog from '$lib/components/conference/conference-log-dialog.svelte'
-
-  import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
-
-  import { Gavel, Play, Users, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
-
-  import { ScrollArea } from '$lib/components/ui/scroll-area'
-  import { Button } from '$lib/components/ui/button/index.js'
-
-  const conferenceId = $derived($page.params.conference_id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
-
-  const conf = $derived($currentCommittee)
-  const conference = $derived($conferences.find((item) => item.id === conferenceId) ?? null)
-  const isSingleton = $derived(conference?.mode === 'singleton')
-
-  let motionDialogOpen = $state(false)
-  let pointDialogOpen = $state(false)
-  let logDialogOpen = $state(false)
-  let wsPort = $state<number | null>(null)
-  let lanUrl = $state<string | null>(null)
-
-  onMount(async () => {
-    if (conferenceId) {
-      await loadConference(conferenceId, committeeId ?? undefined)
-    }
-
-    if (!isSingleton) {
-      wsPort = window.veto?.ws ? await window.veto.ws.getPort() : 19527
-      if (window.veto?.lan) {
-        const serverInfo = await window.veto.lan.getServerInfo()
-        lanUrl = serverInfo.urls[0] ?? null
-      }
-    }
-  })
-
-  $effect(() => {
-    if (!conf) return
-    if (!isSingleton) void window.veto?.lan?.publishConference()
-  })
-
-  // 自动同步 Display 窗口
-  $effect(() => {
-    const conference = $currentCommittee
-
-    if (conference) {
-      getDisplayBridge().sendUpdate(
-        buildDisplayData(conference, {
-          pointDraft: $pointDraft ?? undefined
-        })
-      )
-    }
-  })
-
-  $effect(() => {
-    console.log('当前会议状态更新:', {
-      phase: conf?.phase,
-      activeSpeaker: conf?.activeSpeaker,
-      caucusSetup: conf?.caucusSetup
-    })
-  })
-
-  onDestroy(async () => {
-    // 离开页面保存状态
-    await saveConferencesNow()
-    if (!isSingleton) await window.veto?.lan?.unpublishConference()
-
-    destroyAllTimers()
-  })
-
-  async function openDisplayWindow(): Promise<void> {
-    if (!conf) return
-
-    const bridge = getDisplayBridge()
-
-    const ok = await bridge.openDisplay(conf.id)
-
-    if (ok) {
-      await new Promise((r) => setTimeout(r, 500))
-
-      bridge.sendUpdate(buildDisplayData(conf))
-    }
-  }
-
-  function startRollCall(): void {
-    if (!conf) return
-
-    setPhase('roll_call')
-
-    const route =
-      `/client/${conferenceId}/committee/${committeeId}/roll-call` as `/client/${string}/committee/${string}/roll-call`
-    goto(resolve(route))
-  }
-
-  function handlePrimaryAction(): void {
-    if (!conf) return
-
-    switch (conf.phase) {
-      case 'pending_speakers_list':
-      case 'general_debate':
-      case 'caucus':
-      case 'caucus_setup':
-      case 'voting':
-        motionDialogOpen = true
-        break
-
-      default:
-        break
-    }
-  }
-
-  const primaryActionLabel = $derived.by(() => {
-    if (!conf) return ''
-
-    switch (conf.phase) {
-      case 'pending_speakers_list':
-      case 'general_debate':
-      case 'caucus':
-      case 'caucus_setup':
-      case 'voting':
-        return '动议与程序'
-
-      default:
-        return ''
-    }
-  })
-
-  const isTimerActive = $derived(conf?.activeSpeaker != null)
-
-  const isMotionInProgress = $derived(conf?.phase === 'caucus' || conf?.phase === 'caucus_setup')
-
-  const canProposeMotion = $derived(!isTimerActive && !isMotionInProgress)
-
-  const canProposePoint = $derived(conf?.phase !== 'closed')
+  const conferenceName = $derived(
+    cloudProjection?.conference.name ?? conference?.name ?? '当前大会'
+  )
+  const committeeName = $derived(cloudProjection?.committee.name ?? committee?.name ?? '当前委员会')
+  const organizer = $derived(
+    cloudProjection?.conference.organizer ?? conference?.organizer ?? '未填写'
+  )
+  const seatName = $derived(cloudResult ? cloudResult.seatShortName || cloudResult.seatName : null)
+  const participantCount = $derived(
+    cloudProjection
+      ? cloudProjection.seats.filter((seat) => seat.id !== cloudProjection.chairSeat.id).length
+      : (committee?.participantSeats.length ?? 0)
+  )
 </script>
 
-<svelte:head>
-  <title>{VETO_NAME}</title>
-</svelte:head>
+<div class="flex h-full min-h-0 items-center justify-center p-6">
+  <Empty.Root class="max-w-2xl border bg-card/45 py-10 shadow-sm">
+    <Empty.Header>
+      <Empty.Media variant="icon">
+        <PanelLeft class="size-5" />
+      </Empty.Media>
+      <Empty.Title>从侧边栏开始你的会议</Empty.Title>
+      <Empty.Description>选择左侧可用功能，查看会议内容或进入主席台。</Empty.Description>
+    </Empty.Header>
 
-<div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
-  {#if conf}
-    <PageTopBar
-      icon={Gavel}
-      title={PHASE_LABELS[conf.phase] ?? conf.phase}
-      subtitle={conf.name}
-      backHref={resolve(`/client/${conferenceId}/committee/${committeeId}`)}
-      showBackButton={false}
-    >
-      {#snippet actions()}
-        {#if !isSingleton && wsPort !== null}
-          <span
-            class="select-none text-[11px] text-muted-foreground/70"
-            title="WebSocket 端口：{wsPort}"
-          >
-            {#if lanUrl}
-              {lanUrl}
-            {:else}
-              WS :{wsPort}
-            {/if}
-          </span>
-        {/if}
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="打开显示窗口（投影/第二屏幕）"
-          onclick={openDisplayWindow}
-        >
-          <Monitor size={12} />
-          显示窗口
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="会议日志"
-          onclick={() => (logDialogOpen = true)}
-        >
-          <ScrollText size={12} />
-          日志
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          class="h-8 gap-1.5 text-xs"
-          title="打开简易计时器"
-          onclick={() => {
-            timerDialogOpen.set(true)
-          }}
-        >
-          <Timer size={12} />
-          计时器
-        </Button>
-
-        {#if canProposePoint}
-          <Button
-            size="sm"
-            variant="outline"
-            class="h-8 gap-1.5 text-xs"
-            title="提出问题"
-            onclick={() => (pointDialogOpen = true)}
-          >
-            <HelpCircle size={12} />
-            问题
-          </Button>
-        {/if}
-
-        {#if primaryActionLabel}
-          <Button
-            size="sm"
-            class="h-8 gap-1.5 text-xs"
-            onclick={handlePrimaryAction}
-            disabled={!canProposeMotion}
-            title={isTimerActive
-              ? '发言计时进行中，无法提出动议'
-              : isMotionInProgress
-                ? '磋商进行中，无法提出新动议'
-                : ''}
-          >
-            <Play size={12} />
-            {primaryActionLabel}
-          </Button>
-        {/if}
-
-        {#if conf.phase === 'suspended'}
-          <Button size="sm" variant="outline" class="h-8 gap-1.5 text-xs" onclick={resumeMeeting}>
-            <Play size={12} />
-            恢复会议
-          </Button>
-        {/if}
-      {/snippet}
-    </PageTopBar>
-
-    <!-- 阶段对应内容 -->
-    <div class="flex flex-1 min-h-0 overflow-hidden p-6">
-      {#if conf.phase === 'preamble'}
-        <PlaceholderPage title="会前准备" subtitle="所有参会席位已就位，准备开始点名" icon={Users}>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            开始点名
-          </Button>
-        </PlaceholderPage>
-      {:else if conf.phase === 'roll_call'}
-        <PlaceholderPage title="点名进行中" subtitle="点名页面已在独立窗口中打开" icon={Users}>
-          <Button size="lg" class="gap-2 bg-indigo-600 hover:bg-indigo-700" onclick={startRollCall}>
-            <Play size={18} />
-            进入点名页面
-          </Button>
-        </PlaceholderPage>
-      {:else if conf.phase === 'pending_speakers_list'}
-        <PlaceholderPage
-          title="等待开启主发言名单"
-          subtitle="点名已完成，需由代表动议「开启主发言名单」以进入一般性辩论"
-          icon={Users}
-        />
-      {:else if conf.phase === 'general_debate'}
-        <ScrollArea class="flex-1">
-          <GeneralDebatePanel />
-        </ScrollArea>
-      {:else if conf.phase === 'caucus_setup'}
-        <ScrollArea class="flex-1">
-          <CaucusSetupPanel />
-        </ScrollArea>
-      {:else if conf.phase === 'caucus'}
-        <ScrollArea class="flex-1">
-          {#if conf.activeCaucus?.type === 'moderated'}
-            <ModeratedCaucusPanel />
+    <Empty.Content class="max-w-xl">
+      <dl class="grid w-full gap-3 text-left sm:grid-cols-2">
+        <div class="rounded-lg border bg-background/60 p-3">
+          <dt class="text-xs text-muted-foreground">大会</dt>
+          <dd class="mt-1 truncate text-sm font-medium text-foreground">{conferenceName}</dd>
+        </div>
+        <div class="rounded-lg border bg-background/60 p-3">
+          <dt class="text-xs text-muted-foreground">委员会</dt>
+          <dd class="mt-1 truncate text-sm font-medium text-foreground">{committeeName}</dd>
+        </div>
+        <div class="rounded-lg border bg-background/60 p-3">
+          <dt class="text-xs text-muted-foreground">组织方</dt>
+          <dd class="mt-1 truncate text-sm font-medium text-foreground">{organizer}</dd>
+        </div>
+        <div class="rounded-lg border bg-background/60 p-3">
+          {#if seatName && cloudResult}
+            <dt class="text-xs text-muted-foreground">当前身份</dt>
+            <dd class="mt-1 truncate text-sm font-medium text-foreground">
+              {seatName} · {cloudResult.roleName}
+            </dd>
           {:else}
-            <FreeCaucusPanel />
+            <dt class="text-xs text-muted-foreground">参会席位</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground">{participantCount} 个</dd>
           {/if}
-        </ScrollArea>
-      {:else if conf.phase === 'voting'}
-        <ScrollArea class="flex-1">
-          <VotingPanel />
-        </ScrollArea>
-      {:else if conf.phase === 'suspended'}
-        <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续" icon={Gavel} />
-      {:else if conf.phase === 'closed'}
-        <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与" icon={Gavel} />
-      {/if}
-    </div>
-
-    <!-- Motion Dialog -->
-    {#key motionDialogOpen}
-      <MotionDialog bind:open={motionDialogOpen} />
-    {/key}
-
-    <!-- Point Dialog -->
-    {#key pointDialogOpen}
-      <PointDialog bind:open={pointDialogOpen} />
-    {/key}
-
-    <!-- Log Dialog -->
-    <ConferenceLogDialog bind:open={logDialogOpen} minutes={conf?.minutes ?? []} />
-  {:else}
-    <div class="flex flex-1 items-center justify-center text-muted-foreground">
-      <p>请选择或创建一场大会</p>
-    </div>
-  {/if}
+        </div>
+      </dl>
+    </Empty.Content>
+  </Empty.Root>
 </div>

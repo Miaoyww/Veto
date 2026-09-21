@@ -14,15 +14,14 @@
   import { toSeatView } from '$lib/classes/types/delegate'
   import { goto } from '$app/navigation'
   import { resolve } from '$app/paths'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import SeatSelector from '$lib/components/conference/common/seat-selector.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   const conf = $derived($currentCommittee)
-  const conferenceId = $derived($page.params.conference_id ?? conf?.id ?? null)
-  const committeeId = $derived($page.params.committee_id ?? null)
-  const routePrefix = $derived($page.url.pathname.startsWith('/client/') ? '/client' : '/conference')
+  const conferenceId = $derived(page.params.conference_id ?? conf?.id ?? null)
+  const committeeId = $derived(page.params.committee_id ?? null)
 
   const pointTypes: PointType[] = [
     'point_of_order',
@@ -74,7 +73,9 @@
     })
 
     // 跳转到问题页面（navigate 在 cleanup 之前，与 motion-dialog 一致）
-    goto(resolve(`${routePrefix}/${conferenceId}/committee/${committeeId}/question`))
+    if (conferenceId && committeeId) {
+      goto(resolve(`/client/${conferenceId}/committee/${committeeId}/chair/question`))
+    }
 
     open = false
     resetForm()
@@ -143,8 +144,9 @@
                 {@const disabled = isPointTypeDisabled(pt)}
                 <button
                   type="button"
-                  disabled={disabled}
-                  class="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all {selectedType === pt
+                  {disabled}
+                  class="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all {selectedType ===
+                  pt
                     ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-400'
                     : disabled
                       ? 'cursor-not-allowed opacity-40'

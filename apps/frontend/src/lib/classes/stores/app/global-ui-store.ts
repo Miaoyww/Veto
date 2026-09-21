@@ -1,7 +1,8 @@
 import { writable } from 'svelte/store'
 
-
 export const settingsDialogOpen = writable(false)
+
+export const joinConferenceDialogOpen = writable(false)
 
 export type SettingsSection = 'general' | 'mods' | 'venue' | 'about' | 'account'
 

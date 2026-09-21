@@ -4,7 +4,7 @@
  * Display 窗口通信抽象层。
  *
  * Display is a direct, local Chair-to-Display link. It deliberately does not
- * connect to the Host Service: the Chair owns its local procedure projection.
+ * connect to the Cloud Service: the Chair owns its local procedure projection.
  */
 
 import type {
@@ -14,7 +14,12 @@ import type {
   CaucusSpeakerStatus,
   TimerTickData
 } from '$lib/classes/types/conference'
-import { isParticipantSeat, toSeatView, type Seat, type SeatView } from '$lib/classes/types/delegate'
+import {
+  isParticipantSeat,
+  toSeatView,
+  type Seat,
+  type SeatView
+} from '$lib/classes/types/delegate'
 
 // ---- 抽象接口 ------------------------------------------------------------
 
@@ -72,10 +77,7 @@ function getActiveDisplayCommitteeId(): string | undefined {
   return window.location.pathname.match(/^\/(?:client|conference)\/[^/]+\/committee\/([^/]+)/)?.[1]
 }
 
-async function connectDisplaySocket(
-  role: DisplaySocketRole,
-  committeeId?: string
-): Promise<void> {
+async function connectDisplaySocket(role: DisplaySocketRole, committeeId?: string): Promise<void> {
   const nextCommitteeId = role === 'display' ? getActiveDisplayCommitteeId() : committeeId
   if (
     displaySocket?.readyState === WebSocket.OPEN &&
@@ -85,10 +87,7 @@ async function connectDisplaySocket(
     return
   }
 
-  if (
-    displaySocket?.readyState === WebSocket.CONNECTING &&
-    displaySocketRole === role
-  ) {
+  if (displaySocket?.readyState === WebSocket.CONNECTING && displaySocketRole === role) {
     displaySocketCommitteeId = nextCommitteeId
     return
   }
@@ -245,8 +244,7 @@ export function getDisplayBridge(): ConferenceDisplayBridge {
   if (!currentBridge) {
     const isDisplay =
       typeof window !== 'undefined' &&
-      (window.location.hash.includes('/display/') ||
-        window.location.pathname.includes('/display/'))
+      (window.location.hash.includes('/display/') || window.location.pathname.includes('/display/'))
     currentBridge = isDisplay ? createDisplayBridge() : createHostBridge()
   }
   return currentBridge
@@ -268,15 +266,17 @@ import type { Committee } from '$lib/classes/domain/committee.svelte'
  * 构建 Display 窗口数据。
  * 接受 Committee（优先）或 Committee JSON。
  */
+export interface ConferenceDisplayExtra {
+  rollCall?: ConferenceDisplayData['rollCall']
+  motionDraft?: ConferenceDisplayData['motionDraft']
+  pointDraft?: ConferenceDisplayData['pointDraft']
+  attendanceChange?: ConferenceDisplayData['attendanceChange']
+  speakerTransition?: SpeakerTransitionReason
+}
+
 export function buildDisplayData(
   source: Committee | CommitteeDTO,
-  extra?: {
-    rollCall?: ConferenceDisplayData['rollCall']
-    motionDraft?: ConferenceDisplayData['motionDraft']
-    pointDraft?: ConferenceDisplayData['pointDraft']
-    attendanceChange?: ConferenceDisplayData['attendanceChange']
-    speakerTransition?: SpeakerTransitionReason
-  }
+  extra?: ConferenceDisplayExtra
 ): ConferenceDisplayData {
   // 统一为 Committee JSON 格式
   const conf: CommitteeDTO = 'toJSON' in source ? source.toJSON() : source
@@ -396,16 +396,15 @@ export function buildDisplayData(
       totalSec,
       type: conf.activeCaucus.type,
       status,
-      topic:
-        (() => {
-          const motion = conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)
-          if (!motion) return undefined
-          if (motion.type === 'moderated_caucus') return (motion as any).topic as string | undefined
-          if (motion.type === 'individual_speech') {
-            return conf.seats.find((seat) => seat.id === motion.proposedBySeatId)?.name
-          }
-          return undefined
-        })(),
+      topic: (() => {
+        const motion = conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)
+        if (!motion) return undefined
+        if (motion.type === 'moderated_caucus') return (motion as any).topic as string | undefined
+        if (motion.type === 'individual_speech') {
+          return conf.seats.find((seat) => seat.id === motion.proposedBySeatId)?.name
+        }
+        return undefined
+      })(),
       caucusSpeakers: conf.activeCaucus.caucusSpeakers
         ?.map((s) => {
           const seat = conf.seats.find((d) => d.id === s.seatId)
@@ -419,7 +418,9 @@ export function buildDisplayData(
             : null
         })
         .filter(
-          (speaker): speaker is {
+          (
+            speaker
+          ): speaker is {
             seatName: string
             seat: SeatView
             status: CaucusSpeakerStatus
@@ -432,7 +433,7 @@ export function buildDisplayData(
   }
 
   // 动议活跃时覆盖 phase 为 'motion'（Display 专用）
-  const effectivePhase: CommitteeDTO['phase'] | 'motion' = hasActiveMotionPhase
+  const effectivePhase: ConferenceDisplayData['phase'] = hasActiveMotionPhase
     ? 'motion'
     : conf.phase
 
@@ -441,19 +442,19 @@ export function buildDisplayData(
     phase: effectivePhase,
     venue: conf.name,
     name: conf.name,
-    presentCount: conf.seats.filter(isParticipantSeat).filter(
-      (seat) => seat.procedure.attendance === 'present'
-    ).length,
-    votingCount: conf.seats.filter(isParticipantSeat).filter(
-      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-    ).length,
+    presentCount: conf.seats
+      .filter(isParticipantSeat)
+      .filter((seat) => seat.procedure.attendance === 'present').length,
+    votingCount: conf.seats
+      .filter(isParticipantSeat)
+      .filter((seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights)
+      .length,
     currentSpeaker: (() => {
       if (!currentSpeakerSeat) return undefined
       const remainingSec = conf.activeSpeaker
         ? Math.max(0, conf.activeSpeaker.totalSec - conf.activeSpeaker.elapsedSec)
         : 0
-      const status =
-        conf.activeSpeaker?.paused ? ('paused' as const) : ('playing' as const)
+      const status = conf.activeSpeaker?.paused ? ('paused' as const) : ('playing' as const)
       return {
         seat: toSeatView(currentSpeakerSeat),
         remainingSec,
@@ -508,9 +509,7 @@ export function buildDisplayData(
           return {
             type: displayMotion.type,
             topic:
-              displayMotion.type === 'moderated_caucus'
-                ? (displayMotion as any).topic
-                : undefined,
+              displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
             status: displayMotion.status,
             proposedBy,
             motionId: displayMotion.id,
@@ -560,8 +559,8 @@ export function buildDisplayData(
             proposerName: proposer?.name,
             proposerPosition: conf.caucusSetup!.proposerPosition,
             speakerSeatIds: conf.caucusSetup!.speakerSeatIds,
-            speakerNames: conf.caucusSetup!.speakerSeatIds
-              .map(findSeatView)
+            speakerNames: conf
+              .caucusSetup!.speakerSeatIds.map(findSeatView)
               .filter((seat): seat is SeatView => seat !== undefined)
           }
         })()
