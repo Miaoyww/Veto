@@ -26,6 +26,7 @@ export type Capability =
   | 'withdraw_situation'
   | 'withdraw_files'
   | 'control_conference'
+  | 'control_timeline'
   | 'draft_resolution'
 
 export const CAPABILITIES: readonly Capability[] = [
@@ -43,6 +44,7 @@ export const CAPABILITIES: readonly Capability[] = [
   'withdraw_situation',
   'withdraw_files',
   'control_conference',
+  'control_timeline',
   'draft_resolution'
 ] as const
 
@@ -61,6 +63,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   withdraw_situation: '撤回已发布局势更新',
   withdraw_files: '撤回已发布文件',
   control_conference: '控制会议流程',
+  control_timeline: '控制大会时间线',
   draft_resolution: '起草决议'
 }
 
@@ -97,11 +100,6 @@ export interface ProceduralSeatProfile {
   flagUrl?: string
   hasVotingRights: boolean
   sortOrder: number
-}
-
-export interface ChairAssignment {
-  seatId: string
-  committeeId: string
 }
 
 /** Identity returned to a normal UserClient after authentication. */
@@ -177,18 +175,22 @@ export interface News extends ContentRecord {
   idempotencyKey?: string
 }
 
-export type SituationStatus = 'published' | 'retracted'
+export type SituationStatus = 'published' | 'withdrawn'
 
 export interface TimelineProjection {
   id: string
   name: string
-  simulationTime: number
-  status: string
+  currentTime: number
+  ratio: number
+  paused: boolean
+  version: number
 }
 
-export interface SituationUpdate extends ContentRecord {
+export interface SituationUpdate extends Omit<ContentRecord, 'title' | 'content' | 'createdAt' | 'updatedAt'> {
+  content: string
+  contentTime: number
   status: SituationStatus
-  timelineId: string
+  publishedAt: string
   /** The IPC publish form receives this minimum projection only. */
   timeline?: TimelineProjection
   relatedBattleId?: string
@@ -197,10 +199,8 @@ export interface SituationUpdate extends ContentRecord {
     lng: number
     label?: string
   }
-  publishedAt?: number
-  retractedAt?: number
-  retractionReason?: string
-  idempotencyKey?: string
+  withdrawnAt?: string
+  withdrawalReason?: string
 }
 
 /** Files are intentionally represented as a placeholder until that subsystem opens. */
@@ -240,13 +240,12 @@ export interface WorkflowAudienceProjection {
   news: News[]
 }
 
-/** A Chair gets only its assigned Committee and static Seat information. */
+/** A Seat with control_conference gets only its own Committee and static Seat information. */
 export interface ChairCommitteeProjection {
   conferenceId: string
   conferenceName: string
   committee: CommitteeRecord
   seats: ChairSeatProjection[]
-  chairAssignment: ChairAssignment
 }
 
 /**

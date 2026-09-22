@@ -11,6 +11,8 @@ describe('committee phase utilities', () => {
 
   it('returns the target phase for a valid transition', () => {
     expect(transitionPhase('preamble', 'roll_call')).toBe('roll_call')
+    expect(transitionPhase('suspended', 'pending_speakers_list')).toBe('pending_speakers_list')
+    expect(transitionPhase('closed', 'pending_speakers_list')).toBe('pending_speakers_list')
     expect(PHASE_LABELS.voting).toBe('投票表决')
   })
 })

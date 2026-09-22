@@ -63,7 +63,7 @@
   {:else if screen.kind === 'suspended'}
     <PlaceholderPage title="会议休会中" subtitle="点击「恢复会议」继续" icon={Gavel} />
   {:else if screen.kind === 'closed'}
-    <PlaceholderPage title="会议已闭幕" subtitle="感谢各位代表的参与" icon={Gavel} />
+    <PlaceholderPage title="会议已闭幕" subtitle="点击「恢复会议」重置会议流程" icon={Gavel} />
   {:else}
     <PlaceholderPage title="会议状态异常" subtitle={screen.message} icon={AlertTriangle} />
   {/if}

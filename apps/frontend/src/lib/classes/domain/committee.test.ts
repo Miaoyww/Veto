@@ -123,4 +123,17 @@ describe('Committee domain aggregate', () => {
     })
     expect(committee.activeCaucus?.caucusSpeakers).toBeUndefined()
   })
+
+  it('resets a closed meeting to the motion-ready phase when resumed', () => {
+    const committee = new Committee({ phase: 'general_debate' })
+
+    committee.closeMeeting()
+    expect(committee.phase).toBe('closed')
+
+    committee.resumeMeeting()
+
+    expect(committee.phase).toBe('pending_speakers_list')
+    expect(committee.minutes.at(-2)?.actionType).toBe('meeting_resumed')
+    expect(committee.minutes.at(-1)?.description).toBe('进入阶段: 等待开启主发言名单')
+  })
 })

@@ -9,8 +9,8 @@ export const VALID_TRANSITIONS: Record<ConferencePhase, ConferencePhase[]> = {
   caucus: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
   voting: ['general_debate', 'caucus', 'voting', 'suspended', 'closed'],
   caucus_setup: ['caucus', 'general_debate', 'suspended', 'closed'],
-  suspended: ['general_debate', 'closed'],
-  closed: []
+  suspended: ['pending_speakers_list', 'general_debate', 'closed'],
+  closed: ['pending_speakers_list']
 }
 
 /** Human-readable labels for Chair and Display procedure surfaces. */

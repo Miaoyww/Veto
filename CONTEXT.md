@@ -12,7 +12,8 @@ Conference 的一种组织模式，限定 Conference 只包含一个 Committee�
 _Avoid_: Singleton Conference, Single Meeting Mode
 
 **Offline Mode（离线模式）**:
-UserClient 的本地运行边界。用户不登录平台，只能创建、保存和主持 Singleton Mode Conference。
+UserClient 的本地运行边界。用户不登录平台，只能创建、保存和主持 Singleton Mode Conference；其内容有且只有
+Chair 本地维护的议程与议事状态，不包含指令、新闻、局势、文件或其他共享内容工作流。
 _Avoid_: Local Mode, Singleton Mode
 
 ## Cloud Deployment（云端部署）
@@ -27,7 +28,7 @@ _Avoid_: LAN Conference, Hosted Conference
 _Avoid_: Cloud Backend, Cloud Host, Server
 
 **Organizer Platform (组织者平台)**:
-组织者创建和配置云端大会的独立平台。它管理大会、席位、角色模板、Capability 和 ChairAssignment，
+组织者创建和配置云端大会的独立平台。它管理大会、席位、角色模板和 Capability，
 不主持某个 Committee 的本地议程或议事状态。
 _Avoid_: Host Console, Admin Console, Creator
 
@@ -51,6 +52,10 @@ _Avoid_: Status, Phase
 大会级 User、SeatAccess、角色模板、全局新闻和全局局势更新。大会本身不直接承载发言名单、
 动议、表决等议事流程。
 _Avoid_: Meeting, Session, ConferenceEvent
+
+**ConferenceTimezone（大会时区）**:
+解释和展示 ContentTime 的大会级时区，持久化在每个 Conference 上；当前统一默认为 `Asia/Shanghai`（UTC+8），暂不提供修改入口。
+_Avoid_: Device Timezone, Timeline Timezone
 
 ## Committee（委员会 / 会场）
 
@@ -127,7 +132,7 @@ _Avoid_: Full Conference Sync, Seat DTO
 **AuthenticatedSeatSession（已认证席位会话）**:
 UserClient 成功认证后获得的临时连接上下文，包含 UserClientSessionProjection 所需的身份与授权信息。
 它不持久化，也不包含邀请码、密码摘要、其他 Seat 或完整的 Host Conference 数据。
-Organizer Platform 变更其 Capability、ChairAssignment、User、邀请码或 Committee 归属时，Cloud Service 会立即撤销该会话。
+Organizer Platform 变更其 Capability、User、邀请码或 Committee 归属时，Cloud Service 会立即撤销该会话。
 一个 Seat 同时至多拥有一个已认证会话；该 Seat 在另一台 UserClient 上重新登录时，原会话立即撤销并返回首页。
 _Avoid_: DelegateSession, User Session, SeatAccess
 
@@ -172,7 +177,8 @@ _Avoid_: Role, Permission, Account
 ## Capability（能力）
 
 **Capability (能力)**:
-Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（开/关）。
+Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（开/关）；Capability 代码统一使用
+`动词_对象` 命名，不使用 `对象_动词`。
 
 | 能力 | 说明 |
 |---|---|
@@ -189,17 +195,11 @@ Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（
 | `withdraw_news` | 撤回已发布新闻 |
 | `withdraw_situation` | 撤回已发布局势更新 |
 | `withdraw_files` | 撤回已发布文件（功能随文件系统延期，Capability 保留） |
-| `control_conference` | 进入 Chair 模式；仍须有 ChairAssignment 才能管理具体 Committee |
+| `control_conference` | 进入 Chair 模式，并管理该 Seat 所属的 Committee |
+| `control_timeline` | 控制大会 Timeline；仅 IPC Committee 的 Seat 可使用，内置 IPC 角色模板默认具备 |
 | `draft_resolution` | 起草决议（功能随文件系统延期，Capability 保留） |
 
 _Avoid_: Permission, Right, Role
-
-**ChairAssignment（主席委员会授权）**:
-Organizer Platform 授予一个拥有 `control_conference` 的 Seat 对一个 Committee 的本地主持资格。一个 Seat 至多拥有一项
-ChairAssignment。只有 Capability 与 ChairAssignment 同时存在时，该 UserClient 才能取得对应 Committee 的
-ChairCommitteeProjection；其目标 Committee 必须就是该 Seat 所属的 Committee。这项授权不扩大该 Seat 对
-其他 Committee 的数据访问范围。
-_Avoid_: Chair Role, Global Admin
 
 ## ContentAudience（内容受众）
 
@@ -223,6 +223,11 @@ UserClient 在明确提交前仅保存在本机的内容草稿，不属于 Cloud
 LocalDraft 跨同一 UserClient 的应用重启保留，并绑定原 Cloud Service、Conference 与 Seat；重新认证后的身份不匹配时，
 草稿只可查看或复制，不能自动提交。
 _Avoid_: Shared Draft, Offline Command
+
+**ContentTime（内容时间）**:
+News 或 SituationUpdate 在模拟世界中的时间，代码字段为 `contentTime`，不同于 Cloud Service 记录的真实提交或发布时间。
+它在内容提交时成为不可变快照；不存在 Timeline 时可手动填写任意合法日期时间，不受大会现实日期或其他内容时间限制。
+_Avoid_: PublishedAt, CreatedAt, Timeline Current Time
 
 **ContentOrigin（内容来源）**:
 每条指令、新闻、局势更新或文件都保留其来源 Seat 与来源 Committee。认证 Seat 创建的内容自动绑定其所属 Committee，不能伪造其他 Committee；Chair 通过 UserClient 创建内容时仍署名其认证 Seat；Organizer Platform 不创建、修改或代发业务内容。普通内容署名展示 Committee、Seat 展示名或角色，新闻另展示 source，且不展示 User 真实姓名。
@@ -252,6 +257,7 @@ _Avoid_: Order, Command, Request
 
 **News (新闻)**:
 由 MPC 成员起草、带 `review_news` Capability 的 Seat 审核后发布的新闻稿，同时归属 Conference 与 Committee。未提交草稿为 LocalDraft；提交后进入 WorkflowAudience 的待审核队列，只有审核完成后才能发布或被驳回；驳回必须填写说明，驳回后可修改重交；通过只记录审核 Seat 和时间。已发布新闻固定发送至整个 Conference，不可原地修改；拥有 `withdraw_news` 的 Seat 可附原因撤回，修正以新新闻发布。
+News 在提交审核时确定 ContentTime：Conference 配置 Timeline 时截取其当前模拟时间，未配置时由提交者手动填写；审核等待、通过、Timeline 控制和后续重交都不改变该次提交的 ContentTime。
 每一条已提交新闻对大会内所有拥有 `review_news` Capability 的 Seat 都可见于受限队列；首个有效审核决定结束该次审核，
 并从其他审核者的待办中移除。
 _Avoid_: Article, Post, Bulletin
@@ -259,18 +265,18 @@ _Avoid_: Article, Post, Bulletin
 ## SituationUpdate（局势更新）
 
 **SituationUpdate（局势更新）**:
-由拥有 `publish_situation` Capability 的 IPC Seat 发布、关联 Timeline 的局势变化公告，同时归属 Conference 与 Committee；
-UserClient 创建后立即发布，不进入审核队列，并固定发送至整个 Conference。已发布局势不可原地修改；拥有 `withdraw_situation` 的 Seat 可附原因撤回，修正以新局势更新发布。当前阶段不做分内阁差异化情报，预留 `relatedBattleId` 和 `relatedLocation` 供未来地图集成。
+由拥有 `publish_situation` Capability 的 IPC Seat 发布、由 ContentTime 与 Markdown 正文组成的局势变化公告，同时归属 Conference 与 Committee；
+Conference 配置 Timeline 时，ContentTime 取发布瞬间的模拟时间；未配置 Timeline 时，由发布者手动填写。Timeline 暂停时仍可在冻结的 ContentTime 发布多条局势。ContentTime 发布后保持不变，不受后续 Timeline 控制影响。UserClient 创建后立即发布，不进入审核队列，并固定发送至整个 Conference。已发布局势不可原地修改；拥有 `withdraw_situation` 的 Seat 可附原因撤回，修正以新局势更新发布。当前阶段不做分内阁差异化情报，预留 `relatedBattleId` 和 `relatedLocation` 供未来地图集成。
 _Avoid_: Event, Update, Intel
 
 ## 角色（Role）
 
 **Chair (主席)**:
-同时具有 `control_conference` Capability 与一项 ChairAssignment 的 UserClient 角色。Chair 以自己的 Seat 认证 Cloud Service，并主动取得其被授权 Committee 的 ChairCommitteeProjection；它在本地进行会议主持与议程处理，并直接向绑定的 Display 输出投影。Chair 的 Agenda 与 ProcedureSeatState 仅持久化在其本机，第一版不做跨设备迁移或接管。Chair 不等同于 Cloud Service 或 Organizer Platform。
+拥有 `control_conference` Capability 的 UserClient 角色。Chair 以自己的 Seat 认证 Cloud Service，并主动取得该 Seat 所属 Committee 的 ChairCommitteeProjection；它在本地进行会议主持与议程处理，并直接向绑定的 Display 输出投影。Chair 的 Agenda 与 ProcedureSeatState 仅持久化在其本机，第一版不做跨设备迁移或接管。Chair 不等同于 Cloud Service 或 Organizer Platform。
 
 **UserClient（用户端）**:
 以 Seat 身份使用的 Veto 桌面应用，涵盖代表、MPC 与 IPC 等所有用户。它通过邀请码+密码连接 Cloud Service 中的 Cloud Conference，
-也可以在 Offline Mode 中直接主持 Singleton Mode Conference。它根据 Seat 的 Capability 执行操作（提交指令、起草新闻等）。
+也可以在 Offline Mode 中直接主持 Singleton Mode Conference；Offline Mode 只提供本地议程与议事功能。它根据 Seat 的 Capability 执行 Cloud Conference 操作（提交指令、起草新闻等）。
 普通 UserClient 只向 Cloud Service 传输指令、新闻和局势；断开连接时可以保留本地草稿，但不排队或稍后重放任何改变共享大会数据的命令。
 拥有 `control_conference` Capability 的 UserClient 是 Chair，并有额外的本地议程与 Display 职责。
 _Avoid_: Delegate, Member
@@ -284,7 +290,7 @@ _Avoid_: UserClient workflow, Remote procedure
 _Avoid_: Projector, Screen
 
 **ChairCommitteeProjection（主席委员会投影）**:
-Cloud Service 按已认证 Chair 的 Capability 与 ChairAssignment 返回的受限 Committee 席位数据，用于 Chair 在本地执行议程与会议控制。它包含 Seat 身份、角色和 ProceduralSeatProfile 等静态资料，而不包含运行中的 ProcedureSeatState。它不是普通 UserClient 的同步快照，也不授予 Chair 对其他 Committee 数据的访问权。
+Cloud Service 向拥有 `control_conference` Capability 的已认证 Seat 返回其所属 Committee 的受限席位数据，用于 Chair 在本地执行议程与会议控制。它包含 Seat 身份、角色和 ProceduralSeatProfile 等静态资料，而不包含运行中的 ProcedureSeatState。它不是普通 UserClient 的同步快照，也不授予 Chair 对其他 Committee 数据的访问权。
 为支持线下主持，它还包含该 Committee 各 Seat 已绑定 User 的真实姓名；这是一项仅限获授权 Chair 的 User 数据例外。
 _Avoid_: Full Conference Sync, Display Snapshot
 
@@ -314,12 +320,17 @@ _Avoid_: Delegations, Members
 （保留，重新定位）
 
 **Timeline (时间线)**:
-独立时间模拟实例。Conference 可绑定多个 Timeline（如 JCC 的快轴/慢轴/停轴）。
-通过倍率控制模拟时间流速。SituationUpdate 按 Timeline 时间排序展示。
+Cloud Conference 可选的共享时间模拟实例，每场大会至多一条，由 Organizer Platform 在 `draft` 阶段创建和配置。
+Organizer 设置起始模拟时间和默认倍率；大会进入 `active` 后 Timeline 保持暂停，直到 TimelineController 主动启动。
+Organizer 必须在激活大会时明确选择不使用 Timeline 或提供完整配置；进入 `active` 后不得新增、删除 Timeline，也不得修改其起始时间和时区。存在 Timeline 时，News 与 SituationUpdate 使用其模拟时间；不存在时，两者的 ContentTime 由创建者手动填写。
 _Avoid_: Clock, Timer, Speed
 
+**TimelineController（时间线控制者）**:
+所属 Committee 类型为 IPC 且拥有 `control_timeline` Capability 的 Seat。它可以暂停、恢复、设置任意正整数倍率或向过去及未来跳转大会 Timeline 的当前模拟时间；每次控制操作都写入 AuditLog，不要求该 Seat 是 Chair。
+_Avoid_: Chair, Timeline Owner
+
 **TimelineProjection（时间线最小投影）**:
-Cloud Service 向拥有 `publish_situation` 的 IPC Seat 提供的局势发布上下文，只包含 Timeline ID、名称、当前模拟时间和状态；不包含 Battle、地图或议程。
+Cloud Service 向拥有 `view_situation`、`publish_situation` 或 `control_timeline` 的已认证 Seat 提供的时间上下文，只包含 Timeline ID、名称、当前模拟时间、暂停状态、倍率和并发版本；不包含 Battle、地图或议程。前两类 Capability 只允许读取，只有 IPC Committee 中拥有 `control_timeline` 的 Seat 可以提交控制操作。
 _Avoid_: Battle Projection, Agenda Snapshot
 
 ## Battle（兵棋推演 / 军事推演）

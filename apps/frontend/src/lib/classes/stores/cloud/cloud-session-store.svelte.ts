@@ -51,8 +51,8 @@ class CloudSessionStore {
       session.result.conferenceId === conferenceId &&
       identity.committeeId === committeeId
 
-    // The Cloud Service remains authoritative for ChairAssignment. The client only
-    // needs the capability to attempt loading that authorized projection.
+    // Chair identity is derived solely from control_conference. The service returns
+    // the authorized Committee projection for that Seat; there is no assignment record.
     if (!matchesRoute || !session || !identity || !this.hasCapability('control_conference')) {
       if (this.chairRequestKey) {
         this.chairRequestKey = ''

@@ -20,7 +20,7 @@ export interface CloudJoinTarget {
   roleTemplateId: string
   roleName: string
   capabilities: string[]
-  chair?: CloudChairAssignment | null
+  chair?: CloudChairProjection | null
   seatState: CloudSeatState
   hasPassword: boolean
   wsUrl: string
@@ -55,7 +55,8 @@ export interface CloudClaimResult extends CloudJoinTarget {
   identity: CloudJoinIdentity
 }
 
-export interface CloudChairAssignment {
+/** Committee projection derived solely from the Seat's control_conference capability. */
+export interface CloudChairProjection {
   committeeId: string
   committeeName: string
 }

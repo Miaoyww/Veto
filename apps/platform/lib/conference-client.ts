@@ -17,6 +17,7 @@ export const CAPABILITIES = [
   "withdraw_situation",
   "withdraw_files",
   "control_conference",
+  "control_timeline",
   "draft_resolution",
 ] as const
 
@@ -39,6 +40,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   withdraw_situation: "撤回局势更新",
   withdraw_files: "撤回文件",
   control_conference: "控制会议流程",
+  control_timeline: "控制大会时间线",
   draft_resolution: "起草决议",
 }
 
@@ -49,6 +51,8 @@ export interface ConferenceSummary {
   description?: string
   organizer?: string
   version: number
+  lifecycle: "draft" | "active" | "closed"
+  timezone: string
   createdAt: string
   updatedAt: string
   deletedAt?: string
@@ -92,6 +96,18 @@ export interface CommitteeInput {
 }
 
 export interface Conference extends ConferenceSummary {
+  timelineMode: "undecided" | "none" | "configured"
+  timeline: {
+    id: string
+    name: string
+    initialSimTime: number
+    simulationAnchor: number
+    realAnchor: number
+    ratio: number
+    paused: boolean
+    pausedSimTime: number | null
+    version: number
+  } | null
   roleTemplates: RoleTemplateInput[]
   committees: CommitteeInput[]
 }
@@ -351,6 +367,71 @@ export async function replaceConferenceStructure(
   )
   cacheConference(token, result.conference)
   return result.conference
+}
+
+export async function configureConferenceRuntime(
+  token: string,
+  id: string,
+  version: number,
+  timeline: null | { name: string; initialSimTime: number; ratio: number }
+): Promise<Conference> {
+  const result = await apiRequest<{ ok: true; conference: Conference }>(
+    token,
+    `${conferencePath(id)}/runtime`,
+    {
+      method: "PUT",
+      headers: { "If-Match": `"${version}"` },
+      body: JSON.stringify({ timeline }),
+    }
+  )
+  cacheConference(token, result.conference)
+  return result.conference
+}
+
+export async function activateConference(
+  token: string,
+  id: string,
+  version: number
+): Promise<Conference> {
+  const result = await apiRequest<{ ok: true; conference: Conference }>(
+    token,
+    `${conferencePath(id)}/activate`,
+    { method: "POST", headers: { "If-Match": `"${version}"` } }
+  )
+  cacheConference(token, result.conference)
+  return result.conference
+}
+
+export interface OrganizerSituation {
+  id: string
+  content: string
+  contentTime: number
+  status: "published" | "withdrawn"
+  publishedAt: string
+  withdrawnAt?: string
+  withdrawalReason?: string
+  author: { committeeName: string; seatName: string; role?: string }
+}
+
+export async function listOrganizerSituations(
+  token: string,
+  id: string,
+  refresh = false
+): Promise<{ timezone: string; situations: OrganizerSituation[] }> {
+  return apiRequest(token, `${conferencePath(id)}/situations`, { refreshCache: refresh })
+}
+
+export async function withdrawOrganizerSituation(
+  token: string,
+  conferenceId: string,
+  situationId: string,
+  reason: string
+): Promise<void> {
+  await apiRequest(
+    token,
+    `${conferencePath(conferenceId)}/situations/${encodeURIComponent(situationId)}/withdraw`,
+    { method: "POST", body: JSON.stringify({ reason }) }
+  )
 }
 
 export async function deleteConference(

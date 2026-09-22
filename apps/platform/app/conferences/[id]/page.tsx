@@ -22,6 +22,7 @@ import {
   textareaClassName,
 } from "@/components/conference-structure-editor"
 import { ConferenceWorkspacePlaceholder } from "@/components/conference-workspace-placeholder"
+import { ConferenceSituationWorkspace } from "@/components/conference-situation-workspace"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -436,12 +437,14 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsContent>
 
             <TabsContent value="situations" className="mt-8">
-              <ConferenceWorkspacePlaceholder
-                icon={Radio}
-                title="局势"
-                description="编排和发布大会局势更新，并保留撤回与发布时间线。当前云端接口尚未提供局势数据。"
-                items={["局势草稿", "发布时间线", "已发布更新", "撤回记录"]}
-              />
+              {token && conference ? (
+                <ConferenceSituationWorkspace
+                  token={token}
+                  conference={conference}
+                  onConferenceChange={setConference}
+                  onError={handleError}
+                />
+              ) : null}
             </TabsContent>
 
             <TabsContent value="files" className="mt-8">

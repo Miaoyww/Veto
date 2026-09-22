@@ -141,6 +141,7 @@ const defaultRoles: RoleTemplateInput[] = [
       "review_news",
       "publish_situation",
       "control_conference",
+      "control_timeline",
     ],
   },
   {

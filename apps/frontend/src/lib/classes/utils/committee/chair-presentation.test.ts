@@ -137,4 +137,11 @@ describe('chair presentation', () => {
     expect(caucus.canProposeMotion).toBe(false)
     expect(caucus.motionDisabledReason).toContain('磋商进行中')
   })
+
+  it.each(['suspended', 'closed'] as const)('allows a %s meeting to be resumed', (phase) => {
+    const presentation = getChairPresentation(committeeState({ phase }))
+
+    expect(presentation.canResumeMeeting).toBe(true)
+    expect(presentation.canProposeMotion).toBe(false)
+  })
 })

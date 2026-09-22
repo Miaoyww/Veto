@@ -68,17 +68,17 @@
     !isCloudSession || cloudSession.hasCapability('control_conference')
   )
   const canViewDirectives = $derived(
-    !isCloudSession || cloudSession.hasCapability('submit_directive', 'process_directive')
+    isCloudSession && cloudSession.hasCapability('submit_directive', 'process_directive')
   )
   const canViewFiles = $derived(
-    !isCloudSession || cloudSession.hasCapability('view_files', 'send_files', 'withdraw_files')
+    isCloudSession && cloudSession.hasCapability('view_files', 'send_files', 'withdraw_files')
   )
   const canViewSituation = $derived(
-    !isCloudSession ||
+    isCloudSession &&
       cloudSession.hasCapability('view_situation', 'publish_situation', 'withdraw_situation')
   )
   const canViewNews = $derived(
-    !isCloudSession ||
+    isCloudSession &&
       cloudSession.hasCapability('view_news', 'draft_news', 'review_news', 'withdraw_news')
   )
   const cloudProjection = $derived(

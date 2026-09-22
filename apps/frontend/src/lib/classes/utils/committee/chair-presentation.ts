@@ -115,6 +115,6 @@ export function getChairPresentation(committee: ChairCommitteeState): ChairPrese
       : isMotionInProgress
         ? '磋商进行中，无法提出新动议'
         : '',
-    canResumeMeeting: committee.phase === 'suspended'
+    canResumeMeeting: committee.phase === 'suspended' || committee.phase === 'closed'
   }
 }

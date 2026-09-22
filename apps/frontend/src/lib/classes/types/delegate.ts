@@ -35,6 +35,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   withdraw_situation: '撤回已发布局势更新',
   withdraw_files: '撤回已发布文件',
   control_conference: '控制会议流程',
+  control_timeline: '控制大会时间线',
   draft_resolution: '起草决议'
 }
 
