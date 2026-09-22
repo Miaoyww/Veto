@@ -69,6 +69,8 @@
         'change_attendance',
         'moderated_caucus',
         'unmoderated_caucus',
+        'moderated_debate',
+        'unmoderated_debate',
         'individual_speech',
         'modify_speaking_time',
         'closure_debate',
@@ -81,6 +83,8 @@
       'open_speakers_list',
       'moderated_caucus',
       'unmoderated_caucus',
+      'moderated_debate',
+      'unmoderated_debate',
       'modify_speaking_time',
       'closure_debate',
       'suspend_meeting',
@@ -92,6 +96,8 @@
     open_speakers_list: Presentation,
     moderated_caucus: MessageSquare,
     unmoderated_caucus: Coffee,
+    moderated_debate: MessageSquare,
+    unmoderated_debate: MessageSquare,
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
     suspend_meeting: Timer,
@@ -117,7 +123,7 @@
   let committedMcTotalSec = $state<number | null>(360)
   let mcSpeakerSec = $state<number | null>(60)
   let committedMcSpeakerSec = $state<number | null>(60)
-  // Unmoderated Caucus
+  // 自由磋商 / 有主持的辩论 / 自由辩论（均为总倒计时）
   let ucDurationMin = $state(15)
   let committedUcDurationMin = $state(15)
   // Modify Speaking Time
@@ -186,6 +192,8 @@
         break
       }
       case 'unmoderated_caucus':
+      case 'moderated_debate':
+      case 'unmoderated_debate':
         motionData.durationSec = committedUcDurationMin * 60
         break
       case 'modify_speaking_time':
@@ -215,6 +223,8 @@
         if (
           selectedType === 'moderated_caucus' ||
           selectedType === 'unmoderated_caucus' ||
+          selectedType === 'moderated_debate' ||
+          selectedType === 'unmoderated_debate' ||
           selectedType === 'individual_speech'
         ) {
           import('$lib/classes/stores/conference/conference-store').then(({ startCaucus }) => {
@@ -249,6 +259,8 @@
           mcSpeakerSec !== committedMcSpeakerSec
         )
       case 'unmoderated_caucus':
+      case 'moderated_debate':
+      case 'unmoderated_debate':
         return ucDurationMin !== committedUcDurationMin
       case 'individual_speech':
         return isDurationSec !== committedIsDurationSec
@@ -291,7 +303,9 @@
       totalTimeSec:
         selectedType === 'moderated_caucus'
           ? (committedMcTotalSec ?? undefined)
-          : selectedType === 'unmoderated_caucus'
+          : selectedType === 'unmoderated_caucus' ||
+              selectedType === 'moderated_debate' ||
+              selectedType === 'unmoderated_debate'
             ? committedUcDurationMin * 60
             : selectedType === 'individual_speech'
               ? committedIsDurationSec
@@ -423,7 +437,7 @@
               </div>
             {/if}
           </div>
-        {:else if selectedType === 'unmoderated_caucus'}
+        {:else if selectedType === 'unmoderated_caucus' || selectedType === 'moderated_debate' || selectedType === 'unmoderated_debate'}
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
             <Input

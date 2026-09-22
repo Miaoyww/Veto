@@ -518,9 +518,12 @@ export function buildDisplayData(
                 ? (displayMotion as any).totalTimeSec
                 : displayMotion.type === 'unmoderated_caucus'
                   ? (displayMotion as any).durationSec
-                  : displayMotion.type === 'individual_speech'
+                  : displayMotion.type === 'moderated_debate' ||
+                      displayMotion.type === 'unmoderated_debate'
                     ? (displayMotion as any).durationSec
-                    : undefined,
+                    : displayMotion.type === 'individual_speech'
+                      ? (displayMotion as any).durationSec
+                      : undefined,
             speakingTimePerPersonSec:
               displayMotion.type === 'moderated_caucus'
                 ? (displayMotion as any).speakingTimePerPersonSec

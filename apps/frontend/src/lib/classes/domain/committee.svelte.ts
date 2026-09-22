@@ -687,6 +687,8 @@ export class Committee {
         this.executeModeratedCaucusMotion(motion)
         break
       case 'unmoderated_caucus':
+      case 'moderated_debate':
+      case 'unmoderated_debate':
         this.startCaucusImpl(motion.id)
         break
       case 'suspend_meeting':
@@ -866,6 +868,12 @@ export class Committee {
     } else if (motion.type === 'unmoderated_caucus') {
       caucusType = 'unmoderated'
       totalSec = (motion as any).durationSec
+    } else if (motion.type === 'moderated_debate') {
+      caucusType = 'moderated_debate'
+      totalSec = (motion as any).durationSec
+    } else if (motion.type === 'unmoderated_debate') {
+      caucusType = 'unmoderated_debate'
+      totalSec = (motion as any).durationSec
     } else if (motion.type === 'individual_speech') {
       caucusType = 'individual'
       totalSec = (motion as any).durationSec
@@ -879,10 +887,19 @@ export class Committee {
         ? '有主持核心磋商'
         : caucusType === 'individual'
           ? '个人演讲'
-          : '自由磋商'
+          : caucusType === 'moderated_debate'
+            ? '有主持的辩论'
+            : caucusType === 'unmoderated_debate'
+              ? '自由辩论'
+              : '自由磋商'
     const eventType = caucusType === 'individual' ? 'individual_speech_started' : 'caucus_started'
     this.addConferenceEntry(eventType, `${label}开始${topic ? ': ' + topic : ''}`, { motionId })
-    this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
+    this.addConferenceEntry(
+      'phase_changed',
+      caucusType === 'moderated_debate' || caucusType === 'unmoderated_debate'
+        ? `进入阶段: ${label}`
+        : '进入阶段: 磋商'
+    )
     this.touch()
   }
 
@@ -1197,7 +1214,14 @@ export class Committee {
     this.activeCaucus = null
     const eventType =
       caucusType === 'individual' ? 'individual_speech_ended' : 'caucus_ended'
-    const label = caucusType === 'individual' ? '个人演讲结束' : '磋商结束'
+    const label =
+      caucusType === 'individual'
+        ? '个人演讲结束'
+        : caucusType === 'moderated_debate'
+          ? '有主持的辩论结束'
+          : caucusType === 'unmoderated_debate'
+            ? '自由辩论结束'
+            : '磋商结束'
     this.addConferenceEntry(eventType, label)
     this.addConferenceEntry('phase_changed', '进入阶段: 一般性辩论')
     this.touch()
@@ -1382,19 +1406,30 @@ export class Committee {
               newActiveSpeaker = null
               newActiveCaucus = null
               this.addConferenceEntry('phase_changed', '进入阶段: 投票表决')
-            } else if (motion.type === 'unmoderated_caucus') {
+            } else if (
+              motion.type === 'unmoderated_caucus' ||
+              motion.type === 'moderated_debate' ||
+              motion.type === 'unmoderated_debate'
+            ) {
               const durationSec = (motion as any).durationSec as number
+              const caucusType: CaucusType =
+                motion.type === 'moderated_debate'
+                  ? 'moderated_debate'
+                  : motion.type === 'unmoderated_debate'
+                    ? 'unmoderated_debate'
+                    : 'unmoderated'
+              const label = MOTION_LABELS[motion.type]
               newPhase = 'caucus'
               newActiveSpeaker = null
               newActiveCaucus = {
                 motionId: motion.id,
-                type: 'unmoderated',
+                type: caucusType,
                 totalSec: durationSec,
                 elapsedSec: 0,
                 paused: false
               }
-              this.addConferenceEntry('caucus_started', '自由磋商开始')
-              this.addConferenceEntry('phase_changed', '进入阶段: 磋商')
+              this.addConferenceEntry('caucus_started', `${label}开始`)
+              this.addConferenceEntry('phase_changed', `进入阶段: ${label}`)
             } else if (motion.type === 'modify_speaking_time') {
               const newTime = (motion as any).newTimeSec as number
               newDefaultSpeakingTimeSec = newTime

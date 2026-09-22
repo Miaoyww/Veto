@@ -89,6 +89,8 @@ export type MotionType =
   | 'open_speakers_list'
   | 'moderated_caucus'
   | 'unmoderated_caucus'
+  | 'moderated_debate'
+  | 'unmoderated_debate'
   | 'modify_speaking_time'
   | 'postpone_resolution'
   | 'resume_resolution'
@@ -124,6 +126,16 @@ export interface ModeratedCaucusMotion extends AbstractMotion {
 
 export interface UnmoderatedCaucusMotion extends AbstractMotion {
   type: 'unmoderated_caucus'
+  durationSec: number
+}
+
+export interface ModeratedDebateMotion extends AbstractMotion {
+  type: 'moderated_debate'
+  durationSec: number
+}
+
+export interface UnmoderatedDebateMotion extends AbstractMotion {
+  type: 'unmoderated_debate'
   durationSec: number
 }
 
@@ -178,6 +190,8 @@ export type Motion =
   | OpenSpeakersListMotion
   | ModeratedCaucusMotion
   | UnmoderatedCaucusMotion
+  | ModeratedDebateMotion
+  | UnmoderatedDebateMotion
   | ModifySpeakingTimeMotion
   | PostponeResolutionMotion
   | ResumeResolutionMotion
@@ -193,6 +207,8 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   open_speakers_list: '开启主发言名单',
   moderated_caucus: '有主持核心磋商',
   unmoderated_caucus: '自由磋商',
+  moderated_debate: '有主持的辩论',
+  unmoderated_debate: '自由辩论',
   modify_speaking_time: '修改发言时间',
   postpone_resolution: '延置决议草案',
   resume_resolution: '恢复决议草案',
@@ -253,7 +269,8 @@ export interface MajorityThresholds {
 }
 
 export type ProposerPosition = 'first' | 'last'
-export type CaucusType = 'moderated' | 'unmoderated' | 'individual'
+export type CaucusType =
+  'moderated' | 'unmoderated' | 'moderated_debate' | 'unmoderated_debate' | 'individual'
 
 export interface Committee {
   id: string

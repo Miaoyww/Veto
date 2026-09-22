@@ -98,4 +98,29 @@ describe('Committee domain aggregate', () => {
       })
     ])
   })
+
+  it.each([
+    ['moderated_debate', 'moderated_debate'],
+    ['unmoderated_debate', 'unmoderated_debate']
+  ] as const)('starts %s as a countdown-only debate', (motionType, caucusType) => {
+    const committee = new Committee({ phase: 'general_debate' })
+    const seatId = committee.addSeat('Delegate', 'group-1')
+    const motionId = committee.proposeMotion({
+      type: motionType,
+      proposedBySeatId: seatId,
+      durationSec: 600
+    } as any)
+
+    committee.approveMotion(motionId)
+
+    expect(committee.phase).toBe('caucus')
+    expect(committee.activeCaucus).toMatchObject({
+      motionId,
+      type: caucusType,
+      totalSec: 600,
+      elapsedSec: 0,
+      paused: false
+    })
+    expect(committee.activeCaucus?.caucusSpeakers).toBeUndefined()
+  })
 })

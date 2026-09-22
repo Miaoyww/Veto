@@ -15,6 +15,8 @@ export function resolveMotion(motionType: MotionType): MotionResolution {
     case 'open_speakers_list':
     case 'moderated_caucus':
     case 'unmoderated_caucus':
+    case 'moderated_debate':
+    case 'unmoderated_debate':
     case 'modify_speaking_time':
     case 'resume_resolution':
     case 'reorder_resolution':

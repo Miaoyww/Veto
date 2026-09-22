@@ -93,6 +93,16 @@ describe('chair presentation', () => {
         committeeState({ phase: 'caucus', activeCaucus: { ...base, type: 'individual' } })
       ).screen
     ).toEqual({ kind: 'caucus_countdown', mode: 'individual' })
+    expect(
+      getChairPresentation(
+        committeeState({ phase: 'caucus', activeCaucus: { ...base, type: 'moderated_debate' } })
+      ).screen
+    ).toEqual({ kind: 'caucus_countdown', mode: 'moderated_debate' })
+    expect(
+      getChairPresentation(
+        committeeState({ phase: 'caucus', activeCaucus: { ...base, type: 'unmoderated_debate' } })
+      ).screen
+    ).toEqual({ kind: 'caucus_countdown', mode: 'unmoderated_debate' })
   })
 
   it('surfaces an invalid caucus state instead of treating it as a free caucus', () => {

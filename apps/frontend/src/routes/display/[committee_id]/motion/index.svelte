@@ -37,6 +37,8 @@
     open_speakers_list: Presentation,
     moderated_caucus: MessageSquare,
     unmoderated_caucus: Coffee,
+    moderated_debate: MessageSquare,
+    unmoderated_debate: MessageSquare,
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
     suspend_meeting: Timer,
@@ -60,6 +62,10 @@
         return { title: am?.topic ?? '' }
       case 'unmoderated_caucus':
         return { title: '自由磋商' }
+      case 'moderated_debate':
+        return { title: '有主持的辩论' }
+      case 'unmoderated_debate':
+        return { title: '自由辩论' }
       case 'modify_speaking_time':
         return { title: '修改发言时间' }
       case 'suspend_meeting':
@@ -94,23 +100,29 @@
     </div>
 
     <div class="mt-3 text-3xl tracking-wider text-white/40">
-      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
+      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span>
+       提出
     </div>
 
     {#if activeMotion.type === 'moderated_caucus'}
       <div class="mt-15 space-y-2 text-2xl tracking-wider text-white/25">
         {#if activeMotion.totalTimeSec}
-          <p>总时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span></p>
+          <p>
+            总时长：
+            <span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
+          </p>
         {/if}
         {#if activeMotion.speakingTimePerPersonSec}
           <p>
-            每人发言：<span class="text-white/45">{activeMotion.speakingTimePerPersonSec} 秒</span>
+            每人发言：
+            <span class="text-white/45">{activeMotion.speakingTimePerPersonSec} 秒</span>
           </p>
         {/if}
       </div>
-    {:else if activeMotion.type === 'unmoderated_caucus' && activeMotion.totalTimeSec}
+    {:else if (activeMotion.type === 'unmoderated_caucus' || activeMotion.type === 'moderated_debate' || activeMotion.type === 'unmoderated_debate') && activeMotion.totalTimeSec}
       <div class="mt-5 text-2xl tracking-wider text-white/25">
-        时长：<span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
+        时长：
+        <span class="text-white/45">{activeMotion.totalTimeSec} 秒</span>
       </div>
     {:else if activeMotion.type === 'modify_speaking_time' && activeMotion.newTimeSec != null}
       <div class="mt-5 text-2xl tracking-wider text-white/25">
@@ -140,7 +152,8 @@
       />
     </div>
     <div class="mt-3 text-3xl tracking-wider text-white/40">
-      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span> 提出
+      由 <span class="text-white/70">{activeMotion.proposedBy?.name}</span>
+       提出
     </div>
   {/if}
 </DisplayPage>

@@ -42,6 +42,8 @@
     open_speakers_list: Presentation,
     moderated_caucus: MessageSquare,
     unmoderated_caucus: Coffee,
+    moderated_debate: MessageSquare,
+    unmoderated_debate: MessageSquare,
     modify_speaking_time: Pencil,
     closure_debate: Gavel,
     suspend_meeting: Timer,
@@ -153,7 +155,7 @@
                   人
                 </p>
               </div>
-            {:else if pendingMotion.type === 'unmoderated_caucus'}
+            {:else if pendingMotion.type === 'unmoderated_caucus' || pendingMotion.type === 'moderated_debate' || pendingMotion.type === 'unmoderated_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
                 时长 {(pendingMotion as any).durationSec / 60} 分钟
               </div>

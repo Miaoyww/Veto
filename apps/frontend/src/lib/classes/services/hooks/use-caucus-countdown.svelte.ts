@@ -1,10 +1,10 @@
 /**
  * use-caucus-countdown.svelte.ts
  * ──────────────────────────────────────────────
- * 自由磋商 / 个人演讲的总倒计时 composable。
+ * 自由磋商 / 辩论 / 个人演讲的总倒计时 composable。
  *
  * 管理 activeCaucus 的总时间倒计时、暂停/恢复、到期处理。
- * 仅在 isCaucus && !isModerated 时启用。
+ * 仅用于不含逐席发言队列的计时阶段。
  */
 
 import { createTimer, getTimer } from '$lib/classes/services/engine/conference-engine'
@@ -12,7 +12,7 @@ import { saveConferencesNow } from '$lib/classes/stores/conference/conference-st
 import type { Committee } from '$lib/classes/domain/committee.svelte'
 
 export interface CaucusCountdownOptions {
-  /** 仅自由磋商（或 individual speech）时启用 */
+  /** 仅自由磋商、辩论或 individual speech 时启用 */
   enabled: boolean
   /** 唯一 timer ID */
   timerId: string
@@ -27,7 +27,7 @@ export interface CaucusCountdownOptions {
 }
 
 /**
- * 自由磋商 / 个人演讲总倒计时。
+ * 自由磋商 / 辩论 / 个人演讲总倒计时。
  * 管理 activeCaucus 的总时间显示、tick 更新、到期处理。
  */
 export function useCaucusCountdown(opts: CaucusCountdownOptions) {

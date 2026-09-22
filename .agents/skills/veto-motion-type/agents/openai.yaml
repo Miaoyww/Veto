@@ -1,0 +1,4 @@
+interface:
+  display_name: "Veto Motion Type"
+  short_description: "Add Veto committee motion types end to end"
+  default_prompt: "Use $veto-motion-type to add a new committee motion type throughout Veto."

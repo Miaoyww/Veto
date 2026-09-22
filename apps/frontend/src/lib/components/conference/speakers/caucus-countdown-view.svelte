@@ -2,11 +2,11 @@
   /**
    * caucus-countdown-view.svelte
    * ────────────────────────
-   * 自由磋商 / 个人演讲面板 —— 总倒计时 + 暂停/恢复/结束控制。
+   * 自由磋商 / 辩论 / 个人演讲面板 —— 总倒计时 + 暂停/恢复/结束控制。
    */
   import { onDestroy } from 'svelte'
   import { get } from 'svelte/store'
-  import { Timer, Coffee, Mic } from '@lucide/svelte'
+  import { Timer, Coffee, MessageSquare, Mic } from '@lucide/svelte'
   import PanelHeader from '$lib/components/conference/common/panel-header.svelte'
   import { Button } from '$lib/components/ui/button/index.js'
   import { Separator } from '$lib/components/ui/separator/index.js'
@@ -26,11 +26,29 @@
   import { useCaucusCountdown } from '$lib/classes/services/hooks/use-caucus-countdown.svelte'
   import type { Committee } from '$lib/classes/domain/committee.svelte'
 
-  let { mode }: { mode: 'unmoderated' | 'individual' } = $props()
+  let {
+    mode
+  }: {
+    mode: 'unmoderated' | 'moderated_debate' | 'unmoderated_debate' | 'individual'
+  } = $props()
 
   const conf = $derived($currentCommittee)
-  const title = $derived(mode === 'individual' ? '个人演讲' : '自由磋商')
-  const HeaderIcon = $derived(mode === 'individual' ? Mic : Coffee)
+  const title = $derived(
+    mode === 'individual'
+      ? '个人演讲'
+      : mode === 'moderated_debate'
+        ? '有主持的辩论'
+        : mode === 'unmoderated_debate'
+          ? '自由辩论'
+          : '自由磋商'
+  )
+  const HeaderIcon = $derived(
+    mode === 'individual'
+      ? Mic
+      : mode === 'moderated_debate' || mode === 'unmoderated_debate'
+        ? MessageSquare
+        : Coffee
+  )
 
   function getEngine(): Committee | null | undefined {
     return get(currentCommittee)
@@ -139,7 +157,7 @@
         {/if}
         <Button variant="destructive" onclick={endCaucus} class="min-w-[140px] gap-2">
           <Timer size={14} />
-          提前结束磋商
+          提前结束{title}
         </Button>
       </div>
     </div>
