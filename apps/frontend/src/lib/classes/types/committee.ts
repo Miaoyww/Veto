@@ -131,6 +131,7 @@ export interface UnmoderatedCaucusMotion extends AbstractMotion {
 
 export interface ModeratedDebateMotion extends AbstractMotion {
   type: 'moderated_debate'
+  topic: string
   durationSec: number
 }
 

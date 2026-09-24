@@ -399,7 +399,9 @@ export function buildDisplayData(
       topic: (() => {
         const motion = conf.motions.find((m) => m.id === conf.activeCaucus?.motionId)
         if (!motion) return undefined
-        if (motion.type === 'moderated_caucus') return (motion as any).topic as string | undefined
+        if (motion.type === 'moderated_caucus' || motion.type === 'moderated_debate') {
+          return motion.topic
+        }
         if (motion.type === 'individual_speech') {
           return conf.seats.find((seat) => seat.id === motion.proposedBySeatId)?.name
         }
@@ -509,7 +511,10 @@ export function buildDisplayData(
           return {
             type: displayMotion.type,
             topic:
-              displayMotion.type === 'moderated_caucus' ? (displayMotion as any).topic : undefined,
+              displayMotion.type === 'moderated_caucus' ||
+              displayMotion.type === 'moderated_debate'
+                ? displayMotion.topic
+                : undefined,
             status: displayMotion.status,
             proposedBy,
             motionId: displayMotion.id,

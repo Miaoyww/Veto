@@ -632,7 +632,9 @@ export class Committee {
     const motionLabel =
       motion.type === 'moderated_caucus'
         ? `有主持核心磋商: ${(motion as any).topic}`
-        : MOTION_LABELS[motion.type] ?? motion.type
+        : motion.type === 'moderated_debate'
+          ? `有主持的辩论: ${motion.topic}`
+          : MOTION_LABELS[motion.type] ?? motion.type
     const proposer = this.getSeat(motion.proposedBySeatId)
     this.addConferenceEntry('motion_proposed', `${proposer?.name ?? motion.proposedBySeatId} 提出动议: ${motionLabel}`, {
       seatId: motion.proposedBySeatId,
@@ -649,7 +651,9 @@ export class Committee {
     const motionLabel =
       motion.type === 'moderated_caucus'
         ? `有主持核心磋商: ${(motion as any).topic}`
-        : MOTION_LABELS[motion.type] ?? motion.type
+        : motion.type === 'moderated_debate'
+          ? `有主持的辩论: ${motion.topic}`
+          : MOTION_LABELS[motion.type] ?? motion.type
 
     this.motions = this.motions.map((m) =>
       m.id === motionId ? { ...m, status: 'approved' as const } : m
@@ -664,7 +668,9 @@ export class Committee {
     const motionLabel = motion
       ? motion.type === 'moderated_caucus'
         ? `有主持核心磋商: ${(motion as any).topic}`
-        : MOTION_LABELS[motion.type] ?? motion.type
+        : motion.type === 'moderated_debate'
+          ? `有主持的辩论: ${motion.topic}`
+          : MOTION_LABELS[motion.type] ?? motion.type
       : motionId
 
     this.motions = this.motions.map((m) =>
@@ -878,6 +884,7 @@ export class Committee {
     } else if (motion.type === 'moderated_debate') {
       caucusType = 'moderated_debate'
       totalSec = (motion as any).durationSec
+      topic = motion.topic
     } else if (motion.type === 'unmoderated_debate') {
       caucusType = 'unmoderated_debate'
       totalSec = (motion as any).durationSec
@@ -1418,6 +1425,7 @@ export class Committee {
                     ? 'unmoderated_debate'
                     : 'unmoderated'
               const label = MOTION_LABELS[motion.type]
+              const topic = motion.type === 'moderated_debate' ? motion.topic : undefined
               newPhase = 'caucus'
               newActiveSpeaker = null
               newActiveCaucus = {
@@ -1427,7 +1435,7 @@ export class Committee {
                 elapsedSec: 0,
                 paused: false
               }
-              this.addConferenceEntry('caucus_started', `${label}开始`)
+              this.addConferenceEntry('caucus_started', `${label}开始${topic ? ': ' + topic : ''}`)
               this.addConferenceEntry('phase_changed', `进入阶段: ${label}`)
             } else if (motion.type === 'modify_speaking_time') {
               const newTime = (motion as any).newTimeSec as number

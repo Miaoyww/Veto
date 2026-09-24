@@ -123,6 +123,9 @@
   let committedMcTotalSec = $state<number | null>(360)
   let mcSpeakerSec = $state<number | null>(60)
   let committedMcSpeakerSec = $state<number | null>(60)
+  // Moderated Debate
+  let mdTopic = $state('')
+  let committedMdTopic = $state('')
   // 自由磋商 / 有主持的辩论 / 自由辩论（均为总倒计时）
   let ucDurationMin = $state(15)
   let committedUcDurationMin = $state(15)
@@ -150,6 +153,8 @@
     committedMcTotalSec = 360
     mcSpeakerSec = 60
     committedMcSpeakerSec = 60
+    mdTopic = ''
+    committedMdTopic = ''
     ucDurationMin = 15
     committedUcDurationMin = 15
     newTimeSec = 90
@@ -191,8 +196,11 @@
         motionData.maxSpeakers = calcMaxSpeakers(total, perSpeaker)
         break
       }
-      case 'unmoderated_caucus':
       case 'moderated_debate':
+        motionData.topic = committedMdTopic.trim()
+        motionData.durationSec = committedUcDurationMin * 60
+        break
+      case 'unmoderated_caucus':
       case 'unmoderated_debate':
         motionData.durationSec = committedUcDurationMin * 60
         break
@@ -259,9 +267,10 @@
           mcSpeakerSec !== committedMcSpeakerSec
         )
       case 'unmoderated_caucus':
-      case 'moderated_debate':
       case 'unmoderated_debate':
         return ucDurationMin !== committedUcDurationMin
+      case 'moderated_debate':
+        return mdTopic !== committedMdTopic || ucDurationMin !== committedUcDurationMin
       case 'individual_speech':
         return isDurationSec !== committedIsDurationSec
       case 'modify_speaking_time':
@@ -280,6 +289,7 @@
       selectedProposer !== null &&
       !isDirty &&
       (selectedType !== 'substantive_vote' || committedDocumentName.trim() !== '') &&
+      (selectedType !== 'moderated_debate' || committedMdTopic.trim() !== '') &&
       (selectedType !== 'moderated_caucus' ||
         (committedTopic.trim() !== '' &&
           committedMcTotalSec != null &&
@@ -299,7 +309,12 @@
       proposedBy: proposerDel ? toSeatView(proposerDel) : undefined,
       type: selectedType ?? undefined,
       isRequestingVote: selectedType ? resolveMotion(selectedType).requiresVoting : undefined,
-      topic: selectedType === 'moderated_caucus' ? committedTopic.trim() || undefined : undefined,
+      topic:
+        selectedType === 'moderated_caucus'
+          ? committedTopic.trim() || undefined
+          : selectedType === 'moderated_debate'
+            ? committedMdTopic.trim() || undefined
+            : undefined,
       totalTimeSec:
         selectedType === 'moderated_caucus'
           ? (committedMcTotalSec ?? undefined)
@@ -437,7 +452,35 @@
               </div>
             {/if}
           </div>
-        {:else if selectedType === 'unmoderated_caucus' || selectedType === 'moderated_debate' || selectedType === 'unmoderated_debate'}
+        {:else if selectedType === 'moderated_debate'}
+          <Separator />
+          <div class="flex flex-col gap-3">
+            <div>
+              <div class="mb-1.5 flex items-center justify-between">
+                <Label class="text-xs text-muted-foreground">主题</Label>
+                <span class="text-[10px] text-muted-foreground/60">{mdTopic.length}/100</span>
+              </div>
+              <Input
+                bind:value={mdTopic}
+                maxlength={100}
+                class="h-9 text-sm"
+                onblur={() => (committedMdTopic = mdTopic)}
+              />
+            </div>
+            <div>
+              <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
+              <Input
+                type="number"
+                min="1"
+                max="120"
+                bind:value={ucDurationMin}
+                class="h-9 w-32 text-sm"
+                onblur={() => (committedUcDurationMin = ucDurationMin)}
+              />
+              <p class="mt-1 text-[10px] text-muted-foreground">开始后将围绕该主题进行倒计时</p>
+            </div>
+          </div>
+        {:else if selectedType === 'unmoderated_caucus' || selectedType === 'unmoderated_debate'}
           <div>
             <Label class="mb-1.5 block text-xs text-muted-foreground">时长（分钟）</Label>
             <Input

@@ -155,7 +155,17 @@
                   人
                 </p>
               </div>
-            {:else if pendingMotion.type === 'unmoderated_caucus' || pendingMotion.type === 'moderated_debate' || pendingMotion.type === 'unmoderated_debate'}
+            {:else if pendingMotion.type === 'moderated_debate'}
+              <div
+                class="mt-3 rounded-md bg-background/50 px-4 py-2.5 text-sm text-muted-foreground"
+              >
+                <p>
+                  主题：
+                  <span class="font-medium text-foreground">{pendingMotion.topic}</span>
+                </p>
+                <p class="mt-0.5">时长 {pendingMotion.durationSec / 60} 分钟</p>
+              </div>
+            {:else if pendingMotion.type === 'unmoderated_caucus' || pendingMotion.type === 'unmoderated_debate'}
               <div class="mt-3 text-sm text-muted-foreground">
                 时长 {(pendingMotion as any).durationSec / 60} 分钟
               </div>

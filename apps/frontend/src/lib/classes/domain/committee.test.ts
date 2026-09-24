@@ -100,15 +100,20 @@ describe('Committee domain aggregate', () => {
   })
 
   it.each([
-    ['moderated_debate', 'moderated_debate'],
-    ['unmoderated_debate', 'unmoderated_debate']
-  ] as const)('starts %s as a countdown-only debate', (motionType, caucusType) => {
+    {
+      motionType: 'moderated_debate',
+      caucusType: 'moderated_debate',
+      topic: 'Climate security'
+    },
+    { motionType: 'unmoderated_debate', caucusType: 'unmoderated_debate' }
+  ] as const)('starts $motionType as a countdown-only debate', ({ motionType, caucusType, ...params }) => {
     const committee = new Committee({ phase: 'general_debate' })
     const seatId = committee.addSeat('Delegate', 'group-1')
     const motionId = committee.proposeMotion({
       type: motionType,
       proposedBySeatId: seatId,
-      durationSec: 600
+      durationSec: 600,
+      ...params
     } as any)
 
     committee.approveMotion(motionId)
@@ -122,6 +127,10 @@ describe('Committee domain aggregate', () => {
       paused: false
     })
     expect(committee.activeCaucus?.caucusSpeakers).toBeUndefined()
+    if ('topic' in params) {
+      expect(committee.motions.at(-1)).toMatchObject({ topic: params.topic })
+      expect(committee.minutes.at(-2)?.description).toContain(params.topic)
+    }
   })
 
   it('uses the configured majority for substantive voting and preserves it after reload', () => {

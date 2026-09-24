@@ -78,6 +78,16 @@
         colorClass={isPaused ? 'text-[#C9A84C]/50' : 'text-[#C9A84C]'}
       />
 
+      {#if caucusTimer.type === 'moderated_debate' && caucusTimer.topic}
+        <div
+          class="max-w-5xl text-center text-3xl font-medium tracking-[0.05em] {isPaused
+            ? 'text-white/30'
+            : 'text-white/70'}"
+        >
+          {caucusTimer.topic}
+        </div>
+      {/if}
+
       <div
         class="font-mono text-[120px] font-light tabular-nums leading-none tracking-tight {isPaused
           ? 'text-[#C9A84C]/50'

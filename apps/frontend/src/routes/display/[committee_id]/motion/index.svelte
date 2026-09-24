@@ -63,7 +63,7 @@
       case 'unmoderated_caucus':
         return { title: '自由磋商' }
       case 'moderated_debate':
-        return { title: '有主持的辩论' }
+        return { title: am?.topic ?? '有主持的辩论' }
       case 'unmoderated_debate':
         return { title: '自由辩论' }
       case 'modify_speaking_time':

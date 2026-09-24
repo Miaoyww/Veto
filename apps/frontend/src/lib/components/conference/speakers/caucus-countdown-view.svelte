@@ -49,6 +49,11 @@
         ? MessageSquare
         : Coffee
   )
+  const topic = $derived.by(() => {
+    if (mode !== 'moderated_debate' || !conf?.activeCaucus) return undefined
+    const motion = conf.motions.find((item) => item.id === conf.activeCaucus?.motionId)
+    return motion?.type === 'moderated_debate' ? motion.topic : undefined
+  })
 
   function getEngine(): Committee | null | undefined {
     return get(currentCommittee)
@@ -109,6 +114,10 @@
   {#if conf}
     <div class="flex flex-col items-center gap-6">
       <PanelHeader icon={HeaderIcon} {title} />
+
+      {#if topic}
+        <p class="max-w-2xl text-center text-lg font-medium text-foreground">{topic}</p>
+      {/if}
 
       <div class="text-center">
         {#if caucusCountdown.isCaucusPaused}
