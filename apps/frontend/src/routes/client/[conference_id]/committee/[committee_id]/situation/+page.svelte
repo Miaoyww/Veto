@@ -43,6 +43,7 @@
   let error = $state('')
   let clockNow = $state(Date.now())
   let timelineReceivedAt = $state(Date.now())
+  let loadSequence = 0
 
   const token = $derived(cloudSession.session?.result.token ?? '')
   const identity = $derived(cloudSession.session?.result.identity)
@@ -89,8 +90,11 @@
   }
 
   function validChinaTime(value: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return false
+    const timestamp = parseChinaTime(value)
     return (
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) && Number.isSafeInteger(parseChinaTime(value))
+      Number.isSafeInteger(timestamp) &&
+      new Date(timestamp + 8 * 60 * 60 * 1000).toISOString().slice(0, 16) === value
     )
   }
 
@@ -99,26 +103,29 @@
   }
 
   async function load(silent = false): Promise<void> {
+    if (controlling) return
     if (!token) {
       loading = false
       return
     }
+    const sequence = ++loadSequence
     if (!silent) loading = true
     try {
       const [situationResult, timelineResult] = await Promise.all([
         canView ? listCloudSituations(token) : Promise.resolve(null),
         canSeeTimeline ? getCloudTimeline(token) : Promise.resolve(null)
       ])
-      if (token !== cloudSession.session?.result.token) return
+      if (sequence !== loadSequence || token !== cloudSession.session?.result.token) return
       situations = situationResult?.situations ?? []
       timezone = situationResult?.timezone ?? timelineResult?.timezone ?? 'Asia/Shanghai'
       timeline = timelineResult?.timeline ?? null
       timelineReceivedAt = Date.now()
       error = ''
     } catch (caught) {
+      if (sequence !== loadSequence) return
       error = caught instanceof CloudSituationError ? caught.message : '加载局势失败'
     } finally {
-      loading = false
+      if (sequence === loadSequence) loading = false
     }
   }
 
@@ -175,8 +182,11 @@
       | { action: 'set_ratio'; ratio: number }
       | { action: 'jump'; contentTime: number }
   ): Promise<void> {
-    if (!token || controlling) return
+    if (!token || !canControl || !timeline || controlling) return
+    ++loadSequence
+    loading = false
     controlling = true
+    let conflictMessage = ''
     try {
       const result = await controlCloudTimeline(token, input)
       timeline = result.timeline
@@ -185,9 +195,15 @@
       jumpTime = ''
       error = ''
     } catch (caught) {
+      if (caught instanceof CloudSituationError && caught.status === 409)
+        conflictMessage = caught.message
       error = caught instanceof CloudSituationError ? caught.message : '控制时间线失败'
     } finally {
       controlling = false
+    }
+    if (conflictMessage) {
+      await load(true)
+      error = conflictMessage
     }
   }
 
@@ -338,7 +354,7 @@
                   />
                   <Button
                     variant="outline"
-                    disabled={!Number.isInteger(Number(ratioInput)) ||
+                    disabled={!Number.isSafeInteger(Number(ratioInput)) ||
                       Number(ratioInput) < 1 ||
                       controlling}
                     onclick={() => void control({ action: 'set_ratio', ratio: Number(ratioInput) })}
@@ -348,12 +364,12 @@
                 </div>
               </div>
               <div class="space-y-1">
-                <Label for="timeline-jump">跳转时间</Label>
+                <Label for="timeline-jump">跳转时间（UTC+8）</Label>
                 <div class="flex gap-2">
                   <Input id="timeline-jump" type="datetime-local" bind:value={jumpTime} />
                   <Button
                     variant="outline"
-                    disabled={!jumpTime || controlling}
+                    disabled={!validChinaTime(jumpTime) || controlling}
                     onclick={() =>
                       void control({ action: 'jump', contentTime: parseChinaTime(jumpTime) })}
                   >
