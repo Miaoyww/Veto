@@ -189,11 +189,26 @@
           {#if isChair}
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
-                isActive={$page.url.pathname.startsWith(`${committeeRoute}/chair`)}
+                isActive={
+                  $page.url.pathname.startsWith(`${committeeRoute}/chair`) &&
+                  !$page.url.pathname.startsWith(`${committeeRoute}/chair/participants`)
+                }
                 onclick={() => goTo(`${committeeRoute}/chair`)}
               >
                 <Users />
                 <span>主席</span>
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+          {/if}
+
+          {#if canControlConference && !isCloudSession}
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                isActive={$page.url.pathname.startsWith(`${committeeRoute}/chair/participants`)}
+                onclick={() => goTo(`${committeeRoute}/chair/participants`)}
+              >
+                <UserRoundCheck />
+                <span>代表管理</span>
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
           {/if}
@@ -249,25 +264,6 @@
           {#if canControlConference}
             <!-- 代表团列表 -->
             <div class="flex flex-1 flex-col">
-              {#if !isCloudSession}
-                <div class="flex shrink-0 justify-end px-5 pb-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="h-7 gap-1 text-[10px]"
-                    onclick={() =>
-                      goto(
-                        resolve(
-                          `/client/${activeConference.id}/committee/${activeCommittee.id}/chair/participants`
-                        )
-                      )}
-                  >
-                    <UserRoundCheck />
-                    代表管理
-                  </Button>
-                </div>
-              {/if}
-
               {#if cloudSession.chairError}
                 <p class="px-5 pb-3 text-xs text-destructive">{cloudSession.chairError}</p>
               {:else if cloudSession.loadingChairProjection}
