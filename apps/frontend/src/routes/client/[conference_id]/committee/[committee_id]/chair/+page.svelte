@@ -16,6 +16,7 @@
   } from '$lib/classes/clients/conference-display-client'
 
   import { timerDialogOpen } from '$lib/classes/stores/conference/timer-store'
+  import { activeSettingsSection, settingsDialogOpen } from '$lib/classes/stores/app/global-ui-store'
 
   import ChairPhaseView from '$lib/components/conference/chair/chair-phase-view.svelte'
   import { getChairPresentation } from '$lib/classes/utils/committee/chair-presentation'
@@ -26,7 +27,7 @@
 
   import PageTopBar from '$lib/components/conference/common/page-top-bar.svelte'
 
-  import { Gavel, Play, Monitor, HelpCircle, Timer, ScrollText } from '@lucide/svelte'
+  import { Gavel, Play, Monitor, HelpCircle, Timer, ScrollText, Settings } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button/index.js'
 
   const conferenceId = $derived(page.params.conference_id ?? null)
@@ -67,6 +68,20 @@
       showBackButton={false}
     >
       {#snippet actions()}
+        <Button
+          size="sm"
+          variant="outline"
+          class="h-8 gap-1.5 text-xs"
+          title="会议设置"
+          onclick={() => {
+            activeSettingsSection.set('committee')
+            settingsDialogOpen.set(true)
+          }}
+        >
+          <Settings size={12} />
+          会议设置
+        </Button>
+
         <Button
           size="sm"
           variant="outline"

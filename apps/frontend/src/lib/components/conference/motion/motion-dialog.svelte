@@ -481,7 +481,9 @@
                 {/each}
               </datalist>
             {/if}
-            <p class="mt-1 text-[10px] text-muted-foreground">此文件将进入唱名表决（2/3多数）</p>
+            <p class="mt-1 text-[10px] text-muted-foreground">
+              此文件将进入唱名表决（{conf?.substantiveVotingMajority === 'simple_majority' ? '二分之一多数' : '三分之二多数'}）
+            </p>
           </div>
         {:else if selectedType === 'individual_speech'}
           <div>

@@ -34,4 +34,14 @@ describe('committee voting utilities', () => {
     expect(determinePassFail([{ seatId: 'a', vote: 'yes' }, { seatId: 'b', vote: 'no' }], 'simple_majority', seats)).toBe('failed')
     expect(determinePassFail([{ seatId: 'a', vote: 'yes' }, { seatId: 'b', vote: 'yes' }], 'simple_majority', seats)).toBe('passed')
   })
+
+  it('requires three of five votes for a half majority and four for two thirds', () => {
+    const seats = Array.from({ length: 5 }, (_, index) => seat(String(index), 'present'))
+    const ballots = seats.map((voter, index) => ({
+      seatId: voter.id,
+      vote: index < 3 ? 'yes' as const : 'no' as const
+    }))
+    expect(determinePassFail(ballots, 'simple_majority', seats)).toBe('passed')
+    expect(determinePassFail(ballots, 'two_thirds', seats)).toBe('failed')
+  })
 })

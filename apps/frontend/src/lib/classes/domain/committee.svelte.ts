@@ -197,6 +197,7 @@ export class Committee {
 
   // ── 配置 ──
   defaultSpeakingTimeSec: number = $state(120)
+  substantiveVotingMajority: MajorityRule = $state('two_thirds')
 
   // ── 议题 ──
   agenda: AgendaItem[] = $state([])
@@ -241,6 +242,11 @@ export class Committee {
     if (data.name != null) this.name = data.name
     if (data.defaultSpeakingTimeSec != null)
       this.defaultSpeakingTimeSec = data.defaultSpeakingTimeSec
+    if (
+      data.substantiveVotingMajority === 'simple_majority' ||
+      data.substantiveVotingMajority === 'two_thirds'
+    )
+      this.substantiveVotingMajority = data.substantiveVotingMajority
     if (data.seats != null) this.seats = data.seats.map(cloneSeat)
     if (data.agenda != null) this.agenda = data.agenda.map((item) => ({ ...item }))
     if (data.phase != null) this.phase = data.phase
@@ -772,11 +778,12 @@ export class Committee {
     if (docName) {
       this.addDocumentName(docName)
     }
+    const majorityRule = this.substantiveVotingMajority
     this.startVotingSession(
       'motion',
       motion.id,
-      'two_thirds',
-      `对「${docName || '未命名文件'}」开始实质性投票 (2/3多数)`
+      majorityRule,
+      `对「${docName || '未命名文件'}」开始实质性投票 (${majorityRule === 'simple_majority' ? '简单多数' : '2/3多数'})`
     )
   }
 
@@ -1355,15 +1362,7 @@ export class Committee {
     }
 
     const { yes, no, abstain } = tallyVotesEngine(session.ballots)
-    // 仅统计拥有投票权的出席代表（排除观察员）
-    const presentCount = this.participantSeats.filter(
-      (seat) => seat.procedure.attendance === 'present' && seat.procedure.hasVotingRights
-    ).length
-    const threshold =
-      session.majorityRule === 'simple_majority'
-        ? Math.floor(presentCount / 2) + 1
-        : Math.ceil((presentCount * 2) / 3)
-    const result: 'passed' | 'failed' = yes >= threshold ? 'passed' : 'failed'
+    const result = determinePassFail(session.ballots, session.majorityRule, this.participantSeats)
 
     const now = Date.now()
 
@@ -1659,6 +1658,7 @@ export class Committee {
       votingSessions: this.votingSessions.map((session) => ({ ...session, ballots: session.ballots.map((ballot) => ({ ...ballot })) })),
       minutes: this.minutes.map((entry) => ({ ...entry })),
       defaultSpeakingTimeSec: this.defaultSpeakingTimeSec,
+      substantiveVotingMajority: this.substantiveVotingMajority,
       caucusSetup: this.caucusSetup,
       activeCaucus: this.activeCaucus
         ? {

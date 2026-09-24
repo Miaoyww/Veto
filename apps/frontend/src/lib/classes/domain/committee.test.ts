@@ -124,6 +124,39 @@ describe('Committee domain aggregate', () => {
     expect(committee.activeCaucus?.caucusSpeakers).toBeUndefined()
   })
 
+  it('uses the configured majority for substantive voting and preserves it after reload', () => {
+    const committee = new Committee({ phase: 'general_debate' })
+    const seatIds = Array.from({ length: 5 }, (_, sortOrder) =>
+      committee.addSeat(`Delegate ${sortOrder}`, 'group-1', undefined, {}, {
+        attendance: 'present',
+        hasVotingRights: true,
+        sortOrder
+      })
+    )
+
+    const legacyData = committee.toJSON()
+    delete legacyData.substantiveVotingMajority
+    expect(Committee.fromJSON(legacyData).substantiveVotingMajority).toBe('two_thirds')
+    committee.substantiveVotingMajority = 'simple_majority'
+    const restored = Committee.fromJSON(committee.toJSON())
+    expect(restored.substantiveVotingMajority).toBe('simple_majority')
+
+    const motionId = restored.proposeMotion({
+      type: 'substantive_vote',
+      proposedBySeatId: seatIds[0],
+      documentName: 'Draft 1.1'
+    } as any)
+    restored.approveMotion(motionId)
+
+    const session = restored.votingSessions.at(-1)!
+    expect(session.majorityRule).toBe('simple_majority')
+    for (const [index, seatId] of seatIds.entries()) {
+      restored.castVote(session.id, seatId, index < 3 ? 'yes' : 'no')
+    }
+    restored.closeVotingSession(session.id)
+    expect(restored.votingSessions.at(-1)?.result).toBe('passed')
+  })
+
   it('resets a closed meeting to the motion-ready phase when resumed', () => {
     const committee = new Committee({ phase: 'general_debate' })
 

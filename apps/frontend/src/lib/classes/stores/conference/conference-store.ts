@@ -80,6 +80,14 @@ export function syncCurrentCommittee(): void {
   if (engine) syncEngine(engine)
 }
 
+/** 更新当前委员会的实质性投票规则并保存到大会记录。 */
+export function setSubstantiveVotingMajority(majorityRule: MajorityRule): void {
+  const engine = getCurrentEngine()
+  if (!engine) return
+  engine.substantiveVotingMajority = majorityRule
+  syncEngine(engine)
+}
+
 // ---- 文件持久化（双重写入：localStorage + 文件）--------------------------
 
 function loadConferencesFromStorage(): Conference[] {

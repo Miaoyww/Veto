@@ -6,7 +6,7 @@
   import GeneralPage from './pages/common/general.svelte'
   import ModsPage from './pages/common/mods.svelte'
   import AboutPage from '../settings/pages/common/about.svelte'
-  import VenuePage from './pages/common/venue.svelte'
+  import CommitteePage from './pages/common/committee.svelte'
 
   import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte'
   import * as Dialog from '$lib/components/ui/dialog'
@@ -19,7 +19,7 @@
 
   let activeSection = $state<Section>('general')
   let electronEnvironment = $state(false)
-  type Section = 'general' | 'mods' | 'venue' | 'about'
+  type Section = 'general' | 'mods' | 'committee' | 'about'
 
   interface NavItem {
     key: Section
@@ -30,7 +30,7 @@
   let NAV_TOP: NavItem[] = $state([
     { key: 'general', label: '常规设置', icon: Settings },
     { key: 'mods', label: '模组设置', icon: Puzzle },
-    { key: 'venue', label: '会场设置', icon: Map }
+    { key: 'committee', label: '会议设置', icon: Map }
   ])
 
   let NAV_BOTTOM: NavItem[] = $state([{ key: 'about', label: '关于', icon: Info }])
@@ -161,7 +161,7 @@
             <div class="p-10">
               {#if activeSection === 'general'}<GeneralPage />{/if}
               {#if activeSection === 'mods' && electronEnvironment}<ModsPage />{/if}
-              {#if activeSection === 'venue'}<VenuePage />{/if}
+              {#if activeSection === 'committee'}<CommitteePage />{/if}
               {#if activeSection === 'about'}<AboutPage />{/if}
             </div>
           </ScrollArea>

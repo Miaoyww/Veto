@@ -288,6 +288,8 @@ export interface Committee {
   votingSessions: VotingSession[]
   minutes: ConferenceEntry[]
   defaultSpeakingTimeSec: number
+  /** 实质性投票的通过门槛；旧会议默认使用 2/3 多数。 */
+  substantiveVotingMajority?: MajorityRule
   caucusSetup?: {
     motionId: string
     proposerPosition: ProposerPosition
