@@ -78,7 +78,7 @@ export default function CommitteeDetailPage(): JSX.Element {
   }, [load])
 
   async function save(): Promise<void> {
-    if (!token || !conference || conference.lifecycle !== "draft" || !committee || isSaving) return
+    if (!token || !conference || conference.lifecycle === "closed" || !committee || isSaving) return
     if (!committee.name.trim()) {
       setError("委员会名称不能为空。")
       return
@@ -134,10 +134,10 @@ export default function CommitteeDetailPage(): JSX.Element {
             返回大会
           </Link>
         </div>
-      ) : conference.lifecycle !== "draft" ? (
+      ) : conference.lifecycle === "closed" ? (
         <div className="mx-auto max-w-xl rounded-xl border bg-muted/30 p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            只有草稿大会可以修改委员会结构。
+            已结束的大会不能修改委员会结构。
           </p>
           <Link
             href={backHref}
@@ -183,6 +183,7 @@ export default function CommitteeDetailPage(): JSX.Element {
                 value={committee}
                 roles={conference.roleTemplates}
                 disabled={isSaving}
+                allowExistingRemoval={conference.lifecycle === "draft"}
                 onChange={setCommittee}
               />
             </CardContent>

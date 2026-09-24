@@ -24,6 +24,7 @@ interface CommitteeSeatTableProps {
   roles: RoleTemplateInput[]
   committeeType: CommitteeType
   disabled?: boolean
+  allowExistingRemoval?: boolean
   onChange: (seats: SeatInput[]) => void
 }
 
@@ -36,6 +37,7 @@ export function CommitteeSeatTable({
   roles,
   committeeType,
   disabled = false,
+  allowExistingRemoval = true,
   onChange,
 }: CommitteeSeatTableProps): JSX.Element {
   const knownSeats = useRef(new Set(seats.map(seatReference)))
@@ -303,7 +305,7 @@ export function CommitteeSeatTable({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      disabled={disabled}
+                      disabled={disabled || (!allowExistingRemoval && Boolean(seat.id))}
                       className={
                         deleteConfirm === reference
                           ? "bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"

@@ -13,7 +13,10 @@
     publishCloudSituation,
     withdrawCloudSituation
   } from '$lib/classes/clients/cloud-situation-client'
-  import type { CloudSituation as SituationUpdate, CloudTimeline as TimelineProjection } from '$lib/classes/clients/cloud-situation-client'
+  import type {
+    CloudSituation as SituationUpdate,
+    CloudTimeline as TimelineProjection
+  } from '$lib/classes/clients/cloud-situation-client'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
@@ -45,22 +48,27 @@
   const identity = $derived(cloudSession.session?.result.identity)
   const canView = $derived(cloudSession.hasCapability('view_situation'))
   const canPublish = $derived(
-    cloudSession.session?.result.committeeType === 'ipc' && cloudSession.hasCapability('publish_situation')
+    cloudSession.session?.result.committeeType === 'ipc' &&
+      cloudSession.hasCapability('publish_situation')
   )
   const canWithdraw = $derived(cloudSession.hasCapability('withdraw_situation'))
   const canControl = $derived(
-    cloudSession.session?.result.committeeType === 'ipc' && cloudSession.hasCapability('control_timeline')
+    cloudSession.session?.result.committeeType === 'ipc' &&
+      cloudSession.hasCapability('control_timeline')
   )
   const canSeeTimeline = $derived(canView || canPublish || canControl)
   const draftKey = $derived(
-    identity ? `veto.situation-draft:${cloudApiBaseUrl}:${identity.conferenceId}:${identity.seatId}` : ''
+    identity
+      ? `veto.situation-draft:${cloudApiBaseUrl}:${identity.conferenceId}:${identity.seatId}`
+      : ''
   )
   const draftPrefix = $derived(
     identity ? `veto.situation-draft:${cloudApiBaseUrl}:${identity.conferenceId}:` : ''
   )
   const currentTimelineTime = $derived(
     timeline
-      ? timeline.currentTime + (timeline.paused ? 0 : (clockNow - timelineReceivedAt) * timeline.ratio)
+      ? timeline.currentTime +
+          (timeline.paused ? 0 : (clockNow - timelineReceivedAt) * timeline.ratio)
       : null
   )
 
@@ -81,8 +89,9 @@
   }
 
   function validChinaTime(value: string): boolean {
-    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) &&
-      Number.isSafeInteger(parseChinaTime(value))
+    return (
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) && Number.isSafeInteger(parseChinaTime(value))
+    )
   }
 
   function markdown(value: string): string {
@@ -138,7 +147,15 @@
 
   async function withdraw(item: SituationUpdate): Promise<void> {
     const reason = withdrawalReason.trim()
-    if (!token || !canWithdraw || !reason || reason.length > 500 || withdrawingId !== item.id || withdrawing) return
+    if (
+      !token ||
+      !canWithdraw ||
+      !reason ||
+      reason.length > 500 ||
+      withdrawingId !== item.id ||
+      withdrawing
+    )
+      return
     withdrawing = true
     try {
       await withdrawCloudSituation(token, item.id, reason)
@@ -178,19 +195,33 @@
     if (draftKey) {
       try {
         const saved = JSON.parse(localStorage.getItem(draftKey) ?? 'null') as unknown
-        if (saved && typeof saved === 'object' && 'content' in saved && typeof saved.content === 'string') {
+        if (
+          saved &&
+          typeof saved === 'object' &&
+          'content' in saved &&
+          typeof saved.content === 'string'
+        ) {
           content = saved.content
-          if ('manualTime' in saved && typeof saved.manualTime === 'string') manualTime = saved.manualTime
+          if ('manualTime' in saved && typeof saved.manualTime === 'string')
+            manualTime = saved.manualTime
         }
         for (let index = 0; index < localStorage.length; index += 1) {
           const key = localStorage.key(index)
           if (!key?.startsWith(draftPrefix) || key === draftKey) continue
           const value = JSON.parse(localStorage.getItem(key) ?? 'null') as unknown
-          if (value && typeof value === 'object' && 'content' in value && typeof value.content === 'string') {
+          if (
+            value &&
+            typeof value === 'object' &&
+            'content' in value &&
+            typeof value.content === 'string'
+          ) {
             otherSeatDraft = {
               seatId: key.slice(draftPrefix.length),
               content: value.content,
-              manualTime: 'manualTime' in value && typeof value.manualTime === 'string' ? value.manualTime : ''
+              manualTime:
+                'manualTime' in value && typeof value.manualTime === 'string'
+                  ? value.manualTime
+                  : ''
             }
             break
           }
@@ -238,18 +269,30 @@
   </header>
 
   {#if !token}
-    <Card.Root><Card.Content class="py-10 text-center text-muted-foreground">局势仅在 Cloud Conference 中提供。</Card.Content></Card.Root>
+    <Card.Root>
+      <Card.Content class="py-10 text-center text-muted-foreground">
+        局势仅在 Cloud Conference 中提供。
+      </Card.Content>
+    </Card.Root>
   {:else}
-    {#if error}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>{/if}
-    {#if draftError}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{draftError}</p>{/if}
+    {#if error}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        {error}
+      </p>{/if}
+    {#if draftError}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        {draftError}
+      </p>{/if}
     {#if otherSeatDraft}
       <Card.Root>
         <Card.Header>
           <Card.Title>其他席位的本地草稿</Card.Title>
-          <Card.Description>此草稿属于席位 {otherSeatDraft.seatId}，仅供查看和复制。请用原席位重新认证后提交。</Card.Description>
+          <Card.Description>
+            此草稿属于席位 {otherSeatDraft.seatId}，仅供查看和复制。请用原席位重新认证后提交。
+          </Card.Description>
         </Card.Header>
         <Card.Content class="space-y-3">
-          {#if otherSeatDraft.manualTime}<p class="text-sm text-muted-foreground">内容时间：{otherSeatDraft.manualTime}（UTC+8）</p>{/if}
+          {#if otherSeatDraft.manualTime}<p class="text-sm text-muted-foreground">
+              内容时间：{otherSeatDraft.manualTime}（UTC+8）
+            </p>{/if}
           <Textarea readonly rows={6} value={otherSeatDraft.content} />
         </Card.Content>
       </Card.Root>
@@ -261,32 +304,61 @@
           <div class="flex items-center justify-between gap-3">
             <div>
               <Card.Title class="flex items-center gap-2"><Clock3 />{timeline.name}</Card.Title>
-              <Card.Description>{timeline.paused ? '已暂停' : `${timeline.ratio}x 运行中`}</Card.Description>
+              <Card.Description>
+                {timeline.paused ? '已暂停' : `${timeline.ratio}x 运行中`}
+              </Card.Description>
             </div>
-            <Badge variant={timeline.paused ? 'secondary' : 'default'}>{timeline.paused ? '暂停' : '运行'}</Badge>
+            <Badge variant={timeline.paused ? 'secondary' : 'default'}>
+              {timeline.paused ? '暂停' : '运行'}
+            </Badge>
           </div>
         </Card.Header>
         <Card.Content class="space-y-4">
-          <p class="font-mono text-3xl font-semibold">{formatTime(currentTimelineTime ?? timeline.currentTime)}</p>
+          <p class="font-mono text-3xl font-semibold">
+            {formatTime(currentTimelineTime ?? timeline.currentTime)}
+          </p>
           {#if canControl}
             <div class="flex flex-wrap items-end gap-2 border-t pt-4">
-              <Button disabled={controlling} onclick={() => void control({ action: timeline?.paused ? 'resume' : 'pause' })}>
+              <Button
+                disabled={controlling}
+                onclick={() => void control({ action: timeline?.paused ? 'resume' : 'pause' })}
+              >
                 {#if timeline.paused}<Play />启动{:else}<Pause />暂停{/if}
               </Button>
               <div class="space-y-1">
                 <Label for="timeline-ratio">正整数倍率</Label>
                 <div class="flex gap-2">
-                  <Input id="timeline-ratio" class="w-32" type="number" min="1" step="1" bind:value={ratioInput} />
-                  <Button variant="outline" disabled={!Number.isInteger(Number(ratioInput)) || Number(ratioInput) < 1 || controlling}
-                    onclick={() => void control({ action: 'set_ratio', ratio: Number(ratioInput) })}>应用</Button>
+                  <Input
+                    id="timeline-ratio"
+                    class="w-32"
+                    type="number"
+                    min="1"
+                    step="1"
+                    bind:value={ratioInput}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={!Number.isInteger(Number(ratioInput)) ||
+                      Number(ratioInput) < 1 ||
+                      controlling}
+                    onclick={() => void control({ action: 'set_ratio', ratio: Number(ratioInput) })}
+                  >
+                    应用
+                  </Button>
                 </div>
               </div>
               <div class="space-y-1">
                 <Label for="timeline-jump">跳转时间</Label>
                 <div class="flex gap-2">
                   <Input id="timeline-jump" type="datetime-local" bind:value={jumpTime} />
-                  <Button variant="outline" disabled={!jumpTime || controlling}
-                    onclick={() => void control({ action: 'jump', contentTime: parseChinaTime(jumpTime) })}><SkipForward />跳转</Button>
+                  <Button
+                    variant="outline"
+                    disabled={!jumpTime || controlling}
+                    onclick={() =>
+                      void control({ action: 'jump', contentTime: parseChinaTime(jumpTime) })}
+                  >
+                    <SkipForward />跳转
+                  </Button>
                 </div>
               </div>
             </div>
@@ -297,59 +369,158 @@
 
     {#if canPublish}
       <Card.Root>
-        <Card.Header><Card.Title>发布局势更新</Card.Title><Card.Description>正文支持 Markdown，草稿保存在本机；发布后不可修改。</Card.Description></Card.Header>
+        <Card.Header>
+          <Card.Title>发布局势更新</Card.Title><Card.Description>
+            正文支持 Markdown，草稿保存在本机；发布后不可修改。
+          </Card.Description>
+        </Card.Header>
         <Card.Content class="space-y-4">
           {#if !timeline}
-            <div class="space-y-1.5"><Label for="content-time">内容时间（UTC+8）</Label><Input id="content-time" type="datetime-local" bind:value={manualTime} /></div>
+            <div class="space-y-1.5">
+              <Label for="content-time">内容时间（UTC+8）</Label><Input
+                id="content-time"
+                type="datetime-local"
+                bind:value={manualTime}
+              />
+            </div>
           {:else}
             <p class="text-sm text-muted-foreground">内容时间将取发布瞬间的大会时间线时间。</p>
           {/if}
-          <div class="space-y-1.5"><Label for="situation-content">正文</Label><Textarea id="situation-content" rows={8} maxlength={20000} bind:value={content} placeholder="输入 Markdown 正文…" /></div>
-          <div class="flex justify-end"><Button disabled={!content.trim() || content.trim().length > 20000 || (!timeline && !validChinaTime(manualTime)) || submitting || loading} onclick={() => void publish()}><Send />{submitting ? '发布中…' : '立即发布'}</Button></div>
+          <div class="space-y-1.5">
+            <Label for="situation-content">正文</Label><Textarea
+              id="situation-content"
+              rows={8}
+              maxlength={20000}
+              bind:value={content}
+              placeholder="输入 Markdown 正文…"
+            />
+          </div>
+          <div class="flex justify-end">
+            <Button
+              disabled={!content.trim() ||
+                content.trim().length > 20000 ||
+                (!timeline && !validChinaTime(manualTime)) ||
+                submitting ||
+                loading}
+              onclick={() => void publish()}
+            >
+              <Send />{submitting ? '发布中…' : '立即发布'}
+            </Button>
+          </div>
         </Card.Content>
       </Card.Root>
     {/if}
 
     {#if canView}<section class="space-y-3">
-      <div class="flex items-center justify-between"><h2 class="font-semibold">已发布局势</h2><span class="text-xs text-muted-foreground">{situations.length} 条</span></div>
-      {#if loading}
-        <p class="py-10 text-center text-sm text-muted-foreground">正在加载…</p>
-      {:else if situations.length === 0}
-        <Card.Root><Card.Content class="py-10 text-center text-muted-foreground">暂无局势更新</Card.Content></Card.Root>
-      {:else}
-        {#each situations as item (item.id)}
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">已发布局势</h2>
+          <span class="text-xs text-muted-foreground">{situations.length} 条</span>
+        </div>
+        {#if loading}
+          <p class="py-10 text-center text-sm text-muted-foreground">正在加载…</p>
+        {:else if situations.length === 0}
           <Card.Root>
-            <Card.Header>
-              <div class="flex items-start justify-between gap-4">
-                <div><Card.Title class="font-mono text-base">{formatTime(item.contentTime)}</Card.Title><Card.Description>{item.author?.committeeName} · {item.author?.seatName}{item.author?.role ? ` · ${item.author.role}` : ''}</Card.Description></div>
-                {#if canWithdraw}<Button variant="destructive" size="sm" disabled={withdrawingId !== null || withdrawing} onclick={() => { withdrawingId = item.id; withdrawalReason = '' }}>撤回</Button>{/if}
-              </div>
-            </Card.Header>
-            <Card.Content class="space-y-4">
-              <article class="markdown-body text-sm leading-7">{@html markdown(item.content)}</article>
-              {#if withdrawingId === item.id}
-                <div class="space-y-2 border-t pt-4">
-                  <Label for={`withdraw-${item.id}`}>撤回原因（必填，最多 500 字）</Label>
-                  <Textarea id={`withdraw-${item.id}`} rows={3} maxlength={500} bind:value={withdrawalReason} />
-                  <div class="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" disabled={withdrawing} onclick={() => { withdrawingId = null; withdrawalReason = '' }}>取消</Button>
-                    <Button variant="destructive" size="sm" disabled={!withdrawalReason.trim() || withdrawalReason.trim().length > 500 || withdrawing} onclick={() => void withdraw(item)}>{withdrawing ? '撤回中…' : '确认撤回'}</Button>
-                  </div>
-                </div>
-              {/if}
+            <Card.Content class="py-10 text-center text-muted-foreground">
+              暂无局势更新
             </Card.Content>
           </Card.Root>
-        {/each}
-      {/if}
-    </section>{/if}
+        {:else}
+          {#each situations as item (item.id)}
+            <Card.Root>
+              <Card.Header>
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <Card.Title class="font-mono text-base">
+                      {formatTime(item.contentTime)}
+                    </Card.Title><Card.Description>
+                      {item.author?.committeeName} · {item.author?.seatName}{item.author?.role
+                        ? ` · ${item.author.role}`
+                        : ''}
+                    </Card.Description>
+                  </div>
+                  {#if canWithdraw}<Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={withdrawingId !== null || withdrawing}
+                      onclick={() => {
+                        withdrawingId = item.id
+                        withdrawalReason = ''
+                      }}
+                    >
+                      撤回
+                    </Button>{/if}
+                </div>
+              </Card.Header>
+              <Card.Content class="space-y-4">
+                <article class="markdown-body text-sm leading-7">
+                  {@html markdown(item.content)}
+                </article>
+                {#if withdrawingId === item.id}
+                  <div class="space-y-2 border-t pt-4">
+                    <Label for={`withdraw-${item.id}`}>撤回原因（必填，最多 500 字）</Label>
+                    <Textarea
+                      id={`withdraw-${item.id}`}
+                      rows={3}
+                      maxlength={500}
+                      bind:value={withdrawalReason}
+                    />
+                    <div class="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={withdrawing}
+                        onclick={() => {
+                          withdrawingId = null
+                          withdrawalReason = ''
+                        }}
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={!withdrawalReason.trim() ||
+                          withdrawalReason.trim().length > 500 ||
+                          withdrawing}
+                        onclick={() => void withdraw(item)}
+                      >
+                        {withdrawing ? '撤回中…' : '确认撤回'}
+                      </Button>
+                    </div>
+                  </div>
+                {/if}
+              </Card.Content>
+            </Card.Root>
+          {/each}
+        {/if}
+      </section>{/if}
   {/if}
 </div>
 
 <style>
-  :global(.markdown-body p) { margin: 0.5rem 0; }
-  :global(.markdown-body ul), :global(.markdown-body ol) { margin: 0.5rem 0; padding-left: 1.5rem; }
-  :global(.markdown-body ul) { list-style: disc; }
-  :global(.markdown-body ol) { list-style: decimal; }
-  :global(.markdown-body h1), :global(.markdown-body h2), :global(.markdown-body h3) { margin: 1rem 0 0.5rem; font-weight: 650; }
-  :global(.markdown-body code) { border-radius: 0.25rem; background: var(--muted); padding: 0.1rem 0.3rem; }
+  :global(.markdown-body p) {
+    margin: 0.5rem 0;
+  }
+  :global(.markdown-body ul),
+  :global(.markdown-body ol) {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+  :global(.markdown-body ul) {
+    list-style: disc;
+  }
+  :global(.markdown-body ol) {
+    list-style: decimal;
+  }
+  :global(.markdown-body h1),
+  :global(.markdown-body h2),
+  :global(.markdown-body h3) {
+    margin: 1rem 0 0.5rem;
+    font-weight: 650;
+  }
+  :global(.markdown-body code) {
+    border-radius: 0.25rem;
+    background: var(--muted);
+    padding: 0.1rem 0.3rem;
+  }
 </style>

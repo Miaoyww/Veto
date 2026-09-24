@@ -41,7 +41,7 @@ Organizer Account 上的必填归属名称，标识组织者所在的模联、�
 _Avoid_: Organization, Team
 
 **ConferenceLifecycle（大会生命周期）**:
-Cloud Conference 的 `draft → active → closed` 状态流。`draft` 只供组织者配置；`active` 接受席位认证和业务命令；
+Cloud Conference 的 `draft → active → closed` 状态流。`draft` 只供组织者配置；`active` 接受席位认证和业务命令，组织者仍可修改大会信息并新增或修改角色、委员会和席位；
 `closed` 保留查询与审计，不再接受改变共享大会数据的命令。
 _Avoid_: Status, Phase
 
@@ -320,9 +320,9 @@ _Avoid_: Delegations, Members
 （保留，重新定位）
 
 **Timeline (时间线)**:
-Cloud Conference 可选的共享时间模拟实例，每场大会至多一条，由 Organizer Platform 在 `draft` 阶段创建和配置。
+Cloud Conference 可选的共享时间模拟实例，每场大会至多一条，由 Organizer Platform 在 `draft` 阶段决定是否启用。
 Organizer 设置起始模拟时间和默认倍率；大会进入 `active` 后 Timeline 保持暂停，直到 TimelineController 主动启动。
-Organizer 必须在激活大会时明确选择不使用 Timeline 或提供完整配置；进入 `active` 后不得新增、删除 Timeline，也不得修改其起始时间和时区。存在 Timeline 时，News 与 SituationUpdate 使用其模拟时间；不存在时，两者的 ContentTime 由创建者手动填写。
+Organizer 必须在激活大会时明确选择不使用 Timeline 或提供完整配置；进入 `active` 后不得新增或删除 Timeline，但可修改现有 Timeline 的名称、起始时间和倍率。修改起始时间会将当前模拟时间跳转至新时间，倍率立即生效；大会时区暂不可修改。存在 Timeline 时，News 与 SituationUpdate 使用其模拟时间；不存在时，两者的 ContentTime 由创建者手动填写。
 _Avoid_: Clock, Timer, Speed
 
 **TimelineController（时间线控制者）**:

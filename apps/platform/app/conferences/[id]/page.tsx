@@ -117,7 +117,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   }, [load])
 
   async function saveMetadata(): Promise<void> {
-    if (!token || !conference || saving) return
+    if (!token || !conference || conference.lifecycle === "closed" || saving) return
     if (!name.trim()) {
       setError("大会名称不能为空")
       return
@@ -148,7 +148,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   }
 
   async function saveStructure(): Promise<void> {
-    if (!token || !conference || conference.lifecycle !== "draft" || saving) return
+    if (!token || !conference || conference.lifecycle === "closed" || saving) return
     setSaving("structure")
     setError("")
     setFieldErrors([])
@@ -318,12 +318,14 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsList>
 
             <TabsContent value="settings" className="mt-8">
-              {conference.lifecycle === "draft" && token ? (
+              {conference.lifecycle !== "closed" && token ? (
                 <div className="mb-8 space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold">启用大会</h2>
+                    <h2 className="text-xl font-semibold">大会时间</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      大会已创建为草稿。完成结构编辑并保存时间配置后，手动激活大会。
+                      {conference.lifecycle === "draft"
+                        ? "完成结构编辑并保存时间配置后，手动激活大会。"
+                        : "大会运行期间可修改现有时间线，是否使用时间线保持不变。"}
                     </p>
                   </div>
                   <ConferenceSituationWorkspace
@@ -333,6 +335,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                       roleTemplates: conference.roleTemplates,
                       committees: conference.committees,
                     })}
+                    settingsOnly
                     onConferenceChange={setConference}
                     onError={handleError}
                   />
@@ -353,7 +356,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                         id="conference-name"
                         value={name}
                         maxLength={120}
-                        disabled={Boolean(saving)}
+                        disabled={Boolean(saving) || conference.lifecycle === "closed"}
                         onChange={(event) => setName(event.target.value)}
                       />
                     </div>
@@ -363,7 +366,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                         id="conference-description"
                         value={description}
                         maxLength={4000}
-                        disabled={Boolean(saving)}
+                        disabled={Boolean(saving) || conference.lifecycle === "closed"}
                         className={textareaClassName}
                         onChange={(event) => setDescription(event.target.value)}
                       />
@@ -374,7 +377,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                         id="conference-organizer"
                         value={organizer}
                         maxLength={120}
-                        disabled={Boolean(saving)}
+                        disabled={Boolean(saving) || conference.lifecycle === "closed"}
                         onChange={(event) => setOrganizer(event.target.value)}
                       />
                     </div>
@@ -382,7 +385,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                       type="button"
                       size="lg"
                       className="w-full"
-                      disabled={Boolean(saving)}
+                      disabled={Boolean(saving) || conference.lifecycle === "closed"}
                       onClick={() => void saveMetadata()}
                     >
                       {saving === "metadata" ? (
@@ -411,9 +414,9 @@ export default function ConferenceDetailPage(): JSX.Element {
                         大会结构
                       </h2>
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        {conference.lifecycle === "draft"
-                          ? "配置角色权限、委员会与席位。"
-                          : "大会激活后，结构不可修改。"}
+                        {conference.lifecycle === "closed"
+                          ? "已结束的大会不能修改结构。"
+                          : "可新增和修改角色、委员会与席位；活动中的大会保留已有对象。"}
                       </p>
                     </div>
                   </div>
@@ -421,11 +424,12 @@ export default function ConferenceDetailPage(): JSX.Element {
                   <ConferenceStructureEditor
                     value={structure}
                     onChange={setStructure}
-                    disabled={Boolean(saving) || conference.lifecycle !== "draft"}
+                    disabled={Boolean(saving) || conference.lifecycle === "closed"}
+                    allowExistingRemoval={conference.lifecycle === "draft"}
                     conferenceId={conference.id}
                   />
 
-                  {conference.lifecycle === "draft" ? (
+                  {conference.lifecycle !== "closed" ? (
                     <div className="sticky bottom-4 mt-8 flex justify-end rounded-xl border bg-background p-3 shadow-sm">
                       <Button
                         type="button"

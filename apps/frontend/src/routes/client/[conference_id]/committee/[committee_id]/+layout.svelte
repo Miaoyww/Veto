@@ -10,6 +10,7 @@
     Newspaper,
     Plus,
     Puzzle,
+    RefreshCw,
     ScrollText,
     UserRoundCheck,
     Users
@@ -20,6 +21,7 @@
   import GlobalSidebar from '$lib/components/global-sidebar.svelte'
   import BrandSwitcher from '$lib/components/app-sidebar/brand-switcher.svelte'
   import DisplayOnlyDialog from '$lib/components/conference/display-only-dialog.svelte'
+  import DynamicIsland from '$lib/components/dynamic-island.svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Sidebar from '$lib/components/ui/sidebar'
   import { conferences } from '$lib/classes/stores/conference/conference-store'
@@ -33,6 +35,7 @@
     settingsDialogOpen
   } from '$lib/classes/stores/app/global-ui-store'
   import { isElectron } from '$lib/classes/utils/runtime'
+  import { getCloudTimeline, type CloudTimeline } from '$lib/classes/clients/cloud-situation-client'
 
   let { children } = $props()
   let displayOnlyDialogOpen = $state(false)
@@ -77,6 +80,54 @@
     isCloudSession &&
       cloudSession.hasCapability('view_situation', 'publish_situation', 'withdraw_situation', 'control_timeline')
   )
+  const canViewCloudTimeline = $derived(
+    isCloudSession &&
+      cloudSession.hasCapability('view_situation', 'publish_situation', 'control_timeline')
+  )
+  let cloudTimeline = $state<CloudTimeline | null>(null)
+  let cloudTimelineTimezone = $state('Asia/Shanghai')
+  let cloudTimelineReceivedAt = $state(0)
+  let cloudTimelineLoading = $state(false)
+  let cloudTimelineError = $state('')
+  let cloudTimelineRequest = 0
+
+  async function refreshCloudTimeline(token: string): Promise<void> {
+    const request = ++cloudTimelineRequest
+    cloudTimelineLoading = true
+    try {
+      const result = await getCloudTimeline(token)
+      if (request !== cloudTimelineRequest) return
+      cloudTimeline = result.timeline
+      cloudTimelineTimezone = result.timezone
+      cloudTimelineReceivedAt = Date.now()
+      cloudTimelineError = ''
+    } catch (error) {
+      if (request !== cloudTimelineRequest) return
+      cloudTimelineError = error instanceof Error ? error.message : '刷新时间线失败'
+    } finally {
+      if (request === cloudTimelineRequest) cloudTimelineLoading = false
+    }
+  }
+
+  $effect(() => {
+    const token = canViewCloudTimeline ? cloudSession.session?.result.token : undefined
+    if (!token) {
+      cloudTimelineRequest += 1
+      cloudTimeline = null
+      cloudTimelineError = ''
+      cloudTimelineLoading = false
+      return
+    }
+    cloudTimeline = null
+    cloudTimelineReceivedAt = 0
+    cloudTimelineError = ''
+    void refreshCloudTimeline(token)
+    const interval = window.setInterval(() => void refreshCloudTimeline(token), 5000)
+    return () => {
+      window.clearInterval(interval)
+      cloudTimelineRequest += 1
+    }
+  })
   const canViewNews = $derived(
     isCloudSession &&
       cloudSession.hasCapability('view_news', 'draft_news', 'review_news', 'withdraw_news')
@@ -319,6 +370,32 @@
 
     <div class="drag-region h-full flex-1"></div>
 
+    {#if !isCloudSession || canViewCloudTimeline}
+      <div class="pointer-events-none absolute inset-x-0 z-10 flex h-full items-center justify-center gap-1.5">
+        <div class="no-drag pointer-events-auto min-w-0 max-w-[calc(100%_-_10rem)]">
+          <DynamicIsland
+            cloudMode={isCloudSession}
+            {cloudTimeline}
+            cloudTimezone={cloudTimelineTimezone}
+            {cloudTimelineReceivedAt}
+          />
+        </div>
+        {#if canViewCloudTimeline}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            class={`no-drag pointer-events-auto text-muted-foreground hover:text-foreground ${cloudTimelineError ? 'text-destructive' : ''}`}
+            disabled={cloudTimelineLoading}
+            onclick={() => void refreshCloudTimeline(cloudSession.session?.result.token ?? '')}
+            title={cloudTimelineError || '刷新时间线'}
+            aria-label="刷新时间线"
+          >
+            <RefreshCw class={cloudTimelineLoading ? 'animate-spin' : ''} />
+          </Button>
+        {/if}
+      </div>
+    {/if}
+
     <Button
       variant="ghost"
       size="sm"
@@ -350,5 +427,8 @@
 <style>
   .drag-region {
     -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
   }
 </style>

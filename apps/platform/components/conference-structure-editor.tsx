@@ -81,6 +81,7 @@ interface ConferenceStructureEditorProps {
   value: ConferenceStructure
   onChange: (value: ConferenceStructure) => void
   disabled?: boolean
+  allowExistingRemoval?: boolean
   conferenceId?: string
 }
 
@@ -88,6 +89,7 @@ export function ConferenceStructureEditor({
   value,
   onChange,
   disabled = false,
+  allowExistingRemoval = true,
   conferenceId,
 }: ConferenceStructureEditorProps): JSX.Element {
   const [rolesOpen, setRolesOpen] = useState(true)
@@ -264,9 +266,9 @@ export function ConferenceStructureEditor({
                             编辑
                           </Button>
                           <ConfirmDeleteButton
-                            disabled={disabled || inUse}
+                            disabled={disabled || inUse || (!allowExistingRemoval && Boolean(role.id))}
                             disabledLabel={
-                              inUse ? "角色正在被席位使用" : undefined
+                              inUse ? "角色正在被席位使用" : !allowExistingRemoval && role.id ? "活动中的大会不能删除已有角色" : undefined
                             }
                             onConfirm={() => removeRole(roleIndex)}
                           />
@@ -424,7 +426,7 @@ export function ConferenceStructureEditor({
                             </Button>
                           )}
                           <ConfirmDeleteButton
-                            disabled={disabled}
+                            disabled={disabled || (!allowExistingRemoval && Boolean(committee.id))}
                             onConfirm={() => removeCommittee(committeeIndex)}
                           />
                         </div>
@@ -580,6 +582,7 @@ export function ConferenceStructureEditor({
               value={editingCommittee}
               roles={value.roleTemplates}
               disabled={disabled}
+              allowExistingRemoval={allowExistingRemoval}
               onChange={(committee) =>
                 updateCommittee(editingCommitteeIndex, committee)
               }

@@ -1,5 +1,7 @@
+<!-- Hallmark · component scope · inherited workbench theme · pre-emit critique: P4 H4 E4 S4 R5 V4 -->
 <script lang="ts">
-  import { Timer, Plus, Check, Copy, X } from '@lucide/svelte'
+  import { onMount } from 'svelte'
+  import { Clock3, Timer, Plus, Check, Copy, X } from '@lucide/svelte'
   import { Button } from '$lib/components/ui/button'
   import * as Popover from '$lib/components/ui/popover'
   import * as Command from '$lib/components/ui/command'
@@ -7,6 +9,43 @@
   import { formatTime } from '$lib/classes/formatters/time-formater'
   import { timelines } from '$lib/classes/stores/timeline-store'
   import { currentConferenceRecord, bindTimeline } from '$lib/classes/stores/conference/conference-store'
+  import type { CloudTimeline } from '$lib/classes/clients/cloud-situation-client'
+
+  let {
+    cloudMode = false,
+    cloudTimeline = null,
+    cloudTimezone = 'Asia/Shanghai',
+    cloudTimelineReceivedAt = 0
+  }: {
+    cloudMode?: boolean
+    cloudTimeline?: CloudTimeline | null
+    cloudTimezone?: string
+    cloudTimelineReceivedAt?: number
+  } = $props()
+
+  let clockNow = $state(Date.now())
+  onMount(() => {
+    const interval = window.setInterval(() => (clockNow = Date.now()), 1000)
+    return () => window.clearInterval(interval)
+  })
+  const cloudTime = $derived(
+    cloudTimeline
+      ? cloudTimeline.currentTime +
+          (cloudTimeline.paused ? 0 : (clockNow - cloudTimelineReceivedAt) * cloudTimeline.ratio)
+      : null
+  )
+
+  function formatCloudTime(ts: number, short = false): string {
+    return new Intl.DateTimeFormat('zh-CN', {
+      timeZone: cloudTimezone,
+      ...(!short ? { year: 'numeric' as const } : {}),
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(ts)
+  }
 
   // ─── 时间线数据 ──────────────────────────────────────────────────────
 
@@ -22,14 +61,10 @@
   const tlRatio = $derived(tlState?.ratio ?? 1)
   const tlPausedSimTime = $derived(tlState?.pausedSimulationTime)
 
-  let liveSimTime = $state(
-    tlPaused
-      ? (tlPausedSimTime ?? tlSimAnchor)
-      : tlSimAnchor + (Date.now() - tlRealAnchor) * tlRatio
-  )
+  let liveSimTime = $state(0)
 
   $effect(() => {
-    if (tlPaused || !timeline) {
+    if (cloudMode || tlPaused || !timeline) {
       liveSimTime = tlPausedSimTime ?? tlSimAnchor
       return () => {}
     }
@@ -57,7 +92,9 @@
   let copied = $state(false)
 
   async function copySimTime(): Promise<void> {
-    await navigator.clipboard.writeText(formatSimTime(liveSimTime))
+    await navigator.clipboard.writeText(
+      cloudMode && cloudTime !== null ? formatCloudTime(cloudTime) : formatSimTime(liveSimTime)
+    )
     copied = true
     setTimeout(() => (copied = false), 1500)
   }
@@ -79,25 +116,53 @@
 
   // ─── 可见性 ──────────────────────────────────────────────────────────
 
-  const visible = $derived($standaloneTimer != null || timeline != null || timelineItems.length > 0)
+  const visible = $derived(
+    cloudMode || $standaloneTimer != null || timeline != null || timelineItems.length > 0
+  )
 </script>
 
 {#if visible}
-  <div class="flex justify-center px-4 pb-1">
+  <div class="flex min-w-0 justify-center">
     <div
-      class="flex items-center gap-3 rounded-full bg-foreground px-4 py-1.5 text-xs text-background shadow-lg transition-all duration-300"
+      class="flex h-7 min-w-0 items-center gap-2 px-1 text-xs text-foreground"
     >
+      {#if cloudMode}
+        {#if cloudTimeline && cloudTime !== null}
+          <Clock3 class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span class="hidden max-w-24 truncate text-muted-foreground lg:inline" title={cloudTimeline.name}>{cloudTimeline.name}</span>
+          <span class="whitespace-nowrap font-mono font-medium tabular-nums" title={`${cloudTimeline.name} · ${cloudTimeline.paused ? '已暂停' : `${cloudTimeline.ratio}x 运行中`}`}>
+            <span class="sm:hidden">{formatCloudTime(cloudTime, true)}</span>
+            <span class="hidden sm:inline">{formatCloudTime(cloudTime)}</span>
+          </span>
+          <span class="hidden whitespace-nowrap text-muted-foreground lg:inline">
+            {cloudTimeline.paused ? '暂停' : `${cloudTimeline.ratio}x`}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="复制模拟时间"
+            aria-label="复制模拟时间"
+            onclick={copySimTime}
+          >
+            {#if copied}<Check size={11} />{:else}<Copy size={11} />{/if}
+          </Button>
+        {:else}
+          <Clock3 class="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <span class="whitespace-nowrap text-muted-foreground">未配置时间线</span>
+        {/if}
+      {:else}
       {#if $standaloneTimer}
         {@const st = $standaloneTimer}
         {@const expired = !st.isRunning && st.remainingSec <= 0}
         <Button
           variant="ghost"
           size="xs"
-          class="h-auto gap-1 rounded-full px-1.5 py-0 font-mono tabular-nums hover:bg-white/10 {expired
-            ? 'text-red-400'
+          class="h-auto gap-1 px-1.5 py-0 font-mono tabular-nums hover:bg-accent {expired
+            ? 'text-destructive'
             : st.isRunning
-              ? 'text-indigo-300'
-              : 'text-amber-300'}"
+              ? 'text-foreground'
+              : 'text-muted-foreground'}"
           onclick={() => timerDialogOpen.set(true)}
           title={expired
             ? '计时器已到期（点击打开）'
@@ -109,7 +174,7 @@
           <span>{formatTime(st.remainingSec)}</span>
         </Button>
         {#if timeline || timelineItems.length > 0}
-          <span class="h-4 w-px bg-background/20" />
+          <span class="h-4 w-px bg-border"></span>
         {/if}
       {/if}
 
@@ -119,12 +184,12 @@
           <Button
             variant="ghost"
             size="icon-xs"
-            class="size-5 text-background/70 hover:bg-white/10 hover:text-background"
+            class="size-5 text-muted-foreground hover:bg-accent hover:text-foreground"
             title="复制模拟时间"
             onclick={copySimTime}
           >
             {#if copied}
-              <Check size={11} class="text-green-400" />
+              <Check size={11} />
             {:else}
               <Copy size={11} />
             {/if}
@@ -132,7 +197,7 @@
           <Button
             variant="ghost"
             size="icon-xs"
-            class="size-5 text-background/70 hover:bg-white/10 hover:text-red-400"
+            class="size-5 text-muted-foreground hover:bg-accent hover:text-destructive"
             title="解除绑定"
             onclick={handleUnbind}
           >
@@ -146,7 +211,7 @@
               <Button
                 variant="ghost"
                 size="xs"
-                class="h-auto gap-1 rounded-full px-1.5 py-0 text-background/70 hover:bg-white/10 hover:text-background"
+                class="h-auto gap-1 px-1.5 py-0 text-muted-foreground hover:bg-accent hover:text-foreground"
                 {...props}
               >
                 <Plus size={11} />
@@ -170,6 +235,7 @@
             </Command.Root>
           </Popover.Content>
         </Popover.Root>
+      {/if}
       {/if}
     </div>
   </div>

@@ -36,6 +36,7 @@ interface CommitteeFormProps {
   value: CommitteeInput
   roles: RoleTemplateInput[]
   disabled?: boolean
+  allowExistingRemoval?: boolean
   onChange: (value: CommitteeInput) => void
 }
 
@@ -43,6 +44,7 @@ export function CommitteeForm({
   value,
   roles,
   disabled = false,
+  allowExistingRemoval = true,
   onChange,
 }: CommitteeFormProps): JSX.Element {
   const reference = value.id ?? value.clientId ?? "committee"
@@ -190,6 +192,7 @@ export function CommitteeForm({
           roles={roles}
           committeeType={value.type}
           disabled={disabled}
+          allowExistingRemoval={allowExistingRemoval}
           onChange={(seats) => onChange({ ...value, seats })}
         />
       </section>

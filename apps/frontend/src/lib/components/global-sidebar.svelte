@@ -27,7 +27,7 @@
   </Sidebar.Root>
 
   <Sidebar.Inset class="min-h-0 overflow-hidden">
-    <header class="flex h-9 shrink-0 items-center gap-2 pl-4">
+    <header class="relative flex h-9 shrink-0 items-center gap-2 pl-4">
       {@render toolbar?.()}
 
       <WindowControls />
