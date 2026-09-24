@@ -21,9 +21,10 @@ import {
   ConferenceStructureEditor,
   textareaClassName,
 } from "@/components/conference-structure-editor"
-import { ConferenceWorkspacePlaceholder } from "@/components/conference-workspace-placeholder"
 import { ConferenceSituationWorkspace } from "@/components/conference-situation-workspace"
 import { ConferenceDirectiveWorkspace } from "@/components/conference-directive-workspace"
+import { ConferenceNewsWorkspace } from "@/components/conference-news-workspace"
+import { ConferenceFilesWorkspace } from "@/components/conference-files-workspace"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -452,12 +453,12 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsContent>
 
             <TabsContent value="news" className="mt-8">
-              <ConferenceWorkspacePlaceholder
-                icon={Newspaper}
-                title="新闻"
-                description="集中处理大会新闻的起草、审核、发布与撤回。当前云端接口尚未提供新闻数据，工作区先保留稳定的布局入口。"
-                items={["新闻草稿", "待审核内容", "已发布新闻", "撤回记录"]}
-              />
+              {token ? <ConferenceNewsWorkspace
+                token={token}
+                conferenceId={conference.id}
+                lifecycle={conference.lifecycle}
+                onError={handleError}
+              /> : null}
             </TabsContent>
 
             <TabsContent value="directives" className="mt-8">
@@ -487,12 +488,12 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsContent>
 
             <TabsContent value="files" className="mt-8">
-              <ConferenceWorkspacePlaceholder
-                icon={FolderOpen}
-                title="文件"
-                description="统一管理大会材料的上传、分发范围与可见状态。当前云端接口尚未提供文件存储能力。"
-                items={["大会材料", "席位文件", "分发范围", "文件记录"]}
-              />
+              {token ? <ConferenceFilesWorkspace
+                token={token}
+                conferenceId={conference.id}
+                lifecycle={conference.lifecycle}
+                onError={handleError}
+              /> : null}
             </TabsContent>
           </Tabs>
         </div>

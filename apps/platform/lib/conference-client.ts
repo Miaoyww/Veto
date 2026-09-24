@@ -440,6 +440,106 @@ export async function withdrawOrganizerSituation(
   )
 }
 
+export interface OrganizerNews {
+  id: string
+  source: string
+  title: string
+  content: string
+  contentTime: number
+  status: "submitted" | "rejected" | "published" | "withdrawn"
+  revision: number
+  reviewNote?: string
+  publishedAt?: string
+  withdrawnAt?: string
+  withdrawalReason?: string
+  createdAt: string
+  author: { committeeName: string; seatName: string; role?: string }
+}
+
+export async function listOrganizerNews(
+  token: string,
+  id: string,
+  refresh = false
+): Promise<{ ok: true; timezone: string; news: OrganizerNews[] }> {
+  return apiRequest(token, `${conferencePath(id)}/news`, { refreshCache: refresh })
+}
+
+export async function withdrawOrganizerNews(
+  token: string,
+  conferenceId: string,
+  newsId: string,
+  reason: string
+): Promise<void> {
+  await apiRequest(token, `${conferencePath(conferenceId)}/news/${encodeURIComponent(newsId)}/withdraw`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export interface OrganizerFile {
+  id: string
+  sourceCommitteeId: string
+  sourceSeatId: string
+  title: string
+  fileType: string
+  agendaItem?: string
+  fileName: string
+  mimeType: string
+  size: number
+  status: 'published' | 'withdrawn'
+  createdAt: string
+  withdrawnAt?: string
+  withdrawalReason?: string
+  author: { committeeName: string; seatName: string; role?: string }
+}
+
+export async function listOrganizerFiles(
+  token: string,
+  id: string,
+  refresh = false
+): Promise<{ ok: true; files: OrganizerFile[] }> {
+  return apiRequest(token, `${conferencePath(id)}/files`, { refreshCache: refresh })
+}
+
+export async function withdrawOrganizerFile(
+  token: string,
+  conferenceId: string,
+  fileId: string,
+  reason: string
+): Promise<void> {
+  await apiRequest(token, `${conferencePath(conferenceId)}/files/${encodeURIComponent(fileId)}/withdraw`, {
+    method: 'POST', body: JSON.stringify({ reason }),
+  })
+}
+
+export async function downloadOrganizerFile(
+  token: string,
+  conferenceId: string,
+  file: OrganizerFile
+): Promise<void> {
+  if (!apiBaseUrl) throw new ConferenceApiError('API 服务暂未配置')
+  let response: Response
+  try {
+    response = await fetch(new URL(`${conferencePath(conferenceId)}/files/${encodeURIComponent(file.id)}/download`.replace(/^\//, ''), `${apiBaseUrl}/`), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new ConferenceApiError('无法连接大会服务')
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null
+    throw new ConferenceApiError(payload?.error?.message ?? '下载文件失败', { status: response.status })
+  }
+  const url = URL.createObjectURL(await response.blob())
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = file.fileName
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export interface OrganizerDirective {
   id: string
   sourceCommitteeId: string

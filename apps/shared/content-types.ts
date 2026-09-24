@@ -159,18 +159,22 @@ export interface Directive extends ContentRecord {
   idempotencyKey?: string
 }
 
-export type NewsStatus = 'submitted' | 'published' | 'rejected' | 'retracted'
+export type NewsStatus = 'submitted' | 'published' | 'rejected' | 'withdrawn'
 
-export interface News extends ContentRecord {
+export interface News extends Omit<ContentRecord, 'createdAt' | 'updatedAt'> {
   /** News source label, e.g. a wire-service name. */
   source: string
+  contentTime: number
   status: NewsStatus
+  revision: number
+  createdAt: string
+  updatedAt: string
   reviewedBySeatId?: string
-  reviewedAt?: number
+  reviewedAt?: string
   reviewNote?: string
-  publishedAt?: number
-  retractedAt?: number
-  retractionReason?: string
+  publishedAt?: string
+  withdrawnAt?: string
+  withdrawalReason?: string
   /** Durable key supplied by a client to make submission idempotent. */
   idempotencyKey?: string
 }
@@ -203,14 +207,19 @@ export interface SituationUpdate extends Omit<ContentRecord, 'title' | 'content'
   withdrawalReason?: string
 }
 
-/** Files are intentionally represented as a placeholder until that subsystem opens. */
-export interface FileContent extends ContentRecord {
-  status: 'published' | 'retracted'
+export interface FileContent extends ContentOrigin {
+  id: string
+  title: string
+  status: 'published' | 'withdrawn'
+  fileType: string
+  agendaItem?: string
   fileName: string
-  mimeType?: string
-  size?: number
-  retractedAt?: number
-  retractionReason?: string
+  mimeType: string
+  size: number
+  createdAt: string
+  author: ContentAuthorView
+  withdrawnAt?: string
+  withdrawalReason?: string
 }
 
 export type SharedContent = Directive | News | SituationUpdate | FileContent
@@ -231,8 +240,8 @@ export interface UserClientSessionProjection {
   directiveTargets: Array<{ id: string; name: string }>
   /** Available only to a Seat that may publish situations. */
   timelines: TimelineProjection[]
-  /** The user may see that files are not implemented, but receives no files. */
-  filesAvailable: false
+  /** File access is resolved through the Committee-scoped file route. */
+  filesAvailable: boolean
 }
 
 export interface WorkflowAudienceProjection {

@@ -194,17 +194,17 @@ Seat 可执行的操作权限。SeatGroup 设默认值，Seat 级别可覆盖（
 | `publish_situation` | 发布局势更新 |
 | `withdraw_news` | 撤回已发布新闻 |
 | `withdraw_situation` | 撤回已发布局势更新 |
-| `withdraw_files` | 撤回已发布文件（功能随文件系统延期，Capability 保留） |
+| `withdraw_files` | 撤回已发布文件 |
 | `control_conference` | 进入 Chair 模式，并管理该 Seat 所属的 Committee |
 | `control_timeline` | 控制大会 Timeline；仅 IPC Committee 的 Seat 可使用，内置 IPC 角色模板默认具备 |
-| `draft_resolution` | 起草决议（功能随文件系统延期，Capability 保留） |
+| `draft_resolution` | 起草决议（共享决议工作流暂未开放，Capability 保留） |
 
 _Avoid_: Permission, Right, Role
 
 ## ContentAudience（内容受众）
 
 **ContentAudience（内容受众）**:
-Cloud Service 从内容类型和工作流状态推导出的可见主体集合，不是创作者填写的收件人字段，也不支持定向给单一 Seat。第一版已发布 News 与 SituationUpdate 固定广播至整个 Conference；Directive 只使用唯一的 DirectiveTarget；File 的路由规则随文件子系统延期。主体仍须拥有对应查看或工作流 Capability 才能取得其被授权内容；系统不再使用公开、保密或其他密级标签推断可见性。
+Cloud Service 从内容类型和工作流状态推导出的可见主体集合，不是创作者填写的收件人字段，也不支持定向给单一 Seat。已发布 News 与 SituationUpdate 固定广播至整个 Conference；Directive 只使用唯一的 DirectiveTarget；已发布 File 仅对来源 Committee 中拥有 `view_files` 的 Seat 可见。主体仍须拥有对应查看或工作流 Capability 才能取得其被授权内容；系统不再使用公开、保密或其他密级标签推断可见性。
 _Avoid_: Content Scope, Classification, Security Level
 
 **WorkflowAudience（工作流受众）**:
@@ -214,7 +214,7 @@ _Avoid_: General Reader, Global Visibility
 
 **OrganizerModeration（组织者管理）**:
 Organizer Platform 对 Cloud Conference 的特权管理能力：查看全部共享内容、附原因撤回内容、
-释放异常指令认领，以及管理会话与席位访问。第一版不管理 File，也不能创建、修改或代发 Seat 业务内容。
+释放异常指令认领，以及管理会话与席位访问。它不能创建、修改或代发 Seat 业务内容。
 _Avoid_: Host Console, Admin Console
 
 **LocalDraft（本地草稿）**:
@@ -277,7 +277,7 @@ _Avoid_: Event, Update, Intel
 **UserClient（用户端）**:
 以 Seat 身份使用的 Veto 桌面应用，涵盖代表、MPC 与 IPC 等所有用户。它通过邀请码+密码连接 Cloud Service 中的 Cloud Conference，
 也可以在 Offline Mode 中直接主持 Singleton Mode Conference；Offline Mode 只提供本地议程与议事功能。它根据 Seat 的 Capability 执行 Cloud Conference 操作（提交指令、起草新闻等）。
-普通 UserClient 只向 Cloud Service 传输指令、新闻和局势；断开连接时可以保留本地草稿，但不排队或稍后重放任何改变共享大会数据的命令。
+普通 UserClient 向 Cloud Service 传输指令、新闻、局势和文件；断开连接时可以保留本地草稿，但不排队或稍后重放任何改变共享大会数据的命令。
 拥有 `control_conference` Capability 的 UserClient 是 Chair，并有额外的本地议程与 Display 职责。
 _Avoid_: Delegate, Member
 
@@ -307,7 +307,7 @@ _Avoid_: Full Conference Sync, Display Snapshot
 - **Motion (动议)** — 程序性提议，13 种类型
 - **Caucus (磋商)** — moderated / unmoderated / individual
 - **Point (问题)** — 程序性/咨询性/个人特权
-- **DraftResolution (决议草案)** — 起草国+附议国，需表决；与 File 子系统一同延期，第一版不提供共享 UserClient 工作流
+- **DraftResolution (决议草案)** — 起草国+附议国，需表决；共享 UserClient 工作流尚未开放，普通 File 上传不触发决议或表决流程
 - **VotingSession (表决)** — 唱名表决，simple_majority / two_thirds
 - **RollCall (点名)** — 会议出席确认
 
@@ -344,7 +344,7 @@ _Avoid_: War, Scenario, Game
 ## File（文件）
 
 **File (文件)**:
-大会中产出的文档，同时归属 Conference 与 Committee，并至少带有来源委员会、文件类型、可选议程项、作者与创建时间。文件子系统当前不在实现范围内，因而不预设其路由规则；相关 Capability（包括 `withdraw_files`）继续可见、可配置，具备这些 Capability 的 UserClient 显示尚未开放的文件区域。
+大会中由拥有 `send_files` 的 Seat 发布的文档，同时归属 Conference 与来源 Committee，记录文件类型、可选议程项、来源 Seat 与创建时间。已发布文件只向来源 Committee 中拥有 `view_files` 的 Seat 展示和提供下载；同委员会中拥有 `withdraw_files` 的 Seat 可附原因撤回，组织者亦可附原因撤回。撤回后文件不再可下载，权威记录和审计保留。
 _Avoid_: Document, Archive
 
 ## Plugin System（插件系统）
