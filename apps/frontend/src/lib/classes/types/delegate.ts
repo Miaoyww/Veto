@@ -25,6 +25,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   view_situation: '查看全局局势',
   view_news: '查看全局新闻',
   view_files: '查看文件',
+  review_files: '审核文件',
   draft_news: '起草新闻草稿',
   review_news: '审核新闻',
   submit_directive: '提交指令',

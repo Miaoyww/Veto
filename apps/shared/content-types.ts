@@ -16,6 +16,7 @@ export type Capability =
   | 'view_news'
   | 'view_situation'
   | 'view_files'
+  | 'review_files'
   | 'draft_news'
   | 'review_news'
   | 'submit_directive'
@@ -34,6 +35,7 @@ export const CAPABILITIES: readonly Capability[] = [
   'view_news',
   'view_situation',
   'view_files',
+  'review_files',
   'draft_news',
   'review_news',
   'submit_directive',
@@ -53,6 +55,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   view_news: '查看全局新闻',
   view_situation: '查看全局局势',
   view_files: '查看文件',
+  review_files: '审核文件',
   draft_news: '起草新闻草稿',
   review_news: '审核新闻',
   submit_directive: '提交指令',
@@ -210,8 +213,15 @@ export interface SituationUpdate extends Omit<ContentRecord, 'title' | 'content'
 export interface FileContent extends ContentOrigin {
   id: string
   title: string
-  status: 'published' | 'withdrawn'
+  status: 'submitted' | 'published' | 'rejected' | 'cancelled' | 'withdrawn'
   fileType: string
+  requestedVisibility: 'committee' | 'conference'
+  visibility: 'committee' | 'conference'
+  replacesFileId?: string
+  reviewedAt?: string
+  reviewNote?: string
+  publishedAt?: string
+  cancelledAt?: string
   agendaItem?: string
   fileName: string
   mimeType: string
