@@ -14,13 +14,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import {
-  closeConference,
   downloadOrganizerFile,
-  getConference,
   listOrganizerFiles,
   listOrganizerFileTypes,
   withdrawOrganizerFile,
-  type Conference,
   type OrganizerFile,
 } from "@/lib/conference-client"
 
@@ -28,8 +25,6 @@ interface Props {
   token: string
   conferenceId: string
   lifecycle: "draft" | "active" | "closed"
-  version: number
-  onConferenceChange: (conference: Conference) => void
   onError: (error: unknown, fallback: string) => void
 }
 
@@ -37,16 +32,12 @@ export function ConferenceFilesWorkspace({
   token,
   conferenceId,
   lifecycle,
-  version,
-  onConferenceChange,
   onError,
 }: Props) {
   const [files, setFiles] = useState<OrganizerFile[]>([])
-  const [allFiles, setAllFiles] = useState<OrganizerFile[]>([])
   const [fileTypes, setFileTypes] = useState<string[]>([])
   const [selectedType, setSelectedType] = useState("")
   const [loading, setLoading] = useState(false)
-  const [closing, setClosing] = useState(false)
   const [withdrawId, setWithdrawId] = useState<string>()
   const [reason, setReason] = useState("")
   const [busy, setBusy] = useState(false)
@@ -55,9 +46,6 @@ export function ConferenceFilesWorkspace({
   >("createdAt")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const loadSequence = useRef(0)
-  const pendingCount = allFiles.filter(
-    (item) => item.status === "submitted"
-  ).length
 
   const statusLabel: Record<OrganizerFile["status"], string> = {
     submitted: "待审核",
@@ -103,16 +91,17 @@ export function ConferenceFilesWorkspace({
     const sequence = ++loadSequence.current
     setLoading(true)
     try {
-      const [all, selected, types] = await Promise.all([
-        listOrganizerFiles(token, conferenceId, true),
-        selectedType
-          ? listOrganizerFiles(token, conferenceId, true, selectedType)
-          : Promise.resolve(null),
+      const [result, types] = await Promise.all([
+        listOrganizerFiles(
+          token,
+          conferenceId,
+          true,
+          selectedType || undefined
+        ),
         listOrganizerFileTypes(token, conferenceId, true),
       ])
       if (sequence !== loadSequence.current) return
-      setAllFiles(all.files)
-      setFiles(selected?.files ?? all.files)
+      setFiles(result.files)
       setFileTypes(types.fileTypes)
     } catch (error) {
       if (sequence === loadSequence.current) onError(error, "加载文件失败")
@@ -145,27 +134,6 @@ export function ConferenceFilesWorkspace({
       await downloadOrganizerFile(token, conferenceId, item)
     } catch (error) {
       onError(error, "下载文件失败")
-    }
-  }
-
-  async function close(): Promise<void> {
-    if (closing || (lifecycle === "closed" && !pendingCount)) return
-    setClosing(true)
-    try {
-      onConferenceChange(await closeConference(token, conferenceId, version))
-      await load()
-    } catch (error) {
-      onError(error, "结束大会或清理待审文件失败")
-      try {
-        onConferenceChange(
-          await getConference(token, conferenceId, { refresh: true })
-        )
-        await load()
-      } catch {
-        /* The original error remains visible. */
-      }
-    } finally {
-      setClosing(false)
     }
   }
 
@@ -217,24 +185,6 @@ export function ConferenceFilesWorkspace({
           </Button>
         </div>
       </div>
-      {(lifecycle === "active" ||
-        (lifecycle === "closed" && pendingCount > 0)) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-4">
-          <p className="text-sm text-muted-foreground">
-            {lifecycle === "active"
-              ? "结束大会时将直接删除所有待审文件的云端内容，不向提交者发送通知。"
-              : "仍有待审文件需要删除云端内容。"}
-          </p>
-          <Button
-            variant="destructive"
-            disabled={closing || loading}
-            onClick={() => void close()}
-          >
-            {closing && <Loader2 className="animate-spin" />}
-            {lifecycle === "active" ? "结束大会" : "重试清理"}
-          </Button>
-        </div>
-      )}
       <div className="overflow-x-auto rounded-lg border bg-card">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="border-b bg-muted/50 text-left">

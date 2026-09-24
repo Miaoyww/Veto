@@ -25,6 +25,7 @@ import { ConferenceSituationWorkspace } from "@/components/conference-situation-
 import { ConferenceDirectiveWorkspace } from "@/components/conference-directive-workspace"
 import { ConferenceNewsWorkspace } from "@/components/conference-news-workspace"
 import { ConferenceFilesWorkspace } from "@/components/conference-files-workspace"
+import { ConferenceCloseCard } from "@/components/conference-close-card"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -360,74 +361,93 @@ export default function ConferenceDetailPage(): JSX.Element {
                   </div>
                 ) : null}
                 <div className="grid min-w-0 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-                  <Card className="bg-muted/30 shadow-none ring-0 lg:sticky lg:top-6">
-                    <CardHeader>
-                      <CardTitle className="text-lg">基本信息</CardTitle>
-                      <p className="text-sm leading-6 text-muted-foreground">
-                        大会名称、公开说明和主办方信息。
-                      </p>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-5">
-                      <div className="flex flex-col gap-2">
-                        <Label htmlFor="conference-name">大会名称</Label>
-                        <Input
-                          id="conference-name"
-                          value={name}
-                          maxLength={120}
-                          disabled={
-                            Boolean(saving) || conference.lifecycle === "closed"
-                          }
-                          onChange={(event) => setName(event.target.value)}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Label htmlFor="conference-description">大会说明</Label>
-                        <textarea
-                          id="conference-description"
-                          value={description}
-                          maxLength={4000}
-                          disabled={
-                            Boolean(saving) || conference.lifecycle === "closed"
-                          }
-                          className={textareaClassName}
-                          onChange={(event) =>
-                            setDescription(event.target.value)
-                          }
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Label htmlFor="conference-organizer">主办方</Label>
-                        <Input
-                          id="conference-organizer"
-                          value={organizer}
-                          maxLength={120}
-                          disabled={
-                            Boolean(saving) || conference.lifecycle === "closed"
-                          }
-                          onChange={(event) => setOrganizer(event.target.value)}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        size="lg"
-                        className="w-full"
-                        disabled={
-                          Boolean(saving) || conference.lifecycle === "closed"
-                        }
-                        onClick={() => void saveMetadata()}
-                      >
-                        {saving === "metadata" ? (
-                          <Loader2
-                            className="animate-spin"
-                            aria-hidden="true"
+                  <div className="flex min-w-0 flex-col gap-8">
+                    <Card className="bg-muted/30 shadow-none ring-0 lg:sticky lg:top-6">
+                      <CardHeader>
+                        <CardTitle className="text-lg">基本信息</CardTitle>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          大会名称、公开说明和主办方信息。
+                        </p>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-2">
+                          <Label htmlFor="conference-name">大会名称</Label>
+                          <Input
+                            id="conference-name"
+                            value={name}
+                            maxLength={120}
+                            disabled={
+                              Boolean(saving) ||
+                              conference.lifecycle === "closed"
+                            }
+                            onChange={(event) => setName(event.target.value)}
                           />
-                        ) : (
-                          <Save aria-hidden="true" />
-                        )}
-                        保存基本信息
-                      </Button>
-                    </CardContent>
-                  </Card>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Label htmlFor="conference-description">
+                            大会说明
+                          </Label>
+                          <textarea
+                            id="conference-description"
+                            value={description}
+                            maxLength={4000}
+                            disabled={
+                              Boolean(saving) ||
+                              conference.lifecycle === "closed"
+                            }
+                            className={textareaClassName}
+                            onChange={(event) =>
+                              setDescription(event.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Label htmlFor="conference-organizer">主办方</Label>
+                          <Input
+                            id="conference-organizer"
+                            value={organizer}
+                            maxLength={120}
+                            disabled={
+                              Boolean(saving) ||
+                              conference.lifecycle === "closed"
+                            }
+                            onChange={(event) =>
+                              setOrganizer(event.target.value)
+                            }
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="lg"
+                          className="w-full"
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          onClick={() => void saveMetadata()}
+                        >
+                          {saving === "metadata" ? (
+                            <Loader2
+                              className="animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Save aria-hidden="true" />
+                          )}
+                          保存基本信息
+                        </Button>
+                      </CardContent>
+                    </Card>
+                    {token ? (
+                      <ConferenceCloseCard
+                        token={token}
+                        conferenceId={conference.id}
+                        lifecycle={conference.lifecycle}
+                        version={conference.version}
+                        onConferenceChange={setConference}
+                        onError={handleError}
+                      />
+                    ) : null}
+                  </div>
 
                   <section
                     className="min-w-0"
@@ -531,8 +551,6 @@ export default function ConferenceDetailPage(): JSX.Element {
                     token={token}
                     conferenceId={conference.id}
                     lifecycle={conference.lifecycle}
-                    version={conference.version}
-                    onConferenceChange={setConference}
                     onError={handleError}
                   />
                 ) : null}
