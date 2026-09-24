@@ -1,4 +1,4 @@
-import { clearApiCache, readApiCache, writeApiCache } from "@/lib/api-cache"
+import { clearApiCache, readApiCache, writeApiCache } from "./api-cache"
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
 
@@ -7,6 +7,7 @@ export const CAPABILITIES = [
   "view_news",
   "view_situation",
   "view_files",
+  "review_files",
   "draft_news",
   "review_news",
   "submit_directive",
@@ -30,6 +31,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   view_news: "查看全局新闻",
   view_situation: "查看全局局势",
   view_files: "查看文件",
+  review_files: "审核文件",
   draft_news: "起草新闻草稿",
   review_news: "审核新闻",
   submit_directive: "提交指令",
@@ -64,7 +66,13 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
   {
     id: "content",
     label: "文件与新闻",
-    capabilities: ["draft_news", "review_news", "send_files", "draft_resolution"],
+    capabilities: [
+      "draft_news",
+      "review_news",
+      "send_files",
+      "review_files",
+      "draft_resolution",
+    ],
   },
   {
     id: "directive",
@@ -413,7 +421,10 @@ export async function replaceConferenceStructure(
   return result.conference
 }
 
-export const CONFERENCE_LIFECYCLE_LABELS: Record<ConferenceSummary["lifecycle"], string> = {
+export const CONFERENCE_LIFECYCLE_LABELS: Record<
+  ConferenceSummary["lifecycle"],
+  string
+> = {
   draft: "草稿",
   active: "进行中",
   closed: "已结束",
@@ -468,7 +479,9 @@ export async function listOrganizerSituations(
   id: string,
   refresh = false
 ): Promise<{ timezone: string; situations: OrganizerSituation[] }> {
-  return apiRequest(token, `${conferencePath(id)}/situations`, { refreshCache: refresh })
+  return apiRequest(token, `${conferencePath(id)}/situations`, {
+    refreshCache: refresh,
+  })
 }
 
 export async function withdrawOrganizerSituation(
@@ -505,7 +518,9 @@ export async function listOrganizerNews(
   id: string,
   refresh = false
 ): Promise<{ ok: true; timezone: string; news: OrganizerNews[] }> {
-  return apiRequest(token, `${conferencePath(id)}/news`, { refreshCache: refresh })
+  return apiRequest(token, `${conferencePath(id)}/news`, {
+    refreshCache: refresh,
+  })
 }
 
 export async function withdrawOrganizerNews(
@@ -514,10 +529,14 @@ export async function withdrawOrganizerNews(
   newsId: string,
   reason: string
 ): Promise<void> {
-  await apiRequest(token, `${conferencePath(conferenceId)}/news/${encodeURIComponent(newsId)}/withdraw`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  await apiRequest(
+    token,
+    `${conferencePath(conferenceId)}/news/${encodeURIComponent(newsId)}/withdraw`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export interface OrganizerFile {
@@ -530,7 +549,14 @@ export interface OrganizerFile {
   fileName: string
   mimeType: string
   size: number
-  status: 'published' | 'withdrawn'
+  status: "submitted" | "published" | "rejected" | "cancelled" | "withdrawn"
+  requestedVisibility: "committee" | "conference"
+  visibility: "committee" | "conference"
+  replacesFileId?: string
+  reviewedAt?: string
+  reviewNote?: string
+  publishedAt?: string
+  cancelledAt?: string
   createdAt: string
   withdrawnAt?: string
   withdrawalReason?: string
@@ -540,9 +566,40 @@ export interface OrganizerFile {
 export async function listOrganizerFiles(
   token: string,
   id: string,
-  refresh = false
+  refresh = false,
+  fileType?: string
 ): Promise<{ ok: true; files: OrganizerFile[] }> {
-  return apiRequest(token, `${conferencePath(id)}/files`, { refreshCache: refresh })
+  const query = fileType ? `?${new URLSearchParams({ fileType })}` : ""
+  return apiRequest(token, `${conferencePath(id)}/files${query}`, {
+    refreshCache: refresh,
+  })
+}
+
+export function listOrganizerFileTypes(
+  token: string,
+  id: string,
+  refresh = false
+): Promise<{ ok: true; fileTypes: string[] }> {
+  return apiRequest(token, `${conferencePath(id)}/files/types`, {
+    refreshCache: refresh,
+  })
+}
+
+export async function closeConference(
+  token: string,
+  id: string,
+  version: number
+): Promise<Conference> {
+  const result = await apiRequest<{ ok: true; conference: Conference }>(
+    token,
+    `${conferencePath(id)}/close`,
+    {
+      method: "POST",
+      headers: { "If-Match": `"${version}"` },
+    }
+  )
+  cacheConference(token, result.conference)
+  return result.conference
 }
 
 export async function withdrawOrganizerFile(
@@ -551,9 +608,14 @@ export async function withdrawOrganizerFile(
   fileId: string,
   reason: string
 ): Promise<void> {
-  await apiRequest(token, `${conferencePath(conferenceId)}/files/${encodeURIComponent(fileId)}/withdraw`, {
-    method: 'POST', body: JSON.stringify({ reason }),
-  })
+  await apiRequest(
+    token,
+    `${conferencePath(conferenceId)}/files/${encodeURIComponent(fileId)}/withdraw`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export async function downloadOrganizerFile(
@@ -561,21 +623,34 @@ export async function downloadOrganizerFile(
   conferenceId: string,
   file: OrganizerFile
 ): Promise<void> {
-  if (!apiBaseUrl) throw new ConferenceApiError('API 服务暂未配置')
+  if (!apiBaseUrl) throw new ConferenceApiError("API 服务暂未配置")
   let response: Response
   try {
-    response = await fetch(new URL(`${conferencePath(conferenceId)}/files/${encodeURIComponent(file.id)}/download`.replace(/^\//, ''), `${apiBaseUrl}/`), {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    response = await fetch(
+      new URL(
+        `${conferencePath(conferenceId)}/files/${encodeURIComponent(file.id)}/download`.replace(
+          /^\//,
+          ""
+        ),
+        `${apiBaseUrl}/`
+      ),
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
   } catch {
-    throw new ConferenceApiError('无法连接大会服务')
+    throw new ConferenceApiError("无法连接大会服务")
   }
   if (!response.ok) {
-    const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null
-    throw new ConferenceApiError(payload?.error?.message ?? '下载文件失败', { status: response.status })
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { message?: string }
+    } | null
+    throw new ConferenceApiError(payload?.error?.message ?? "下载文件失败", {
+      status: response.status,
+    })
   }
   const url = URL.createObjectURL(await response.blob())
-  const anchor = document.createElement('a')
+  const anchor = document.createElement("a")
   anchor.href = url
   anchor.download = file.fileName
   document.body.append(anchor)
@@ -607,7 +682,9 @@ export async function listOrganizerDirectives(
   id: string,
   refresh = false
 ): Promise<{ ok: true; directives: OrganizerDirective[] }> {
-  return apiRequest(token, `${conferencePath(id)}/directives`, { refreshCache: refresh })
+  return apiRequest(token, `${conferencePath(id)}/directives`, {
+    refreshCache: refresh,
+  })
 }
 
 export async function releaseOrganizerDirective(
@@ -616,10 +693,14 @@ export async function releaseOrganizerDirective(
   directiveId: string,
   reason: string
 ): Promise<void> {
-  await apiRequest(token, `${conferencePath(conferenceId)}/directives/${encodeURIComponent(directiveId)}/release`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  await apiRequest(
+    token,
+    `${conferencePath(conferenceId)}/directives/${encodeURIComponent(directiveId)}/release`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export async function deleteConference(

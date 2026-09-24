@@ -531,6 +531,8 @@ export default function ConferenceDetailPage(): JSX.Element {
                     token={token}
                     conferenceId={conference.id}
                     lifecycle={conference.lifecycle}
+                    version={conference.version}
+                    onConferenceChange={setConference}
                     onError={handleError}
                   />
                 ) : null}

@@ -119,6 +119,7 @@ const defaultRoles: RoleTemplateInput[] = [
       "process_directive",
       "send_files",
       "publish_situation",
+      "review_files",
       "withdraw_news",
       "withdraw_situation",
       "withdraw_files",
