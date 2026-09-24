@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { useEffect, useState } from "react"
 import { ArrowLeft, Loader2, LogOut, Monitor } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -9,11 +10,63 @@ import { ThemeToggler } from "@/components/theme-toggler"
 import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
+import { ConferenceApiError, getConference } from "@/lib/conference-client"
+import { committeeReference } from "@/lib/conference-structure"
 import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { usePlatformUser } from "@/lib/use-platform-user"
 import { cn } from "@/lib/utils"
 
 const APP_URL = "https://app.miaoyww.top"
+
+const CONFERENCE_ROUTE = /^\/conferences\/([^/]+)(?:\/committees\/([^/]+))?$/
+
+function usePlatformSubtitle(token: string | undefined, signOut: () => void) {
+  const pathname = usePathname()
+  const routeMatch = CONFERENCE_ROUTE.exec(pathname ?? "")
+  const conferenceId = routeMatch?.[1]
+  const committeeId = routeMatch?.[2]
+
+  const [subtitle, setSubtitle] = useState("Platform")
+
+  useEffect(() => {
+    if (!token || !conferenceId || conferenceId === "new") {
+      setSubtitle("Platform")
+      return
+    }
+
+    let cancelled = false
+    getConference(token, conferenceId)
+      .then((conference) => {
+        if (cancelled) return
+        if (committeeId && committeeId !== "new") {
+          const committee = conference.committees.find(
+            (item, index) => committeeReference(item, index) === committeeId
+          )
+          setSubtitle(
+            committee
+              ? `${conference.name} - ${committee.name}`
+              : conference.name
+          )
+        } else {
+          setSubtitle(conference.name)
+        }
+      })
+      .catch((caught: unknown) => {
+        if (cancelled) return
+        if (caught instanceof ConferenceApiError && caught.status === 401) {
+          signOut()
+          return
+        }
+        setSubtitle("Platform")
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [committeeId, conferenceId, signOut, token])
+
+  return subtitle
+}
 
 export function PlatformLoading({ label = "正在进入 Platform" }) {
   return (
@@ -38,6 +91,7 @@ export function PlatformShell({
   const pathname = usePathname()
   const { token, signOut } = usePlatformAuth()
   const { user } = usePlatformUser(token, signOut)
+  const subtitle = usePlatformSubtitle(token, signOut)
   const onAccountPage = pathname === "/account"
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
@@ -69,8 +123,8 @@ export function PlatformShell({
             <img src="/favicon.png" alt="" className="size-9 shrink-0" />
           )}
           <div className="min-w-0 leading-tight">
-            <p className="truncate font-semibold tracking-tight">Veto</p>
-            <p className="truncate text-xs text-muted-foreground">Platform</p>
+            <p className="truncate font-semibold tracking-tight">云Veto</p>
+            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
           </div>
         </div>
 
