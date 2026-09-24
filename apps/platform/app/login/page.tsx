@@ -36,6 +36,7 @@ import {
   verifyCode,
 } from "@/lib/auth-client"
 import { ThemeToggler } from "@/components/theme-toggler"
+import { BubbleBackground } from "@/components/animate-ui/components/backgrounds/bubble"
 
 type AuthTab = "login" | "register"
 type RegisterStage = "email" | "code" | "password"
@@ -65,10 +66,11 @@ export default function Page() {
         <ThemeToggler className="flex size-10 items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5 cursor-pointer" />
       </div>
 
-      <div className="flowing-background" aria-hidden="true">
-        <span className="flowing-background__veil flowing-background__veil--strong" />
-        <span className="flowing-background__veil flowing-background__veil--soft" />
-      </div>
+      <BubbleBackground
+        interactive
+        className="absolute inset-0"
+        aria-hidden="true"
+      />
 
       <div className="relative z-10 flex min-h-svh items-center justify-center">
         <div className="flex w-full max-w-7xl items-center">
