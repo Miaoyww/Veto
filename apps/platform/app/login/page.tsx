@@ -55,7 +55,7 @@ export default function Page() {
     <div className="relative min-h-svh overflow-clip">
       <a
         href="https://veto.miaoyww.top"
-        className="absolute left-8 top-6 z-20 flex items-center gap-3 py-2 pr-4 pl-2"
+        className="absolute top-6 left-8 z-20 flex items-center gap-3 py-2 pr-4 pl-2"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/favicon.png" alt="Veto" className="size-8" />
@@ -63,7 +63,7 @@ export default function Page() {
       </a>
 
       <div className="absolute top-6 right-6 z-20">
-        <ThemeToggler className="flex size-10 items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5 cursor-pointer" />
+        <ThemeToggler className="flex size-10 cursor-pointer items-center justify-center rounded-full border bg-card/80 shadow-sm backdrop-blur [&_svg]:size-5" />
       </div>
 
       <BubbleBackground
@@ -136,7 +136,7 @@ export default function Page() {
 function HeroSection() {
   return (
     <section className="hidden flex-1 flex-col justify-center px-12 lg:flex xl:px-24">
-      <div className="max-w-xl flex flex-col gap-4">
+      <div className="flex max-w-xl flex-col gap-4">
         <h1 className="text-5xl font-bold tracking-tight text-foreground">
           Build your ideas.
           <br />

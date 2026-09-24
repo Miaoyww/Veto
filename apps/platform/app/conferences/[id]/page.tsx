@@ -31,7 +31,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tabs,
+  TabsList,
+  TabsTab,
+  TabsPanels,
+  TabsPanel,
+} from "@/components/animate-ui/components/base/tabs"
 import {
   CONFERENCE_LIFECYCLE_LABELS,
   ConferenceApiError,
@@ -119,7 +125,8 @@ export default function ConferenceDetailPage(): JSX.Element {
   }, [load])
 
   async function saveMetadata(): Promise<void> {
-    if (!token || !conference || conference.lifecycle === "closed" || saving) return
+    if (!token || !conference || conference.lifecycle === "closed" || saving)
+      return
     if (!name.trim()) {
       setError("大会名称不能为空")
       return
@@ -150,7 +157,8 @@ export default function ConferenceDetailPage(): JSX.Element {
   }
 
   async function saveStructure(): Promise<void> {
-    if (!token || !conference || conference.lifecycle === "closed" || saving) return
+    if (!token || !conference || conference.lifecycle === "closed" || saving)
+      return
     setSaving("structure")
     setError("")
     setFieldErrors([])
@@ -218,7 +226,11 @@ export default function ConferenceDetailPage(): JSX.Element {
           <section className="flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={conference.lifecycle === "active" ? "default" : "secondary"}>
+                <Badge
+                  variant={
+                    conference.lifecycle === "active" ? "default" : "secondary"
+                  }
+                >
                   {CONFERENCE_LIFECYCLE_LABELS[conference.lifecycle]}
                 </Badge>
                 <Badge variant="secondary">v{conference.version}</Badge>
@@ -282,219 +294,248 @@ export default function ConferenceDetailPage(): JSX.Element {
               className="grid h-auto w-full grid-cols-5"
               aria-label="大会工作区"
             >
-              <TabsTrigger
+              <TabsTab
                 value="settings"
                 className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Settings2 className="hidden sm:block" aria-hidden="true" />
                 大会设置
-              </TabsTrigger>
-              <TabsTrigger
+              </TabsTab>
+              <TabsTab
                 value="news"
                 className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Newspaper className="hidden sm:block" aria-hidden="true" />
                 新闻
-              </TabsTrigger>
-              <TabsTrigger
+              </TabsTab>
+              <TabsTab
                 value="directives"
                 className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <ScrollText className="hidden sm:block" aria-hidden="true" />
                 指令
-              </TabsTrigger>
-              <TabsTrigger
+              </TabsTab>
+              <TabsTab
                 value="situations"
                 className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <Radio className="hidden sm:block" aria-hidden="true" />
                 局势
-              </TabsTrigger>
-              <TabsTrigger
+              </TabsTab>
+              <TabsTab
                 value="files"
                 className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
               >
                 <FolderOpen className="hidden sm:block" aria-hidden="true" />
                 文件
-              </TabsTrigger>
+              </TabsTab>
             </TabsList>
 
-            <TabsContent value="settings" className="mt-8">
-              {conference.lifecycle !== "closed" && token ? (
-                <div className="mb-8 space-y-4">
-                  <div>
-                    <h2 className="text-xl font-semibold">大会时间</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {conference.lifecycle === "draft"
-                        ? "完成结构编辑并保存时间配置后，手动激活大会。"
-                        : "大会运行期间可修改现有时间线，是否使用时间线保持不变。"}
-                    </p>
-                  </div>
-                  <ConferenceSituationWorkspace
-                    token={token}
-                    conference={conference}
-                    hasUnsavedStructure={JSON.stringify(structure) !== JSON.stringify({
-                      roleTemplates: conference.roleTemplates,
-                      committees: conference.committees,
-                    })}
-                    settingsOnly
-                    onConferenceChange={setConference}
-                    onError={handleError}
-                  />
-                </div>
-              ) : null}
-              <div className="grid min-w-0 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-                <Card className="bg-muted/30 shadow-none ring-0 lg:sticky lg:top-6">
-                  <CardHeader>
-                    <CardTitle className="text-lg">基本信息</CardTitle>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      大会名称、公开说明和主办方信息。
-                    </p>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-5">
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="conference-name">大会名称</Label>
-                      <Input
-                        id="conference-name"
-                        value={name}
-                        maxLength={120}
-                        disabled={Boolean(saving) || conference.lifecycle === "closed"}
-                        onChange={(event) => setName(event.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="conference-description">大会说明</Label>
-                      <textarea
-                        id="conference-description"
-                        value={description}
-                        maxLength={4000}
-                        disabled={Boolean(saving) || conference.lifecycle === "closed"}
-                        className={textareaClassName}
-                        onChange={(event) => setDescription(event.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="conference-organizer">主办方</Label>
-                      <Input
-                        id="conference-organizer"
-                        value={organizer}
-                        maxLength={120}
-                        disabled={Boolean(saving) || conference.lifecycle === "closed"}
-                        onChange={(event) => setOrganizer(event.target.value)}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="w-full"
-                      disabled={Boolean(saving) || conference.lifecycle === "closed"}
-                      onClick={() => void saveMetadata()}
-                    >
-                      {saving === "metadata" ? (
-                        <Loader2 className="animate-spin" aria-hidden="true" />
-                      ) : (
-                        <Save aria-hidden="true" />
-                      )}
-                      保存基本信息
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <section
-                  className="min-w-0"
-                  aria-labelledby="structure-heading"
-                >
-                  <div className="mb-6 flex items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-lg border bg-muted/30 text-muted-foreground">
-                      <FileText className="size-5" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
-                      <h2
-                        id="structure-heading"
-                        className="text-xl font-semibold tracking-tight"
-                      >
-                        大会结构
-                      </h2>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        {conference.lifecycle === "closed"
-                          ? "已结束的大会不能修改结构。"
-                          : "可新增和修改角色、委员会与席位；活动中的大会保留已有对象。"}
+            <TabsPanels className="mt-8">
+              <TabsPanel value="settings">
+                {conference.lifecycle !== "closed" && token ? (
+                  <div className="mb-8 space-y-4">
+                    <div>
+                      <h2 className="text-xl font-semibold">大会时间</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {conference.lifecycle === "draft"
+                          ? "完成结构编辑并保存时间配置后，手动激活大会。"
+                          : "大会运行期间可修改现有时间线，是否使用时间线保持不变。"}
                       </p>
                     </div>
+                    <ConferenceSituationWorkspace
+                      token={token}
+                      conference={conference}
+                      hasUnsavedStructure={
+                        JSON.stringify(structure) !==
+                        JSON.stringify({
+                          roleTemplates: conference.roleTemplates,
+                          committees: conference.committees,
+                        })
+                      }
+                      settingsOnly
+                      onConferenceChange={setConference}
+                      onError={handleError}
+                    />
                   </div>
-
-                  <ConferenceStructureEditor
-                    value={structure}
-                    onChange={setStructure}
-                    disabled={Boolean(saving) || conference.lifecycle === "closed"}
-                    allowExistingRemoval={conference.lifecycle === "draft"}
-                    conferenceId={conference.id}
-                  />
-
-                  {conference.lifecycle !== "closed" ? (
-                    <div className="sticky bottom-4 mt-8 flex justify-end rounded-xl border bg-background p-3 shadow-sm">
+                ) : null}
+                <div className="grid min-w-0 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+                  <Card className="bg-muted/30 shadow-none ring-0 lg:sticky lg:top-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg">基本信息</CardTitle>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        大会名称、公开说明和主办方信息。
+                      </p>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-5">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="conference-name">大会名称</Label>
+                        <Input
+                          id="conference-name"
+                          value={name}
+                          maxLength={120}
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          onChange={(event) => setName(event.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="conference-description">大会说明</Label>
+                        <textarea
+                          id="conference-description"
+                          value={description}
+                          maxLength={4000}
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          className={textareaClassName}
+                          onChange={(event) =>
+                            setDescription(event.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="conference-organizer">主办方</Label>
+                        <Input
+                          id="conference-organizer"
+                          value={organizer}
+                          maxLength={120}
+                          disabled={
+                            Boolean(saving) || conference.lifecycle === "closed"
+                          }
+                          onChange={(event) => setOrganizer(event.target.value)}
+                        />
+                      </div>
                       <Button
                         type="button"
                         size="lg"
-                        disabled={Boolean(saving)}
-                        onClick={() => void saveStructure()}
+                        className="w-full"
+                        disabled={
+                          Boolean(saving) || conference.lifecycle === "closed"
+                        }
+                        onClick={() => void saveMetadata()}
                       >
-                        {saving === "structure" ? (
-                          <Loader2 className="animate-spin" aria-hidden="true" />
+                        {saving === "metadata" ? (
+                          <Loader2
+                            className="animate-spin"
+                            aria-hidden="true"
+                          />
                         ) : (
                           <Save aria-hidden="true" />
                         )}
-                        保存大会结构
+                        保存基本信息
                       </Button>
+                    </CardContent>
+                  </Card>
+
+                  <section
+                    className="min-w-0"
+                    aria-labelledby="structure-heading"
+                  >
+                    <div className="mb-6 flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-lg border bg-muted/30 text-muted-foreground">
+                        <FileText className="size-5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <h2
+                          id="structure-heading"
+                          className="text-xl font-semibold tracking-tight"
+                        >
+                          大会结构
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                          {conference.lifecycle === "closed"
+                            ? "已结束的大会不能修改结构。"
+                            : "可新增和修改角色、委员会与席位；活动中的大会保留已有对象。"}
+                        </p>
+                      </div>
                     </div>
-                  ) : null}
-                </section>
-              </div>
-            </TabsContent>
 
-            <TabsContent value="news" className="mt-8">
-              {token ? <ConferenceNewsWorkspace
-                token={token}
-                conferenceId={conference.id}
-                lifecycle={conference.lifecycle}
-                onError={handleError}
-              /> : null}
-            </TabsContent>
+                    <ConferenceStructureEditor
+                      value={structure}
+                      onChange={setStructure}
+                      disabled={
+                        Boolean(saving) || conference.lifecycle === "closed"
+                      }
+                      allowExistingRemoval={conference.lifecycle === "draft"}
+                      conferenceId={conference.id}
+                    />
 
-            <TabsContent value="directives" className="mt-8">
-              {token ? <ConferenceDirectiveWorkspace
-                token={token}
-                conferenceId={conference.id}
-                lifecycle={conference.lifecycle}
-                onError={handleError}
-              /> : null}
-            </TabsContent>
+                    {conference.lifecycle !== "closed" ? (
+                      <div className="sticky bottom-4 mt-8 flex justify-end rounded-xl border bg-background p-3 shadow-sm">
+                        <Button
+                          type="button"
+                          size="lg"
+                          disabled={Boolean(saving)}
+                          onClick={() => void saveStructure()}
+                        >
+                          {saving === "structure" ? (
+                            <Loader2
+                              className="animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Save aria-hidden="true" />
+                          )}
+                          保存大会结构
+                        </Button>
+                      </div>
+                    ) : null}
+                  </section>
+                </div>
+              </TabsPanel>
 
-            <TabsContent value="situations" className="mt-8">
-              {conference.lifecycle === "draft" ? (
-                <Card>
-                  <CardContent className="py-8 text-sm text-muted-foreground">
-                    大会尚未激活。请在大会设置中配置时间并激活大会。
-                  </CardContent>
-                </Card>
-              ) : token ? (
-                <ConferenceSituationWorkspace
-                  token={token}
-                  conference={conference}
-                  onConferenceChange={setConference}
-                  onError={handleError}
-                />
-              ) : null}
-            </TabsContent>
+              <TabsPanel value="news">
+                {token ? (
+                  <ConferenceNewsWorkspace
+                    token={token}
+                    conferenceId={conference.id}
+                    lifecycle={conference.lifecycle}
+                    onError={handleError}
+                  />
+                ) : null}
+              </TabsPanel>
 
-            <TabsContent value="files" className="mt-8">
-              {token ? <ConferenceFilesWorkspace
-                token={token}
-                conferenceId={conference.id}
-                lifecycle={conference.lifecycle}
-                onError={handleError}
-              /> : null}
-            </TabsContent>
+              <TabsPanel value="directives">
+                {token ? (
+                  <ConferenceDirectiveWorkspace
+                    token={token}
+                    conferenceId={conference.id}
+                    lifecycle={conference.lifecycle}
+                    onError={handleError}
+                  />
+                ) : null}
+              </TabsPanel>
+
+              <TabsPanel value="situations">
+                {conference.lifecycle === "draft" ? (
+                  <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                      大会激活可查看局势。
+                    </CardContent>
+                  </Card>
+                ) : token ? (
+                  <ConferenceSituationWorkspace
+                    token={token}
+                    conference={conference}
+                    onConferenceChange={setConference}
+                    onError={handleError}
+                  />
+                ) : null}
+              </TabsPanel>
+
+              <TabsPanel value="files">
+                {token ? (
+                  <ConferenceFilesWorkspace
+                    token={token}
+                    conferenceId={conference.id}
+                    lifecycle={conference.lifecycle}
+                    onError={handleError}
+                  />
+                ) : null}
+              </TabsPanel>
+            </TabsPanels>
           </Tabs>
         </div>
       )}
