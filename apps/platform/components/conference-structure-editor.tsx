@@ -6,6 +6,7 @@ import { ChevronDown, Pencil, Plus } from "lucide-react"
 import Link from "next/link"
 
 import { CommitteeForm } from "@/components/committee-form"
+import { CapabilityPicker } from "@/components/capability-picker"
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -34,9 +35,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  CAPABILITIES,
-  CAPABILITY_LABELS,
-  type Capability,
   type CommitteeInput,
   type ConferenceStructure,
   type RoleTemplateInput,
@@ -525,31 +523,15 @@ export function ConferenceStructureEditor({
               </div>
               <fieldset>
                 <legend className="text-sm font-medium">权限</legend>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {CAPABILITIES.map((capability) => (
-                    <label
-                      key={capability}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm has-checked:bg-muted"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={editingRole.capabilities.includes(capability)}
-                        disabled={disabled}
-                        onChange={() => {
-                          const capabilities =
-                            editingRole.capabilities.includes(capability)
-                              ? editingRole.capabilities.filter(
-                                  (item) => item !== capability
-                                )
-                              : [...editingRole.capabilities, capability]
-                          updateRole(editingRoleIndex, {
-                            capabilities: capabilities as Capability[],
-                          })
-                        }}
-                      />
-                      {CAPABILITY_LABELS[capability]}
-                    </label>
-                  ))}
+                <div className="mt-3">
+                  <CapabilityPicker
+                    value={editingRole.capabilities}
+                    disabled={disabled}
+                    gridClassName="sm:grid-cols-2"
+                    onChange={(capabilities) =>
+                      updateRole(editingRoleIndex, { capabilities })
+                    }
+                  />
                 </div>
               </fieldset>
             </div>

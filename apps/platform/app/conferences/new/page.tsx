@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import type { ImportedSeat } from "@vetoexpress/utils/seat-import"
 
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
+import { CapabilityPicker } from "@/components/capability-picker"
 import { SeatImportDialog } from "@/components/seat-import-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -37,11 +38,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  CAPABILITIES,
   CAPABILITY_LABELS,
   ConferenceApiError,
   createConference,
-  type Capability,
   type CommitteeInput,
   type ConferenceStructure,
   type RoleTemplateInput,
@@ -109,7 +108,7 @@ const defaultRoles: RoleTemplateInput[] = [
   },
   {
     clientId: "role-preset-chair",
-    name: "主席",
+    name: "主场主席团",
     description: "主持委员会并处理会议流程",
     builtIn: true,
     capabilities: [
@@ -1019,36 +1018,15 @@ function RoleCard({
         <CollapsibleContent>
           <fieldset className="mt-4">
             <legend className="text-sm font-medium">权限</legend>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {CAPABILITIES.map((capability) => (
-                <label
-                  key={capability}
-                  htmlFor={`capability-${reference}-${capability}`}
-                  className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent/50 has-checked:bg-accent/50"
-                >
-                  <input
-                    id={`capability-${reference}-${capability}`}
-                    type="checkbox"
-                    checked={role.capabilities.includes(capability)}
-                    disabled={disabled}
-                    onChange={() => {
-                      const capabilities = role.capabilities.includes(
-                        capability
-                      )
-                        ? role.capabilities.filter(
-                            (item) => item !== capability
-                          )
-                        : [...role.capabilities, capability]
-                      onChange(roleIndex, {
-                        capabilities: capabilities as Capability[],
-                      })
-                    }}
-                  />
-                  <span className="min-w-0">
-                    {CAPABILITY_LABELS[capability]}
-                  </span>
-                </label>
-              ))}
+            <div className="mt-3">
+              <CapabilityPicker
+                idPrefix={`capability-${reference}`}
+                value={role.capabilities}
+                disabled={disabled}
+                onChange={(capabilities) =>
+                  onChange(roleIndex, { capabilities })
+                }
+              />
             </div>
             {capabilitiesInvalid ? (
               <div className="mt-2">

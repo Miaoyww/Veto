@@ -44,6 +44,50 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   draft_resolution: "起草决议",
 }
 
+export interface CapabilityGroup {
+  id: string
+  label: string
+  capabilities: readonly Capability[]
+}
+
+export const CAPABILITY_GROUPS: CapabilityGroup[] = [
+  {
+    id: "view",
+    label: "查看",
+    capabilities: [
+      "view_conference",
+      "view_news",
+      "view_situation",
+      "view_files",
+    ],
+  },
+  {
+    id: "content",
+    label: "文件与新闻",
+    capabilities: ["draft_news", "review_news", "send_files", "draft_resolution"],
+  },
+  {
+    id: "directive",
+    label: "指令",
+    capabilities: ["submit_directive", "process_directive"],
+  },
+  {
+    id: "publish",
+    label: "发布与撤回",
+    capabilities: [
+      "publish_situation",
+      "withdraw_news",
+      "withdraw_situation",
+      "withdraw_files",
+    ],
+  },
+  {
+    id: "control",
+    label: "会议控制",
+    capabilities: ["control_conference", "control_timeline"],
+  },
+]
+
 export interface ConferenceSummary {
   id: string
   mode: "conference"
