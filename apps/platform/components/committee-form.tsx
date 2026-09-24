@@ -6,6 +6,7 @@ import type { ImportedSeat } from "@vetoexpress/utils/seat-import"
 
 import { CommitteeSeatTable } from "@/components/committee-seat-table"
 import { SeatImportDialog } from "@/components/seat-import-dialog"
+import { SeatInviteExportDialog } from "@/components/seat-invite-export-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -159,6 +160,12 @@ export function CommitteeForm({
               disabled={disabled}
               roleLabel={importedRoleLabel}
               onImport={importSeats}
+            />
+            <SeatInviteExportDialog
+              committeeName={value.name}
+              seats={value.seats}
+              roles={roles}
+              disabled={disabled}
             />
             <Button
               type="button"

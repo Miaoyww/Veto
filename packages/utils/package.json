@@ -5,10 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./seat-import": "./src/seat-import.ts"
+    "./seat-import": "./src/seat-import.ts",
+    "./seat-invite-export": "./src/seat-invite-export.ts"
   },
   "scripts": {
-    "test": "vitest run src/seat-import.test.ts",
+    "test": "vitest run src/seat-import.test.ts src/seat-invite-export.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
