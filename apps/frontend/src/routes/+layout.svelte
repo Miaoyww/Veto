@@ -1,5 +1,7 @@
 <script>
   import { VETO_NAME } from '$lib/classes/const'
+  import { onMount } from 'svelte'
+  import { scheduleWebLaunchTelemetry } from '$lib/classes/services/web-telemetry'
   import { ModeWatcher } from 'mode-watcher'
   import { createConferenceDialogOpen } from '$lib/classes/stores/app/global-ui-store'
   import MyAlertDialog from '$lib/components/dialog/my-alert-dialog.svelte'
@@ -11,6 +13,10 @@
   import '../css/components.css'
 
   let { children } = $props()
+
+  onMount(() => {
+    scheduleWebLaunchTelemetry(__APP_VERSION__)
+  })
 </script>
 
 <svelte:head>

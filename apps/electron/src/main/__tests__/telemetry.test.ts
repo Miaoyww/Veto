@@ -45,11 +45,11 @@ describe('telemetry', () => {
       const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
 
       await expect(
-        sendLaunchTelemetry('https://api.miaoyww.top/event', 'ingest-key', payload, fetchImpl)
+        sendLaunchTelemetry('https://api.miaoyww.top/v1/event', 'ingest-key', payload, fetchImpl)
       ).resolves.toBe(true)
 
       expect(fetchImpl).toHaveBeenCalledWith(
-        'https://api.miaoyww.top/event',
+        'https://api.miaoyww.top/v1/event',
         expect.objectContaining({
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-ingest-key': 'ingest-key' },

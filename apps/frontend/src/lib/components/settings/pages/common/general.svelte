@@ -166,7 +166,7 @@
       <!-- 隐私 -->
       <SettingCard
         title="匿名使用统计"
-        description="发送匿名启动事件，包括应用版本、系统平台和随机安装 ID。关闭后从下次启动开始生效。"
+        description="发送匿名打开事件，包括应用版本、运行平台（Web 或操作系统）和随机安装 ID。关闭后从下次打开开始生效。"
       >
         <Switch
           checked={$globalSettings.usageAnalyticsEnabled}
