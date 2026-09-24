@@ -440,6 +440,44 @@ export async function withdrawOrganizerSituation(
   )
 }
 
+export interface OrganizerDirective {
+  id: string
+  sourceCommitteeId: string
+  sourceSeatId: string
+  targetCommitteeId: string
+  targetCommitteeName: string
+  title: string
+  content: string
+  status: "submitted" | "processing" | "approved" | "rejected" | "cancelled"
+  revision: number
+  claimedBySeatId?: string
+  claimedAt?: string
+  processingNote?: string
+  decidedAt?: string
+  createdAt: string
+  author: { committeeName: string; seatName: string; role?: string }
+}
+
+export async function listOrganizerDirectives(
+  token: string,
+  id: string,
+  refresh = false
+): Promise<{ ok: true; directives: OrganizerDirective[] }> {
+  return apiRequest(token, `${conferencePath(id)}/directives`, { refreshCache: refresh })
+}
+
+export async function releaseOrganizerDirective(
+  token: string,
+  conferenceId: string,
+  directiveId: string,
+  reason: string
+): Promise<void> {
+  await apiRequest(token, `${conferencePath(conferenceId)}/directives/${encodeURIComponent(directiveId)}/release`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  })
+}
+
 export async function deleteConference(
   token: string,
   id: string,

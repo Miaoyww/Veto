@@ -23,6 +23,7 @@ import {
 } from "@/components/conference-structure-editor"
 import { ConferenceWorkspacePlaceholder } from "@/components/conference-workspace-placeholder"
 import { ConferenceSituationWorkspace } from "@/components/conference-situation-workspace"
+import { ConferenceDirectiveWorkspace } from "@/components/conference-directive-workspace"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -460,12 +461,12 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsContent>
 
             <TabsContent value="directives" className="mt-8">
-              <ConferenceWorkspacePlaceholder
-                icon={ScrollText}
-                title="指令"
-                description="查看各委员会提交的指令，并在同一工作区内认领、处理和追踪结果。当前云端接口尚未提供指令数据。"
-                items={["待处理指令", "处理中", "已完成", "处理记录"]}
-              />
+              {token ? <ConferenceDirectiveWorkspace
+                token={token}
+                conferenceId={conference.id}
+                lifecycle={conference.lifecycle}
+                onError={handleError}
+              /> : null}
             </TabsContent>
 
             <TabsContent value="situations" className="mt-8">
