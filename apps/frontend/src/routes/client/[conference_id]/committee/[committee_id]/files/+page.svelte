@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { CircleAlert, Download, FileUp, FolderOpen, RefreshCw, RotateCcw } from '@lucide/svelte'
+  import { ArrowDown, ArrowUp, ArrowUpDown, CircleAlert, Download, FileUp, FolderOpen, RefreshCw, RotateCcw } from '@lucide/svelte'
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import {
     CloudFileError, downloadCloudFile, listCloudFiles, uploadCloudFile, withdrawCloudFile
@@ -10,6 +10,8 @@
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
   import * as Card from '$lib/components/ui/card'
+  import * as Select from '$lib/components/ui/select'
+  import * as Table from '$lib/components/ui/table'
   import * as Alert from '$lib/components/ui/alert'
   import * as Empty from '$lib/components/ui/empty'
   import { Badge } from '$lib/components/ui/badge'
@@ -17,8 +19,11 @@
   let files = $state<FileContent[]>([])
   let selectedFile = $state<globalThis.File | null>(null)
   let title = $state('')
-  let fileType = $state('会议材料')
-  let agendaItem = $state('')
+  let selectedType = $state('会议材料')
+  let customType = $state('')
+  const customTypeValue = '__custom__'
+  let sortKey = $state<'fileType' | 'createdAt' | 'author' | 'fileName'>('createdAt')
+  let sortDirection = $state<'asc' | 'desc'>('desc')
   let loading = $state(true)
   let busy = $state(false)
   let error = $state('')
@@ -31,6 +36,24 @@
   const canView = $derived(cloudSession.hasCapability('view_files'))
   const canSend = $derived(cloudSession.hasCapability('send_files'))
   const canWithdraw = $derived(cloudSession.hasCapability('withdraw_files'))
+  const fileTypes = $derived([...new Set(['会议材料', ...files.map((item) => item.fileType.trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'zh-CN')))
+  const fileType = $derived(selectedType === customTypeValue ? customType : selectedType)
+  const sortedFiles = $derived([...files].sort((a, b) => {
+    const compare = sortKey === 'createdAt'
+      ? Date.parse(a.createdAt) - Date.parse(b.createdAt)
+      : sortKey === 'author'
+        ? `${a.author.committeeName} / ${a.author.seatName}`.localeCompare(`${b.author.committeeName} / ${b.author.seatName}`, 'zh-CN', { numeric: true })
+        : a[sortKey].localeCompare(b[sortKey], 'zh-CN', { numeric: true })
+    return (sortDirection === 'asc' ? compare : -compare) || a.id.localeCompare(b.id)
+  }))
+
+  function sortBy(key: typeof sortKey): void {
+    if (sortKey === key) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+    else {
+      sortKey = key
+      sortDirection = key === 'createdAt' ? 'desc' : 'asc'
+    }
+  }
 
   async function load(silent = false): Promise<void> {
     if (!token || !canView || busy) {
@@ -65,11 +88,10 @@
     busy = true
     try {
       await uploadCloudFile(token, selectedFile, {
-        title: title.trim(), fileType: fileType.trim(), agendaItem: agendaItem.trim() || undefined
+        title: title.trim(), fileType: fileType.trim()
       })
       selectedFile = null
       title = ''
-      agendaItem = ''
       notice = '文件已发布到当前委员会'
       const input = document.getElementById('file-upload') as HTMLInputElement | null
       if (input) input.value = ''
@@ -159,8 +181,19 @@
               }} />
           </div>
           <div><Label for="file-title">标题</Label><Input id="file-title" class="mt-2" maxlength={200} bind:value={title} /></div>
-          <div><Label for="file-type">文件类型</Label><Input id="file-type" class="mt-2" maxlength={60} bind:value={fileType} /></div>
-          <div class="sm:col-span-2"><Label for="file-agenda">议程项（可选）</Label><Input id="file-agenda" class="mt-2" maxlength={200} bind:value={agendaItem} /></div>
+          <div class="flex flex-col gap-2">
+            <Label for="file-type">文件类型</Label>
+            <Select.Root type="single" bind:value={selectedType} items={[...fileTypes.map((value) => ({ value, label: value })), { value: customTypeValue, label: '自定义类型…' }]}>
+              <Select.Trigger id="file-type" class="w-full"><Select.Value placeholder="选择文件类型" /></Select.Trigger>
+              <Select.Content><Select.Group>
+                {#each fileTypes as type (type)}<Select.Item value={type}>{type}</Select.Item>{/each}
+                <Select.Item value={customTypeValue}>自定义类型…</Select.Item>
+              </Select.Group></Select.Content>
+            </Select.Root>
+            {#if selectedType === customTypeValue}
+              <Input aria-label="自定义文件类型" placeholder="输入文件类型" maxlength={60} bind:value={customType} />
+            {/if}
+          </div>
         </Card.Content>
         <Card.Footer class="justify-end">
           <Button disabled={busy || !selectedFile || !title.trim() || !fileType.trim()} onclick={() => void send()}>
@@ -173,45 +206,51 @@
     {#if canView}
       <section class="flex flex-col gap-3">
         <h2 class="font-semibold">委员会文件 <span class="text-xs text-muted-foreground">{files.length}</span></h2>
-        {#if loading && files.length === 0}
-          <Card.Root><Card.Content class="py-8 text-sm text-muted-foreground">正在加载文件…</Card.Content></Card.Root>
-        {:else if files.length === 0}
-          <Card.Root><Card.Content class="py-8 text-sm text-muted-foreground">当前委员会暂无文件</Card.Content></Card.Root>
-        {:else}
-          {#each files as item (item.id)}
-            <Card.Root>
-              <Card.Header>
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <Card.Title>{item.title}</Card.Title>
-                    <Card.Description class="mt-1">{item.author.committeeName} / {item.author.seatName} · {new Date(item.createdAt).toLocaleString('zh-CN')}</Card.Description>
-                  </div>
-                  <Badge variant="secondary">{item.fileType}</Badge>
-                </div>
-              </Card.Header>
-              <Card.Content class="space-y-2 text-sm text-muted-foreground">
-                <p>{item.fileName} · {(item.size / 1024).toFixed(1)} KiB</p>
-                {#if item.agendaItem}<p>议程项：{item.agendaItem}</p>{/if}
-                {#if withdrawalId === item.id}
-                  <div class="flex flex-col gap-2 border-t pt-3">
-                    <Label for={`withdraw-file-${item.id}`}>撤回原因</Label>
-                    <Input id={`withdraw-file-${item.id}`} maxlength={500} bind:value={reason} />
-                    <div class="flex justify-end gap-2">
-                      <Button variant="outline" disabled={busy} onclick={() => { withdrawalId = null; reason = '' }}>取消</Button>
-                      <Button variant="destructive" disabled={busy || !reason.trim()} onclick={() => void withdraw(item)}>确认撤回</Button>
-                    </div>
-                  </div>
-                {/if}
-              </Card.Content>
-              <Card.Footer class="justify-end gap-2">
-                {#if canWithdraw && withdrawalId !== item.id}
-                  <Button variant="outline" size="sm" onclick={() => { withdrawalId = item.id; reason = '' }}><RotateCcw data-icon="inline-start" />撤回</Button>
-                {/if}
-                <Button size="sm" onclick={() => void download(item)}><Download data-icon="inline-start" />下载</Button>
-              </Card.Footer>
-            </Card.Root>
-          {/each}
-        {/if}
+        <div class="rounded-lg border bg-card">
+          <Table.Root class="min-w-[900px]">
+            <Table.Header><Table.Row>
+              <Table.Head>标题</Table.Head>
+              {#each [{ key: 'fileType', label: '类型' }, { key: 'createdAt', label: '时间' }, { key: 'author', label: '上传者' }, { key: 'fileName', label: '文件名' }] as column (column.key)}
+                <Table.Head aria-sort={sortKey === column.key ? sortDirection === 'asc' ? 'ascending' : 'descending' : 'none'}><button class="inline-flex items-center gap-1 hover:text-foreground" onclick={() => sortBy(column.key as typeof sortKey)} aria-label={`按${column.label}排序`}>
+                  {column.label}
+                  {#if sortKey === column.key}{#if sortDirection === 'asc'}<ArrowUp class="size-3.5" />{:else}<ArrowDown class="size-3.5" />{/if}{:else}<ArrowUpDown class="size-3.5" />{/if}
+                </button></Table.Head>
+              {/each}
+              <Table.Head>状态</Table.Head><Table.Head class="text-right">操作</Table.Head>
+            </Table.Row></Table.Header>
+            <Table.Body>
+              {#if files.length === 0}
+                <Table.Row><Table.Cell colspan={7} class="py-8 text-center text-muted-foreground">{loading ? '正在加载文件…' : '当前委员会暂无文件'}</Table.Cell></Table.Row>
+              {:else}
+                {#each sortedFiles as item (item.id)}
+                  <Table.Row>
+                    <Table.Cell class="min-w-40 font-medium">{item.title}{#if item.withdrawalReason}<p class="mt-1 max-w-56 whitespace-normal text-xs text-destructive">撤回原因：{item.withdrawalReason}</p>{/if}</Table.Cell>
+                    <Table.Cell>{item.fileType}</Table.Cell>
+                    <Table.Cell>{new Date(item.createdAt).toLocaleString('zh-CN')}</Table.Cell>
+                    <Table.Cell>{item.author.committeeName} / {item.author.seatName}</Table.Cell>
+                    <Table.Cell><span title={item.fileName}>{item.fileName}</span><span class="ml-2 text-xs text-muted-foreground">{(item.size / 1024).toFixed(1)} KiB</span></Table.Cell>
+                    <Table.Cell><Badge variant={item.status === 'published' ? 'default' : 'secondary'}>{item.status === 'published' ? '已发布' : '已撤回'}</Badge></Table.Cell>
+                    <Table.Cell class="text-right">
+                      {#if item.status === 'published'}
+                        <div class="flex justify-end gap-2">
+                          {#if canWithdraw && withdrawalId !== item.id}<Button variant="outline" size="sm" onclick={() => { withdrawalId = item.id; reason = '' }}><RotateCcw data-icon="inline-start" />撤回</Button>{/if}
+                          <Button size="sm" onclick={() => void download(item)}><Download data-icon="inline-start" />下载</Button>
+                        </div>
+                        {#if withdrawalId === item.id}
+                          <div class="mt-2 flex min-w-56 flex-col gap-2 text-left">
+                            <Label for={`withdraw-file-${item.id}`}>撤回原因</Label>
+                            <Input id={`withdraw-file-${item.id}`} maxlength={500} bind:value={reason} />
+                            <div class="flex justify-end gap-2"><Button variant="outline" size="sm" disabled={busy} onclick={() => { withdrawalId = null; reason = '' }}>取消</Button><Button variant="destructive" size="sm" disabled={busy || !reason.trim()} onclick={() => void withdraw(item)}>确认撤回</Button></div>
+                          </div>
+                        {/if}
+                      {/if}
+                    </Table.Cell>
+                  </Table.Row>
+                {/each}
+              {/if}
+            </Table.Body>
+          </Table.Root>
+        </div>
       </section>
     {/if}
   {/if}

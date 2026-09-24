@@ -33,7 +33,7 @@ export async function listCloudFiles(token: string): Promise<{ ok: true; files: 
 export async function uploadCloudFile(
   token: string,
   file: globalThis.File,
-  metadata: { title: string; fileType: string; agendaItem?: string }
+  metadata: { title: string; fileType: string }
 ): Promise<FileContent> {
   const headers = new Headers({
     Authorization: `Bearer ${token}`,
@@ -43,7 +43,6 @@ export async function uploadCloudFile(
     'X-File-Type': encodeURIComponent(metadata.fileType),
     'X-File-Size': String(file.size)
   })
-  if (metadata.agendaItem) headers.set('X-Agenda-Item', encodeURIComponent(metadata.agendaItem))
   let response: Response
   try {
     response = await fetch(endpoint('/veto/files'), { method: 'POST', headers, body: file })
