@@ -452,7 +452,7 @@ export default function NewConferencePage() {
   )
 
   return (
-    <PlatformShell onSignOut={signOut} backHref="/">
+    <PlatformShell backHref="/">
       <form onSubmit={(event) => void submit(event)}>
         <header className="flex items-center justify-between gap-4 pb-6">
           <div>

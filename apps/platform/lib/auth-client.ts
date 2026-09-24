@@ -45,6 +45,45 @@ async function request<T>(path: string, body: unknown): Promise<T> {
   return payload as T
 }
 
+export interface PlatformUser {
+  name: string
+  email: string
+  avatar: string
+}
+
+let cachedUser: { token: string; user: PlatformUser } | null = null
+
+export function readCachedUser(token: string): PlatformUser | undefined {
+  return cachedUser?.token === token ? cachedUser.user : undefined
+}
+
+export async function fetchMe(token: string): Promise<PlatformUser> {
+  if (!apiBaseUrl) {
+    throw new AuthError("API 服务暂未配置")
+  }
+
+  let response: Response
+  try {
+    response = await fetch(new URL("v1/auth/me", `${apiBaseUrl}/`), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new AuthError("无法连接认证服务")
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | { ok?: boolean; error?: string; user?: PlatformUser }
+    | null
+
+  if (!response.ok || payload?.ok === false || !payload?.user) {
+    const message = payload?.error ? String(payload.error) : "请求失败"
+    throw new AuthError(message, response.status)
+  }
+
+  cachedUser = { token, user: payload.user }
+  return payload.user
+}
+
 export async function login(email: string, password: string): Promise<string> {
   const result = await request<{ ok: true; token: string }>("/v1/auth/login", {
     email,

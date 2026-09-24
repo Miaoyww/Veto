@@ -198,7 +198,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   }
 
   return (
-    <PlatformShell onSignOut={signOut} backHref="/">
+    <PlatformShell backHref="/">
       {!conference ? (
         <div className="mx-auto max-w-xl rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
           <p className="text-sm text-destructive">

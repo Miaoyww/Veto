@@ -3,10 +3,14 @@
 import type { ReactNode } from "react"
 import { ArrowLeft, Loader2, LogOut, Monitor } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { ThemeToggler } from "@/components/theme-toggler"
 import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { UserAvatar } from "@/components/user-avatar"
+import { usePlatformAuth } from "@/lib/use-platform-auth"
+import { usePlatformUser } from "@/lib/use-platform-user"
 import { cn } from "@/lib/utils"
 
 const APP_URL = "https://app.miaoyww.top"
@@ -24,15 +28,17 @@ export function PlatformLoading({ label = "正在进入 Platform" }) {
 
 export function PlatformShell({
   children,
-  onSignOut,
   backHref,
   backLabel = "返回大会列表",
 }: {
   children: ReactNode
-  onSignOut: () => void
   backHref?: string
   backLabel?: string
 }) {
+  const pathname = usePathname()
+  const { token, signOut } = usePlatformAuth()
+  const { user } = usePlatformUser(token, signOut)
+  const onAccountPage = pathname === "/account"
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
       <AnimatedGridPattern
@@ -80,12 +86,31 @@ export function PlatformShell({
             返回应用
           </a>
           <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted [&_svg]:size-4" />
+          <Link
+            href="/account"
+            className={cn(
+              buttonVariants({
+                variant: onAccountPage ? "secondary" : "ghost",
+                size: "lg",
+              }),
+              "h-11 max-w-40 rounded-full pl-1.5",
+              onAccountPage ? "shadow-sm" : "hover:bg-muted"
+            )}
+            aria-label={user?.name ? `用户 ${user.name}` : "用户中心"}
+          >
+            <UserAvatar
+              name={user?.name ?? "?"}
+              avatar={user?.avatar || undefined}
+              className="size-8 bg-muted text-foreground"
+            />
+            <span className="truncate font-medium">{user?.name || "用户"}</span>
+          </Link>
           <Button
             type="button"
             variant="ghost"
             size="icon-lg"
             className="size-11 rounded-full"
-            onClick={onSignOut}
+            onClick={signOut}
             aria-label="退出登录"
           >
             <LogOut aria-hidden="true" />

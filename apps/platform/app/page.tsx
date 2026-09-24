@@ -107,7 +107,7 @@ export default function PlatformHome() {
   if (!isReady) return <PlatformLoading />
 
   return (
-    <PlatformShell onSignOut={signOut}>
+    <PlatformShell>
       <section className="grid gap-8 border-b pb-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="min-w-0">
           <h1 className="platform-title text-4xl font-bold tracking-[-0.04em] text-balance sm:text-5xl">

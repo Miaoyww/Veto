@@ -121,7 +121,7 @@ export default function CommitteeDetailPage(): JSX.Element {
   const backHref = `/conferences/${params.id}`
 
   return (
-    <PlatformShell onSignOut={signOut} backHref={backHref} backLabel="返回大会">
+    <PlatformShell backHref={backHref} backLabel="返回大会">
       {!conference || !committee ? (
         <div className="mx-auto max-w-xl rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
           <p className="text-sm text-destructive">
