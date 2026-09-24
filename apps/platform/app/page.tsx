@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ArchiveRestore, Cloud, Loader2, Plus, RefreshCw } from "lucide-react"
+import { ArchiveRestore, Cloud, Loader2, Plus } from "lucide-react"
 import Link from "next/link"
 
+import { RotateCw } from "@/components/animate-ui/icons/rotate-cw"
 import { ConferenceCard } from "@/components/conference-card"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -33,6 +34,7 @@ export default function PlatformHome() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [restoringId, setRestoringId] = useState<string>()
+  const [spinCount, setSpinCount] = useState(0)
   const [error, setError] = useState("")
 
   const handleError = useCallback(
@@ -108,8 +110,19 @@ export default function PlatformHome() {
 
   return (
     <PlatformShell>
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-14">
-        <section className="flex flex-col items-start gap-7 self-start lg:sticky lg:top-24">
+      <section aria-labelledby="conference-list" className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2
+              id="conference-list"
+              className="text-lg font-semibold tracking-tight"
+            >
+              我管理的大会
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              按最近更新时间排序。
+            </p>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/conferences/new"
@@ -124,99 +137,83 @@ export default function PlatformHome() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full"
+              className="rounded-full"
               disabled={isLoading}
-              onClick={() => void loadConferences(true)}
+              onClick={() => {
+                void loadConferences(true)
+              }}
             >
-              <RefreshCw
-                className={cn(isLoading && "animate-spin")}
-                aria-hidden="true"
-              />
-              刷新
+              <RotateCw key={spinCount}  />
             </Button>
           </div>
-        </section>
+        </div>
 
-        <section aria-labelledby="conference-list" className="space-y-5">
-          <div>
-            <h2
-              id="conference-list"
-              className="text-lg font-semibold tracking-tight"
-            >
-              我管理的大会
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              按最近更新时间排序。
-            </p>
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          >
+            {error}
           </div>
+        ) : null}
 
-          {error ? (
-            <div
-              role="alert"
-              className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+        {isLoading ? (
+          <Card className="min-h-80 bg-card/70 shadow-none ring-0">
+            <CardContent className="grid flex-1 place-items-center">
+              <Loader2
+                className="animate-spin text-muted-foreground"
+                aria-label="正在加载大会"
+              />
+            </CardContent>
+          </Card>
+        ) : conferences.length === 0 ? (
+          <Card className="min-h-80 border-dashed bg-card/70 shadow-none ring-0">
+            <CardContent className="grid flex-1 place-items-center px-6 py-14">
+              <div className="flex w-full max-w-sm flex-col items-center text-center">
+                <span className="mb-5 grid size-12 place-items-center rounded-xl border bg-background shadow-sm">
+                  <Cloud className="size-5" aria-hidden="true" />
+                </span>
+                <CardHeader className="w-full justify-items-center text-center">
+                  <CardTitle className="text-lg">还没有云端大会</CardTitle>
+                  <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                    创建大会后，它会出现在这里。
+                  </p>
+                </CardHeader>
+                <Link
+                  href="/conferences/new"
+                  className={cn(buttonVariants(), "mt-5 rounded-full px-4")}
+                >
+                  <Plus aria-hidden="true" />
+                  创建第一个大会
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {conferences.map((conference) => (
+              <ConferenceCard key={conference.id} conference={conference} />
+            ))}
+          </div>
+        )}
+
+        {nextCursor ? (
+          <div className="flex justify-center pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={isLoadingMore}
+              onClick={() => void loadMore()}
             >
-              {error}
-            </div>
-          ) : null}
-
-          {isLoading ? (
-            <Card className="min-h-80 bg-card/70 shadow-none ring-0">
-              <CardContent className="grid flex-1 place-items-center">
-                <Loader2
-                  className="animate-spin text-muted-foreground"
-                  aria-label="正在加载大会"
-                />
-              </CardContent>
-            </Card>
-          ) : conferences.length === 0 ? (
-            <Card className="min-h-80 border-dashed bg-card/70 shadow-none ring-0">
-              <CardContent className="grid flex-1 place-items-center px-6 py-14">
-                <div className="flex w-full max-w-sm flex-col items-center text-center">
-                  <span className="mb-5 grid size-12 place-items-center rounded-xl border bg-background shadow-sm">
-                    <Cloud className="size-5" aria-hidden="true" />
-                  </span>
-                  <CardHeader className="w-full justify-items-center text-center">
-                    <CardTitle className="text-lg">还没有云端大会</CardTitle>
-                    <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-                      创建大会后，它会出现在这里。
-                    </p>
-                  </CardHeader>
-                  <Link
-                    href="/conferences/new"
-                    className={cn(buttonVariants(), "mt-5 rounded-full px-4")}
-                  >
-                    <Plus aria-hidden="true" />
-                    创建第一个大会
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {conferences.map((conference) => (
-                <ConferenceCard key={conference.id} conference={conference} />
-              ))}
-            </div>
-          )}
-
-          {nextCursor ? (
-            <div className="flex justify-center pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-full"
-                disabled={isLoadingMore}
-                onClick={() => void loadMore()}
-              >
-                {isLoadingMore ? (
-                  <Loader2 className="animate-spin" aria-hidden="true" />
-                ) : null}
-                加载更多
-              </Button>
-            </div>
-          ) : null}
-        </section>
-      </div>
+              {isLoadingMore ? (
+                <Loader2 className="animate-spin" aria-hidden="true" />
+              ) : null}
+              加载更多
+            </Button>
+          </div>
+        ) : null}
+      </section>
 
       {deletedConferences.length > 0 ? (
         <section className="space-y-4 pt-14" aria-labelledby="deleted-list">
