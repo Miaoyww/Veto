@@ -7,7 +7,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { ThemeToggler } from "@/components/theme-toggler"
-import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
 import { ConferenceApiError, getConference } from "@/lib/conference-client"
@@ -95,16 +94,6 @@ export function PlatformShell({
   const onAccountPage = pathname === "/account"
   return (
     <div className="platform-shell relative flex min-h-svh flex-col overflow-clip bg-background">
-      <AnimatedGridPattern
-        width={52}
-        height={52}
-        numSquares={20}
-        maxOpacity={0.06}
-        duration={3}
-        repeatDelay={1}
-        className="platform-grid-mask fill-primary/10 stroke-border/60 text-primary"
-      />
-
       <header className="relative z-10 flex h-20 shrink-0 items-center justify-between border-b bg-background/85 px-4 backdrop-blur-md sm:px-8 lg:px-12">
         <div className="flex min-w-0 items-center gap-3">
           {backHref ? (
