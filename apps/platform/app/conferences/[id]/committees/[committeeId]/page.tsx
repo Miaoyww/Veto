@@ -78,7 +78,7 @@ export default function CommitteeDetailPage(): JSX.Element {
   }, [load])
 
   async function save(): Promise<void> {
-    if (!token || !conference || !committee || isSaving) return
+    if (!token || !conference || conference.lifecycle !== "draft" || !committee || isSaving) return
     if (!committee.name.trim()) {
       setError("委员会名称不能为空。")
       return
@@ -126,6 +126,18 @@ export default function CommitteeDetailPage(): JSX.Element {
         <div className="mx-auto max-w-xl rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
           <p className="text-sm text-destructive">
             {error || "委员会不存在或无法访问"}
+          </p>
+          <Link
+            href={backHref}
+            className={cn(buttonVariants({ variant: "outline" }), "mt-5")}
+          >
+            返回大会
+          </Link>
+        </div>
+      ) : conference.lifecycle !== "draft" ? (
+        <div className="mx-auto max-w-xl rounded-xl border bg-muted/30 p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            只有草稿大会可以修改委员会结构。
           </p>
           <Link
             href={backHref}

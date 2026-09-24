@@ -6,6 +6,7 @@
   import { cloudSession } from '$lib/classes/stores/cloud/cloud-session-store.svelte'
   import {
     CloudSituationError,
+    cloudApiBaseUrl,
     controlCloudTimeline,
     getCloudTimeline,
     listCloudSituations,
@@ -30,14 +31,33 @@
   let loading = $state(true)
   let submitting = $state(false)
   let controlling = $state(false)
+  let withdrawingId = $state<string | null>(null)
+  let withdrawing = $state(false)
+  let withdrawalReason = $state('')
+  let draftReady = $state(false)
+  let draftError = $state('')
+  let otherSeatDraft = $state<{ seatId: string; content: string; manualTime: string } | null>(null)
   let error = $state('')
   let clockNow = $state(Date.now())
   let timelineReceivedAt = $state(Date.now())
 
   const token = $derived(cloudSession.session?.result.token ?? '')
-  const canPublish = $derived(cloudSession.hasCapability('publish_situation'))
+  const identity = $derived(cloudSession.session?.result.identity)
+  const canView = $derived(cloudSession.hasCapability('view_situation'))
+  const canPublish = $derived(
+    cloudSession.session?.result.committeeType === 'ipc' && cloudSession.hasCapability('publish_situation')
+  )
   const canWithdraw = $derived(cloudSession.hasCapability('withdraw_situation'))
-  const canControl = $derived(cloudSession.hasCapability('control_timeline'))
+  const canControl = $derived(
+    cloudSession.session?.result.committeeType === 'ipc' && cloudSession.hasCapability('control_timeline')
+  )
+  const canSeeTimeline = $derived(canView || canPublish || canControl)
+  const draftKey = $derived(
+    identity ? `veto.situation-draft:${cloudApiBaseUrl}:${identity.conferenceId}:${identity.seatId}` : ''
+  )
+  const draftPrefix = $derived(
+    identity ? `veto.situation-draft:${cloudApiBaseUrl}:${identity.conferenceId}:` : ''
+  )
   const currentTimelineTime = $derived(
     timeline
       ? timeline.currentTime + (timeline.paused ? 0 : (clockNow - timelineReceivedAt) * timeline.ratio)
@@ -60,6 +80,11 @@
     return Date.parse(`${value}:00+08:00`)
   }
 
+  function validChinaTime(value: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) &&
+      Number.isSafeInteger(parseChinaTime(value))
+  }
+
   function markdown(value: string): string {
     return DOMPurify.sanitize(marked.parse(value, { async: false }) as string)
   }
@@ -72,12 +97,13 @@
     if (!silent) loading = true
     try {
       const [situationResult, timelineResult] = await Promise.all([
-        listCloudSituations(token),
-        getCloudTimeline(token)
+        canView ? listCloudSituations(token) : Promise.resolve(null),
+        canSeeTimeline ? getCloudTimeline(token) : Promise.resolve(null)
       ])
-      situations = situationResult.situations
-      timezone = situationResult.timezone
-      timeline = timelineResult.timeline
+      if (token !== cloudSession.session?.result.token) return
+      situations = situationResult?.situations ?? []
+      timezone = situationResult?.timezone ?? timelineResult?.timezone ?? 'Asia/Shanghai'
+      timeline = timelineResult?.timeline ?? null
       timelineReceivedAt = Date.now()
       error = ''
     } catch (caught) {
@@ -88,9 +114,9 @@
   }
 
   async function publish(): Promise<void> {
-    if (!token || !content.trim() || submitting) return
-    if (!timeline && !manualTime) {
-      error = '未配置时间线，请填写内容时间'
+    if (!token || !canPublish || !content.trim() || submitting) return
+    if (!timeline && !validChinaTime(manualTime)) {
+      error = '请填写有效的内容时间（UTC+8）'
       return
     }
     submitting = true
@@ -101,6 +127,7 @@
       })
       content = ''
       manualTime = ''
+      if (draftKey) localStorage.removeItem(draftKey)
       await load(true)
     } catch (caught) {
       error = caught instanceof CloudSituationError ? caught.message : '发布局势失败'
@@ -110,14 +137,18 @@
   }
 
   async function withdraw(item: SituationUpdate): Promise<void> {
-    if (!token) return
-    const reason = window.prompt('请输入撤回原因')?.trim()
-    if (!reason) return
+    const reason = withdrawalReason.trim()
+    if (!token || !canWithdraw || !reason || reason.length > 500 || withdrawingId !== item.id || withdrawing) return
+    withdrawing = true
     try {
       await withdrawCloudSituation(token, item.id, reason)
+      withdrawingId = null
+      withdrawalReason = ''
       await load(true)
     } catch (caught) {
       error = caught instanceof CloudSituationError ? caught.message : '撤回局势失败'
+    } finally {
+      withdrawing = false
     }
   }
 
@@ -144,12 +175,51 @@
   }
 
   onMount(() => {
+    if (draftKey) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(draftKey) ?? 'null') as unknown
+        if (saved && typeof saved === 'object' && 'content' in saved && typeof saved.content === 'string') {
+          content = saved.content
+          if ('manualTime' in saved && typeof saved.manualTime === 'string') manualTime = saved.manualTime
+        }
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index)
+          if (!key?.startsWith(draftPrefix) || key === draftKey) continue
+          const value = JSON.parse(localStorage.getItem(key) ?? 'null') as unknown
+          if (value && typeof value === 'object' && 'content' in value && typeof value.content === 'string') {
+            otherSeatDraft = {
+              seatId: key.slice(draftPrefix.length),
+              content: value.content,
+              manualTime: 'manualTime' in value && typeof value.manualTime === 'string' ? value.manualTime : ''
+            }
+            break
+          }
+        }
+      } catch {
+        draftError = '无法读取本地草稿'
+      }
+    }
+    draftReady = true
     void load()
     const clock = window.setInterval(() => (clockNow = Date.now()), 1000)
     const refresh = window.setInterval(() => void load(true), 5000)
     return () => {
       window.clearInterval(clock)
       window.clearInterval(refresh)
+    }
+  })
+
+  $effect(() => {
+    if (!draftReady || !draftKey) return
+    try {
+      if (content || manualTime) {
+        localStorage.setItem(draftKey, JSON.stringify({ content, manualTime }))
+      } else {
+        localStorage.removeItem(draftKey)
+      }
+      draftError = ''
+    } catch {
+      draftError = '本地草稿保存失败，请先复制正文备份'
     }
   })
 </script>
@@ -171,6 +241,19 @@
     <Card.Root><Card.Content class="py-10 text-center text-muted-foreground">局势仅在 Cloud Conference 中提供。</Card.Content></Card.Root>
   {:else}
     {#if error}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>{/if}
+    {#if draftError}<p class="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{draftError}</p>{/if}
+    {#if otherSeatDraft}
+      <Card.Root>
+        <Card.Header>
+          <Card.Title>其他席位的本地草稿</Card.Title>
+          <Card.Description>此草稿属于席位 {otherSeatDraft.seatId}，仅供查看和复制。请用原席位重新认证后提交。</Card.Description>
+        </Card.Header>
+        <Card.Content class="space-y-3">
+          {#if otherSeatDraft.manualTime}<p class="text-sm text-muted-foreground">内容时间：{otherSeatDraft.manualTime}（UTC+8）</p>{/if}
+          <Textarea readonly rows={6} value={otherSeatDraft.content} />
+        </Card.Content>
+      </Card.Root>
+    {/if}
 
     {#if timeline}
       <Card.Root>
@@ -214,18 +297,20 @@
 
     {#if canPublish}
       <Card.Root>
-        <Card.Header><Card.Title>发布局势更新</Card.Title><Card.Description>正文支持 Markdown，发布后不可修改。</Card.Description></Card.Header>
+        <Card.Header><Card.Title>发布局势更新</Card.Title><Card.Description>正文支持 Markdown，草稿保存在本机；发布后不可修改。</Card.Description></Card.Header>
         <Card.Content class="space-y-4">
           {#if !timeline}
             <div class="space-y-1.5"><Label for="content-time">内容时间（UTC+8）</Label><Input id="content-time" type="datetime-local" bind:value={manualTime} /></div>
+          {:else}
+            <p class="text-sm text-muted-foreground">内容时间将取发布瞬间的大会时间线时间。</p>
           {/if}
           <div class="space-y-1.5"><Label for="situation-content">正文</Label><Textarea id="situation-content" rows={8} maxlength={20000} bind:value={content} placeholder="输入 Markdown 正文…" /></div>
-          <div class="flex justify-end"><Button disabled={!content.trim() || submitting} onclick={() => void publish()}><Send />{submitting ? '发布中…' : '立即发布'}</Button></div>
+          <div class="flex justify-end"><Button disabled={!content.trim() || content.trim().length > 20000 || (!timeline && !validChinaTime(manualTime)) || submitting || loading} onclick={() => void publish()}><Send />{submitting ? '发布中…' : '立即发布'}</Button></div>
         </Card.Content>
       </Card.Root>
     {/if}
 
-    <section class="space-y-3">
+    {#if canView}<section class="space-y-3">
       <div class="flex items-center justify-between"><h2 class="font-semibold">已发布局势</h2><span class="text-xs text-muted-foreground">{situations.length} 条</span></div>
       {#if loading}
         <p class="py-10 text-center text-sm text-muted-foreground">正在加载…</p>
@@ -237,14 +322,26 @@
             <Card.Header>
               <div class="flex items-start justify-between gap-4">
                 <div><Card.Title class="font-mono text-base">{formatTime(item.contentTime)}</Card.Title><Card.Description>{item.author?.committeeName} · {item.author?.seatName}{item.author?.role ? ` · ${item.author.role}` : ''}</Card.Description></div>
-                {#if canWithdraw}<Button variant="destructive" size="sm" onclick={() => void withdraw(item)}>撤回</Button>{/if}
+                {#if canWithdraw}<Button variant="destructive" size="sm" disabled={withdrawingId !== null || withdrawing} onclick={() => { withdrawingId = item.id; withdrawalReason = '' }}>撤回</Button>{/if}
               </div>
             </Card.Header>
-            <Card.Content><article class="markdown-body text-sm leading-7">{@html markdown(item.content)}</article></Card.Content>
+            <Card.Content class="space-y-4">
+              <article class="markdown-body text-sm leading-7">{@html markdown(item.content)}</article>
+              {#if withdrawingId === item.id}
+                <div class="space-y-2 border-t pt-4">
+                  <Label for={`withdraw-${item.id}`}>撤回原因（必填，最多 500 字）</Label>
+                  <Textarea id={`withdraw-${item.id}`} rows={3} maxlength={500} bind:value={withdrawalReason} />
+                  <div class="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" disabled={withdrawing} onclick={() => { withdrawingId = null; withdrawalReason = '' }}>取消</Button>
+                    <Button variant="destructive" size="sm" disabled={!withdrawalReason.trim() || withdrawalReason.trim().length > 500 || withdrawing} onclick={() => void withdraw(item)}>{withdrawing ? '撤回中…' : '确认撤回'}</Button>
+                  </div>
+                </div>
+              {/if}
+            </Card.Content>
           </Card.Root>
         {/each}
       {/if}
-    </section>
+    </section>{/if}
   {/if}
 </div>
 

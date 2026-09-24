@@ -1102,6 +1102,9 @@ function ReviewStep({
             <dd className="mt-1 font-medium">{totalSeats}</dd>
           </div>
         </dl>
+        <p className="mt-4 text-sm text-muted-foreground">
+          创建后大会处于草稿状态。请在大会设置中完成时间配置，再手动激活大会。
+        </p>
       </article>
       <div className="grid gap-4">
         {structure.committees.map((committee, committeeIndex) => (

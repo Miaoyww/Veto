@@ -75,7 +75,7 @@
   )
   const canViewSituation = $derived(
     isCloudSession &&
-      cloudSession.hasCapability('view_situation', 'publish_situation', 'withdraw_situation')
+      cloudSession.hasCapability('view_situation', 'publish_situation', 'withdraw_situation', 'control_timeline')
   )
   const canViewNews = $derived(
     isCloudSession &&

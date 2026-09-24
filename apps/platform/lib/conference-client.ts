@@ -369,6 +369,12 @@ export async function replaceConferenceStructure(
   return result.conference
 }
 
+export const CONFERENCE_LIFECYCLE_LABELS: Record<ConferenceSummary["lifecycle"], string> = {
+  draft: "草稿",
+  active: "进行中",
+  closed: "已结束",
+}
+
 export async function configureConferenceRuntime(
   token: string,
   id: string,

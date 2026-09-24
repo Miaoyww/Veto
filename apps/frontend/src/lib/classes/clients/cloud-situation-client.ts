@@ -3,7 +3,7 @@ import type { SituationUpdate, TimelineProjection } from '../../../../../shared/
 export type CloudSituation = SituationUpdate
 export type CloudTimeline = TimelineProjection
 
-const cloudApiBaseUrl = (
+export const cloudApiBaseUrl = (
   import.meta.env.VITE_CLOUD_API_URL ?? 'https://api.miaoyww.top/v1'
 ).replace(/\/$/, '')
 

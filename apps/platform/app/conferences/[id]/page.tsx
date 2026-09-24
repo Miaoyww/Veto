@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  CONFERENCE_LIFECYCLE_LABELS,
   ConferenceApiError,
   type Conference,
   type ConferenceStructure,
@@ -147,7 +148,7 @@ export default function ConferenceDetailPage(): JSX.Element {
   }
 
   async function saveStructure(): Promise<void> {
-    if (!token || !conference || saving) return
+    if (!token || !conference || conference.lifecycle !== "draft" || saving) return
     setSaving("structure")
     setError("")
     setFieldErrors([])
@@ -215,6 +216,9 @@ export default function ConferenceDetailPage(): JSX.Element {
           <section className="flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={conference.lifecycle === "active" ? "default" : "secondary"}>
+                  {CONFERENCE_LIFECYCLE_LABELS[conference.lifecycle]}
+                </Badge>
                 <Badge variant="secondary">v{conference.version}</Badge>
                 <span className="text-xs text-muted-foreground">
                   {conference.committees.length} 个委员会 ·{" "}
@@ -314,6 +318,26 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsList>
 
             <TabsContent value="settings" className="mt-8">
+              {conference.lifecycle === "draft" && token ? (
+                <div className="mb-8 space-y-4">
+                  <div>
+                    <h2 className="text-xl font-semibold">启用大会</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      大会已创建为草稿。完成结构编辑并保存时间配置后，手动激活大会。
+                    </p>
+                  </div>
+                  <ConferenceSituationWorkspace
+                    token={token}
+                    conference={conference}
+                    hasUnsavedStructure={JSON.stringify(structure) !== JSON.stringify({
+                      roleTemplates: conference.roleTemplates,
+                      committees: conference.committees,
+                    })}
+                    onConferenceChange={setConference}
+                    onError={handleError}
+                  />
+                </div>
+              ) : null}
               <div className="grid min-w-0 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
                 <Card className="bg-muted/30 shadow-none ring-0 lg:sticky lg:top-6">
                   <CardHeader>
@@ -387,7 +411,9 @@ export default function ConferenceDetailPage(): JSX.Element {
                         大会结构
                       </h2>
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        配置角色权限、委员会与席位。
+                        {conference.lifecycle === "draft"
+                          ? "配置角色权限、委员会与席位。"
+                          : "大会激活后，结构不可修改。"}
                       </p>
                     </div>
                   </div>
@@ -395,25 +421,27 @@ export default function ConferenceDetailPage(): JSX.Element {
                   <ConferenceStructureEditor
                     value={structure}
                     onChange={setStructure}
-                    disabled={Boolean(saving)}
+                    disabled={Boolean(saving) || conference.lifecycle !== "draft"}
                     conferenceId={conference.id}
                   />
 
-                  <div className="sticky bottom-4 mt-8 flex justify-end rounded-xl border bg-background p-3 shadow-sm">
-                    <Button
-                      type="button"
-                      size="lg"
-                      disabled={Boolean(saving)}
-                      onClick={() => void saveStructure()}
-                    >
-                      {saving === "structure" ? (
-                        <Loader2 className="animate-spin" aria-hidden="true" />
-                      ) : (
-                        <Save aria-hidden="true" />
-                      )}
-                      保存大会结构
-                    </Button>
-                  </div>
+                  {conference.lifecycle === "draft" ? (
+                    <div className="sticky bottom-4 mt-8 flex justify-end rounded-xl border bg-background p-3 shadow-sm">
+                      <Button
+                        type="button"
+                        size="lg"
+                        disabled={Boolean(saving)}
+                        onClick={() => void saveStructure()}
+                      >
+                        {saving === "structure" ? (
+                          <Loader2 className="animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Save aria-hidden="true" />
+                        )}
+                        保存大会结构
+                      </Button>
+                    </div>
+                  ) : null}
                 </section>
               </div>
             </TabsContent>
@@ -437,7 +465,13 @@ export default function ConferenceDetailPage(): JSX.Element {
             </TabsContent>
 
             <TabsContent value="situations" className="mt-8">
-              {token && conference ? (
+              {conference.lifecycle === "draft" ? (
+                <Card>
+                  <CardContent className="py-8 text-sm text-muted-foreground">
+                    大会尚未激活。请在大会设置中配置时间并激活大会。
+                  </CardContent>
+                </Card>
+              ) : token ? (
                 <ConferenceSituationWorkspace
                   token={token}
                   conference={conference}

@@ -11,7 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import type { ConferenceSummary } from "@/lib/conference-client"
+import {
+  CONFERENCE_LIFECYCLE_LABELS,
+  type ConferenceSummary,
+} from "@/lib/conference-client"
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
@@ -49,6 +52,9 @@ export function ConferenceCard({
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <Badge variant={conference.lifecycle === "active" ? "default" : "secondary"}>
+            {CONFERENCE_LIFECYCLE_LABELS[conference.lifecycle]}
+          </Badge>
           {conference.organizer ? (
             <Badge variant="secondary">{conference.organizer}</Badge>
           ) : null}

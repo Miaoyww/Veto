@@ -20,6 +20,7 @@ import {
 interface Props {
   token: string
   conference: Conference
+  hasUnsavedStructure?: boolean
   onConferenceChange: (conference: Conference) => void
   onError: (error: unknown, fallback: string) => void
 }
@@ -44,6 +45,7 @@ function formatTime(value: number): string {
 export function ConferenceSituationWorkspace({
   token,
   conference,
+  hasUnsavedStructure = false,
   onConferenceChange,
   onError,
 }: Props) {
@@ -154,7 +156,9 @@ export function ConferenceSituationWorkspace({
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>激活后不能再新增、删除或修改 Timeline 基础配置。</p>
             <p>默认时区：Asia/Shanghai（UTC+8）</p>
-            <Button className="w-full" disabled={conference.timelineMode === "undecided" || Boolean(busy)} onClick={() => void activate()}>
+            {conference.timelineMode === "undecided" ? <p>请先保存时间配置。</p> : null}
+            {hasUnsavedStructure ? <p>请先保存大会结构。</p> : null}
+            <Button className="w-full" disabled={conference.timelineMode === "undecided" || hasUnsavedStructure || Boolean(busy)} onClick={() => void activate()}>
               {busy === "activate" ? <Loader2 className="animate-spin" /> : <Play />}激活大会
             </Button>
           </CardContent>

@@ -302,7 +302,7 @@ export function ConferenceStructureEditor({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {conferenceId ? (
+              {conferenceId && !disabled ? (
                 <Link
                   href={`/conferences/${conferenceId}/committees/new`}
                   className={buttonVariants({ variant: "outline" })}
@@ -347,7 +347,7 @@ export function ConferenceStructureEditor({
                     committee,
                     committeeIndex
                   )
-                  const href = conferenceId
+                  const href = conferenceId && !disabled
                     ? `/conferences/${conferenceId}/committees/${reference}`
                     : undefined
                   return (
