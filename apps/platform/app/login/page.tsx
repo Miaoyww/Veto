@@ -20,7 +20,13 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tabs,
+  TabsList,
+  TabsTab,
+  TabsPanels,
+  TabsPanel,
+} from "@/components/animate-ui/components/base/tabs"
 import { TypingAnimation } from "@/components/ui/typing-animation"
 import { TextAnimate } from "@/components/ui/text-animate"
 import {
@@ -84,17 +90,18 @@ export default function Page() {
                   className="gap-4"
                 >
                   <TabsList className="w-full">
-                    <TabsTrigger value="login">登录</TabsTrigger>
-                    <TabsTrigger value="register">注册</TabsTrigger>
+                    <TabsTab value="login">登录</TabsTab>
+                    <TabsTab value="register">注册</TabsTab>
                   </TabsList>
 
-                  <TabsContent value="login">
-                    <LoginForm />
-                  </TabsContent>
-
-                  <TabsContent value="register">
-                    <RegisterForm onSuccess={() => setTab("login")} />
-                  </TabsContent>
+                  <TabsPanels>
+                    <TabsPanel value="login">
+                      <LoginForm />
+                    </TabsPanel>
+                    <TabsPanel value="register">
+                      <RegisterForm onSuccess={() => setTab("login")} />
+                    </TabsPanel>
+                  </TabsPanels>
                 </Tabs>
               </CardContent>
 

@@ -12,8 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@vetoexpress/utils": "workspace:*",
+    "@base-ui-components/react": "1.0.0-rc.0",
     "@base-ui/react": "^1.8.0",
+    "@vetoexpress/utils": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "input-otp": "^1.5.0",
