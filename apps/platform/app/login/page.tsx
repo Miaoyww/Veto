@@ -41,6 +41,8 @@ import { BubbleBackground } from "@/components/animate-ui/components/backgrounds
 type AuthTab = "login" | "register"
 type RegisterStage = "email" | "code" | "password"
 
+const RESEND_COOLDOWN_SECONDS = 60
+
 export default function Page() {
   const [tab, setTab] = useState<AuthTab>("login")
   const router = useRouter()
@@ -238,16 +240,27 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [regToken, setRegToken] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+
+    const timer = setInterval(() => {
+      setCooldown((seconds) => Math.max(seconds - 1, 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [cooldown > 0])
 
   async function submitEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!email.trim()) return
+    if (!email.trim() || cooldown > 0) return
 
     setBusy(true)
     setError("")
     try {
       await sendVerificationCode(email.trim())
       setStage("code")
+      setCooldown(RESEND_COOLDOWN_SECONDS)
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "发送失败")
     } finally {
@@ -315,8 +328,12 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
             icon={<LogIn className="size-4" />}
             busyIcon={<Loader2 className="size-4 animate-spin" />}
             busy={busy}
-            disabled={busy || !email.trim()}
-            label="发送验证码"
+            disabled={busy || cooldown > 0 || !email.trim()}
+            label={
+              cooldown > 0
+                ? `重新发送（${cooldown}s）`
+                : "发送验证码"
+            }
           />
         </form>
       ) : null}
