@@ -329,12 +329,9 @@ export async function rememberCloudMembership(
 }
 
 export async function updateCloudMembershipPassword(
-  conferenceId: string,
+  membership: CloudMembership,
   password: string
 ): Promise<CloudMembership> {
-  const membership = getCloudMembershipByConferenceId(conferenceId)
-  if (!membership) throw new CloudJoinError('未找到云端大会成员信息')
-
   const nextMembership: CloudMembership = {
     ...membership,
     password: await encryptLocalValue(password),
@@ -342,7 +339,7 @@ export async function updateCloudMembershipPassword(
   }
   saveMemberships(
     loadMemberships().map((item) =>
-      item.conferenceId === conferenceId && item.seatId === membership.seatId
+      item.conferenceId === membership.conferenceId && item.seatId === membership.seatId
         ? nextMembership
         : item
     )
@@ -350,10 +347,6 @@ export async function updateCloudMembershipPassword(
   ensureCloudConference(nextMembership)
 
   return nextMembership
-}
-
-export function getCloudMembershipByConferenceId(conferenceId: string): CloudMembership | null {
-  return loadMemberships().find((membership) => membership.conferenceId === conferenceId) ?? null
 }
 
 /** All locally remembered seats for a cloud conference, most recently used first. */

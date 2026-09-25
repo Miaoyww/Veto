@@ -70,7 +70,7 @@
     requestError = ''
     isSubmitting = true
     try {
-      await updateCloudMembershipPassword(membership.conferenceId, nextPassword)
+      await updateCloudMembershipPassword(membership, nextPassword)
       onOpenChange(false)
     } catch (error) {
       requestError = error instanceof CloudJoinError ? error.message : '无法保存入会密码，请重试'

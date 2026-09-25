@@ -25,6 +25,7 @@
   import { ScrollArea } from '$lib/components/ui/scroll-area'
   import ConferenceCard from '$lib/components/home/conference-card.svelte'
   import CloudPasswordDialog from '$lib/components/conference/join/cloud-password-dialog.svelte'
+  import CloudIdentityPickerDialog from '$lib/components/conference/join/cloud-identity-picker-dialog.svelte'
   import TextAnimate from '$lib/components/ui/text-animate.svelte'
   import {
     conferences,
@@ -39,7 +40,7 @@
   import { navigateToConference } from '$lib/classes/utils'
   import { authenticateCloudSeat, CloudJoinError } from '$lib/classes/clients/cloud-join-client'
   import {
-    getCloudMembershipByConferenceId,
+    getCloudMembershipsByConferenceId,
     getCloudMembershipPassword,
     rememberCloudMembership,
     removeCloudMembership,
@@ -51,6 +52,10 @@
   let passwordDialogOpen = $state(false)
   let passwordMembership = $state<CloudMembership | null>(null)
   let rejoinError = $state('')
+  let identityPickerOpen = $state(false)
+  let identityPickerMemberships = $state<CloudMembership[]>([])
+  let identityPickerDescription = $state('')
+  let identityPickerAction = $state<'rejoin' | 'password'>('rejoin')
 
   const filteredConferences = $derived(
     query.trim()
@@ -100,13 +105,7 @@
     if (lastOpened) navigateToConference(lastOpened.id)
   }
 
-  async function rejoinCloudConference(conference: Conference): Promise<void> {
-    const membership = getCloudMembershipByConferenceId(conference.id)
-    if (!membership) {
-      rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
-      return
-    }
-
+  async function rejoinWithMembership(membership: CloudMembership): Promise<void> {
     rejoinError = ''
     try {
       const password = await getCloudMembershipPassword(membership)
@@ -129,15 +128,58 @@
     }
   }
 
-  function openCloudPasswordDialog(conference: Conference): void {
-    const membership = getCloudMembershipByConferenceId(conference.id)
-    if (!membership) {
+  function openIdentityPicker(
+    conference: Conference,
+    memberships: CloudMembership[],
+    action: 'rejoin' | 'password'
+  ): void {
+    identityPickerMemberships = memberships
+    identityPickerDescription =
+      action === 'rejoin'
+        ? `「${conference.name}」在本机保存了多个身份，请选择本次进入的席位。`
+        : `「${conference.name}」在本机保存了多个身份，请选择要修改入会密码的席位。`
+    identityPickerAction = action
+    identityPickerOpen = true
+  }
+
+  async function rejoinCloudConference(conference: Conference): Promise<void> {
+    const memberships = getCloudMembershipsByConferenceId(conference.id)
+    if (memberships.length === 0) {
       rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
       return
     }
 
     rejoinError = ''
-    passwordMembership = membership
+    if (memberships.length > 1) {
+      openIdentityPicker(conference, memberships, 'rejoin')
+      return
+    }
+    await rejoinWithMembership(memberships[0])
+  }
+
+  function handleIdentitySelect(membership: CloudMembership): void {
+    if (identityPickerAction === 'password') {
+      rejoinError = ''
+      passwordMembership = membership
+      passwordDialogOpen = true
+      return
+    }
+    void rejoinWithMembership(membership)
+  }
+
+  function openCloudPasswordDialog(conference: Conference): void {
+    const memberships = getCloudMembershipsByConferenceId(conference.id)
+    if (memberships.length === 0) {
+      rejoinError = '未找到本机保存的云端席位信息，请通过邀请码重新加入。'
+      return
+    }
+
+    rejoinError = ''
+    if (memberships.length > 1) {
+      openIdentityPicker(conference, memberships, 'password')
+      return
+    }
+    passwordMembership = memberships[0]
     passwordDialogOpen = true
   }
 
@@ -359,6 +401,13 @@
     open={passwordDialogOpen}
     membership={passwordMembership}
     onOpenChange={(value) => (passwordDialogOpen = value)}
+  />
+  <CloudIdentityPickerDialog
+    open={identityPickerOpen}
+    memberships={identityPickerMemberships}
+    description={identityPickerDescription}
+    onSelect={handleIdentitySelect}
+    onOpenChange={(value) => (identityPickerOpen = value)}
   />
 </div>
 

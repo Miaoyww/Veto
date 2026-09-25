@@ -223,8 +223,8 @@
             variant={index === 0 ? 'default' : 'secondary'}
             class="max-w-56 truncate text-[11px]"
             title={
-              index === 0
-                ? `重新入会将进入：${seatLabel(membership)}`
+              memberships.length > 1 && index === 0
+                ? `最近使用：${seatLabel(membership)}`
                 : seatLabel(membership)
             }
           >
