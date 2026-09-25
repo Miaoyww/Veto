@@ -1,10 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ArchiveRestore, Cloud, Loader2, Plus } from "lucide-react"
+import { ArchiveRestore, Cloud, Loader2, Plus, RotateCw } from "lucide-react"
 import Link from "next/link"
 
-import { RotateCw } from "@/components/animate-ui/icons/rotate-cw"
 import { ConferenceCard } from "@/components/conference-card"
 import { PlatformLoading, PlatformShell } from "@/components/platform-shell"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -34,7 +33,6 @@ export default function PlatformHome() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [restoringId, setRestoringId] = useState<string>()
-  const [spinCount, setSpinCount] = useState(0)
   const [error, setError] = useState("")
 
   const handleError = useCallback(
@@ -143,7 +141,7 @@ export default function PlatformHome() {
                 void loadConferences(true)
               }}
             >
-              <RotateCw key={spinCount}  />
+              <RotateCw />
             </Button>
           </div>
         </div>
