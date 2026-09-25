@@ -8,7 +8,8 @@
     KeyRound,
     CalendarDays,
     Users,
-    Building2
+    Building2,
+    Armchair
   } from '@lucide/svelte'
   import type { Conference } from '$lib/classes/types/conference'
   import {
@@ -16,6 +17,10 @@
     deleteConference,
     renameConference
   } from '$lib/classes/stores/conference/conference-store'
+  import {
+    getCloudMembershipsByConferenceId,
+    type CloudMembership
+  } from '$lib/classes/stores/conference/cloud-membership-store'
   import { navigateToConference } from '$lib/classes/utils'
   import { showConfirm } from '$lib/classes/stores/app/global-ui-store'
   import { Badge } from '$lib/components/ui/badge'
@@ -40,6 +45,19 @@
   let inputRef = $state<HTMLInputElement | null>(null)
 
   const isActive = $derived($currentConferenceId === conference.id)
+
+  /** 本机为该云端大会保存的身份，按最近使用排序；第一个即「重新入会」将进入的席位 */
+  const memberships = $derived(
+    conference.source === 'cloud' ? getCloudMembershipsByConferenceId(conference.id) : []
+  )
+
+  function seatLabel(membership: CloudMembership): string {
+    if (membership.isChair) {
+      return membership.chairCommitteeName ? `主席 · ${membership.chairCommitteeName}` : '主席'
+    }
+    const committeePrefix = memberships.length > 1 ? `${membership.committeeName} · ` : ''
+    return `${committeePrefix}${membership.seatName} · ${membership.roleName}`
+  }
 
   function handleLoad(): void {
     if (editing) return
@@ -194,6 +212,27 @@
   </CardHeader>
 
   <CardContent class="px-5">
+    {#if memberships.length > 0}
+      <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
+        <span class="flex items-center gap-1 text-xs text-muted-foreground">
+          <Armchair class="size-3" />
+          {memberships.length > 1 ? '本机身份' : '当前席位'}
+        </span>
+        {#each memberships as membership, index (membership.seatId)}
+          <Badge
+            variant={index === 0 ? 'default' : 'secondary'}
+            class="max-w-56 truncate text-[11px]"
+            title={
+              index === 0
+                ? `重新入会将进入：${seatLabel(membership)}`
+                : seatLabel(membership)
+            }
+          >
+            {seatLabel(membership)}
+          </Badge>
+        {/each}
+      </div>
+    {/if}
     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <span class="flex items-center gap-1">
         <Building2 class="size-3" />
