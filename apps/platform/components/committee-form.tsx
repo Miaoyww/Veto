@@ -3,6 +3,7 @@
 import type { JSX } from "react"
 import { Plus } from "lucide-react"
 import type { ImportedSeat } from "@vetoexpress/utils/seat-import"
+import type { SeatInviteExportRow } from "@vetoexpress/utils/seat-invite-export"
 
 import { CommitteeSeatTable } from "@/components/committee-seat-table"
 import { SeatImportDialog } from "@/components/seat-import-dialog"
@@ -49,6 +50,21 @@ export function CommitteeForm({
   onChange,
 }: CommitteeFormProps): JSX.Element {
   const reference = value.id ?? value.clientId ?? "committee"
+
+  const exportRows: SeatInviteExportRow[] = value.seats.flatMap((seat) => {
+    if (!seat.inviteCode) return []
+    const role = roles.find(
+      (item) => roleReference(item) === seat.roleTemplateId
+    )
+    return [
+      {
+        name: seat.name,
+        shortName: seat.shortName,
+        roleName: role?.name,
+        inviteCode: seat.inviteCode,
+      },
+    ]
+  })
 
   function roleReferenceForImportedName(roleName: string): string {
     const allowedRoles = roles.filter((role) =>
@@ -162,9 +178,9 @@ export function CommitteeForm({
               onImport={importSeats}
             />
             <SeatInviteExportDialog
-              committeeName={value.name}
-              seats={value.seats}
-              roles={roles}
+              filenameBase={value.name}
+              rows={exportRows}
+              missingCount={value.seats.length - exportRows.length}
               disabled={disabled}
             />
             <Button

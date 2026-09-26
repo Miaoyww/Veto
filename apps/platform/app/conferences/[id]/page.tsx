@@ -14,6 +14,7 @@ import {
   ScrollText,
   Settings2,
   Trash2,
+  Users,
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
@@ -21,6 +22,7 @@ import {
   ConferenceStructureEditor,
   textareaClassName,
 } from "@/components/conference-structure-editor"
+import { ConferenceSeatOverview } from "@/components/conference-seat-overview"
 import { ConferenceSituationWorkspace } from "@/components/conference-situation-workspace"
 import { ConferenceDirectiveWorkspace } from "@/components/conference-directive-workspace"
 import { ConferenceNewsWorkspace } from "@/components/conference-news-workspace"
@@ -318,7 +320,7 @@ export default function ConferenceDetailPage(): JSX.Element {
 
           <Tabs defaultValue="settings" className="gap-0">
             <TabsList
-              className="grid h-auto w-full grid-cols-5"
+              className="grid h-auto w-full grid-cols-6"
               aria-label="大会工作区"
             >
               <TabsTab
@@ -327,6 +329,13 @@ export default function ConferenceDetailPage(): JSX.Element {
               >
                 <Settings2 className="hidden sm:block" aria-hidden="true" />
                 大会设置
+              </TabsTab>
+              <TabsTab
+                value="seats"
+                className="min-h-11 min-w-0 py-2 text-xs sm:text-sm"
+              >
+                <Users className="hidden sm:block" aria-hidden="true" />
+                席位总览
               </TabsTab>
               <TabsTab
                 value="news"
@@ -546,6 +555,19 @@ export default function ConferenceDetailPage(): JSX.Element {
                     ) : null}
                   </section>
                 </div>
+              </TabsPanel>
+
+              <TabsPanel value="seats">
+                <ConferenceSeatOverview
+                  conference={conference}
+                  hasUnsavedStructure={
+                    JSON.stringify(structure) !==
+                    JSON.stringify({
+                      roleTemplates: conference.roleTemplates,
+                      committees: conference.committees,
+                    })
+                  }
+                />
               </TabsPanel>
 
               <TabsPanel value="news">

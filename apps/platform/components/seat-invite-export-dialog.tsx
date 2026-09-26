@@ -14,13 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { RoleTemplateInput, SeatInput } from "@/lib/conference-client"
-import { roleReference } from "@/lib/conference-structure"
 
 interface SeatInviteExportDialogProps {
-  committeeName: string
-  seats: SeatInput[]
-  roles: RoleTemplateInput[]
+  filenameBase: string
+  rows: SeatInviteExportRow[]
+  description?: string
+  missingCount?: number
   disabled?: boolean
 }
 
@@ -36,33 +35,19 @@ function download(data: BlobPart, mimeType: string, filename: string): void {
 }
 
 export function SeatInviteExportDialog({
-  committeeName,
-  seats,
-  roles,
+  filenameBase,
+  rows,
+  description = "导出已生成的邀请码，包含席位名称、简称和角色。",
+  missingCount = 0,
   disabled = false,
 }: SeatInviteExportDialogProps): JSX.Element {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState("")
   const [exporting, setExporting] = useState(false)
-  const rows: SeatInviteExportRow[] = seats.flatMap((seat) => {
-    if (!seat.inviteCode) return []
-    const role = roles.find(
-      (item) => roleReference(item) === seat.roleTemplateId
-    )
-    return [
-      {
-        name: seat.name,
-        shortName: seat.shortName,
-        roleName: role?.name,
-        inviteCode: seat.inviteCode,
-      },
-    ]
-  })
-  const missingCount = seats.length - rows.length
   const filename =
-    (committeeName.trim() || "委员会")
+    (filenameBase.trim() || "席位")
       .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
-      .replace(/[. ]+$/g, "") || "委员会"
+      .replace(/[. ]+$/g, "") || "席位"
 
   async function exportFile(format: "text" | "excel"): Promise<void> {
     if (!rows.length || exporting) return
@@ -111,16 +96,14 @@ export function SeatInviteExportDialog({
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>导出邀请码</DialogTitle>
-            <DialogDescription>
-              导出当前委员会中已生成的邀请码，包含席位名称、简称和角色。
-            </DialogDescription>
+            <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm">
             <p>可导出 {rows.length} 个席位的邀请码。</p>
             {missingCount > 0 ? (
               <p className="text-muted-foreground">
                 {missingCount}{" "}
-                个席位尚未生成邀请码，将不会出现在文件中。请先保存委员会以生成新席位的邀请码。
+                个席位尚未生成邀请码，将不会出现在文件中。请先保存以生成新席位的邀请码。
               </p>
             ) : null}
             {error ? (
