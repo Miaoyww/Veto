@@ -39,12 +39,12 @@
       `会议 ID: ${conferenceId}`,
       `席位: ${seat.name}`,
       `邀请码: ${inviteCode}`,
-      `密码: ${user?.passwordHash ? '使用者已设置' : '未设置，仅凭邀请码连接'}`,
+      `密码: ${user?.passwordHash ? '使用者已设置' : '未设置，首次认领时需设置密码'}`,
       ``,
       `加入方式：`,
       `1. 打开 Veto 应用`,
       `2. 在首页点击"加入会议"`,
-      `3. 输入邀请码、姓名和可选密码`
+      `3. 输入邀请码，首次认领时填写姓名和密码（均为必填）`
     ].join('\n')
 
     navigator.clipboard.writeText(text)

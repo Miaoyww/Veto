@@ -54,7 +54,7 @@
       if (nameError) return
     }
 
-    if (!isClaimMode && target.hasPassword && !password) {
+    if ((isClaimMode || target.hasPassword) && !password) {
       requestError = '请填写入会密码'
       return
     }
@@ -65,7 +65,7 @@
         ? await claimCloudSeat({
             inviteCode: target.inviteCode,
             displayName: displayName.trim(),
-            password: password || undefined
+            password
           })
         : await authenticateCloudSeat({
             inviteCode: target.inviteCode,
@@ -104,6 +104,7 @@
               placeholder="请输入姓名"
               aria-invalid={Boolean(nameError)}
               disabled={isSubmitting}
+              required
             />
             {#if nameError}
               <Field.FieldError>{nameError}</Field.FieldError>
@@ -113,7 +114,7 @@
 
         <Field.Field>
           <Field.FieldLabel for="join-password">
-            {isClaimMode ? '密码（可选）' : '入会密码'}
+            {isClaimMode ? '密码' : '入会密码'}
           </Field.FieldLabel>
           <Input
             id="join-password"
@@ -143,7 +144,12 @@
         <Button type="button" variant="outline" onclick={onBack} disabled={isSubmitting}>
           返回
         </Button>
-        <Button type="submit" disabled={isSubmitting || (isClaimMode && !displayName.trim())}>
+        <Button
+          type="submit"
+          disabled={isSubmitting ||
+            (isClaimMode && !displayName.trim()) ||
+            ((isClaimMode || target.hasPassword) && !password)}
+        >
           {#if isSubmitting}
             <Spinner data-icon="inline-start" aria-label="正在加入" />
             正在加入
