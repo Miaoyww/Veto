@@ -49,6 +49,7 @@ export interface PlatformUser {
   name: string
   email: string
   avatar: string
+  organization: string
 }
 
 let cachedUser: { token: string; user: PlatformUser } | null = null
@@ -107,14 +108,19 @@ export async function verifyCode(email: string, code: string): Promise<string> {
 export async function register(
   regToken: string,
   password: string,
-  name?: string
+  name: string,
+  organization: string
 ): Promise<string> {
+  if (!name.trim()) throw new AuthError("请填写姓名")
+  if (!organization.trim()) throw new AuthError("请填写所属模联")
+
   const result = await request<{ ok: true; token: string }>(
     "/v1/auth/register",
     {
       regToken,
       password,
-      name: name?.trim() || undefined,
+      name: name.trim(),
+      organization: organization.trim(),
     }
   )
   return result.token

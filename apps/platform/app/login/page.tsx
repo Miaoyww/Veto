@@ -236,6 +236,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("")
   const [code, setCode] = useState("")
   const [name, setName] = useState("")
+  const [organization, setOrganization] = useState("")
   const [password, setPassword] = useState("")
   const [regToken, setRegToken] = useState("")
   const [busy, setBusy] = useState(false)
@@ -287,12 +288,12 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
 
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (password.length < 6) return
+    if (busy || password.length < 6) return
 
     setBusy(true)
     setError("")
     try {
-      await register(regToken, password, name)
+      await register(regToken, password, name, organization)
       onSuccess()
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "注册失败")
@@ -387,14 +388,27 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       {stage === "password" ? (
         <form className="flex flex-col gap-4" onSubmit={submitPassword}>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="register-name">姓名（可选）</Label>
+            <Label htmlFor="register-name">姓名</Label>
             <Input
               id="register-name"
               className="h-12"
               placeholder="姓名"
               autoComplete="name"
+              required
               value={name}
               onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="register-organization">所属模联</Label>
+            <Input
+              id="register-organization"
+              className="h-12"
+              placeholder="请输入所属模联"
+              autoComplete="organization"
+              required
+              value={organization}
+              onChange={(event) => setOrganization(event.target.value)}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -405,6 +419,8 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
               className="h-12"
               placeholder="至少 6 位"
               autoComplete="new-password"
+              required
+              minLength={6}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
@@ -413,7 +429,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
             icon={<UserPlus className="size-4" />}
             busyIcon={<Loader2 className="size-4 animate-spin" />}
             busy={busy}
-            disabled={busy || password.length < 6}
+            disabled={busy || !name.trim() || !organization.trim() || password.length < 6}
             label="完成注册"
           />
         </form>
