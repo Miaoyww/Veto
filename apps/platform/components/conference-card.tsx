@@ -16,6 +16,8 @@ import {
   type ConferenceSummary,
 } from "@/lib/conference-client"
 
+import { formatSchedule } from "@/lib/conference-schedule"
+
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
   month: "short",
@@ -52,7 +54,11 @@ export function ConferenceCard({
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <Badge variant={conference.lifecycle === "active" ? "default" : "secondary"}>
+          <Badge
+            variant={
+              conference.lifecycle === "active" ? "default" : "secondary"
+            }
+          >
             {CONFERENCE_LIFECYCLE_LABELS[conference.lifecycle]}
           </Badge>
           {conference.organizer ? (
@@ -63,6 +69,11 @@ export function ConferenceCard({
             更新于 {dateFormatter.format(new Date(conference.updatedAt))}
           </span>
           <span>v{conference.version}</span>
+          <span className="w-full">
+            开始：{formatSchedule(conference.startsAt)}
+            <br />
+            结束：{formatSchedule(conference.endsAt)}
+          </span>
         </CardContent>
       </Card>
     </Link>

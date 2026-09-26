@@ -49,6 +49,12 @@ import {
   replaceConferenceStructure,
   updateConferenceMetadata,
 } from "@/lib/conference-client"
+import { ConferenceScheduleFields } from "@/components/conference-schedule-fields"
+import {
+  scheduleInput,
+  scheduleInstant,
+  scheduleError,
+} from "@/lib/conference-schedule"
 import { usePlatformAuth } from "@/lib/use-platform-auth"
 
 type SavingSection = "metadata" | "structure" | "delete"
@@ -61,6 +67,8 @@ export default function ConferenceDetailPage(): JSX.Element {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [organizer, setOrganizer] = useState("")
+  const [startsAt, setStartsAt] = useState("")
+  const [endsAt, setEndsAt] = useState("")
   const [structure, setStructure] = useState<ConferenceStructure>({
     roleTemplates: [],
     committees: [],
@@ -108,6 +116,8 @@ export default function ConferenceDetailPage(): JSX.Element {
         setName(next.name)
         setDescription(next.description ?? "")
         setOrganizer(next.organizer ?? "")
+        setStartsAt(scheduleInput(next.startsAt))
+        setEndsAt(scheduleInput(next.endsAt))
         setStructure({
           roleTemplates: next.roleTemplates,
           committees: next.committees,
@@ -132,6 +142,10 @@ export default function ConferenceDetailPage(): JSX.Element {
       setError("大会名称不能为空")
       return
     }
+    if (!conference.filesExpiredAt && scheduleError(startsAt, endsAt)) {
+      setError(scheduleError(startsAt, endsAt))
+      return
+    }
     setSaving("metadata")
     setError("")
     setFieldErrors([])
@@ -144,12 +158,24 @@ export default function ConferenceDetailPage(): JSX.Element {
           name: name.trim(),
           description: description.trim(),
           organizer: organizer.trim(),
+          ...(!conference.filesExpiredAt
+            ? {
+                ...(startsAt !== scheduleInput(conference.startsAt)
+                  ? { startsAt: scheduleInstant(startsAt) }
+                  : {}),
+                ...(endsAt !== scheduleInput(conference.endsAt)
+                  ? { endsAt: scheduleInstant(endsAt) }
+                  : {}),
+              }
+            : {}),
         }
       )
       setConference(next)
       setName(next.name)
       setDescription(next.description ?? "")
       setOrganizer(next.organizer ?? "")
+      setStartsAt(scheduleInput(next.startsAt))
+      setEndsAt(scheduleInput(next.endsAt))
     } catch (caught) {
       handleError(caught, "保存大会信息失败")
     } finally {
@@ -337,7 +363,7 @@ export default function ConferenceDetailPage(): JSX.Element {
                 {conference.lifecycle !== "closed" && token ? (
                   <div className="mb-8 space-y-4">
                     <div>
-                      <h2 className="text-xl font-semibold">大会时间</h2>
+                      <h2 className="text-xl font-semibold">模拟时间线</h2>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {conference.lifecycle === "draft"
                           ? "完成结构编辑并保存时间配置后，手动激活大会。"
@@ -416,6 +442,22 @@ export default function ConferenceDetailPage(): JSX.Element {
                             }
                           />
                         </div>
+                        <ConferenceScheduleFields
+                          startsAt={startsAt}
+                          endsAt={endsAt}
+                          onStartChange={setStartsAt}
+                          onEndChange={setEndsAt}
+                          disabled={
+                            Boolean(saving) ||
+                            conference.lifecycle === "closed" ||
+                            Boolean(conference.filesExpiredAt)
+                          }
+                        />
+                        {conference.filesExpiredAt ? (
+                          <p className="text-sm text-muted-foreground">
+                            文件到期清理已开始，会议时间已锁定，无法延长或恢复文件。
+                          </p>
+                        ) : null}
                         <Button
                           type="button"
                           size="lg"
@@ -548,6 +590,8 @@ export default function ConferenceDetailPage(): JSX.Element {
               <TabsPanel value="files">
                 {token ? (
                   <ConferenceFilesWorkspace
+                    filesExpireAt={conference.filesExpireAt}
+                    filesExpiredAt={conference.filesExpiredAt}
                     token={token}
                     conferenceId={conference.id}
                     lifecycle={conference.lifecycle}

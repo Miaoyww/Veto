@@ -6,6 +6,73 @@ describe("organizer file client", () => {
     vi.unstubAllEnvs()
   })
 
+  it("sends schedule fields on create and distinguishes clearing from omission on patch", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test")
+    vi.resetModules()
+    const { createConference, updateConferenceMetadata } =
+      await import("./conference-client")
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ ok: true, conference: { id: "conference-1" } })
+          )
+        )
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    const schedule = {
+      startsAt: "2026-10-01T01:00:00.000Z",
+      endsAt: "2026-10-03T10:00:00.000Z",
+    }
+    await createConference(
+      "owner-token",
+      { name: "大会", roleTemplates: [], committees: [], ...schedule },
+      "create-key"
+    )
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject(schedule)
+    await updateConferenceMetadata("owner-token", "conference-1", 2, {
+      endsAt: null,
+    })
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      endsAt: null,
+    })
+    expect(
+      new Headers(fetchMock.mock.calls[1][1].headers).get("If-Match")
+    ).toBe('"2"')
+    await updateConferenceMetadata("owner-token", "conference-1", 3, {
+      name: "新名称",
+    })
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({
+      name: "新名称",
+    })
+  })
+
+  it("preserves the expiry error code when a download reaches the deadline", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test")
+    vi.resetModules()
+    const { downloadOrganizerFile } = await import("./conference-client")
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              error: { code: "FILES_EXPIRED", message: "文件保存期限已过" },
+            }),
+            { status: 410 }
+          )
+        )
+    )
+    await expect(
+      downloadOrganizerFile("owner-token", "conference-1", {
+        id: "file-1",
+        fileName: "file.txt",
+      } as import("./conference-client").OrganizerFile)
+    ).rejects.toMatchObject({ status: 410, code: "FILES_EXPIRED" })
+  })
+
   it("filters file types through the mounted organizer route", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test")
     vi.resetModules()

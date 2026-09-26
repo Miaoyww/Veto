@@ -85,7 +85,7 @@ export function ConferenceCloseCard({
       <CardHeader>
         <CardTitle className="text-lg">结束大会</CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
-          大会结束后大会将不再可用.
+          结束后将停止大会操作，仍可查看记录。
         </p>
       </CardHeader>
       <CardContent>
@@ -108,10 +108,11 @@ export function ConferenceCloseCard({
                 确认{lifecycle === "active" ? "结束大会" : "重试清理"}？
               </DialogTitle>
               <DialogDescription>
-                大会内文件将会保留至大会结束后14天,
-                在此期间您仍可访问大会并保留相关内容.
+                待审核文件将立即清理。已发布文件仅保留至设置的会议结束时间后 3
+                天（72
+                小时），请在文件页查看截止时间并提前下载到本地。未设置结束时间时暂无自动清理期限。手动结束不会重设该期限。
                 <br />
-                注意, 此操作将无法撤回.
+                此操作无法撤回。
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

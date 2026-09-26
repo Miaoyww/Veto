@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import {
+  ConferenceApiError,
   downloadOrganizerFile,
   listOrganizerFiles,
   listOrganizerFileTypes,
@@ -21,7 +22,11 @@ import {
   type OrganizerFile,
 } from "@/lib/conference-client"
 
+import { filesExpired, formatSchedule } from "@/lib/conference-schedule"
+
 interface Props {
+  filesExpireAt?: string | null
+  filesExpiredAt?: string | null
   token: string
   conferenceId: string
   lifecycle: "draft" | "active" | "closed"
@@ -29,11 +34,23 @@ interface Props {
 }
 
 export function ConferenceFilesWorkspace({
+  filesExpireAt,
+  filesExpiredAt,
   token,
   conferenceId,
   lifecycle,
   onError,
 }: Props) {
+  const [now, setNow] = useState(() => Date.now())
+  const [expiredByServer, setExpiredByServer] = useState(false)
+  const expired =
+    expiredByServer || filesExpired(filesExpireAt, filesExpiredAt, now)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const [files, setFiles] = useState<OrganizerFile[]>([])
   const [fileTypes, setFileTypes] = useState<string[]>([])
   const [selectedType, setSelectedType] = useState("")
@@ -130,9 +147,17 @@ export function ConferenceFilesWorkspace({
   }
 
   async function download(item: OrganizerFile): Promise<void> {
+    if (
+      filesExpired(filesExpireAt, filesExpiredAt) ||
+      expiredByServer ||
+      item.objectDeletedAt
+    )
+      return
     try {
       await downloadOrganizerFile(token, conferenceId, item)
     } catch (error) {
+      if (error instanceof ConferenceApiError && error.code === "FILES_EXPIRED")
+        setExpiredByServer(true)
       onError(error, "下载文件失败")
     }
   }
@@ -149,6 +174,16 @@ export function ConferenceFilesWorkspace({
 
   return (
     <section className="space-y-4">
+      <div
+        role="status"
+        className="rounded-lg border bg-muted/40 p-4 text-sm leading-6"
+      >
+        {expired
+          ? "文件保存期限已过，已停止下载和上传，文件内容将自动清理且无法恢复。文件记录和审核历史仍保留。"
+          : filesExpireAt
+            ? `请在 ${formatSchedule(filesExpireAt)} 前下载并保存所需文件到本地。会议结束后 3 天（72 小时）自动清理全部文件内容，届时无法下载或恢复。`
+            : "尚未设置会议结束时间，暂无自动清理期限。设置后，文件将在结束时间的 3 天（72 小时）后自动清理，请提前下载保存到本地。"}
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">文件管理</h2>
@@ -291,6 +326,11 @@ export function ConferenceFilesWorkspace({
                       }
                     >
                       {statusLabel[item.status]}
+                      {item.objectDeletedAt
+                        ? " · 内容已清理"
+                        : expired
+                          ? " · 已到期"
+                          : ""}
                     </Badge>
                   </td>
                   <td className="px-3 py-3 text-right">
@@ -312,6 +352,7 @@ export function ConferenceFilesWorkspace({
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={expired || Boolean(item.objectDeletedAt)}
                             onClick={() => void download(item)}
                           >
                             <Download />

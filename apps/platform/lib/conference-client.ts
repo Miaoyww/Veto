@@ -102,6 +102,10 @@ export interface ConferenceSummary {
   name: string
   description?: string
   organizer?: string
+  startsAt?: string | null
+  endsAt?: string | null
+  filesExpireAt?: string | null
+  filesExpiredAt?: string | null
   version: number
   lifecycle: "draft" | "active" | "closed"
   timezone: string
@@ -173,6 +177,8 @@ export interface CreateConferenceInput extends ConferenceStructure {
   name: string
   description?: string
   organizer?: string
+  startsAt?: string | null
+  endsAt?: string | null
 }
 
 export interface SeatCommitteeUser {
@@ -186,6 +192,9 @@ export interface SeatCommitteeSession {
     id: string
     name: string
     organizer: string
+    startsAt?: string | null
+    endsAt?: string | null
+    filesExpireAt?: string | null
   }
   committee: {
     id: string
@@ -387,7 +396,13 @@ export async function updateConferenceMetadata(
   token: string,
   id: string,
   version: number,
-  input: { name?: string; description?: string; organizer?: string }
+  input: {
+    name?: string
+    description?: string
+    organizer?: string
+    startsAt?: string | null
+    endsAt?: string | null
+  }
 ): Promise<Conference> {
   const result = await apiRequest<{ ok: true; conference: Conference }>(
     token,
@@ -550,6 +565,7 @@ export interface OrganizerFile {
   mimeType: string
   size: number
   status: "submitted" | "published" | "rejected" | "cancelled" | "withdrawn"
+  objectDeletedAt?: string | null
   requestedVisibility: "committee" | "conference"
   visibility: "committee" | "conference"
   replacesFileId?: string
@@ -643,10 +659,11 @@ export async function downloadOrganizerFile(
   }
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {
-      error?: { message?: string }
+      error?: { message?: string; code?: string }
     } | null
     throw new ConferenceApiError(payload?.error?.message ?? "下载文件失败", {
       status: response.status,
+      code: payload?.error?.code,
     })
   }
   const url = URL.createObjectURL(await response.blob())

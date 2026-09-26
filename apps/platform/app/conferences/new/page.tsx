@@ -51,6 +51,12 @@ import {
   roleAllowedInCommittee,
   roleReference,
 } from "@/lib/conference-structure"
+import { ConferenceScheduleFields } from "@/components/conference-schedule-fields"
+import {
+  scheduleInstant,
+  scheduleError,
+  formatSchedule,
+} from "@/lib/conference-schedule"
 import { usePlatformAuth } from "@/lib/use-platform-auth"
 import { cn } from "@/lib/utils"
 
@@ -203,13 +209,15 @@ export default function NewConferencePage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [organizer, setOrganizer] = useState("")
+  const [startsAt, setStartsAt] = useState("")
+  const [endsAt, setEndsAt] = useState("")
   const [structure, setStructure] =
     useState<ConferenceStructure>(initialStructure)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
 
-  const eventValid = name.trim().length > 0
+  const eventValid = name.trim().length > 0 && !scheduleError(startsAt, endsAt)
   const meetingValid =
     structure.committees.length > 0 &&
     structure.committees.every((committee) => committee.name.trim().length > 0)
@@ -401,6 +409,8 @@ export default function NewConferencePage() {
       name: name.trim(),
       description: description.trim() || undefined,
       organizer: organizer.trim() || undefined,
+      startsAt: scheduleInstant(startsAt),
+      endsAt: scheduleInstant(endsAt),
       roleTemplates: structure.roleTemplates.map((role) => ({
         ...role,
         name: role.name.trim(),
@@ -525,10 +535,12 @@ export default function NewConferencePage() {
                       value={name}
                       maxLength={120}
                       disabled={isSaving}
-                      aria-invalid={attempted && !eventValid ? true : undefined}
+                      aria-invalid={
+                        attempted && !name.trim() ? true : undefined
+                      }
                       onChange={(event) => setName(event.target.value)}
                     />
-                    {attempted && !eventValid ? (
+                    {attempted && !name.trim() ? (
                       <FieldError>请输入大会名称</FieldError>
                     ) : null}
                   </div>
@@ -543,6 +555,13 @@ export default function NewConferencePage() {
                       onChange={(event) => setOrganizer(event.target.value)}
                     />
                   </div>
+                  <ConferenceScheduleFields
+                    startsAt={startsAt}
+                    endsAt={endsAt}
+                    onStartChange={setStartsAt}
+                    onEndChange={setEndsAt}
+                    disabled={isSaving}
+                  />
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="event-description">大会说明</Label>
                     <textarea
@@ -901,13 +920,20 @@ export default function NewConferencePage() {
               ) : null}
 
               {currentStep === 4 ? (
-                <ReviewStep
-                  name={name}
-                  structure={structure}
-                  totalSeats={totalSeats}
-                  error={error}
-                  fieldErrors={fieldErrors}
-                />
+                <div className="space-y-4">
+                  <p className="text-sm">
+                    开始：{formatSchedule(scheduleInstant(startsAt))}
+                    <br />
+                    结束：{formatSchedule(scheduleInstant(endsAt))}
+                  </p>
+                  <ReviewStep
+                    name={name}
+                    structure={structure}
+                    totalSeats={totalSeats}
+                    error={error}
+                    fieldErrors={fieldErrors}
+                  />
+                </div>
               ) : null}
             </div>
 
