@@ -118,17 +118,6 @@ export function PlatformShell({
         </div>
 
         <div className="flex items-center gap-2">
-          <a
-            href={APP_URL}
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "hidden h-11 rounded-full px-4 sm:inline-flex"
-            )}
-          >
-            <Monitor data-icon="inline-start" aria-hidden="true" />
-            返回应用
-          </a>
-          <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted [&_svg]:size-4" />
           <Link
             href="/account"
             className={cn(
@@ -158,6 +147,7 @@ export function PlatformShell({
           >
             <LogOut aria-hidden="true" />
           </Button>
+          <ThemeToggler className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-background transition-colors hover:bg-muted [&_svg]:size-4" />
         </div>
       </header>
 
