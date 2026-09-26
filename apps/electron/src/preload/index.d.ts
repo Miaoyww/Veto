@@ -77,6 +77,7 @@ export interface VetoAPI {
       conferenceIdOrParams: string | { conferenceId?: string; label?: string }
     ) => Promise<{ success: boolean }>
     closeDisplay: () => Promise<{ success: boolean }>
+    toggleFullscreen: () => Promise<{ success: boolean }>
     onDisplayUpdate: (callback: (data: unknown) => void) => () => void
   }
   displayWs: {

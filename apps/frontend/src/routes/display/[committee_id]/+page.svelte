@@ -6,9 +6,10 @@
    *
    * 职责：
    * 1. WebSocket 连接（唯一）
-   * 2. 顶部横幅 + 阶段指示器（渲染一次）
+   * 2. 顶部横幅 + 阶段指示器（渲染一次，横幅为窗口拖拽区）
    * 3. 根据 phase 动态切换内容组件
    * 4. 底部近期记录
+   * 5. 窗口管理（悬停浮现的系统窗口控件、全屏状态同步）
    */
   import { onMount, onDestroy } from 'svelte'
   import {
@@ -16,11 +17,16 @@
     onConnectionStatus
   } from '$lib/classes/clients/conference-display-client'
   import type { ConnectionStatus } from '$lib/classes/clients/conference-display-client'
+  import {
+    toggleDisplayFullscreen,
+    onDisplayWindowUpdate
+  } from '$lib/classes/clients/display-window'
   import type { SeatView } from '$lib/classes/types/conference'
   import type { ConferenceDisplayData, TimerTickData } from '$lib/classes/types/conference'
   import { VETO_NAME, ROLL_CALL_MARK_DELAY } from '$lib/classes/const'
   import { globalSettings } from '$lib/classes/stores/app/global-settings.store'
   import { useKeyboardShortcuts } from '$lib/classes/services/hooks/use-keyboard-shortcuts.svelte'
+  import WindowControls from '$lib/components/app-sidebar/window-controls.svelte'
 
   import RollCallDisplay from './roll-call/index.svelte'
   import GeneralDebateDisplay from './general-debate/index.svelte'
@@ -53,16 +59,32 @@
 
   const contentStyle = $derived(`transform: translate(${displayOffsetX}px, ${displayOffsetY}px)`)
 
-  function toggleFullscreen(): void {
-    window.veto?.conference?.toggleFullscreen?.()
-  }
-
   // 快捷键（Display 窗口专用：Escape 退出全屏、Alt+方向键微调位置）
   useKeyboardShortcuts({
     context: 'conference-display',
     isFullScreen: () => isFullScreen,
-    toggleFullscreen
+    toggleFullscreen: toggleDisplayFullscreen
   })
+
+  // ---- 悬停浮现的窗口控件（复用系统 WindowControls，Electron 下渲染按钮） ----
+  let controlsVisible = $state(false)
+  let controlsHideTimer: ReturnType<typeof setTimeout> | null = null
+
+  function showWindowControls(): void {
+    if (controlsHideTimer) {
+      clearTimeout(controlsHideTimer)
+      controlsHideTimer = null
+    }
+    controlsVisible = true
+  }
+
+  function hideWindowControls(): void {
+    if (controlsHideTimer) clearTimeout(controlsHideTimer)
+    controlsHideTimer = setTimeout(() => {
+      controlsVisible = false
+      controlsHideTimer = null
+    }, 400)
+  }
 
   onMount(() => {
     const bridge = getDisplayBridge()
@@ -99,11 +121,10 @@
       connectionStatus = status
     })
 
-    // 监听来自主进程的 Display 更新（全屏状态变更等）
-    const unsubDisplayUpdate = window.veto?.conference?.onDisplayUpdate?.((data: unknown) => {
-      const msg = data as { type?: string; isFullScreen?: boolean }
-      if (msg.type === 'fullscreen-change') {
-        isFullScreen = msg.isFullScreen ?? false
+    // 主进程推送的窗口事件（全屏状态变更等）
+    const unsubDisplayUpdate = onDisplayWindowUpdate((update) => {
+      if (update.type === 'fullscreen-change') {
+        isFullScreen = update.isFullScreen ?? false
       }
     })
 
@@ -111,7 +132,7 @@
       unsubData()
       unsubTick()
       unsubStatus()
-      unsubDisplayUpdate?.()
+      unsubDisplayUpdate()
     }
   })
 
@@ -130,7 +151,7 @@
   const isSpecialMotion = $derived(displayData?.motionDraft?.isRequestingVote === false)
   const hasActiveMotion = $derived(displayData?.activeMotion != null)
 
-  // 表决结果延迟转跳：当动议通过/否决后，先展示1秒结果再转跳 caucus
+  // 表决结果延迟转跳：当动议通过/否决后，先展示 3 秒结果再转跳
   let effectivePhase = $state<DisplayPhase | null>(null)
   let phaseDelayTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -144,7 +165,7 @@
     // 相同则跳过
     if (newPhase === effectivePhase) return
 
-    // 从 motion 结果阶段切换到其他阶段 → 延迟 1 秒
+    // 从 motion 结果阶段切换到其他阶段 → 延迟 3 秒
     if (
       effectivePhase === 'motion' &&
       motionStatus != null &&
@@ -162,21 +183,10 @@
     effectivePhase = newPhase
   })
 
-  $effect(() => {
-    console.log('[display] state:', {
-      effectivePhase,
-      rawPhase: displayData?.phase,
-      hasAttendanceChange: displayData?.attendanceChange != null,
-      hasActiveMotion: displayData?.activeMotion != null,
-      hasCurrentSpeaker: displayData?.currentSpeaker != null,
-      hasCaucusTimer: displayData?.caucusTimer != null,
-      hasVotingSession: displayData?.votingSession != null
-    })
-  })
-
   onDestroy(() => {
     if (phaseDelayTimer) clearTimeout(phaseDelayTimer)
     if (attendanceTimer) clearTimeout(attendanceTimer)
+    if (controlsHideTimer) clearTimeout(controlsHideTimer)
   })
 
   // ---- 出席状态变更（全屏展示） ----
@@ -228,30 +238,75 @@
 
 <svelte:head>
   <title>{VETO_NAME} - 模拟大会</title>
-  <style>
-    :global(body) {
-      background: #0a0e14;
-      color: #c8ccd4;
-      overflow: hidden;
-    }
-    .drag-region {
-      -webkit-app-region: drag;
-    }
-    .no-drag {
-      -webkit-app-region: no-drag;
-    }
-  </style>
 </svelte:head>
 
+<style>
+  :global(body) {
+    background: #0a0e14;
+    color: #c8ccd4;
+    overflow: hidden;
+  }
+
+  /* 悬停浮现的窗口控件：右上角固定热区，控件默认隐藏、悬停淡入 */
+  .display-controls-anchor {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 50;
+    height: 2.5rem;
+    width: 10rem;
+  }
+
+  .display-controls {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+  }
+
+  .display-controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 投影暗色配色：覆盖 ghost 按钮的语义色（Display 视图整体为固定暗色调） */
+  .display-controls :global(button:not(.close-btn)) {
+    color: rgb(255 255 255 / 0.55);
+  }
+
+  .display-controls :global(button:not(.close-btn):hover) {
+    background-color: rgb(255 255 255 / 0.1);
+    color: rgb(255 255 255 / 0.9);
+  }
+</style>
+
 <div class="flex h-screen w-screen flex-col bg-[#0a0e14] text-[#c8ccd4]">
+  <!-- 悬停浮现的窗口控件 -->
+  <div
+    class="display-controls-anchor"
+    role="presentation"
+    onpointerenter={showWindowControls}
+    onpointerleave={hideWindowControls}
+  >
+    <div class="display-controls no-drag" class:visible={controlsVisible}>
+      <WindowControls showSettings={false} />
+    </div>
+  </div>
+
   {#if displayData}
-    <ConferenceHeader
-      venue={displayData.venue}
-      name={displayData.name}
-      phase={effectivePhase}
-      simpleMajority={headerThresholds?.simpleMajority}
-      twoThirds={headerThresholds?.twoThirds}
-    />
+    <!-- 顶部横幅兼作窗口拖拽区 -->
+    <div class="drag-region">
+      <ConferenceHeader
+        venue={displayData.venue}
+        name={displayData.name}
+        phase={effectivePhase}
+        simpleMajority={headerThresholds?.simpleMajority}
+        twoThirds={headerThresholds?.twoThirds}
+      />
+    </div>
 
     <!-- 出席状态变更（来自代表管理，全屏覆盖） -->
     {#if attendanceChange}

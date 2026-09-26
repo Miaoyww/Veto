@@ -35,6 +35,8 @@ let port: number | null = null
 
 const clients = new Map<WebSocket, DisplayClient>()
 const latestDisplayData = new Map<string, string>()
+/** 最近一次 Chair 投影（用于无绑定 Display 连入时立即重放） */
+let lastDisplayData: string | null = null
 
 export function getDisplayWsPort(): number | null {
   return port
@@ -101,6 +103,7 @@ export async function stopDisplayWs(): Promise<void> {
     ws.close(1001, 'display service stopped')
   }
   latestDisplayData.clear()
+  lastDisplayData = null
 
   await Promise.all([
     new Promise<void>((resolve) => socketServer?.close(() => resolve())),
@@ -126,9 +129,14 @@ function handleConnection(ws: WebSocket, request: IncomingMessage): void {
   const committeeId = url.searchParams.get('committeeId') ?? undefined
   clients.set(ws, { role, committeeId })
 
-  if (role === 'display' && committeeId) {
-    const latest = latestDisplayData.get(committeeId)
-    if (latest && ws.readyState === WebSocket.OPEN) ws.send(latest)
+  if (role === 'display') {
+    if (committeeId) {
+      const latest = latestDisplayData.get(committeeId)
+      if (latest && ws.readyState === WebSocket.OPEN) ws.send(latest)
+    } else if (lastDisplayData && ws.readyState === WebSocket.OPEN) {
+      // 无绑定 Display（仅展示模式）：重放最近一次 Chair 投影，避免空等下一次推送
+      ws.send(lastDisplayData)
+    }
   }
 
   ws.on('message', (data: RawData) => handleChairMessage(ws, data))
@@ -161,6 +169,7 @@ function broadcast(message: DisplaySocketMessage): void {
   const payload = JSON.stringify(message)
   if (message.type === 'display_data' && message.committeeId) {
     latestDisplayData.set(message.committeeId, payload)
+    lastDisplayData = payload
   }
 
   for (const [ws, client] of clients) {

@@ -29,3 +29,11 @@
     @apply flex items-center p-2;
     @apply veto-base;
 }
+/* Electron 无边框窗口拖拽区（窗口控件等交互元素用 no-drag 排除） */
+.drag-region {
+    -webkit-app-region: drag;
+}
+
+.no-drag {
+    -webkit-app-region: no-drag;
+}

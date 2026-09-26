@@ -75,18 +75,28 @@
     isCloudSession && cloudSession.hasCapability('submit_directive', 'process_directive')
   )
   const canViewFiles = $derived(
-    isCloudSession && cloudSession.hasCapability('view_files', 'send_files', 'review_files', 'withdraw_files')
+    isCloudSession &&
+      cloudSession.hasCapability('view_files', 'send_files', 'review_files', 'withdraw_files')
   )
 
   $effect(() => {
     const session = isCloudSession ? cloudSession.session?.result : null
     if (!session?.token || !session.wsUrl) return
-    return fileNotifications.connect(session.token, session.wsUrl,
-      session.conferenceId, session.identity.seatId)
+    return fileNotifications.connect(
+      session.token,
+      session.wsUrl,
+      session.conferenceId,
+      session.identity.seatId
+    )
   })
   const canViewSituation = $derived(
     isCloudSession &&
-      cloudSession.hasCapability('view_situation', 'publish_situation', 'withdraw_situation', 'control_timeline')
+      cloudSession.hasCapability(
+        'view_situation',
+        'publish_situation',
+        'withdraw_situation',
+        'control_timeline'
+      )
   )
   const canViewCloudTimeline = $derived(
     isCloudSession &&
@@ -197,10 +207,8 @@
           {#if isChair}
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
-                isActive={
-                  $page.url.pathname.startsWith(`${committeeRoute}/chair`) &&
-                  !$page.url.pathname.startsWith(`${committeeRoute}/chair/participants`)
-                }
+                isActive={$page.url.pathname.startsWith(`${committeeRoute}/chair`) &&
+                  !$page.url.pathname.startsWith(`${committeeRoute}/chair/participants`)}
                 onclick={() => goTo(`${committeeRoute}/chair`)}
               >
                 <Users />
@@ -375,7 +383,9 @@
     <div class="drag-region h-full flex-1"></div>
 
     {#if !isCloudSession || canViewCloudTimeline}
-      <div class="pointer-events-none absolute inset-x-0 z-10 flex h-full items-center justify-center gap-1.5">
+      <div
+        class="pointer-events-none absolute inset-x-0 z-10 flex h-full items-center justify-center gap-1.5"
+      >
         <div class="no-drag pointer-events-auto min-w-0 max-w-[calc(100%_-_10rem)]">
           <DynamicIsland
             cloudMode={isCloudSession}
@@ -424,13 +434,22 @@
   {/snippet}
 
   {#if isCloudSession && fileNotifications.latest}
-    <div class="mx-6 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/25 bg-primary/5 px-4 py-2 text-sm">
-      <span>{fileNotifications.latest.kind === 'file.submitted' ? '有新的待审文件'
-        : fileNotifications.latest.kind === 'file.published' ? '有文件已通过审核'
-        : fileNotifications.latest.kind === 'file.rejected' ? '有文件被打回，请查看原因'
-        : '有新的文件可视范围申请'}</span>
+    <div
+      class="mx-6 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/25 bg-primary/5 px-4 py-2 text-sm"
+    >
+      <span>
+        {fileNotifications.latest.kind === 'file.submitted'
+          ? '有新的待审文件'
+          : fileNotifications.latest.kind === 'file.published'
+            ? '有文件已通过审核'
+            : fileNotifications.latest.kind === 'file.rejected'
+              ? '有文件被打回，请查看原因'
+              : '有新的文件可视范围申请'}
+      </span>
       <div class="flex gap-2">
-        <Button variant="outline" size="sm" onclick={() => goTo(`${committeeRoute}/files`)}>查看文件</Button>
+        <Button variant="outline" size="sm" onclick={() => goTo(`${committeeRoute}/files`)}>
+          查看文件
+        </Button>
         <Button variant="ghost" size="sm" onclick={() => fileNotifications.dismiss()}>关闭</Button>
       </div>
     </div>

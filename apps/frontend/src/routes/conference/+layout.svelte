@@ -239,37 +239,6 @@
   <DisplayOnlyDialog bind:open={displayOnlyDialogOpen} />
 </div>
 
-<!-- 投屏页：独立渲染，无 Sidebar 无 TitleBar -->
-<!-- {#if routeId === '/conference-display/[conference_id]'}
-  <ConferenceDisplayPage />
-{:else}
-  <div>
-    <Sidebar.Provider>
-      <Sidebar.Inset>
-        {#if routeId === '/battle/[battle_id]'}
-          <BattlePage />
-        {:else if routeId === '/conference/[conference_id]/roll-call'}
-          <ConferenceRollCallPage />
-        {:else if routeId === '/conference/[conference_id]/motion'}
-          <ConferenceMotionPage />
-        {:else if routeId === '/conference/[conference_id]/question'}
-          <ConferenceQuestionPage />
-        {:else if routeId === '/conference/[conference_id]/seats'}
-          <ConferenceSeatsPage />
-        {:else if routeId === '/conference/[conference_id]/seats'}
-          <ConferenceSeatsPage />
-        {:else if routeId === '/conference/[conference_id]'}
-          <ConferencePage />
-        {:else if routeId === '/delegate/[conference_id]'}
-          <DelegatePage />
-        {:else if routeId === '/tools/[tool_id]'}
-          <ToolPage />
-        {:else}{/if}
-      </Sidebar.Inset>
-    </Sidebar.Provider>
-  </div>
-{/if} -->
-
 <style>
   * {
     margin: 0;

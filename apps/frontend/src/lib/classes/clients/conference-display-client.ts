@@ -20,6 +20,7 @@ import {
   type Seat,
   type SeatView
 } from '$lib/classes/types/delegate'
+import { DISPLAY_STANDALONE_ID } from '$lib/classes/const'
 
 // ---- 抽象接口 ------------------------------------------------------------
 
@@ -78,7 +79,10 @@ function getActiveDisplayCommitteeId(): string | undefined {
 }
 
 async function connectDisplaySocket(role: DisplaySocketRole, committeeId?: string): Promise<void> {
-  const nextCommitteeId = role === 'display' ? getActiveDisplayCommitteeId() : committeeId
+  const parsedCommitteeId = role === 'display' ? getActiveDisplayCommitteeId() : committeeId
+  // 仅展示模式（standalone）不绑定 committeeId：服务端对无绑定 Display 放行全部 Chair 广播
+  const nextCommitteeId =
+    parsedCommitteeId === DISPLAY_STANDALONE_ID ? undefined : parsedCommitteeId
   if (
     displaySocket?.readyState === WebSocket.OPEN &&
     displaySocketRole === role &&
@@ -98,6 +102,13 @@ async function connectDisplaySocket(role: DisplaySocketRole, committeeId?: strin
   displaySocketCommitteeId = nextCommitteeId
   _status = 'connecting'
   setStatus(_status)
+
+  // 非 Electron 环境（如浏览器打开）没有 displayWs 桥，直接标记断开，避免崩溃
+  if (!window.veto?.displayWs) {
+    _status = 'disconnected'
+    setStatus(_status)
+    return
+  }
 
   const displayPort = await window.veto.displayWs.getPort()
   const query = new URLSearchParams({ role })
